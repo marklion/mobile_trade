@@ -1,6 +1,6 @@
 const express = require('express');
 const json2md = require('json2md');
-const test_req = require('./test_req');
+const moment = require('moment');
 
 
 const app = express();
@@ -8,7 +8,31 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
 
+const test_req = require('./test_req');
 test_req(app);
+require('./rbac_api')(app);
+
+const db_opt = require('./db_opt');
+
+async function init_super_user() {
+    await db_opt.install();
+    let sq = db_opt.get_sq();
+    let user_one = await sq.models.rbac_user.findOrCreate({
+        where: { phone: '18911992582' },
+        defaults: {
+            name: 'admin',
+            online_token: 'ABCD',
+            online_time: moment().format('YYYY-MM-DD HH:mm:ss'),
+        }
+    });
+    const rbac_lib = require('./rbac_lib');
+    let role = await rbac_lib.add_role('admin', '超级管理员', false, null);
+    if (user_one[0] && role) {
+        await rbac_lib.connect_user2role(user_one[0].id, role.id);
+    }
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('global', '全局模块')).id );
+}
+init_super_user();
 
 app.get('/api/help', (req, res) => {
     let out_json = app.help_info;
@@ -88,4 +112,6 @@ app.get('/api/help', (req, res) => {
 `;
     res.send(html);
 });
+
+
 app.listen(8080, () => console.log('Server running on port 8080'));

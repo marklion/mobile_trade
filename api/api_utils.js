@@ -1,4 +1,5 @@
 const result_maker = require('./result');
+const rbac_lib = require('./rbac_lib');
 //params = {
 //         version:{have_to:true, type:String, mean:'版本号', example:'V1.1'},
 //         detail:{have_to:false,  type:Object, mean:'详细信息',
@@ -145,11 +146,19 @@ function api_param_check(param_req, input) {
     return ret;
 }
 
-function make_api(path, module, resource, is_write, need_rbac, params, result, title, description) {
+function make_api(path, module,  is_write, need_rbac, params, result, title, description, is_get_api = false) {
+    let temp_params = { ...params };
+    let temp_result = { ...result };
+    if (is_get_api)
+    {
+        temp_params.pageNo = { type: Number, have_to: false, mean: '页码', example: 0 };
+        temp_result.total = { type: Number, mean: '总数', example: 100 };
+    }
     let ret = {
-        path: path, module: module, resource: resource, is_write: is_write, need_rbac: need_rbac, params: params, result: result, title: title, description: description,
+        path: path, module: module,  is_write: is_write, need_rbac: need_rbac, params: temp_params, result: temp_result, title: title, description: description,
         add_handler: function (handler) {
             this.handler = handler;
+            return this;
         },
         make_help_info: function () {
             let ret = []
@@ -189,9 +198,20 @@ function make_api(path, module, resource, is_write, need_rbac, params, result, t
                 }
                 else {
                     try {
-                        let result = await this.handler(body, token);
-
-                        ret = result_maker(result)
+                        let rbac_verify_ret = '';
+                        if (this.need_rbac) {
+                            rbac_verify_ret = await rbac_lib.rbac_check(token, this.module, this.is_write);
+                        }
+                        if (rbac_verify_ret.length > 0) {
+                            ret = result_maker(null, rbac_verify_ret);
+                        }
+                        else {
+                            if (is_get_api && body.pageNo == undefined) {
+                                body.pageNo = 0;
+                            }
+                            let result = await this.handler(body, token);
+                            ret = result_maker(result)
+                        }
                     } catch (error) {
                         console.log(error);
                         ret = result_maker(null, JSON.parse(JSON.stringify(error)));
@@ -200,6 +220,7 @@ function make_api(path, module, resource, is_write, need_rbac, params, result, t
 
                 res.send(ret);
             });
+            app.help_info.push(this.make_help_info());
         },
     };
 

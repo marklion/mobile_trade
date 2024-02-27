@@ -1,6 +1,6 @@
 const mkapi = require('./api_utils');
 function install(app) {
-    let test_api = mkapi('/test', 'none', 'none', false, false, {
+    let test_api = mkapi('/test', 'none',  false, false, {
         p1: { type: String, have_to: true, mean: '参数1-字符串', example: 'test1' },
         p2: { type: Number, have_to: true, mean: '参数2-数字', example: 123 },
         p3: {
@@ -34,7 +34,6 @@ function install(app) {
         return 'test_result';
     });
     test_api.install(app);
-    app.help_info.push(test_api.make_help_info());
 }
 
 module.exports = install;
