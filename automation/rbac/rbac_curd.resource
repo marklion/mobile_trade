@@ -18,3 +18,34 @@ Get All Company
         END
     END
     RETURN  ${ret}
+
+Search A Company By Name
+    [Arguments]  ${name}
+    @{cur_companys}  Get All Company
+    ${found_content}  Create Dictionary
+    FOR  ${itr}  IN  @{cur_companys}
+        ${itr_name}  Get From Dictionary  ${itr}  name
+        IF  $itr_name == $name
+        ${found_content}  Set Variable  ${itr}
+            Exit For Loop
+        END
+    END
+    RETURN  ${found_content}
+
+Reg Company Admin
+    [Arguments]  ${company_id}  ${phone}
+    ${req}  Create Dictionary  company_id=${company_id}  phone=${phone}
+    ${resp}  Req to Server  /rbac/reg_company_admin  ABCD  ${req}
+    Should Be True  ${resp}[result]
+
+User Login With Phone
+    [Arguments]  ${phone}
+    ${req}  Create Dictionary  phone=${phone}
+    ${resp}  Req to Server  /rbac/login  AAAAAAAA  ${req}
+    RETURN  ${resp}[token]
+
+Login As Admin Of Company
+    [Arguments]  ${company_id}
+    ${admin}  Reg Company Admin  ${company_id}  12345678901
+    ${token}  User Login With Phone  12345678901
+    RETURN  ${token}

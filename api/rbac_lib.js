@@ -97,6 +97,7 @@ module.exports = {
     },
     add_role: async function (_name, _description, _is_readonly, company) {
         let sq = db_opt.get_sq();
+        let ret = null;
         if (company) {
             if (_name == 'admin') {
                 throw {err_msg: '不允许创建名为admin的角色'};
@@ -110,9 +111,10 @@ module.exports = {
                 match_role[0].description = _description;
                 match_role[0].is_readonly = _is_readonly;
                 await match_role[0].save();
+                ret = match_role[0];
             }
             else {
-                await company.createRbac_role({
+                ret = await company.createRbac_role({
                     name: _name,
                     description: _description,
                     is_readonly: _is_readonly,
@@ -131,10 +133,9 @@ module.exports = {
             found_one[0].description = _description;
             found_one[0].is_readonly = _is_readonly;
             await found_one[0].save();
+            ret = found_one[0];
         }
-        return await sq.models.rbac_role.findOne({
-            where: { name: _name },
-        });
+        return ret;
     },
     del_role: async function (_id, _company) {
         let sq = db_opt.get_sq();
