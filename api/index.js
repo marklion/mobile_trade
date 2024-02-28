@@ -8,8 +8,6 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
 
-const test_req = require('./test_req');
-test_req(app);
 require('./rbac_api')(app);
 
 const db_opt = require('./db_opt');
@@ -31,6 +29,7 @@ async function init_super_user() {
         await rbac_lib.connect_user2role(user_one[0].id, role.id);
     }
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('global', '全局模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('config', '公司配置管理模块')).id );
 }
 init_super_user();
 

@@ -5,8 +5,7 @@ module.exports = {
     rbac_check: async function (_online_token, _req_module, _is_write) {
         let ret = '未登录';
         let sq = db_opt.get_sq();
-        if (!_online_token)
-        {
+        if (!_online_token) {
             return ret;
         }
         let user = await sq.models.rbac_user.findOne({
@@ -61,7 +60,7 @@ module.exports = {
         let sq = db_opt.get_sq();
         let one = await sq.models.company.findOrCreate({
             where: { name: _name },
-            default: {
+            defaults: {
                 name: _name,
             },
         });
@@ -78,17 +77,17 @@ module.exports = {
         let sq = db_opt.get_sq();
         let companys = await sq.models.company.findAll({
             order: [['id', 'ASC']],
-            limit:20,
+            limit: 20,
             offset: _page * 20,
         });
         let count = await sq.models.company.count();
-        return {companys, count};
+        return { companys, count };
     },
     add_module: async function (_name, _description) {
         let sq = db_opt.get_sq();
         let one = await sq.models.rbac_module.findOrCreate({
             where: { name: _name },
-            default: {
+            defaults: {
                 name: _name,
             },
         });
@@ -99,9 +98,8 @@ module.exports = {
     add_role: async function (_name, _description, _is_readonly, company) {
         let sq = db_opt.get_sq();
         if (company) {
-            if (_name == 'admin')
-            {
-                throw new Error('admin角色名被保留');
+            if (_name == 'admin') {
+                throw {err_msg: '不允许创建名为admin的角色'};
             }
             let match_role = await company.getRbac_roles({
                 where: {
@@ -121,16 +119,18 @@ module.exports = {
                 });
             }
         }
-        else
-        {
-            await sq.models.rbac_role.findOrCreate({
+        else {
+            let found_one = await sq.models.rbac_role.findOrCreate({
                 where: { name: _name },
-                default: {
+                defaults: {
                     name: _name,
                     description: _description,
                     is_readonly: _is_readonly,
                 },
             });
+            found_one[0].description = _description;
+            found_one[0].is_readonly = _is_readonly;
+            await found_one[0].save();
         }
         return await sq.models.rbac_role.findOne({
             where: { name: _name },
@@ -147,11 +147,12 @@ module.exports = {
         let sq = db_opt.get_sq();
         let one = await sq.models.rbac_user.findOrCreate({
             where: { phone: _phone },
-            default: {
+            defaults: {
                 phone: _phone,
             },
         });
         await one[0].save();
+        return one[0];
     },
     del_user: async function (_id) {
         let sq = db_opt.get_sq();
@@ -184,12 +185,75 @@ module.exports = {
             await role.addRbac_module(module);
         }
     },
-    disconnect_role2module: async function(_role_id, _module_id) {
+    disconnect_role2module: async function (_role_id, _module_id) {
         let sq = db_opt.get_sq();
         let role = await sq.models.rbac_role.findByPk(_role_id);
         let module = await sq.models.rbac_module.findByPk(_module_id);
-        if ( await role.hasRbac_module(module)) {
+        if (await role.hasRbac_module(module)) {
             await role.removeRbac_module(module);
         }
+    },
+    make_company_admin_role: async function (_company) {
+        let sq = db_opt.get_sq();
+        let role = await this.add_role('公司管理员', '公司内最高权限', false, _company);
+        if (role) {
+            await this.connect_role2module(role.id, (await sq.models.rbac_module.findOne({ where: { name: 'config' } })).id);
+        }
+
+        return role;
+    },
+    get_all_roles: async function (_company, _pageNo) {
+        let sq = db_opt.get_sq();
+        let roles = [];
+        let count = 0;
+        let condition = {
+            order: [['id', 'ASC']],
+            limit: 20,
+            offset: _pageNo * 20,
+        };
+        if (_company) {
+            roles = await _company.getRbac_roles(condition);
+            count = await _company.countRbac_roles();
+        }
+        else {
+            roles = await sq.models.rbac_role.findAll(condition);
+            count = await sq.models.rbac_role.count();
+        }
+        let rows = [];
+        for (let index = 0; index < roles.length; index++) {
+            let element = roles[index];
+            let role = element.toJSON();
+            role.related_users = [];
+            role.related_modules = [];
+            (await element.getRbac_users()).forEach((itr) => {
+                role.related_users.push(itr.toJSON());
+            });
+            (await element.getRbac_modules()).forEach((itr) => {
+                role.related_modules.push(itr.toJSON());
+            });
+            let company = await element.getCompany();
+            if (company) {
+                role.belong_company = company.name;
+            }
+            rows.push(role);
+        }
+        return { count, rows }
+    },
+    user_login: async function (_phone) {
+        let ret = '';
+        let sq = db_opt.get_sq();
+        let user = await sq.models.rbac_user.findOne({
+            where: { phone: _phone },
+        });
+        if (user) {
+            if (!user.online_token) {
+                const uuid = require('uuid');
+                user.online_token = uuid.v4();
+            }
+            user.online_time = moment().format('YYYY-MM-DD HH:mm:ss');
+            await user.save();
+            ret = user.online_token;
+        }
+        return ret;
     },
 };

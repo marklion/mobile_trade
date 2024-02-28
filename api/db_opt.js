@@ -22,6 +22,7 @@ let db_opt = {
             online_time: { type: DataTypes.STRING },
             wx_openid: { type: DataTypes.STRING },
             phone: { type: DataTypes.STRING, unique: true },
+            photo_path: { type: DataTypes.STRING },
         },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -41,12 +42,12 @@ let db_opt = {
     },
     make_associate:function(_sq){
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, {through: 'rbac_user_role'});
-        _sq.models.rbac_role.hasMany(_sq.models.rbac_user);
+        _sq.models.rbac_role.belongsToMany(_sq.models.rbac_user, {through: 'rbac_user_role'});
         _sq.models.rbac_role.belongsToMany(_sq.models.rbac_module, {through: 'rbac_role_module'});
-        _sq.models.rbac_module.hasMany(_sq.models.rbac_role);
-        _sq.models.rbac_user.belongsTo(_sq.models.company, {as:'member_user'});
+        _sq.models.rbac_module.belongsToMany(_sq.models.rbac_role, {through: 'rbac_role_module'});
+        _sq.models.rbac_user.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.rbac_user);
-        _sq.models.rbac_role.belongsTo(_sq.models.company, {as:'member_role'});
+        _sq.models.rbac_role.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.rbac_role);
     },
     install: async function(){
@@ -56,7 +57,7 @@ let db_opt = {
             sq.define(key, this.model[key], {paranoid: true});
         });
         this.make_associate(sq);
-        await sq.sync({ alter: true });
+        await sq.sync({ alter: {drop:false}});
         g_sq = sq;
     },
     get_sq: function () {

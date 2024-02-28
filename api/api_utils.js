@@ -68,9 +68,8 @@ function make_req_example(params) {
         if (params[itr].type == Object) {
             ret[itr] = make_req_example(params[itr].explain);
         }
-        else if (params[itr].type == Array)
-        {
-            ret[itr] =[ make_req_example(params[itr].explain)];
+        else if (params[itr].type == Array) {
+            ret[itr] = [make_req_example(params[itr].explain)];
         }
         else {
             ret[itr] = example;
@@ -99,7 +98,7 @@ function api_param_walk_check(api_param_req, input) {
 
     if (ret.length == 0 && input) {
         if (api_param_req.type == Object) {
-            let explain_keys = Object.keys( api_param_req.explain);
+            let explain_keys = Object.keys(api_param_req.explain);
             for (let index = 0; index < explain_keys.length; index++) {
                 let itr = explain_keys[index];
                 const element = api_param_req.explain[itr];
@@ -146,16 +145,15 @@ function api_param_check(param_req, input) {
     return ret;
 }
 
-function make_api(path, module,  is_write, need_rbac, params, result, title, description, is_get_api = false) {
+function make_api(path, module, is_write, need_rbac, params, result, title, description, is_get_api = false) {
     let temp_params = { ...params };
     let temp_result = { ...result };
-    if (is_get_api)
-    {
+    if (is_get_api) {
         temp_params.pageNo = { type: Number, have_to: false, mean: '页码', example: 0 };
         temp_result.total = { type: Number, mean: '总数', example: 100 };
     }
     let ret = {
-        path: path, module: module,  is_write: is_write, need_rbac: need_rbac, params: temp_params, result: temp_result, title: title, description: description,
+        path: path, module: module, is_write: is_write, need_rbac: need_rbac, params: temp_params, result: temp_result, title: title, description: description,
         add_handler: function (handler) {
             this.handler = handler;
             return this;
@@ -210,11 +208,16 @@ function make_api(path, module,  is_write, need_rbac, params, result, title, des
                                 body.pageNo = 0;
                             }
                             let result = await this.handler(body, token);
-                            ret = result_maker(result)
+                            ret = result_maker(result, '', make_req_example(this.result))
                         }
                     } catch (error) {
                         console.log(error);
-                        ret = result_maker(null, JSON.parse(JSON.stringify(error)));
+                        if (error.err_msg) {
+                            ret = result_maker(null, error.err_msg);
+                        }
+                        else {
+                            ret = result_maker(null, JSON.stringify(error));
+                        }
                     }
                 }
 
