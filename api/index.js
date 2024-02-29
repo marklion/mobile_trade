@@ -30,6 +30,7 @@ async function init_super_user() {
     }
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('global', '全局模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('config', '公司配置管理模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('customer', '客户模块')).id );
 }
 init_super_user();
 

@@ -11,8 +11,14 @@ Clear Table
     Delete All Rows From Table  ${table}
     Disconnect From All Databases
 
-Clear Non-Admin User
+RBAC reset
     Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
     Execute Sql String  delete from rbac_user where phone != '18911992582';
     Execute Sql String  delete from rbac_user_role where rbacUserId not in (select id from rbac_user where phone = '18911992582');
+    Execute Sql String  delete from rbac_role where companyId is not null;
+    Execute Sql String  delete from rbac_role_module where rbacRoleId not in (select id from rbac_role);
     Disconnect From All Databases
+
+Company Reset
+    Clear Table  company_module
+    Clear Table  company

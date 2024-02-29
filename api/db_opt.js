@@ -49,6 +49,8 @@ let db_opt = {
         _sq.models.company.hasMany(_sq.models.rbac_user);
         _sq.models.rbac_role.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.rbac_role);
+        _sq.models.rbac_module.belongsToMany(_sq.models.company, {through: 'company_module'});
+        _sq.models.company.belongsToMany(_sq.models.rbac_module, {through: 'company_module'});
     },
     install: async function(){
         console.log('run install');

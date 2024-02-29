@@ -56,6 +56,26 @@ module.exports = {
         }
         return company;
     },
+    bind_company2module: async function (_company_id, _module_id) {
+        let sq = db_opt.get_sq();
+        let company = await sq.models.company.findByPk(_company_id);
+        let module = await sq.models.rbac_module.findByPk(_module_id);
+        if (company && module) {
+            if (!await company.hasRbac_module(module)) {
+                await company.addRbac_module(module);
+            }
+        }
+    },
+    unbind_company2module: async function (_company_id, _module_id) {
+        let sq = db_opt.get_sq();
+        let company = await sq.models.company.findByPk(_company_id);
+        let module = await sq.models.rbac_module.findByPk(_module_id);
+        if (company && module) {
+            if (await company.hasRbac_module(module)) {
+                await company.removeRbac_module(module);
+            }
+        }
+    },
     add_company: async function (_name) {
         let sq = db_opt.get_sq();
         let one = await sq.models.company.findOrCreate({
@@ -64,6 +84,7 @@ module.exports = {
                 name: _name,
             },
         });
+        await this.bind_company2module(one[0].id, (await sq.models.rbac_module.findOne({ where: { name: 'customer' } })).id);
         await one[0].save();
     },
     del_company: async function (_id) {
@@ -81,6 +102,14 @@ module.exports = {
             offset: _page * 20,
         });
         let count = await sq.models.company.count();
+        for (let index = 0; index < companys.length; index++) {
+            const element = companys[index];
+            element.bound_modules = [];
+            let modules = await element.getRbac_modules();
+            modules.forEach((itr) => {
+                element.bound_modules.push(itr.toJSON());
+            });
+        }
         return { companys, count };
     },
     add_module: async function (_name, _description) {
@@ -239,6 +268,27 @@ module.exports = {
             rows.push(role);
         }
         return { count, rows }
+    },
+    get_all_modules:async function(_pageNo, _company){
+        let sq = db_opt.get_sq();
+        let condition = {
+            order: [['id', 'ASC']],
+            limit: 20,
+            offset: _pageNo * 20,
+        };
+        let ret = [];
+        let count = 0;
+        if (_company)
+        {
+            ret = await _company.getRbac_modules(condition);
+            count = await _company.countRbac_modules();
+        }
+        else
+        {
+            ret = await sq.models.rbac_module.findAll(condition);
+            count = await sq.models.rbac_module.count();
+        }
+        return { count, rows: ret };
     },
     user_login: async function (_phone) {
         let ret = '';

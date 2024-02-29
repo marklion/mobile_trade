@@ -40,7 +40,14 @@ function install(app) {
             type: Array, mean: '公司列表',
             explain: {
                 id: { type: Number, mean: '公司id', example: 123 },
-                name: { type: String, mean: '公司名', example: 'company_example' }
+                name: { type: String, mean: '公司名', example: 'company_example' },
+                bound_modules: {
+                    type: Array, mean: '绑定模块列表', explain: {
+                        id: { type: Number, mean: '模块id', example: 123 },
+                        name: { type: String, mean: '模块名', example: 'module_example' },
+                        description: { type: String, mean: '模块描述', example: 'module_desp_example' }
+                    },
+                }
             },
         },
     }, '获取公司列表', '获取公司列表', true).add_handler(async function (body, token) {
@@ -71,6 +78,7 @@ function install(app) {
                     type: Array, mean: '关联模块列表', explain: {
                         id: { type: Number, mean: '模块id', example: 123 },
                         name: { type: String, mean: '模块名', example: 'module_example' },
+                        description: { type: String, mean: '模块描述', example: 'module_desp_example'},
                     }
                 },
                 belong_company: { type: String, mean: '所属公司', example: 'company_example' },
@@ -81,7 +89,19 @@ function install(app) {
         let { count, rows } = await rbac_lib.get_all_roles(company, body.pageNo);
         return { all_role: rows, total: count };
     }).install(app);
+    mkapi('/rbac/module_get_all', 'config', false, true, {
 
+    }, {
+        all_module: {type: Array, mean: '模块列表', explain: {
+            id: { type: Number, mean: '模块id', example: 123 },
+            name: { type: String, mean: '模块名', example: 'module_example' },
+            description: { type: String, mean: '模块描述', example: 'module_desp_example'}
+        }},
+    }, '获取模块列表', '获取模块列表', true).add_handler(async function (body, token) {
+        let company = await rbac_lib.get_company_by_token(token);
+        let { count, rows } = await rbac_lib.get_all_modules(body.pageNo , company);
+        return { all_module: rows, total: count };
+    }).install(app);
     mkapi('/rbac/reg_company_admin', 'global', true, true, {
         phone: { type: String, have_to: true, mean: '手机号', example: '12345678901' },
         company_id: { type: Number, have_to: true, mean: '公司id', example: 123 },
@@ -96,6 +116,8 @@ function install(app) {
                 await user.setCompany(company);
                 let company_admin_role = await rbac_lib.make_company_admin_role(company);
                 if (company_admin_role) {
+                    await rbac_lib.unbind_company2module(company.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'customer' } })).id);
+                    await rbac_lib.bind_company2module(company.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'config' } })).id);
                     await rbac_lib.connect_user2role(user.id, company_admin_role.id);
                     ret.result = true;
                 }
@@ -129,6 +151,20 @@ function install(app) {
         let company = await rbac_lib.get_company_by_token(token);
         if (company) {
             await rbac_lib.del_role(body.id, company);
+            ret.result = true;
+        }
+        return ret;
+    }).install(app);
+    mkapi('/rbac/bind_module2role', 'config', true, true, {
+        role_id: { type: Number, have_to: true, mean: '角色id', example: 123 },
+        module_id: { type: Number, have_to: true, mean: '模块id', example: 123 },
+    }, {
+        result: { type: Boolean, mean: '绑定结果', example: true },
+    }, '绑定模块到角色', '绑定模块到角色').add_handler(async function (body, token) {
+        let ret = {result: false};
+        let company = await rbac_lib.get_company_by_token(token);
+        if (company) {
+            await rbac_lib.connect_role2module(body.role_id, body.module_id);
             ret.result = true;
         }
         return ret;
