@@ -37,11 +37,11 @@ Login As Admin Of Company
     ${token}  User Login With Phone  12345678901
     RETURN  ${token}
 Create Several Company And Pick One
-    FOR  ${itr}  IN RANGE  40
+    FOR  ${itr}  IN RANGE  11
         ${add_req}  Create Dictionary  name=test_company_${itr}
         Req to Server  /rbac/company_add  ABCD  ${add_req}
     END
-    ${ran_no}  Evaluate  random.randint(0, 40)
+    ${ran_no}  Evaluate  random.randint(0, 10)
     ${found}  Search A Company By Name  test_company_${ran_no}
     RETURN  ${found}
 
@@ -83,3 +83,33 @@ Get Role By Name
         END
     END
 
+Bind Role To Module
+    [Arguments]  ${token}  ${role_name}  ${module_name}
+    Add Role  ${token}  ${role_name}
+    ${role_added}  Get Role By Name  ${token}  ${role_name}
+    @{moduels}  Get Self Module  ${token}
+    Should Not Be Empty  @{moduels}
+    FOR  ${itr}  IN  @{moduels}
+        ${itr_name}  Get From Dictionary  ${itr}  name
+        IF  $itr_name == $module_name
+            ${bind_req}  Create Dictionary  role_id=${role_added}[id]  module_id=${itr}[id]
+            ${resp}  Req to Server  /rbac/bind_module2role  ${token}  ${bind_req}
+            Should Be True  ${resp}[result]
+            Exit For Loop
+        END
+    END
+
+Unbind Role from Module
+    [Arguments]  ${token}  ${role_name}  ${module_name}
+    ${role_added}  Get Role By Name  ${token}  ${role_name}
+    @{modules}  Get Self Module  ${token}
+    ${module_added}  Set Variable  ${None}
+    FOR  ${itr}  IN  @{modules}
+        ${itr_name}  Get From Dictionary  ${itr}  name
+        IF  $itr_name == $module_name
+            ${module_added}  Set Variable  ${itr}
+        END
+    END
+    ${req}  Create Dictionary  role_id=${role_added}[id]  module_id=${module_added}[id]
+    ${resp}  Req to Server  /rbac/unbind_module2role  ${token}  ${req}
+    Should Be True  ${resp}[result]

@@ -17,7 +17,7 @@ Company Scope Role Add
     @{all_roles}  Get All Roles  token=${token}
     Length Should Be  ${all_roles}  3
 
-Bind Module To Role
+Bind Avalible Module To Role
     [Setup]  RBAC reset
     [Teardown]  RBAC reset
     ${ran_com}  Create Several Company And Pick One
@@ -34,4 +34,24 @@ Bind Module To Role
     FOR  ${itr}  IN  @{role_added}[related_modules]
         Should Be True  ${itr} in @{moduels}
     END
+
+Unbind One Module From Role
+    [Setup]  RBAC reset
+    [Teardown]  RBAC reset
+    ${ran_com}  Create Several Company And Pick One
+    ${token}  Login As Admin Of Company  ${ran_com}[id]
+    Bind Role To Module  ${token}  role1  config
+    ${role_added}  Get Role By Name  ${token}  role1
+    @{role_modules}  Create List
+    FOR  ${itr}  IN  @{role_added}[related_modules]
+        Append To List  ${role_modules}  ${itr}[name]
+    END
+    Should Contain  ${role_modules}  config
+    Unbind Role from Module  ${token}  role1  config
+    ${role_added}  Get Role By Name  ${token}  role1
+    @{role_modules}  Create List
+    FOR  ${itr}  IN  @{role_added}[related_modules]
+        Append To List  ${role_modules}  ${itr}[name]
+    END
+    Should Not Contain  ${role_modules}  config
 

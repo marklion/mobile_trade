@@ -169,6 +169,20 @@ function install(app) {
         }
         return ret;
     }).install(app);
+    mkapi('/rbac/unbind_module2role', 'config', true, true, {
+        role_id: { type: Number, have_to: true, mean: '角色id', example: 123 },
+        module_id: { type: Number, have_to: true, mean: '模块id', example: 123 },
+    }, {
+        result: { type: Boolean, mean: '绑定结果', example: true },
+    }, '解绑模块到角色', '解绑模块到角色').add_handler(async function (body, token) {
+        let ret = {result: false};
+        let company = await rbac_lib.get_company_by_token(token);
+        if (company) {
+            await rbac_lib.disconnect_role2module(body.role_id, body.module_id);
+            ret.result = true;
+        }
+        return ret;
+    }).install(app);
 }
 
 module.exports = install;

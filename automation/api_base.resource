@@ -31,3 +31,7 @@ Req Get to Server
         Exit For Loop If  ${cur_page_no} > ${page} and ${page} != -1
     END
     RETURN  ${ret}
+
+Verify Module Permission
+    [Arguments]  ${token}  ${module_name}
+    Req to Server  /rbac/verify_${module_name}  ${token}  {}
