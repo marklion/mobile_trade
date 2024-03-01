@@ -95,7 +95,7 @@ module.exports = {
                 name: _name,
             },
         });
-        if (!one[1]) {
+        if (one[1]) {
             await this.bind_company2module(one[0].id, (await sq.models.rbac_module.findOne({ where: { name: 'customer' } })).id);
         }
         await one[0].save();
