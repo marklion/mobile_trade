@@ -2,19 +2,33 @@ const db_opt = require('./db_opt');
 const moment = require('moment');
 
 module.exports = {
+    get_user_by_token: async function (_token) {
+        let sq = db_opt.get_sq();
+        let user = await sq.models.rbac_user.findOne({
+            where: { online_token: _token },
+        });
+        if (user) {
+            let now = moment();
+            let last = moment(user.online_time);
+            if (now.diff(last, 'day') < 20) {
+                user.online_time = now.format('YYYY-MM-DD HH:mm:ss');
+                await user.save();
+            }
+            else {
+                user = null;
+            }
+        }
+
+        return user;
+    },
     rbac_check: async function (_online_token, _req_module, _is_write) {
         let ret = '未登录';
         let sq = db_opt.get_sq();
         if (!_online_token) {
             return ret;
         }
-        let user = await sq.models.rbac_user.findOne({
-            where: { online_token: _online_token },
-        });
-        let now = moment();
-        let last = moment(user.online_time);
-        if (user && now.diff(last, 'day') < 20) {
-            user.online_time = now.format('YYYY-MM-DD HH:mm:ss');
+        let user = await this.get_user_by_token(_online_token);
+        if (user) {
             ret = '无权限，需要' + _req_module + '模块的' + (_is_write ? '写' : '读') + '权限';
             let roles = await user.getRbac_roles();
             for (let i = 0; i < roles.length; i++) {
@@ -46,10 +60,7 @@ module.exports = {
         return ret;
     },
     get_company_by_token: async function (_token) {
-        let sq = db_opt.get_sq();
-        let user = await sq.models.rbac_user.findOne({
-            where: { online_token: _token },
-        });
+        let user = await this.get_user_by_token(_token);
         let company = null;
         if (user) {
             company = await user.getCompany();
@@ -84,8 +95,11 @@ module.exports = {
                 name: _name,
             },
         });
-        await this.bind_company2module(one[0].id, (await sq.models.rbac_module.findOne({ where: { name: 'customer' } })).id);
+        if (!one[1]) {
+            await this.bind_company2module(one[0].id, (await sq.models.rbac_module.findOne({ where: { name: 'customer' } })).id);
+        }
         await one[0].save();
+        return one[0];
     },
     del_company: async function (_id) {
         let sq = db_opt.get_sq();
@@ -129,7 +143,7 @@ module.exports = {
         let ret = null;
         if (company) {
             if (_name == 'admin') {
-                throw {err_msg: '不允许创建名为admin的角色'};
+                throw { err_msg: '不允许创建名为admin的角色' };
             }
             let match_role = await company.getRbac_roles({
                 where: {
@@ -269,7 +283,7 @@ module.exports = {
         }
         return { count, rows }
     },
-    get_all_modules:async function(_pageNo, _company){
+    get_all_modules: async function (_pageNo, _company) {
         let sq = db_opt.get_sq();
         let condition = {
             order: [['id', 'ASC']],
@@ -278,13 +292,11 @@ module.exports = {
         };
         let ret = [];
         let count = 0;
-        if (_company)
-        {
+        if (_company) {
             ret = await _company.getRbac_modules(condition);
             count = await _company.countRbac_modules();
         }
-        else
-        {
+        else {
             ret = await sq.models.rbac_module.findAll(condition);
             count = await sq.models.rbac_module.count();
         }

@@ -68,6 +68,18 @@ Get Self Module
     ${modules}  Req Get to Server  /rbac/module_get_all  ${token}  all_module
     RETURN  ${modules}
 
+Get Self Module By Name
+    [Arguments]  ${token}  ${module_name}
+    ${modules}  Req Get to Server  /rbac/module_get_all  ${token}  all_module
+    ${module_added}  Set Variable  ${null}
+    FOR  ${itr}  IN  @{modules}
+        ${itr_name}  Get From Dictionary  ${itr}  name
+        IF  $itr_name == $module_name
+            ${module_added}  Set Variable  ${itr}
+        END
+    END
+    RETURN  ${module_added}
+
 Get All Roles
     [Arguments]  ${token}
     ${resp}  Req Get to Server  /rbac/role_get_all  ${token}  all_role
@@ -85,31 +97,74 @@ Get Role By Name
 
 Bind Role To Module
     [Arguments]  ${token}  ${role_name}  ${module_name}
-    Add Role  ${token}  ${role_name}
     ${role_added}  Get Role By Name  ${token}  ${role_name}
-    @{moduels}  Get Self Module  ${token}
-    Should Not Be Empty  @{moduels}
-    FOR  ${itr}  IN  @{moduels}
-        ${itr_name}  Get From Dictionary  ${itr}  name
-        IF  $itr_name == $module_name
-            ${bind_req}  Create Dictionary  role_id=${role_added}[id]  module_id=${itr}[id]
-            ${resp}  Req to Server  /rbac/bind_module2role  ${token}  ${bind_req}
-            Should Be True  ${resp}[result]
-            Exit For Loop
-        END
-    END
+    ${module_found}  Get Self Module By Name  ${token}  ${module_name}
+    ${bind_req}  Create Dictionary  role_id=${role_added}[id]  module_id=${module_found}[id]
+    ${resp}  Req to Server  /rbac/bind_module2role  ${token}  ${bind_req}
+    Should Be True  ${resp}[result]
 
 Unbind Role from Module
     [Arguments]  ${token}  ${role_name}  ${module_name}
     ${role_added}  Get Role By Name  ${token}  ${role_name}
-    @{modules}  Get Self Module  ${token}
-    ${module_added}  Set Variable  ${None}
-    FOR  ${itr}  IN  @{modules}
-        ${itr_name}  Get From Dictionary  ${itr}  name
-        IF  $itr_name == $module_name
-            ${module_added}  Set Variable  ${itr}
-        END
-    END
+    ${module_added}  Get Self Module By Name  ${token}  ${module_name}
     ${req}  Create Dictionary  role_id=${role_added}[id]  module_id=${module_added}[id]
     ${resp}  Req to Server  /rbac/unbind_module2role  ${token}  ${req}
     Should Be True  ${resp}[result]
+
+Bind Role To User
+    [Arguments]  ${token}  ${role_name}  ${phone}
+    ${role_added}  Get Role By Name  ${token}  ${role_name}
+    ${req}  Create Dictionary  role_id=${role_added}[id]  phone=${phone}
+    ${resp}  Req to Server  /rbac/bind_role2user  ${token}  ${req}
+    Should Be True  ${resp}[result]
+
+Unbind Role From User
+    [Arguments]  ${token}  ${role_name}  ${phone}
+    ${role_added}  Get Role By Name  ${token}  ${role_name}
+    ${req}  Create Dictionary  role_id=${role_added}[id]  phone=${phone}
+    ${resp}  Req to Server  /rbac/unbind_role2user  ${token}  ${req}
+    Should Be True  ${resp}[result]
+
+New User Login
+    [Arguments]  ${phone}  ${company_name}  ${open_id}
+    ${req}  Create Dictionary  phone=${phone}  company_name=${company_name}  open_id=${open_id}
+    ${resp}  Req to Server  /rbac/fetch_user  ABCDDD  ${req}
+    ${token}  User Login With Phone  ${phone}
+    RETURN  ${token}
+
+Add Module To User
+    [Arguments]  ${token}  ${phone}  ${module_name}  ${read_only}=${False}
+    FOR  ${itr}  IN RANGE  4
+        IF  $itr == 0 or $itr == 1
+            Add Role  ${token}  role_name_${itr}  ${True}
+        ELSE
+            Add Role  ${token}  role_name_${itr}
+        END
+    END
+    ${ran_role}  Evaluate  random.randint(2, 3)
+    IF  $read_only
+        ${ran_role}  Evaluate  random.randint(0, 1)
+    END
+    ${role_added}  Get Role By Name  ${token}  role_name_${ran_role}
+    Bind Role To Module  ${token}  ${role_added}[name]  ${module_name}
+    Bind Role To User  ${token}  ${role_added}[name]  ${phone}
+
+Add Module To Company
+    [Arguments]  ${company_id}  ${module_name}
+    ${module_added}  Get Self Module By Name  ABCD  ${module_name}
+    ${req}  Create Dictionary  company_id=${company_id}  module_id=${module_added}[id]
+    ${resp}  Req to Server  /rbac/company_add_module  ABCD  ${req}
+    Should Be True  ${resp}[result]
+
+Del Module from Company
+    [Arguments]  ${company_id}  ${module_name}
+    ${module_added}  Get Self Module By Name  ABCD  ${module_name}
+    ${req}  Create Dictionary  company_id=${company_id}  module_id=${module_added}[id]
+    ${resp}  Req to Server  /rbac/company_del_module  ABCD  ${req}
+    Should Be True  ${resp}[result]
+
+Get Self User
+    [Arguments]  ${token}
+    ${req}  Create Dictionary
+    ${resp}  Req to Server  /rbac/user_get_self  ${token}  ${req}
+    RETURN  ${resp}

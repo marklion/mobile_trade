@@ -31,6 +31,26 @@ async function init_super_user() {
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('global', '全局模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('config', '公司配置管理模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('customer', '客户模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('plan', '计划管理模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('cash', '资金管理模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('scale', '计量模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('bid', '竞价模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('buy', '采购模块')).id );
+    let all_modules = await sq.models.rbac_module.findAll();
+    let mkapi = require('./api_utils');
+    for (let index = 0; index < all_modules.length; index++) {
+        const element = all_modules[index];
+        mkapi('/rbac/verify_' + element.name + '_write', element.name, true, true, {}, {
+            result:{type:Boolean, mean:'无意义', example:true}
+        },element.name + '权限读写校验', '验证是否有' + element.description + '的读写权限').add_handler(async (body, token) => {
+            return {result:true};
+        }).install(app);
+        mkapi('/rbac/verify_' + element.name + '_read', element.name, false, true, {}, {
+            result:{type:Boolean, mean:'无意义', example:true}
+        },element.name + '权限只读校验', '验证是否有' + element.description + '的读权限').add_handler(async (body, token) => {
+            return {result:true};
+        }).install(app);
+    }
 }
 init_super_user();
 

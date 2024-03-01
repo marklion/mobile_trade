@@ -48,6 +48,16 @@ Reg New Admin
     ${token}  User Login With Phone  19911991199
     Should Not Be Empty  ${token}
 
+Company Module Config
+    [Setup]  RBAC reset
+    [Teardown]  RBAC reset
+    ${ran_com}  Create Several Company And Pick One
+    Add Module To Company  ${ran_com}[id]  bid
+    ${ran_com}  Search A Company By Name  ${ran_com}[name]
+    Has Module In Bound Modules  ${ran_com}[bound_modules]  bid
+    Del Module from Company  ${ran_com}[id]  bid
+    ${ran_com}  Search A Company By Name  ${ran_com}[name]
+    Has Module In Bound Modules  ${ran_com}[bound_modules]  bid  True
 
 
 

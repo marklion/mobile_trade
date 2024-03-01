@@ -6,6 +6,14 @@ Library  Collections
 ${remote_url}  http://localhost:44510/api/v1
 
 *** Keywords ***
+No Permission Req to Server
+    [Arguments]  ${url}  ${token}  ${body}
+    ${real_url}  Set Variable  ${remote_url}${url}
+    ${headers}  Create Dictionary  token=${token}
+    ${resp}  POST  url=${real_url}  headers=${headers}  json=${body}
+    Should Not Be Empty  ${resp.json()}[err_msg]
+    Should Contain  ${resp.json()}[err_msg]  权限
+
 Req to Server
     [Arguments]  ${url}  ${token}  ${body}
     ${real_url}  Set Variable  ${remote_url}${url}
@@ -33,5 +41,17 @@ Req Get to Server
     RETURN  ${ret}
 
 Verify Module Permission
-    [Arguments]  ${token}  ${module_name}
-    Req to Server  /rbac/verify_${module_name}  ${token}  {}
+    [Arguments]  ${token}  ${module_name}  ${cannot}=${False}  ${just_read}=${False}
+    ${url_read}  Set Variable  /rbac/verify_${module_name}_read
+    ${url_write}  Set Variable  /rbac/verify_${module_name}_write
+    ${req}  Create Dictionary
+    IF  $cannot
+        No Permission Req to Server  ${url_read}  ${token}  ${req}
+        No Permission Req to Server  ${url_write}  ${token}  ${req}
+    ELSE
+        Req to Server  ${url_read}  ${token}  ${req}
+        IF  $just_read is False
+            Req to Server  ${url_write}  ${token}  ${req}
+        END
+    END
+
