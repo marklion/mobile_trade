@@ -217,6 +217,7 @@ function install(app) {
         phone: { type: String, have_to: true, mean: '手机号', example: '12345678901' },
         company_name: { type: String, have_to: true, mean: '公司名', example: 'company_example' },
         open_id: { type: String, have_to: false, mean: '微信open_id', example: 'open_id_example' },
+        name: { type: String, have_to: false, mean: '姓名', example: 'name_example' },
     }, {
         token: { type: String, mean: '登录token', example: 'ABCD' },
     }, '更新用户信息', '更新用户信息').add_handler(async function (body, token) {
@@ -226,6 +227,10 @@ function install(app) {
         if (company && user) {
             await user.setCompany(company);
             user.wx_openid = body.open_id;
+            user.name = body.name;
+            let cust_role = await rbac_lib.add_role('客户', '客户', false, company);
+            await rbac_lib.connect_user2role(user.id, cust_role.id);
+            await rbac_lib.connect_role2module(cust_role.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'customer' } })).id);
         }
         await user.save();
         ret.token = await rbac_lib.user_login(body.phone);

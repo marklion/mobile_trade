@@ -22,3 +22,9 @@ RBAC reset
 Company Reset
     Clear Table  company_module
     Clear Table  company
+
+Stuff Reset
+    Clear Table  stuff
+
+Contract Reset
+    Clear Table  contract

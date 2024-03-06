@@ -97,15 +97,18 @@ Saler Verify RBAC Api
     Add Module To Company  ${ran_com}[id]  scale
     Add Module To Company  ${ran_com}[id]  bid
     Add Module To Company  ${ran_com}[id]  buy
+    Add Module To Company  ${ran_com}[id]  stuff
     ${token}  Login As Admin Of Company  ${ran_com}[id]
     New User Login  ${test_user_phone}  ${ran_com}[name]  11111122222
     Add Module To User  ${token}  ${test_user_phone}  plan
     Add Module To User  ${token}  ${test_user_phone}  cash  ${True}
     Add Module To User  ${token}  ${test_user_phone}  scale
+    Add Module To User  ${token}  ${test_user_phone}  stuff
     ${test_token}  User Login With Phone  ${test_user_phone}
     Verify Module Permission  ${test_token}  plan
     Verify Module Permission  ${test_token}  cash  ${False}  ${True}
     Verify Module Permission  ${test_token}  scale
+    Verify Module Permission  ${test_token}  stuff
     Verify Module Permission  ${test_token}  config  ${True}
     Verify Module Permission  ${test_token}  bid  ${True}
     Del Module from Company  ${ran_com}[id]  plan

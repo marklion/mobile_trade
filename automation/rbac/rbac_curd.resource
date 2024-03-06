@@ -32,9 +32,9 @@ User Login With Phone
     RETURN  ${resp}[token]
 
 Login As Admin Of Company
-    [Arguments]  ${company_id}
-    ${admin}  Reg Company Admin  ${company_id}  12345678901
-    ${token}  User Login With Phone  12345678901
+    [Arguments]  ${company_id}  ${phone}=12345678901
+    ${admin}  Reg Company Admin  ${company_id}  ${phone}
+    ${token}  User Login With Phone  ${phone}
     RETURN  ${token}
 Create Several Company And Pick One
     FOR  ${itr}  IN RANGE  11
@@ -43,6 +43,13 @@ Create Several Company And Pick One
     END
     ${ran_no}  Evaluate  random.randint(0, 10)
     ${found}  Search A Company By Name  test_company_${ran_no}
+    RETURN  ${found}
+
+Create One Company
+    [Arguments]  ${company_name}
+    ${add_req}  Create Dictionary  name=${company_name}
+    ${resp}  Req to Server  /rbac/company_add  ABCD  ${add_req}
+    ${found}  Search A Company By Name  ${company_name}
     RETURN  ${found}
 
 Has Module In Bound Modules
@@ -126,8 +133,8 @@ Unbind Role From User
     Should Be True  ${resp}[result]
 
 New User Login
-    [Arguments]  ${phone}  ${company_name}  ${open_id}
-    ${req}  Create Dictionary  phone=${phone}  company_name=${company_name}  open_id=${open_id}
+    [Arguments]  ${phone}  ${company_name}  ${open_id}  ${name}=test_user
+    ${req}  Create Dictionary  phone=${phone}  company_name=${company_name}  open_id=${open_id}  name=${name}
     ${resp}  Req to Server  /rbac/fetch_user  ABCDDD  ${req}
     ${token}  User Login With Phone  ${phone}
     RETURN  ${token}

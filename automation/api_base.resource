@@ -19,6 +19,7 @@ Req to Server
     ${real_url}  Set Variable  ${remote_url}${url}
     ${headers}  Create Dictionary  token=${token}
     ${resp}  POST  url=${real_url}  headers=${headers}  json=${body}
+    Log  ${resp.json()}
     Should Be Empty  ${resp.json()}[err_msg]
     RETURN  ${resp.json()}[result]
 
@@ -38,6 +39,7 @@ Req Get to Server
         END
         Exit For Loop If  ${cur_page_no} > ${page} and ${page} != -1
     END
+    Log  ${ret}
     RETURN  ${ret}
 
 Verify Module Permission
