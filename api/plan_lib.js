@@ -1,5 +1,6 @@
 const db_opt = require('./db_opt');
 const moment = require('moment');
+const rbac_lib = require('./rbac_lib');
 
 module.exports = {
     create_single_plan: async function (_new_plan, _stuff_id, _buy_company_id, _driver_id, _main_vehicle_id, _behind_vehicle_id) {
@@ -29,11 +30,11 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0].toJSON();
     },
-    fetch_stuff: async function (_name, _price, _comment, _company) {
+    fetch_stuff: async function (_name, _price, _comment, _company, _expect_count) {
         let sq = db_opt.get_sq();
         let stuff_found = await _company.getStuff({ where: { name: _name } });
         if (stuff_found.length != 1) {
-            stuff_found = await sq.models.stuff.create({ name: _name, price: _price, comment: _comment });
+            stuff_found = await sq.models.stuff.create({ name: _name, price: _price, comment: _comment , expect_count: _expect_count});
             await _company.addStuff(stuff_found);
         }
         let ret = {};
@@ -41,6 +42,7 @@ module.exports = {
         if (stuff_found.length == 1) {
             stuff_found[0].price = _price;
             stuff_found[0].comment = _comment;
+            stuff_found[0].expect_count = _expect_count;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
@@ -142,7 +144,7 @@ module.exports = {
             { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle' },
             { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle' },
             { model: db_opt.get_sq().models.driver },
-            { model: db_opt.get_sq().models.stuff },
+            { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company]},
             { model: db_opt.get_sq().models.plan_history, order: [[db_opt.get_sq().fn('datetime', db_opt.get_sq().col('time')), 'ASC']]}
         ];
     },
@@ -200,7 +202,86 @@ module.exports = {
         }
         return { rows: sold_plans, count: count };
     },
-    confirm_single_plan: async function (_plan_id, _comment) {
+    confirm_single_plan: async function (_plan_id, _token) {
+        await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
+            plan.status = 1;
+            await plan.save();
+            await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            await this.verify_plan_pay(plan);
+        });
+    },
+    get_single_plan_by_id: async function (_plan_id) {
+        let ret = {};
+        let sq = db_opt.get_sq();
+        ret = await sq.models.plan.findByPk(_plan_id, { include: this.plan_detail_include() });
+
+        return ret;
+    },
+    verify_plan_pay: async function (_plan) {
+        if (_plan.status == 1) {
+            let plan = await this.get_single_plan_by_id(_plan.id);
+            let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+            let cur_balance = 0;
+            if (contracts.length == 1) {
+                cur_balance = contracts[0].balance;
+            }
+            console.log(plan.stuff.toJSON());
+            let one_vehicle_cost = plan.stuff.price * plan.stuff.expect_count;
+            let paid_vehicle_count = await plan.company.countPlans({
+                where: {
+                    [db_opt.Op.and]: [
+                        {
+                            status: 2,
+                        },
+                        {
+                            stuffId: plan.stuff.id
+                        }
+                    ]
+                },
+            });
+            let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
+            console.log('cur_balance:', cur_balance, 'already_verified_cash:', already_verified_cash, 'one_vehicle_cost:', one_vehicle_cost, 'paid_vehicle_count:', paid_vehicle_count);
+            if ((cur_balance - already_verified_cash) >= one_vehicle_cost) {
+                _plan.status = 2;
+                await _plan.save();
+                await this.rp_history_pay(_plan, '自动');
+            }
+        }
+    },
+    manual_pay_plan: async function (_plan_id, _token) {
+        await this.action_in_plan(_plan_id, _token, 1, async (plan) => {
+            plan.status = 2;
+            await plan.save();
+            await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
+        });
+    },
+    action_in_plan: async function (_plan_id, _token, _expect_status, _action) {
+        let sq = db_opt.get_sq();
+        let opt_company = await rbac_lib.get_company_by_token(_token);
+        let plan = await sq.models.plan.findByPk(_plan_id);
+        if (plan) {
+            let stuff = await plan.getStuff({ paranoid: false });
+            if (stuff) {
+                let company = await stuff.getCompany();
+                if (company && opt_company && opt_company.id == company.id) {
+                    if (plan.status == _expect_status) {
+                        await _action(plan);
+                    }
+                    else {
+                        throw { err_msg: '计划状态错误' };
+                    }
+                }
+                else {
+                    throw { err_msg: '无权限' };
+                }
+            }
+            else {
+                throw { err_msg: '未找到货物' };
+            }
+        }
+        else {
+            throw { err_msg: '未找到计划' };
+        }
     },
     record_plan_history: async function (_plan, _operator, _action_type) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type });
@@ -208,4 +289,11 @@ module.exports = {
     rp_history_create: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '创建');
     },
+    rp_history_confirm: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '确认');
+    },
+    rp_history_pay: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '验款');
+    },
+
 };

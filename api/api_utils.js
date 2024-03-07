@@ -33,7 +33,9 @@ function make_params_help_info(params, is_params = true) {
             rows.push(result_array);
         }
         if (params[itr].type == Object || params[itr].type == Array) {
-            let one_sub_p = { ...params[itr] };
+            let one_sub_p = {
+                ...
+                params[itr] };
             one_sub_p.name = itr;
             sub_p.push(one_sub_p);
         }

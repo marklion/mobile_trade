@@ -75,6 +75,7 @@ let db_opt = {
             comment: { type: DataTypes.STRING },
             next_price: { type: DataTypes.FLOAT },
             change_last_minutes: { type: DataTypes.INTEGER },
+            expect_count: { type: DataTypes.FLOAT },
         },
         contract:{
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -86,6 +87,13 @@ let db_opt = {
             time: { type: DataTypes.STRING },
             operator: { type: DataTypes.STRING },
             action_type: { type: DataTypes.STRING },
+        },
+        balance_history: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            time: { type: DataTypes.STRING },
+            operator: { type: DataTypes.STRING },
+            comment: { type: DataTypes.STRING },
+            cash_increased: { type: DataTypes.FLOAT },
         },
     },
     make_associate:function(_sq){
@@ -108,6 +116,8 @@ let db_opt = {
         _sq.models.company.hasMany(_sq.models.contract, {as: 'sale_contracts', foreignKey: 'saleCompanyId'});
         _sq.models.stuff.belongsToMany(_sq.models.contract, {through: 'contract_stuff'});
         _sq.models.contract.belongsToMany(_sq.models.stuff, {through: 'contract_stuff'});
+        _sq.models.balance_history.belongsTo(_sq.models.contract);
+        _sq.models.contract.hasMany(_sq.models.balance_history);
 
         _sq.models.plan.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.plan);

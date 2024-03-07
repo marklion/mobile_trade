@@ -51,6 +51,7 @@ function install(app) {
         name: { type: String, have_to: true, mean: '货物名称', example: '货物名称' },
         price: { type: Number, have_to: true, mean: '单价', example: 1 },
         comment: { type: String, have_to: false, mean: '备注', example: '备注' },
+        expect_count: { type: Number, have_to: false, mean: '预期数量', example: 1 },
     }, {
         id: { type: Number, mean: '货物ID', example: 1 },
         name: { type: String, mean: '货物名称', example: '货物名称' },
@@ -61,7 +62,7 @@ function install(app) {
     }, '获取货物', '获取货物').add_handler(async function (body, token) {
         let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
-        return await plan_lib.fetch_stuff(body.name, body.price, body.comment, company);
+        return await plan_lib.fetch_stuff(body.name, body.price, body.comment, company, body.expect_count);
     }).install(app);
     mkapi('/stuff/get_all', 'stuff', false, true, {
     }, {
@@ -343,11 +344,18 @@ function install(app) {
     }).install(app);
     mkapi('/plan/confirm_single_plan', 'plan', true, true, {
         plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
-        comment: { type: String, have_to: false, mean: '备注', example: '备注' }
     }, {
         result: { type: Boolean, mean: '结果', example: true }
     }, '确认计划', '确认计划').add_handler(async function (body, token) {
-        await plan_lib.confirm_single_plan(body.plan_id, body.comment);
+        await plan_lib.confirm_single_plan(body.plan_id, token);
+        return { result: true };
+    }).install(app);
+    mkapi('/plan/pay', 'cash', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '手动验款', '手动验款').add_handler(async function (body, token) {
+        await plan_lib.manual_pay_plan(body.plan_id, token);
         return { result: true };
     }).install(app);
 }

@@ -15,11 +15,13 @@ Prepare Companies And Users
     ${buy_company1}  Create One Company  bc1
     ${buy_company2}  Create One Company  bc2
     ${sale_company}  Create One Company  sc
-    ${sc_admin_token}  Login As Admin Of Company  ${sale_company}[id]  1234
+    ${sc_admin_token}  Login As Admin Of Company  ${sale_company}[id]  1234  sc_admin
     Add Module To Company  ${sale_company}[id]  stuff
     Add Module To Company  ${sale_company}[id]  plan
+    Add Module To Company  ${sale_company}[id]  cash
     Add Module To User  ${sc_admin_token}  1234  stuff
     Add Module To User  ${sc_admin_token}  1234  plan
+    Add Module To User  ${sc_admin_token}  1234  cash
     ${bc1_user_token}  New User Login  5678  ${buy_company1}[name]  2233  bu1
     ${bc2_user_token}  New User Login  9987  ${buy_company2}[name]  1123  bu2
     Set Suite Variable  ${buy_company1}
@@ -34,8 +36,8 @@ Clean Up Companies And Users
     Company Reset
 
 Add A Stuff To Sale
-    [Arguments]  ${stuff_name}  ${stuff_price}  ${stuff_comment}
-    ${req}  Create Dictionary  name=${stuff_name}  price=${stuff_price}  comment=${stuff_comment}
+    [Arguments]  ${stuff_name}  ${stuff_price}  ${stuff_comment}  ${expect_count}=${22}
+    ${req}  Create Dictionary  name=${stuff_name}  price=${stuff_price}  comment=${stuff_comment}  expect_count=${expect_count}
     Req to Server  /stuff/fetch  ${sc_admin_token}  ${req}
 
 Del A Stuff From Sale
@@ -99,6 +101,21 @@ Del A Stuff From Contract
     ${req}  Create Dictionary  stuff_id=${target_stuff}[id]  contract_id=${target_contract}[id]
     Req to Server  /contract/del_stuff  ${sc_admin_token}  ${req}
 
+Charge To A Company
+    [Arguments]  ${company_id}  ${cash}  ${comment}=test_charge
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
+    ${contract_id}  Set Variable
+    FOR  ${itr}  IN  @{found_contracts}
+        ${target_company_id}  Get From Dictionary  ${itr}[buy_company]  id
+        IF  $target_company_id == $company_id
+            ${contract_id}  Set Variable  ${itr}[id]
+            Exit For Loop
+        END
+    END
+    ${req}  Create Dictionary  contract_id=${contract_id}   cash_increased=${cash}  comment=${comment}
+    Req to Server  /contract/charge  ${sc_admin_token}  ${req}
+    RETURN  ${contract_id}
+
 Prepare Sale and Buy
     Prepare Companies And Users
     Add A Stuff To Sale  lng  ${1211}  lng_comment
@@ -113,7 +130,7 @@ Clean Up Sale and Buy
     Clean Up Companies And Users
 
 Create A Plan
-    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途
+    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途
     ${req}  Create Dictionary
     ...    behind_vehicle_id=${bv_id}
     ...    main_vehicle_id=${mv_id}
@@ -123,4 +140,14 @@ Create A Plan
     ...    plan_time=${plan_time}
     ...    stuff_id=${test_stuff}[id]
     ...    use_for=${use_for}
-    ${resp}  Req to Server  /plan/create_single_plan  ${bc1_user_token}  ${req}
+    ${resp}  Req to Server  /plan/create_single_plan  ${token}  ${req}
+    RETURN  ${resp}
+
+Confirm A Plan
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/confirm_single_plan  ${sc_admin_token}  ${req}
+Manual Pay A Plan
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/pay  ${sc_admin_token}  ${req}

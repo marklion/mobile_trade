@@ -135,6 +135,7 @@ function install(app) {
     mkapi('/rbac/reg_company_admin', 'global', true, true, {
         phone: { type: String, have_to: true, mean: '手机号', example: '12345678901' },
         company_id: { type: Number, have_to: true, mean: '公司id', example: 123 },
+        name:{type:String, have_to:false, mean:'姓名', example:'name_example'},
     }, {
         result: { type: Boolean, mean: '注册结果', example: true },
     }, '注册公司管理员', '注册公司管理员').add_handler(async function (body, token) {
@@ -151,6 +152,8 @@ function install(app) {
                     await rbac_lib.connect_user2role(user.id, company_admin_role.id);
                     ret.result = true;
                 }
+                user.name = body.name;
+                await user.save();
             }
         }
         return ret;

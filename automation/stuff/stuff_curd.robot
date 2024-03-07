@@ -55,5 +55,26 @@ Stuff via Contract Maintain
     Length Should Be  ${stuffs_found}  1
     Should Be Equal As Numbers  ${stuffs_found[0]}[price]  -1
 
-
-
+Contract Charge And Check
+    [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset
+    [Setup]  Run Keywords  Add A Company As Customer  ${buy_company1}[id]
+    ...    AND  Add A Company As Customer  ${buy_company2}[id]
+    ${contract_id}  Charge To A Company  ${buy_company1}[id]  ${1200}  abcd
+    ${found_contracts}  Req Get to Server  /contract/get_all_buy  ${bc1_user_token}  contracts
+    Should Be Equal As Numbers  ${found_contracts[0]}[balance]  ${1200}
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
+    FOR  ${itr}  IN  @{found_contracts}
+        ${cust_name}  Get From Dictionary  ${itr}[buy_company]  name
+        IF  $cust_name == 'bc1'
+            Should Be Equal As Numbers  ${itr}[balance]  1200
+            Exit For Loop
+        END
+    END
+    ${req}  Create Dictionary  contract_id=${contract_id}
+    ${resp}  Req Get to Server  /contract/get_self_history  ${bc1_user_token}  histories  ${-1}  &{req}
+    Should Be Equal As Numbers  ${resp}[0][cash_increased]  1200
+    Should Be Equal As Strings  ${resp}[0][comment]  abcd
+    ${req}  Create Dictionary  contract_id=${contract_id}
+    ${resp}  Req Get to Server  /contract/get_company_history  ${sc_admin_token}  histories  ${-1}  &{req}
+    Should Be Equal As Numbers  ${resp}[0][cash_increased]  1200
+    Should Be Equal As Strings  ${resp}[0][comment]  abcd

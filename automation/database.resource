@@ -28,3 +28,9 @@ Stuff Reset
 
 Contract Reset
     Clear Table  contract
+    Clear Table  contract_stuff
+    Clear Table  balance_history
+
+Plan Reset
+    Clear Table  plan
+    Clear Table  plan_history

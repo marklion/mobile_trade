@@ -28,6 +28,10 @@
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-webpack-plugin": "^4.0.1",
     "node-pre-gyp": "^0.17.0",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"

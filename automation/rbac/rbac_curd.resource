@@ -20,8 +20,8 @@ Search A Company By Name
     RETURN  ${found_content}
 
 Reg Company Admin
-    [Arguments]  ${company_id}  ${phone}
-    ${req}  Create Dictionary  company_id=${company_id}  phone=${phone}
+    [Arguments]  ${company_id}  ${phone}  ${name}=company_admin
+    ${req}  Create Dictionary  company_id=${company_id}  phone=${phone}  name=${name}
     ${resp}  Req to Server  /rbac/reg_company_admin  ABCD  ${req}
     Should Be True  ${resp}[result]
 
@@ -32,8 +32,8 @@ User Login With Phone
     RETURN  ${resp}[token]
 
 Login As Admin Of Company
-    [Arguments]  ${company_id}  ${phone}=12345678901
-    ${admin}  Reg Company Admin  ${company_id}  ${phone}
+    [Arguments]  ${company_id}  ${phone}=12345678901  ${name}=company_admin
+    ${admin}  Reg Company Admin  ${company_id}  ${phone}  ${name}
     ${token}  User Login With Phone  ${phone}
     RETURN  ${token}
 Create Several Company And Pick One
