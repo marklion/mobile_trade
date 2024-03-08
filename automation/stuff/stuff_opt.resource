@@ -15,13 +15,16 @@ Prepare Companies And Users
     ${buy_company1}  Create One Company  bc1
     ${buy_company2}  Create One Company  bc2
     ${sale_company}  Create One Company  sc
+    Company Set Script  ${sale_company}[id]  normal
     ${sc_admin_token}  Login As Admin Of Company  ${sale_company}[id]  1234  sc_admin
     Add Module To Company  ${sale_company}[id]  stuff
     Add Module To Company  ${sale_company}[id]  plan
     Add Module To Company  ${sale_company}[id]  cash
+    Add Module To Company  ${sale_company}[id]  scale
     Add Module To User  ${sc_admin_token}  1234  stuff
     Add Module To User  ${sc_admin_token}  1234  plan
     Add Module To User  ${sc_admin_token}  1234  cash
+    Add Module To User  ${sc_admin_token}  1234  scale
     ${bc1_user_token}  New User Login  5678  ${buy_company1}[name]  2233  bu1
     ${bc2_user_token}  New User Login  9987  ${buy_company2}[name]  1123  bu2
     Set Suite Variable  ${buy_company1}
@@ -116,6 +119,19 @@ Charge To A Company
     Req to Server  /contract/charge  ${sc_admin_token}  ${req}
     RETURN  ${contract_id}
 
+Get Cash Of A Company
+    [Arguments]  ${company_name}
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
+    ${ret}  Set Variable  ${0}
+    FOR  ${itr}  IN  @{found_contracts}
+        ${cust_name}  Get From Dictionary  ${itr}[buy_company]  name
+        IF  $cust_name == $company_name
+            ${ret}  Set Variable  ${itr}[balance]
+            Exit For Loop
+        END
+    END
+    RETURN  ${ret}
+
 Prepare Sale and Buy
     Prepare Companies And Users
     Add A Stuff To Sale  lng  ${1211}  lng_comment
@@ -151,3 +167,22 @@ Manual Pay A Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /plan/pay  ${sc_admin_token}  ${req}
+Driver Online
+    [Arguments]  ${phone}  ${open_id}  ${id_card}
+    ${req}  Create Dictionary  phone=${phone}  open_id=${open_id}  id_card=${id_card}
+    Req to Server  /driver/update  none  ${req}
+    ${req}  Create Dictionary   open_id=${open_id}
+    ${resp}  Req to Server  /driver/online  none  ${req}
+    RETURN  ${resp}
+Check In A Plan
+    [Arguments]  ${plan}
+    ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
+    ${req}  Create Dictionary  open_id=${driver}[open_id]
+    ${resp}  Req Get to Server  /driver/self_plan  none  plans  -1  &{req}
+    Length Should Be  ${resp}  1
+    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[0]}[id]
+    Req to Server  /plan/check_in  none  ${req}
+Deliver A Plan
+    [Arguments]  ${plan}  ${count}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
+    Req to Server  /plan/deliver  ${sc_admin_token}  ${req}

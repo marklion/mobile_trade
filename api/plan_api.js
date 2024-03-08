@@ -2,50 +2,62 @@ const mkapi = require('./api_utils');
 const plan_lib = require('./plan_lib');
 const db_opt = require('./db_opt');
 const plan_detail_define = {
-        id: { type: Number, mean: '计划ID', example: 1 },
-        plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
-        unit_price: { type: Number, mean: '单价', example: 1 },
-        status: { type: Number, mean: '状态', example: 1 },
-        comment: { type: String, mean: '备注', example: '备注' },
-        from_bidding: { type: Boolean, mean: '是否来自竞价', example: true },
-        count: { type: Number, mean: '数量', example: 1 },
-        p_weight: { type: Number, mean: '皮重', example: 1 },
-        m_weight: { type: Number, mean: '毛重', example: 1 },
-        p_time: { type: String, mean: '皮重时间', example: '2020-01-01 12:00:00' },
-        m_time: { type: String, mean: '毛重时间', example: '2020-01-01 12:00:00' },
-        use_for: { type: String, mean: '用途', example: '用途' },
-        drop_address: { type: String, mean: '卸货地址', example: '卸货地址' },
-        register_time: { type: String, mean: '登记时间', example: '2020-01-01 12:00:00' },
-        register_number: { type: Number, mean: '登记号', example: 1 },
-        stuff: { type: Object, mean: '货物', explain:{
+    id: { type: Number, mean: '计划ID', example: 1 },
+    plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
+    unit_price: { type: Number, mean: '单价', example: 1 },
+    status: { type: Number, mean: '状态', example: 1 },
+    comment: { type: String, mean: '备注', example: '备注' },
+    from_bidding: { type: Boolean, mean: '是否来自竞价', example: true },
+    count: { type: Number, mean: '数量', example: 1 },
+    p_weight: { type: Number, mean: '皮重', example: 1 },
+    m_weight: { type: Number, mean: '毛重', example: 1 },
+    p_time: { type: String, mean: '皮重时间', example: '2020-01-01 12:00:00' },
+    m_time: { type: String, mean: '毛重时间', example: '2020-01-01 12:00:00' },
+    use_for: { type: String, mean: '用途', example: '用途' },
+    drop_address: { type: String, mean: '卸货地址', example: '卸货地址' },
+    register_time: { type: String, mean: '登记时间', example: '2020-01-01 12:00:00' },
+    register_number: { type: Number, mean: '登记号', example: 1 },
+    stuff: {
+        type: Object, mean: '货物', explain: {
             id: { type: Number, mean: '货物ID', example: 1 },
             name: { type: String, mean: '货物名称', example: '货物名称' },
-        } },
-        company: { type: Object, mean: '购买公司', explain:{
+        }
+    },
+    company: {
+        type: Object, mean: '购买公司', explain: {
             id: { type: Number, mean: '公司ID', example: 1 },
             name: { type: String, mean: '公司名称', example: '公司名称' },
-        } },
-        driver: { type: Object, mean: '司机', explain:{
+        }
+    },
+    driver: {
+        type: Object, mean: '司机', explain: {
             id: { type: Number, mean: '司机ID', example: 1 },
             name: { type: String, mean: '司机名称', example: '司机名称' },
             phone: { type: String, mean: '司机电话', example: '司机电话' },
             id_card: { type: String, mean: '司机身份证', example: '司机身份证' },
-        } },
-        main_vehicle: { type: Object, mean: '主车', explain:{
+        }
+    },
+    main_vehicle: {
+        type: Object, mean: '主车', explain: {
             id: { type: Number, mean: '车辆ID', example: 1 },
             plate: { type: String, mean: '车牌', example: '车牌' },
-        } },
-        behind_vehicle: { type: Object, mean: '挂车', explain:{
+        }
+    },
+    behind_vehicle: {
+        type: Object, mean: '挂车', explain: {
             id: { type: Number, mean: '车辆ID', example: 1 },
             plate: { type: String, mean: '车牌', example: '车牌' },
-        } },
-        plan_histories: { type: Array, mean: '操作历史', explain:{
+        }
+    },
+    plan_histories: {
+        type: Array, mean: '操作历史', explain: {
             id: { type: Number, mean: '历史ID', example: 1 },
             time: { type: String, mean: '历史时间', example: '2020-01-01 12:00:00' },
             operator: { type: String, mean: '操作人', example: '操作人' },
             action_type: { type: String, mean: '操作', example: '操作' },
-        }},
-    };
+        }
+    },
+};
 function install(app) {
     mkapi('/stuff/fetch', 'stuff', true, true, {
         name: { type: String, have_to: true, mean: '货物名称', example: '货物名称' },
@@ -57,8 +69,8 @@ function install(app) {
         name: { type: String, mean: '货物名称', example: '货物名称' },
         price: { type: Number, mean: '单价', example: 1 },
         comment: { type: String, mean: '备注', example: '备注' },
-        next_price:{type:Number, mean:'下次单价', example:1},
-        change_last_minutes:{type:Number, mean:'调价所剩分钟', example:23},
+        next_price: { type: Number, mean: '下次单价', example: 1 },
+        change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
     }, '获取货物', '获取货物').add_handler(async function (body, token) {
         let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
@@ -109,12 +121,11 @@ function install(app) {
     }, {
         result: { type: Boolean, mean: '结果', example: true }
     }, '创建合同', '创建合同').add_handler(async function (body, token) {
-        let ret = {result:false};
+        let ret = { result: false };
         let rbac_lib = require('./rbac_lib');
         let sale_company = await rbac_lib.get_company_by_token(token);
         let buy_company = await db_opt.get_sq().models.company.findByPk(body.customer_id);
-        if (buy_company && sale_company)
-        {
+        if (buy_company && sale_company) {
             await plan_lib.make_contract(buy_company, sale_company);
             ret.result = true;
         }
@@ -143,14 +154,18 @@ function install(app) {
                 id: { type: Number, mean: '合同ID', example: 1 },
                 sign_time: { type: String, mean: '签订时间', example: '2020-01-01 12:00:00' },
                 balance: { type: Number, mean: '余额', example: 1 },
-                stuff:{type:Array, mean:'货物', explain:{
-                    id: { type: Number, mean: '货物ID', example: 1 },
-                    name: { type: String, mean: '货物名称', example: '货物名称' },
-                }},
-                buy_company: { type: Object, mean: '购买公司', explain: {
-                    id: { type: Number, mean: '公司ID', example: 1 },
-                    name: { type: String, mean: '公司名称', example: '公司名称' },
-                }},
+                stuff: {
+                    type: Array, mean: '货物', explain: {
+                        id: { type: Number, mean: '货物ID', example: 1 },
+                        name: { type: String, mean: '货物名称', example: '货物名称' },
+                    }
+                },
+                buy_company: {
+                    type: Object, mean: '购买公司', explain: {
+                        id: { type: Number, mean: '公司ID', example: 1 },
+                        name: { type: String, mean: '公司名称', example: '公司名称' },
+                    }
+                },
             }
         }, total: { type: Number, mean: '总数', example: 1 },
     }, '获取所有销售合同', '获取所有合同', true).add_handler(async function (body, token) {
@@ -158,8 +173,8 @@ function install(app) {
         let company = await rbac_lib.get_company_by_token(token);
         let found_ret = await plan_lib.get_all_sale_contracts(company, body.pageNo);
         return {
-            contracts:found_ret.rows,
-            total:found_ret.count
+            contracts: found_ret.rows,
+            total: found_ret.count
         };
     }).install(app);
     mkapi('/contract/get_all_buy', 'customer', false, true, {
@@ -234,10 +249,12 @@ function install(app) {
                 name: { type: String, mean: '货物名称', example: '货物名称' },
                 price: { type: Number, mean: '单价', example: 1 },
                 comment: { type: String, mean: '备注', example: '备注' },
-                company: {type:Object, mean:'销售公司', explain:{
-                    id: { type: Number, mean: '公司ID', example: 1 },
-                    name: { type: String, mean: '公司名称', example: '公司名称' },
-                }},
+                company: {
+                    type: Object, mean: '销售公司', explain: {
+                        id: { type: Number, mean: '公司ID', example: 1 },
+                        name: { type: String, mean: '公司名称', example: '公司名称' },
+                    }
+                },
             }
         }
     }, '获取公司货物', '获取公司货物', true).add_handler(async function (body, token) {
@@ -250,7 +267,7 @@ function install(app) {
         if (company) {
             ret = await plan_lib.get_stuff_on_sale(company, body.pageNo);
         }
-        return {stuff:ret.rows, total:ret.count};
+        return { stuff: ret.rows, total: ret.count };
     }).install(app);
     mkapi('/driver/fetch', 'customer', true, true, {
         name: { type: String, have_to: true, mean: '司机姓名', example: '张三' },
@@ -262,7 +279,7 @@ function install(app) {
         id_card: { type: String, mean: '司机身份证', example: '1234567890' },
         phone: { type: String, mean: '司机电话', example: '18911992582' },
     }, '获取或更新司机信息', '获取或更新司机信息').add_handler(async function (body, token) {
-        return await plan_lib.fetch_driver(body.name, body.phone, body.id_card);
+        return (await plan_lib.fetch_driver(body.name, body.phone, body.id_card)).toJSON();
     }).install(app);
     mkapi('/vehicle/fetch', 'customer', true, true, {
         plate: { type: String, have_to: true, mean: '车牌', example: '车牌' },
@@ -310,11 +327,10 @@ function install(app) {
             new_plan.status = 0;
             await new_plan.save();
         }
-        else
-        {
-            throw {err_msg:'创建计划失败'};
+        else {
+            throw { err_msg: '创建计划失败' };
         }
-        return new_plan;
+        return await plan_lib.get_single_plan_by_id(new_plan.id);
     }).install(app);
     mkapi('/plan/get_bought_plans', 'customer', false, true, {
         start_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01 12:00:00' },
@@ -327,7 +343,7 @@ function install(app) {
         let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let search_ret = await plan_lib.search_bought_plans(company, body.pageNo, body);
-        return {plans:search_ret.rows, total:search_ret.count};
+        return { plans: search_ret.rows, total: search_ret.count };
     }).install(app);
     mkapi('/plan/get_sold_plans', 'plan', false, true, {
         start_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01 12:00:00' },
@@ -340,7 +356,7 @@ function install(app) {
         let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let search_ret = await plan_lib.search_sold_plans(company, body.pageNo, body);
-        return {plans:search_ret.rows, total:search_ret.count};
+        return { plans: search_ret.rows, total: search_ret.count };
     }).install(app);
     mkapi('/plan/confirm_single_plan', 'plan', true, true, {
         plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
@@ -356,6 +372,96 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '手动验款', '手动验款').add_handler(async function (body, token) {
         await plan_lib.manual_pay_plan(body.plan_id, token);
+        return { result: true };
+    }).install(app);
+    mkapi('/driver/online', 'none', false, false, {
+        open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' }
+    }, {
+        id: { type: Number, mean: '司机ID', example: 1 },
+        name: { type: String, mean: '司机姓名', example: '张三' },
+        phone: { type: String, mean: '司机电话', example: '18911992582' },
+        id_card: { type: String, mean: '司机身份证', example: '1234567890' },
+        open_id: { type: String, mean: '微信open_id', example: 'open_id' },
+    }, '司机上线', '司机上线').add_handler(async function (body, token) {
+        let sq = db_opt.get_sq();
+        let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+        if (driver) {
+            return driver;
+        }
+        else {
+            throw { err_msg: '司机不存在' };
+        }
+    }).install(app);
+    mkapi('/driver/update', 'none', false, false, {
+        open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+        name: { type: String, have_to: false, mean: '司机姓名', example: '张三' },
+        phone: { type: String, have_to: true, mean: '司机电话', example: '18911992582' },
+        id_card: { type: String, have_to: true, mean: '司机身份证', example: '1234567890' },
+    }, {
+        id: { type: Number, mean: '司机ID', example: 1 },
+        name: { type: String, mean: '司机姓名', example: '张三' },
+        phone: { type: String, mean: '司机电话', example: '18911992582' },
+        id_card: { type: String, mean: '司机身份证', example: '1234567890' },
+        open_id: { type: String, mean: '微信open_id', example: 'open_id' },
+    }, '司机更新', '司机更新').add_handler(async function (body, token) {
+        let sq = db_opt.get_sq();
+        let old_driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+        if (old_driver) {
+            old_driver.open_id = '';
+            await old_driver.save();
+        }
+        let driver = await plan_lib.fetch_driver(body.name, body.phone, body.id_card);
+        driver.open_id = body.open_id;
+        await driver.save();
+        return driver;
+    }).install(app);
+    mkapi('/driver/self_plan', 'none', false, false, {
+        open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+    }, {
+        plans: {
+            type: Array, mean: '计划', explain: plan_detail_define
+        },
+    }, '获取自己的计划', '获取自己的计划', true).add_handler(async function (body, token) {
+        let sq = db_opt.get_sq();
+        let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+        if (driver) {
+            let ret = { plans: [], total: 0 };
+            ret.plans = await driver.getPlans({ where: { status: 2 }, limit: 20, offset: body.pageNo * 20 });
+            ret.total = await driver.countPlans({ where: { status: 2 } });
+            return ret;
+        }
+        else {
+            throw { err_msg: '司机不存在' };
+        }
+    }).install(app);
+    mkapi('/plan/check_in', 'none', false, false, {
+        open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '司机签到', '司机签到').add_handler(async function (body, token) {
+        let sq = db_opt.get_sq();
+        let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+        let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+        if (driver && plan && await driver.hasPlan(plan)) {
+            await require('./field_lib').handle_driver_check_in(plan);
+            return { result: true };
+        }
+        else {
+            throw { err_msg: '司机不存在' };
+        }
+    }).install(app);
+    mkapi('/plan/deliver', 'scale', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+        count: { type: Number, have_to: true, mean: '数量', example: 1 },
+        p_weight: { type: Number, have_to: false, mean: '皮重', example: 1 },
+        m_weight: { type: Number, have_to: false, mean: '毛重', example: 1 },
+        p_time: { type: String, have_to: false, mean: '皮重时间', example: '2020-01-01 12:00:00' },
+        m_time: { type: String, have_to: false, mean: '毛重时间', example: '2020-01-01 12:00:00' },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '计划发车', '计划发车').add_handler(async function (body, token) {
+        await plan_lib.deliver_plan(body.plan_id, token, body.count, body.p_weight, body.m_weight, body.p_time, body.m_time);
         return { result: true };
     }).install(app);
 }

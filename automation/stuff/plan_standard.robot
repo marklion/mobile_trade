@@ -58,14 +58,49 @@ Manual Verify Payment
     Manual Pay A Plan  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2
 
+Driver Check In
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Check In A Plan  ${plan}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2  ${True}
+
+Deliver Plan And Check
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Check In A Plan  ${plan}
+    Deliver A Plan  ${plan}  ${23}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${single_cost}  Set Variable  ${plan}[unit_price]
+    ${single_cost}  Set Variable  ${single_cost * 23}
+    ${expect_balance}  Evaluate  $orig_balance - $single_cost
+    Should Be Equal  ${expect_balance}  ${cur_balance}
+
+
+
 *** Keywords ***
 Verify Plan Detail
-    [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}
+    [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${check_in_time}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
     Should Be Equal As Strings  ${plan}[main_vehicle][plate]  ${mv}[plate]
     Should Be Equal As Strings  ${plan}[driver][id_card]  ${dv}[id_card]
     Should Be Equal As Numbers  ${plan}[unit_price]  ${price}
     Should Be Equal As Integers  ${plan}[status]  ${status}
+    IF  $check_in_time
+        Should Not Be Empty  ${plan}[register_time]
+    END
+
     ${history}  Copy List  ${plan}[plan_histories]
     Reverse List  ${history}
     IF  ${status} >= 0
@@ -100,9 +135,20 @@ Verify Plan Detail
         END
         Should Be True  ${found_node}
     END
+    IF  ${status} >= 3
+        ${found_node}  Set Variable  ${False}
+        FOR  ${itr}  IN  @{history}
+            ${action}  Get From Dictionary  ${itr}  action_type
+            IF  $action == '发车'
+                ${found_node}  Set Variable  ${True}
+                Should Be Equal As Strings  ${itr}[operator]  sc_admin
+            END
+        END
+        Should Be True  ${found_node}
+    END
 
 Search And Verify Plan
-    [Arguments]  ${mv}  ${bv}  ${dv}  ${plan_id}  ${status}
+    [Arguments]  ${mv}  ${bv}  ${dv}  ${plan_id}  ${status}  ${check_in_time}=${False}
     ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
     ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc2_user_token}  plans  ${-1}  &{req}
     Length Should Be  ${resp}  0
@@ -117,7 +163,7 @@ Search And Verify Plan
             Exit For Loop
         END
     END
-    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}
+    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${check_in_time}
     ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
     ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
     ${plan}  Create Dictionary
@@ -128,10 +174,7 @@ Search And Verify Plan
             Exit For Loop
         END
     END
-    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}
-
-
-
+    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${check_in_time}
 
 Fetch Driver and Vehicles
     FOR  ${itr}  IN RANGE  3

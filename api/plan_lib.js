@@ -3,23 +3,6 @@ const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 
 module.exports = {
-    create_single_plan: async function (_new_plan, _stuff_id, _buy_company_id, _driver_id, _main_vehicle_id, _behind_vehicle_id) {
-        let sq = db_opt.get_sq();
-        let stuff = await sq.models.stuff.findByPk(_stuff_id);
-        let buy_company = await sq.models.company.findByPk(_buy_company_id);
-        let driver = await sq.models.driver.findByPk(_driver_id);
-        let main_vehicle = await sq.models.vehicle.findByPk(_main_vehicle_id);
-        let behind_vehicle = await sq.models.vehicle.findByPk(_behind_vehicle_id);
-        let new_plan = await sq.models.plan.create(_new_plan);
-        if (new_plan && stuff && buy_company && driver && main_vehicle && behind_vehicle) {
-            await new_plan.setStuff(stuff);
-            await new_plan.setCompany(buy_company);
-            await new_plan.setDriver(driver);
-            await new_plan.setMain_vehicle(main_vehicle);
-            await new_plan.setBehind_vehicle(behind_vehicle);
-        }
-        return new_plan.toJSON();
-    },
     fetch_vehicle: async function (_plate, _is_behind) {
         let sq = db_opt.get_sq();
         let vehicle_found = await sq.models.vehicle.findOrCreate({ where: { plate: _plate }, defaults: { is_behind: _is_behind } });
@@ -28,13 +11,13 @@ module.exports = {
     fetch_driver: async function (_name, _phone, _id_card) {
         let sq = db_opt.get_sq();
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
-        return driver_found[0].toJSON();
+        return driver_found[0];
     },
     fetch_stuff: async function (_name, _price, _comment, _company, _expect_count) {
         let sq = db_opt.get_sq();
         let stuff_found = await _company.getStuff({ where: { name: _name } });
         if (stuff_found.length != 1) {
-            stuff_found = await sq.models.stuff.create({ name: _name, price: _price, comment: _comment , expect_count: _expect_count});
+            stuff_found = await sq.models.stuff.create({ name: _name, price: _price, comment: _comment, expect_count: _expect_count });
             await _company.addStuff(stuff_found);
         }
         let ret = {};
@@ -140,12 +123,12 @@ module.exports = {
     },
     plan_detail_include: function () {
         return [
-            { model: db_opt.get_sq().models.company },
-            { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle' },
-            { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle' },
-            { model: db_opt.get_sq().models.driver },
-            { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company]},
-            { model: db_opt.get_sq().models.plan_history, order: [[db_opt.get_sq().fn('datetime', db_opt.get_sq().col('time')), 'ASC']]}
+            { model: db_opt.get_sq().models.company, paranoid: false },
+            { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
+            { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
+            { model: db_opt.get_sq().models.driver, paranoid: false },
+            { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company], paranoid: false },
+            { model: db_opt.get_sq().models.plan_history, order: [[db_opt.get_sq().fn('datetime', db_opt.get_sq().col('time')), 'ASC']], paranoid: false }
         ];
     },
     search_bought_plans: async function (_company, _pageNo, _condition) {
@@ -161,7 +144,7 @@ module.exports = {
             ]
         };
         let search_condition = {
-            order: [[sq.fn('datetime',sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -184,7 +167,7 @@ module.exports = {
             ]
         };
         let search_condition = {
-            order: [[sq.fn('datetime',sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -217,6 +200,21 @@ module.exports = {
 
         return ret;
     },
+    plan_cost: async function (plan) {
+        let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+        if (contracts.length == 1) {
+            let contract = contracts[0];
+            let decrease_cash = plan.unit_price * plan.count;
+            contract.balance -= decrease_cash
+            await contract.save();
+            await contract.createBalance_history({
+                time: moment().format('YYYY-MM-DD HH:mm:ss'),
+                operator: '系统',
+                comment: '出货扣除',
+                cash_increased: -decrease_cash
+            });
+        }
+    },
     verify_plan_pay: async function (_plan) {
         if (_plan.status == 1) {
             let plan = await this.get_single_plan_by_id(_plan.id);
@@ -225,7 +223,6 @@ module.exports = {
             if (contracts.length == 1) {
                 cur_balance = contracts[0].balance;
             }
-            console.log(plan.stuff.toJSON());
             let one_vehicle_cost = plan.stuff.price * plan.stuff.expect_count;
             let paid_vehicle_count = await plan.company.countPlans({
                 where: {
@@ -240,7 +237,6 @@ module.exports = {
                 },
             });
             let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
-            console.log('cur_balance:', cur_balance, 'already_verified_cash:', already_verified_cash, 'one_vehicle_cost:', one_vehicle_cost, 'paid_vehicle_count:', paid_vehicle_count);
             if ((cur_balance - already_verified_cash) >= one_vehicle_cost) {
                 _plan.status = 2;
                 await _plan.save();
@@ -255,14 +251,26 @@ module.exports = {
             await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
         });
     },
+    deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time) {
+        await this.action_in_plan(_plan_id, _token, 2, async (plan) => {
+            plan.status = 3;
+            plan.count = _count;
+            plan.p_time = p_time;
+            plan.p_weight = p_weight;
+            plan.m_time = m_time;
+            plan.m_weight = m_weight;
+            await plan.save();
+            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            await this.plan_cost(plan);
+        });
+    },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action) {
-        let sq = db_opt.get_sq();
         let opt_company = await rbac_lib.get_company_by_token(_token);
-        let plan = await sq.models.plan.findByPk(_plan_id);
+        let plan = await this.get_single_plan_by_id(_plan_id);
         if (plan) {
-            let stuff = await plan.getStuff({ paranoid: false });
+            let stuff = plan.stuff;
             if (stuff) {
-                let company = await stuff.getCompany();
+                let company = stuff.company;
                 if (company && opt_company && opt_company.id == company.id) {
                     if (plan.status == _expect_status) {
                         await _action(plan);
@@ -294,6 +302,9 @@ module.exports = {
     },
     rp_history_pay: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '验款');
+    },
+    rp_history_deliver: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '发车');
     },
 
 };

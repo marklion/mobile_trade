@@ -22,7 +22,7 @@ module.exports = {
                     let plans = await buy_company.getPlans({ where: { status: 1 } });
                     for (let index = 0; index < plans.length; index++) {
                         const element = plans[index];
-                        plan_lib.verify_plan_pay(element)
+                        await plan_lib.verify_plan_pay(element)
                     }
                 }
             }
@@ -34,6 +34,7 @@ module.exports = {
             throw { err_msg: '无权限' }
         }
     },
+
     get_history_by_company: async function (_token, _contract_id, pageNo) {
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);

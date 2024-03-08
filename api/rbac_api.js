@@ -229,7 +229,7 @@ function install(app) {
         let user = await rbac_lib.add_user(body.phone);
         if (company && user) {
             await user.setCompany(company);
-            user.wx_openid = body.open_id;
+            user.open_id = body.open_id;
             user.name = body.name;
             let cust_role = await rbac_lib.add_role('客户', '客户', false, company);
             await rbac_lib.connect_user2role(user.id, cust_role.id);

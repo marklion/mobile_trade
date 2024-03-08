@@ -34,3 +34,9 @@ Contract Reset
 Plan Reset
     Clear Table  plan
     Clear Table  plan_history
+
+Company Set Script
+    [Arguments]  ${company_id}  ${script_path}
+    Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
+    Execute Sql String  update company set script = '${script_path}' where id = ${company_id};
+    Disconnect From All Databases
