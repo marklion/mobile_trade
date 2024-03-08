@@ -201,3 +201,31 @@ Deliver A Plan
     [Arguments]  ${plan}  ${count}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
     Req to Server  /plan/deliver  ${sc_admin_token}  ${req}
+Search Driver by Index
+    [Arguments]  ${itr}
+    ${req}  Create Dictionary  name=dn_${itr}  id_card=di_${itr}  phone=dp_${itr}
+    ${resp}  Req to Server  /driver/fetch  ${bc1_user_token}  ${req}
+    RETURN  ${resp}
+Search Main Vehicle by Index
+    [Arguments]  ${itr}
+    ${req}  Create Dictionary  plate=mv_${itr}
+    ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
+    RETURN  ${resp}
+Search behind Vehicle by Index
+    [Arguments]  ${itr}
+    ${req}  Create Dictionary  plate=bv_${itr}
+    ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
+    RETURN  ${resp}
+Search Plans Based on User
+    [Arguments]  ${token}  ${is_sale}=${True}  ${status}=${null}
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${status}
+    ${url}  Set Variable  /plan/get_sold_plans
+    IF  $is_sale == False
+        ${url}  Set Variable  /plan/get_bought_plans
+    END
+    ${resp}  Req Get to Server  ${url}  ${token}  plans  ${-1}  &{req}
+    RETURN  ${resp}
+Update A Plan
+    [Arguments]  ${plan_id}  &{update_info}
+    Set To Dictionary  ${update_info}  plan_id=${plan_id}
+    Req to Server  /plan/update  ${bc1_user_token}  ${update_info}

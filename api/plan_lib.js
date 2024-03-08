@@ -185,6 +185,74 @@ module.exports = {
         }
         return { rows: sold_plans, count: count };
     },
+    update_single_plan:async function(_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id ,   _comment, _use_for, _drop_address){
+        let sq = db_opt.get_sq();
+        let plan = await sq.models.plan.findByPk(_plan_id);
+        if (plan && plan.status == 0)
+        {
+            let company = await plan.getCompany();
+            let opt_company = await rbac_lib.get_company_by_token(_token);
+            if (company && opt_company && company.id == opt_company.id)
+            {
+                let change_comment = '';
+                if (_plan_time != undefined)
+                {
+                    change_comment += '计划时间由' + plan.plan_time + '改为' + _plan_time + ';\n';
+                    plan.plan_time = _plan_time;
+                }
+                if (_main_vehicle_id != undefined)
+                {
+                    let orig_main_vehicle = await plan.getMain_vehicle();
+                    let new_main_vehicle = await sq.models.vehicle.findByPk(_main_vehicle_id);
+                    if (orig_main_vehicle && new_main_vehicle) {
+                        change_comment += '主车辆由' + orig_main_vehicle.plate + '改为' + new_main_vehicle.plate + ';\n';
+                    }
+                    plan.setMain_vehicle(new_main_vehicle);
+                }
+                if (_behind_vehicle_id != undefined)
+                {
+                    let orig_behind_vehicle = await plan.getBehind_vehicle();
+                    let new_behind_vehicle = await sq.models.vehicle.findByPk(_behind_vehicle_id);
+                    if (orig_behind_vehicle && new_behind_vehicle) {
+                        change_comment += '挂车辆由' + orig_behind_vehicle.plate + '改为' + new_behind_vehicle.plate + ';\n';
+                    }
+                    plan.setBehind_vehicle(new_behind_vehicle);
+                }
+                if (_driver_id != undefined)
+                {
+                    let orig_driver = await plan.getDriver();
+                    let new_driver = await sq.models.driver.findByPk(_driver_id);
+                    if (orig_driver && new_driver) {
+                        change_comment += '司机电话由' + orig_driver.phone + '改为' + new_driver.phone+ ';\n';
+                    }
+                    plan.setDriver(new_driver);
+                }
+                if (_comment != undefined)
+                {
+                    change_comment += '备注由' + plan.comment + '改为' + _comment + ';\n';
+                    plan.comment = _comment;
+                }
+                if (_use_for != undefined)
+                {
+                    change_comment += '用途由' + plan.use_for + '改为' + _use_for + ';\n';
+                    plan.use_for = _use_for;
+                }
+                if (_drop_address != undefined)
+                {
+                    change_comment += '卸货地址由' + plan.drop_address + '改为' + _drop_address + ';\n';
+                    plan.drop_address = _drop_address;
+                }
+                await plan.save();
+                await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, change_comment);
+            }
+            else {
+                throw { err_msg: '无权限' };
+            }
+        }
+        else {
+            throw { err_msg: '未找到计划或状态错误' };
+        }
+    },
     confirm_single_plan: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
             plan.status = 1;

@@ -122,34 +122,29 @@ Lots of Plan Explore
     ${only_confirm_count}  Evaluate  $after_confirm_count - $after_pay_count
     ${only_pay_count}  Evaluate  $after_pay_count - $after_deliver_count
 
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${0}
-    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}  ${0}
     Length Should Be  ${resp}  ${only_create_count}
-    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}  ${0}
     Length Should Be  ${resp}  ${only_create_count}
 
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${1}
-    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}  ${1}
     Length Should Be  ${resp}  ${only_confirm_count}
-    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}  ${1}
     Length Should Be  ${resp}  ${only_confirm_count}
 
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${2}
-    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}  ${2}
     Length Should Be  ${resp}  ${only_pay_count}
-    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}  ${2}
     Length Should Be  ${resp}  ${only_pay_count}
 
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${3}
-    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}  ${3}
     Length Should Be  ${resp}  ${after_deliver_count}
-    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}  ${3}
     Length Should Be  ${resp}  ${after_deliver_count}
 
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
-    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}
     Length Should Be  ${resp}  100
-    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}
     Length Should Be  ${resp}  100
 
 
@@ -213,14 +208,14 @@ Verify Plan Detail
 
 Search And Verify Plan
     [Arguments]  ${mv}  ${bv}  ${dv}  ${plan_id}  ${status}  ${check_in_time}=${False}
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
-    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc2_user_token}  plans  ${-1}  &{req}
-    Length Should Be  ${resp}  0
-    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_no_need_token}  plans  ${-1}  &{req}
+
+    ${resp}  Search Plans Based on User  ${bc2_user_token}  ${False}
     Length Should Be  ${resp}  0
 
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
-    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${sc_admin_no_need_token}  ${True}
+    Length Should Be  ${resp}  0
+
+    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}
     ${plan}  Create Dictionary
     FOR  ${itr}  IN  @{resp}
         ${plan_found_id}  Get From Dictionary  ${itr}  id
@@ -230,8 +225,7 @@ Search And Verify Plan
         END
     END
     Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${check_in_time}
-    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
-    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}
     ${plan}  Create Dictionary
     FOR  ${itr}  IN  @{resp}
         ${plan_found_id}  Get From Dictionary  ${itr}  id
@@ -241,20 +235,6 @@ Search And Verify Plan
         END
     END
     Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${check_in_time}
-Search Driver by Index
-    [Arguments]  ${itr}
-    ${req}  Create Dictionary  name=dn_${itr}  id_card=di_${itr}  phone=dp_${itr}
-    ${resp}  Req to Server  /driver/fetch  ${bc1_user_token}  ${req}
-    RETURN  ${resp}
-Search Main Vehicle by Index
-    [Arguments]  ${itr}
-    ${req}  Create Dictionary  plate=mv_${itr}
-    ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
-    RETURN  ${resp}
-Search behind Vehicle by Index
-    [Arguments]  ${itr}
-    ${req}  Create Dictionary  plate=bv_${itr}
-    ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
-    RETURN  ${resp}
+
 
 

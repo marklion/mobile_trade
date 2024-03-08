@@ -332,6 +332,21 @@ function install(app) {
         }
         return await plan_lib.get_single_plan_by_id(new_plan.id);
     }).install(app);
+    mkapi('/plan/update', 'customer', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+        plan_time: { type: String, have_to: false, mean: '计划时间', example: '2020-01-01 12:00:00' },
+        main_vehicle_id: { type: Number, have_to: false, mean: '主车ID', example: 1 },
+        behind_vehicle_id: { type: Number, have_to: false, mean: '挂车ID', example: 1 },
+        driver_id: { type: Number, have_to: false, mean: '司机ID', example: 1 },
+        comment: { type: String, have_to: false, mean: '备注', example: '备注' },
+        use_for: { type: String, have_to: false, mean: '用途', example: '用途' },
+        drop_address: { type: String, have_to: false, mean: '卸货地址', example: '卸货地址' },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '更新计划', '更新计划').add_handler(async function (body, token) {
+        await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, body.main_vehicle_id, body.behind_vehicle_id, body.driver_id, body.comment,  body.use_for, body.drop_address);
+        return {result: true};
+    }).install(app);
     mkapi('/plan/get_bought_plans', 'customer', false, true, {
         start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
         end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },

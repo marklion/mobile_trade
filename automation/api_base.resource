@@ -15,13 +15,18 @@ No Permission Req to Server
     Should Contain  ${resp.json()}[err_msg]  权限
 
 Req to Server
-    [Arguments]  ${url}  ${token}  ${body}
+    [Arguments]  ${url}  ${token}  ${body}  ${exception}=${False}
     ${real_url}  Set Variable  ${remote_url}${url}
     ${headers}  Create Dictionary  token=${token}
     ${resp}  POST  url=${real_url}  headers=${headers}  json=${body}
     Log  ${resp.json()}
-    Should Be Empty  ${resp.json()}[err_msg]
-    RETURN  ${resp.json()}[result]
+    IF  $exception
+        Should Not Be Empty  ${resp.json()}[err_msg]
+        RETURN  ${resp.json()}[err_msg]
+    ELSE
+        Should Be Empty  ${resp.json()}[err_msg]
+        RETURN  ${resp.json()}[result]
+    END
 
 Req Get to Server
     [Arguments]  ${url}  ${token}  ${key_name}  ${page}=${-1}  &{body}
