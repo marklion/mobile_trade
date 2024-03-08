@@ -2,14 +2,6 @@
 Resource  stuff_opt.resource
 Suite Setup  Prepare Sale and Buy
 Suite Teardown  Clean Up Sale and Buy
-
-*** Variables ***
-@{main_vehicle_plates}  藏A11223  新A44321  京D221K1
-@{behind_vehicle_plates}  黑A9980挂  京A1245挂  藏A1123挂
-@{driver_ids}  110101198001010011  110101198001010012  110101198001010013
-@{driver_names}  张三  李四  王五
-@{driver_phones}  13800138000  13800138001  13800138002
-
 *** Test Cases ***
 Plan Create and Check
     [Teardown]  Plan Reset
@@ -87,6 +79,72 @@ Deliver Plan And Check
     ${expect_balance}  Evaluate  $orig_balance - $single_cost
     Should Be Equal  ${expect_balance}  ${cur_balance}
 
+Lots of Plan Explore
+    [Teardown]  Plan Reset
+    @{plans_need_next}  Create List
+    FOR  ${itr}  IN RANGE  0  100
+        ${mv}  Search Main Vehicle by Index  ${itr}
+        ${bv}  Search behind Vehicle by Index  ${itr}
+        ${dv}  Search Driver by Index  ${itr}
+        ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+        ${plan_id}  Get From Dictionary  ${plan}  id
+        IF  $plan_id % 10 >= 3
+            Append To List  ${plans_need_next}  ${plan}
+        END
+    END
+    ${after_confirm_count}  Get Length  ${plans_need_next}
+    @{el}  Create List
+    FOR  ${plan}  IN  @{plans_need_next}
+        Confirm A Plan  ${plan}
+        ${plan_id}  Get From Dictionary  ${plan}  id
+        IF  $plan_id % 10 >= 5
+            Append To List  ${el}  ${plan}
+        END
+    END
+    ${plans_need_next}  Copy List  ${el}
+    ${after_pay_count}  Get Length  ${plans_need_next}
+    @{el}  Create List
+    FOR  ${plan}  IN  @{plans_need_next}
+        Manual Pay A Plan  ${plan}
+        ${plan_id}  Get From Dictionary  ${plan}  id
+        IF  $plan_id % 10 >= 7
+            Append To List  ${el}  ${plan}
+        END
+    END
+    ${plans_need_next}  Copy List  ${el}
+    ${after_deliver_count}  Get Length  ${plans_need_next}
+    @{el}  Create List
+    FOR  ${plan}  IN  @{plans_need_next}
+        ${plan_id}  Get From Dictionary  ${plan}  id
+        Deliver A Plan  ${plan}  ${plan_id}
+    END
+    ${only_create_count}  Evaluate  100 - $after_confirm_count
+    ${only_confirm_count}  Evaluate  $after_confirm_count - $after_pay_count
+    ${only_pay_count}  Evaluate  $after_pay_count - $after_deliver_count
+
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${0}
+    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${only_create_count}
+    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${only_create_count}
+
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${1}
+    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${only_confirm_count}
+    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${only_confirm_count}
+
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${2}
+    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${only_pay_count}
+    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${only_pay_count}
+
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${3}
+    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${after_deliver_count}
+    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  ${after_deliver_count}
 
 
 *** Keywords ***
@@ -152,6 +210,8 @@ Search And Verify Plan
     ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
     ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc2_user_token}  plans  ${-1}  &{req}
     Length Should Be  ${resp}  0
+    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_no_need_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  0
 
     ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
     ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
@@ -175,26 +235,19 @@ Search And Verify Plan
         END
     END
     Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${check_in_time}
-
-Fetch Driver and Vehicles
-    FOR  ${itr}  IN RANGE  3
-        Search Driver by Index  ${itr}
-        Search Main Vehicle by Index  ${itr}
-        Search behind Vehicle by Index  ${itr}
-    END
 Search Driver by Index
     [Arguments]  ${itr}
-    ${req}  Create Dictionary  name=${driver_names[${itr}]}  id_card=${driver_ids[${itr}]}  phone=${driver_phones[${itr}]}
+    ${req}  Create Dictionary  name=dn_${itr}  id_card=di_${itr}  phone=dp_${itr}
     ${resp}  Req to Server  /driver/fetch  ${bc1_user_token}  ${req}
     RETURN  ${resp}
 Search Main Vehicle by Index
     [Arguments]  ${itr}
-    ${req}  Create Dictionary  plate=${main_vehicle_plates[${itr}]}
+    ${req}  Create Dictionary  plate=mv_${itr}
     ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
     RETURN  ${resp}
 Search behind Vehicle by Index
     [Arguments]  ${itr}
-    ${req}  Create Dictionary  plate=${behind_vehicle_plates[${itr}]}
+    ${req}  Create Dictionary  plate=bv_${itr}
     ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
     RETURN  ${resp}
 

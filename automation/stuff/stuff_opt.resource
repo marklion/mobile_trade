@@ -4,9 +4,11 @@ Resource  ../database.resource
 
 *** Variables ***
 &{sale_company}
+&{no_need_sale_company}
 &{buy_company1}
 &{buy_company2}
 ${sc_admin_token}
+${sc_admin_no_need_token}
 ${bc1_user_token}
 ${bc2_user_token}
 ${test_stuff}
@@ -25,12 +27,25 @@ Prepare Companies And Users
     Add Module To User  ${sc_admin_token}  1234  plan
     Add Module To User  ${sc_admin_token}  1234  cash
     Add Module To User  ${sc_admin_token}  1234  scale
+    ${no_need_sale_company}  Create One Company  sc_no_need
+    Company Set Script  ${no_need_sale_company}[id]  normal
+    ${sc_admin_no_need_token}  Login As Admin Of Company  ${no_need_sale_company}[id]  12341  sc_admin_no_need
+    Add Module To Company  ${no_need_sale_company}[id]  stuff
+    Add Module To Company  ${no_need_sale_company}[id]  plan
+    Add Module To Company  ${no_need_sale_company}[id]  cash
+    Add Module To Company  ${no_need_sale_company}[id]  scale
+    Add Module To User  ${sc_admin_no_need_token}  12341  stuff
+    Add Module To User  ${sc_admin_no_need_token}  12341  plan
+    Add Module To User  ${sc_admin_no_need_token}  12341  cash
+    Add Module To User  ${sc_admin_no_need_token}  12341  scale
     ${bc1_user_token}  New User Login  5678  ${buy_company1}[name]  2233  bu1
     ${bc2_user_token}  New User Login  9987  ${buy_company2}[name]  1123  bu2
     Set Suite Variable  ${buy_company1}
     Set Suite Variable  ${buy_company2}
+    Set Suite Variable  ${no_need_sale_company}
     Set Suite Variable  ${sale_company}
     Set Suite Variable  ${sc_admin_token}
+    Set Suite Variable  ${sc_admin_no_need_token}
     Set Suite Variable  ${bc1_user_token}
     Set Suite Variable  ${bc2_user_token}
 

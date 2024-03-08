@@ -333,8 +333,9 @@ function install(app) {
         return await plan_lib.get_single_plan_by_id(new_plan.id);
     }).install(app);
     mkapi('/plan/get_bought_plans', 'customer', false, true, {
-        start_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01 12:00:00' },
-        end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01 12:00:00' },
+        start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+        end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+        status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
     }, {
         plans: {
             type: Array, mean: '计划', explain: plan_detail_define
@@ -346,8 +347,9 @@ function install(app) {
         return { plans: search_ret.rows, total: search_ret.count };
     }).install(app);
     mkapi('/plan/get_sold_plans', 'plan', false, true, {
-        start_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01 12:00:00' },
-        end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01 12:00:00' },
+        start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+        end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+        status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
     }, {
         plans: {
             type: Array, mean: '计划', explain: plan_detail_define

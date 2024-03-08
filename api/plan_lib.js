@@ -131,7 +131,7 @@ module.exports = {
             { model: db_opt.get_sq().models.plan_history, order: [[db_opt.get_sq().fn('datetime', db_opt.get_sq().col('time')), 'ASC']], paranoid: false }
         ];
     },
-    search_bought_plans: async function (_company, _pageNo, _condition) {
+    make_plan_where_condition: function (_condition) {
         let sq = db_opt.get_sq();
         let where_condition = {
             [db_opt.Op.and]: [
@@ -143,6 +143,14 @@ module.exports = {
                 }),
             ]
         };
+        if (_condition.status != undefined) {
+            where_condition[db_opt.Op.and].push({ status: _condition.status });
+        }
+        return where_condition;
+    },
+    search_bought_plans: async function (_company, _pageNo, _condition) {
+        let sq = db_opt.get_sq();
+        let where_condition = this.make_plan_where_condition(_condition);
         let search_condition = {
             order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
@@ -156,16 +164,8 @@ module.exports = {
     },
     search_sold_plans: async function (_company, _pageNo, _condition) {
         let sq = db_opt.get_sq();
-        let where_condition = {
-            [db_opt.Op.and]: [
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('datetime', _condition.start_time)
-                }),
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('datetime', _condition.end_time)
-                }),
-            ]
-        };
+        let where_condition = this.make_plan_where_condition(_condition);
+
         let search_condition = {
             order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
