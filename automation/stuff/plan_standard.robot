@@ -146,6 +146,12 @@ Lots of Plan Explore
     ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
     Length Should Be  ${resp}  ${after_deliver_count}
 
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
+    ${resp}  Req Get to Server  /plan/get_bought_plans  ${bc1_user_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  100
+    ${resp}  Req Get to Server  /plan/get_sold_plans  ${sc_admin_token}  plans  ${-1}  &{req}
+    Length Should Be  ${resp}  100
+
 
 *** Keywords ***
 Verify Plan Detail
