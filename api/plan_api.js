@@ -110,8 +110,7 @@ function install(app) {
         let company = await rbac_lib.get_company_by_token(token);
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(body.id);
-        if (stuff && company) {
-            await company.removeStuff(stuff);
+        if (stuff && company && company.hasStuff(stuff)) {
             await stuff.destroy();
         }
         return { result: true };

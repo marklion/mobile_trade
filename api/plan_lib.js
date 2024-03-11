@@ -148,6 +148,17 @@ module.exports = {
         }
         return where_condition;
     },
+    replace_plan2archive: async function (_plan) {
+        let ret = undefined;
+        if (_plan.status == 3) {
+            let archive_plan = await _plan.getArchive_plan();
+            if (archive_plan) {
+                ret = JSON.parse(archive_plan.content);
+            }
+        }
+
+        return ret;
+    },
     search_bought_plans: async function (_company, _pageNo, _condition) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition);
@@ -159,8 +170,21 @@ module.exports = {
             include: this.plan_detail_include(),
         };
         let bought_plans = await _company.getPlans(search_condition);
+        let result = [];
+        for (let index = 0; index < bought_plans.length; index++) {
+            const element = bought_plans[index];
+            let arc_p = await this.replace_plan2archive(element);
+            if (arc_p)
+            {
+                result.push(arc_p);
+            }
+            else
+            {
+                result.push(element);
+            }
+        }
         let count = await _company.countPlans({ where: where_condition });
-        return { rows: bought_plans, count: count };
+        return { rows: result, count: count };
     },
     search_sold_plans: async function (_company, _pageNo, _condition) {
         let sq = db_opt.get_sq();
@@ -173,7 +197,7 @@ module.exports = {
             where: where_condition,
             include: this.plan_detail_include(),
         };
-        let stuff = await _company.getStuff();
+        let stuff = await _company.getStuff({paranoid: false});
         let sold_plans = [];
         let count = 0;
         for (let index = 0; index < stuff.length; index++) {
@@ -183,25 +207,32 @@ module.exports = {
             count += c;
             sold_plans = sold_plans.concat(plans);
         }
-        return { rows: sold_plans, count: count };
+        let result = [];
+        for (let index = 0; index < sold_plans.length; index++) {
+            const element = sold_plans[index];
+            let arc_p = await this.replace_plan2archive(element);
+            if (arc_p) {
+                result.push(arc_p);
+            }
+            else {
+                result.push(element);
+            }
+        }
+        return { rows: result, count: count };
     },
-    update_single_plan:async function(_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id ,   _comment, _use_for, _drop_address){
+    update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address) {
         let sq = db_opt.get_sq();
         let plan = await sq.models.plan.findByPk(_plan_id);
-        if (plan && plan.status == 0)
-        {
+        if (plan && plan.status == 0) {
             let company = await plan.getCompany();
             let opt_company = await rbac_lib.get_company_by_token(_token);
-            if (company && opt_company && company.id == opt_company.id)
-            {
+            if (company && opt_company && company.id == opt_company.id) {
                 let change_comment = '';
-                if (_plan_time != undefined)
-                {
+                if (_plan_time != undefined) {
                     change_comment += '计划时间由' + plan.plan_time + '改为' + _plan_time + ';\n';
                     plan.plan_time = _plan_time;
                 }
-                if (_main_vehicle_id != undefined)
-                {
+                if (_main_vehicle_id != undefined) {
                     let orig_main_vehicle = await plan.getMain_vehicle();
                     let new_main_vehicle = await sq.models.vehicle.findByPk(_main_vehicle_id);
                     if (orig_main_vehicle && new_main_vehicle) {
@@ -209,8 +240,7 @@ module.exports = {
                     }
                     plan.setMain_vehicle(new_main_vehicle);
                 }
-                if (_behind_vehicle_id != undefined)
-                {
+                if (_behind_vehicle_id != undefined) {
                     let orig_behind_vehicle = await plan.getBehind_vehicle();
                     let new_behind_vehicle = await sq.models.vehicle.findByPk(_behind_vehicle_id);
                     if (orig_behind_vehicle && new_behind_vehicle) {
@@ -218,27 +248,23 @@ module.exports = {
                     }
                     plan.setBehind_vehicle(new_behind_vehicle);
                 }
-                if (_driver_id != undefined)
-                {
+                if (_driver_id != undefined) {
                     let orig_driver = await plan.getDriver();
                     let new_driver = await sq.models.driver.findByPk(_driver_id);
                     if (orig_driver && new_driver) {
-                        change_comment += '司机电话由' + orig_driver.phone + '改为' + new_driver.phone+ ';\n';
+                        change_comment += '司机电话由' + orig_driver.phone + '改为' + new_driver.phone + ';\n';
                     }
                     plan.setDriver(new_driver);
                 }
-                if (_comment != undefined)
-                {
+                if (_comment != undefined) {
                     change_comment += '备注由' + plan.comment + '改为' + _comment + ';\n';
                     plan.comment = _comment;
                 }
-                if (_use_for != undefined)
-                {
+                if (_use_for != undefined) {
                     change_comment += '用途由' + plan.use_for + '改为' + _use_for + ';\n';
                     plan.use_for = _use_for;
                 }
-                if (_drop_address != undefined)
-                {
+                if (_drop_address != undefined) {
                     change_comment += '卸货地址由' + plan.drop_address + '改为' + _drop_address + ';\n';
                     plan.drop_address = _drop_address;
                 }
@@ -359,6 +385,9 @@ module.exports = {
             throw { err_msg: '未找到计划' };
         }
     },
+    //TODO
+    // record plan as archive data
+    // confirm plan need authorizing creator
     record_plan_history: async function (_plan, _operator, _action_type) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type });
     },
@@ -373,6 +402,12 @@ module.exports = {
     },
     rp_history_deliver: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '发车');
+        let plan = await this.get_single_plan_by_id(_plan.id);
+        let last_archive = await plan.getArchive_plan();
+        if (last_archive) {
+            await last_archive.destroy();
+        }
+        plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
     },
 
 };

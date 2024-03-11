@@ -155,6 +155,12 @@ Prepare Sale and Buy
     @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
 
+Re-Add Stuff
+    Add A Stuff To Sale  lng  ${1211}  lng_comment
+    Add A Stuff To Contract  lng  bc1
+    @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
+    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+
 Clean Up Sale and Buy
     Stuff Reset
     Contract Reset

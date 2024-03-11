@@ -41,3 +41,12 @@ Update Plan After Confirm
     ${update_info}  Create Dictionary  behind_vehicle_id=${bv_new}[id]  plan_time=2021-10-10 11:12:11  use_for=abcd  drop_address=def
     Set To Dictionary  ${update_info}  plan_id=${plan}[id]
     Req to Server  /plan/update  ${bc1_user_token}  ${update_info}  ${True}
+
+Rollback Plan After Confirm
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${bv_new}  Search behind Vehicle by Index  333
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]

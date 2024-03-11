@@ -78,6 +78,9 @@ Deliver Plan And Check
     ${single_cost}  Set Variable  ${single_cost * 23}
     ${expect_balance}  Evaluate  $orig_balance - $single_cost
     Should Be Equal  ${expect_balance}  ${cur_balance}
+    Del A Stuff From Sale  ${test_stuff}[id]
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
+    Re-Add Stuff
 
 Lots of Plan Explore
     [Teardown]  Plan Reset
@@ -150,7 +153,7 @@ Lots of Plan Explore
 
 *** Keywords ***
 Verify Plan Detail
-    [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${check_in_time}=${False}
+    [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
     Should Be Equal As Strings  ${plan}[main_vehicle][plate]  ${mv}[plate]
     Should Be Equal As Strings  ${plan}[driver][id_card]  ${dv}[id_card]
@@ -224,7 +227,7 @@ Search And Verify Plan
             Exit For Loop
         END
     END
-    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${check_in_time}
+    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${test_stuff}[name]  ${check_in_time}
     ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}
     ${plan}  Create Dictionary
     FOR  ${itr}  IN  @{resp}
@@ -234,7 +237,7 @@ Search And Verify Plan
             Exit For Loop
         END
     END
-    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${check_in_time}
+    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${test_stuff}[name]  ${check_in_time}
 
 
 

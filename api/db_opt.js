@@ -97,6 +97,10 @@ let db_opt = {
             comment: { type: DataTypes.STRING },
             cash_increased: { type: DataTypes.FLOAT, defaultValue: 0 },
         },
+        archive_plan :{
+            id:{ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            content: { type: DataTypes.STRING },
+        },
     },
     make_associate:function(_sq){
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, {through: 'rbac_user_role'});
@@ -133,6 +137,9 @@ let db_opt = {
         _sq.models.stuff.hasMany(_sq.models.plan);
         _sq.models.plan_history.belongsTo(_sq.models.plan);
         _sq.models.plan.hasMany(_sq.models.plan_history);
+
+        _sq.models.archive_plan.belongsTo(_sq.models.plan);
+        _sq.models.plan.hasOne(_sq.models.archive_plan);
 
     },
     install: async function(){
