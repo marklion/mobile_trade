@@ -57,6 +57,7 @@ let db_opt = {
             register_time: { type: DataTypes.STRING },
             register_number: { type: DataTypes.INTEGER ,  defaultValue: 0},
             register_comment: { type: DataTypes.STRING},
+            enter_time: { type: DataTypes.STRING },
         },
         vehicle:{
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -137,10 +138,12 @@ let db_opt = {
         _sq.models.stuff.hasMany(_sq.models.plan);
         _sq.models.plan_history.belongsTo(_sq.models.plan);
         _sq.models.plan.hasMany(_sq.models.plan_history);
-
         _sq.models.archive_plan.belongsTo(_sq.models.plan);
         _sq.models.plan.hasOne(_sq.models.archive_plan);
-
+        _sq.models.rbac_user.belongsToMany(_sq.models.contract, {through: 'user_contract'});
+        _sq.models.contract.belongsToMany(_sq.models.rbac_user, {through: 'user_contract'});
+        _sq.models.plan.belongsTo(_sq.models.rbac_user);
+        _sq.models.rbac_user.hasMany(_sq.models.plan);
     },
     install: async function(){
         console.log('run install');

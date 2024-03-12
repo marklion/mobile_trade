@@ -29,6 +29,17 @@ Plan Confirm with Enough Cash and Check
     Confirm A Plan  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2
     Charge To A Company  ${buy_company1}[id]  ${unit_price * -22}
+Plan Confirm with No User Authorized
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    Unauthorize User to Contract  ${buy_company1}[name]  5678
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/confirm_single_plan  ${sc_admin_token}  ${req}  ${True}
+    Authorize User to Contract  ${buy_company1}[name]  5678
+
 Charge After Plan Confirmed
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -61,6 +72,17 @@ Driver Check In
     Check In A Plan  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2  ${True}
 
+Plan Enter and Check
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Plan Enter  ${plan}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2  ${False}  ${True}
+
 Deliver Plan And Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -71,6 +93,7 @@ Deliver Plan And Check
     Confirm A Plan  ${plan}
     Manual Pay A Plan  ${plan}
     Check In A Plan  ${plan}
+    Plan Enter  ${plan}
     Deliver A Plan  ${plan}  ${23}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
     ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
@@ -153,7 +176,7 @@ Lots of Plan Explore
 
 *** Keywords ***
 Verify Plan Detail
-    [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}
+    [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
     Should Be Equal As Strings  ${plan}[main_vehicle][plate]  ${mv}[plate]
     Should Be Equal As Strings  ${plan}[driver][id_card]  ${dv}[id_card]
@@ -162,6 +185,8 @@ Verify Plan Detail
     IF  $check_in_time
         Should Not Be Empty  ${plan}[register_time]
     END
+
+
 
     ${history}  Copy List  ${plan}[plan_histories]
     Reverse List  ${history}
@@ -208,9 +233,21 @@ Verify Plan Detail
         END
         Should Be True  ${found_node}
     END
+    IF  $enter_check
+        Should Not Be Empty  ${plan}[enter_time]
+        ${found_node}  Set Variable  ${False}
+        FOR  ${itr}  IN  @{history}
+            ${action}  Get From Dictionary  ${itr}  action_type
+            IF  $action == '进厂'
+                ${found_node}  Set Variable  ${True}
+                Should Be Equal As Strings  ${itr}[operator]  sc_admin
+            END
+        END
+        Should Be True  ${found_node}
+    END
 
 Search And Verify Plan
-    [Arguments]  ${mv}  ${bv}  ${dv}  ${plan_id}  ${status}  ${check_in_time}=${False}
+    [Arguments]  ${mv}  ${bv}  ${dv}  ${plan_id}  ${status}  ${check_in_time}=${False}  ${enter_check}=${False}
 
     ${resp}  Search Plans Based on User  ${bc2_user_token}  ${False}
     Length Should Be  ${resp}  0
@@ -227,7 +264,7 @@ Search And Verify Plan
             Exit For Loop
         END
     END
-    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${test_stuff}[name]  ${check_in_time}
+    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${test_stuff}[name]  ${check_in_time}  ${enter_check}
     ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}
     ${plan}  Create Dictionary
     FOR  ${itr}  IN  @{resp}
@@ -237,7 +274,7 @@ Search And Verify Plan
             Exit For Loop
         END
     END
-    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${test_stuff}[name]  ${check_in_time}
+    Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${test_stuff}[name]  ${check_in_time}  ${enter_check}
 
 
 

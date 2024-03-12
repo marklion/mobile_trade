@@ -154,6 +154,32 @@ Prepare Sale and Buy
     Add A Stuff To Contract  lng  bc1
     @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    Authorize User to Contract  bc1  5678
+
+Authorize User to Contract
+    [Arguments]  ${company_name}  ${user_phone}
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
+    FOR  ${itr}  IN  @{found_contracts}
+        ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
+        IF  $buyer_name == $company_name
+            ${req}  Create Dictionary  contract_id=${itr}[id]  phone=${user_phone}
+            Req to Server  /contract/authorize  ${sc_admin_token}  ${req}
+            Exit For Loop
+        END
+    END
+
+Unauthorize User to Contract
+    [Arguments]  ${company_name}  ${user_phone}
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
+    FOR  ${itr}  IN  @{found_contracts}
+        ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
+        IF  $buyer_name == $company_name
+            ${req}  Create Dictionary  contract_id=${itr}[id]  phone=${user_phone}
+            Req to Server  /contract/unauthorize  ${sc_admin_token}  ${req}
+            Exit For Loop
+        END
+    END
+    Req to Server  /contract/unauthorize  ${sc_admin_token}  ${req}
 
 Re-Add Stuff
     Add A Stuff To Sale  lng  ${1211}  lng_comment
@@ -188,6 +214,10 @@ Manual Pay A Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /plan/pay  ${sc_admin_token}  ${req}
+Plan Enter
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/enter  ${sc_admin_token}  ${req}
 Driver Online
     [Arguments]  ${phone}  ${open_id}  ${id_card}
     ${req}  Create Dictionary  phone=${phone}  open_id=${open_id}  id_card=${id_card}
@@ -207,6 +237,10 @@ Deliver A Plan
     [Arguments]  ${plan}  ${count}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
     Req to Server  /plan/deliver  ${sc_admin_token}  ${req}
+Rollback Plan
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/rollback  ${sc_admin_token}  ${req}
 Search Driver by Index
     [Arguments]  ${itr}
     ${req}  Create Dictionary  name=dn_${itr}  id_card=di_${itr}  phone=dp_${itr}

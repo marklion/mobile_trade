@@ -4,7 +4,7 @@ Suite Setup  Prepare Sale and Buy
 Suite Teardown  Clean Up Sale and Buy
 
 *** Test Cases ***
-Update Plan Before Confirm
+Update Plan While Created
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
     ${mv_new}  Search Main Vehicle by Index  121
@@ -30,7 +30,20 @@ Update Plan Before Confirm
     Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  ${bv_new}[plate]
     Should Be Equal As Strings  ${resp}[0][driver][phone]  ${dv_new}[phone]
     Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  ${mv_new}[plate]
-Update Plan After Confirm
+
+Disabled Action While Created
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Pay Failed  ${plan}
+    Rollback Failed  ${plan}
+    Enter Failed  ${plan}
+    Deliver Failed  ${plan}
+    Check In Failed  ${plan}  ${dv}[phone]
+
+Rollback Plan While Confirmed
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
@@ -38,15 +51,145 @@ Update Plan After Confirm
     ${bv_new}  Search behind Vehicle by Index  333
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
-    ${update_info}  Create Dictionary  behind_vehicle_id=${bv_new}[id]  plan_time=2021-10-10 11:12:11  use_for=abcd  drop_address=def
-    Set To Dictionary  ${update_info}  plan_id=${plan}[id]
-    Req to Server  /plan/update  ${bc1_user_token}  ${update_info}  ${True}
+    Rollback Plan  ${plan}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}
+    Should Be Equal As Numbers  ${resp}[0][status]  0
+    ${update_info}  Create Dictionary  comment=new_comment
+    Update A Plan  ${plan}[id]  &{update_info}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}
+    Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  ${bv}[plate]
+    Should Be Equal As Strings  ${resp}[0][comment]  new_comment
 
-Rollback Plan After Confirm
+Disabled Action While Confirmed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Update Failed  ${plan}
+    Confirm Failed  ${plan}
+    Check In Failed  ${plan}  ${dv}[phone]
+    Enter Failed  ${plan}
+    Deliver Failed  ${plan}
+
+Rollback While Payed
+    [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
     ${dv}  Search Driver by Index  0
     ${bv_new}  Search behind Vehicle by Index  333
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Rollback Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+
+Disabled Action While Payed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Update Failed  ${plan}
+    Confirm Failed  ${plan}
+    Pay Failed  ${plan}
+
+Rollback While Entered
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Plan Enter  ${plan}
+    Rollback Plan  ${plan}
+    Plan Enter  ${plan}
+
+Disabled Action While Entered
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Plan Enter  ${plan}
+    Update Failed  ${plan}
+    Confirm Failed  ${plan}
+    Pay Failed  ${plan}
+    Enter Failed  ${plan}
+
+Rollback While Delivered
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Deliver A Plan  ${plan}  ${20}
+    Rollback Plan  ${plan}
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal As Numbers  ${new_balance}  ${cur_balance}
+    Deliver A Plan  ${plan}  ${20}
+
+Disabled Action While Delivered
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Deliver A Plan  ${plan}  ${20}
+    Update Failed  ${plan}
+    Confirm Failed  ${plan}
+    Pay Failed  ${plan}
+    Check In Failed  ${plan}  ${dv}[phone]
+    Enter Failed  ${plan}
+    Deliver Failed  ${plan}
+
+*** Keywords ***
+Update Failed
+    [Arguments]  ${plan}
+    ${bv_new}  Search behind Vehicle by Index  333
+    ${update_info}  Create Dictionary  behind_vehicle_id=${bv_new}[id]  plan_time=2021-10-10 11:12:11  use_for=abcd  drop_address=def
+    Set To Dictionary  ${update_info}  plan_id=${plan}[id]
+    Req to Server  /plan/update  ${bc1_user_token}  ${update_info}  ${True}
+
+Confirm Failed
+    [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/confirm_single_plan  ${sc_admin_token}  ${req}  ${True}
+
+Rollback Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/rollback  ${sc_admin_token}  ${req}  ${True}
+
+Pay Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/pay  ${sc_admin_token}  ${req}  ${True}
+
+Check In Failed
+    [Arguments]  ${plan}  ${dv_phone}
+    ${do_info}  Driver Online  ${dv_phone}  1231312  12312312
+    ${req}  Create Dictionary  open_id=${do_info}[open_id]  plan_id=${plan}[id]
+    Req to Server  /plan/check_in  none  ${req}  ${True}
+
+Enter Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/enter  ${sc_admin_token}  ${req}  ${True}
+
+Deliver Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${20}  p_time=2018-01-01  m_time=2018-01-01
+    Req to Server  /plan/deliver  ${sc_admin_token}  ${req}  ${True}

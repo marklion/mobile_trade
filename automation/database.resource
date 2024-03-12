@@ -30,6 +30,7 @@ Contract Reset
     Clear Table  contract
     Clear Table  contract_stuff
     Clear Table  balance_history
+    Clear Table  user_contract
 
 Plan Reset
     Clear Table  plan

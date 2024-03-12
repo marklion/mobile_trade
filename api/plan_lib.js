@@ -124,6 +124,7 @@ module.exports = {
     plan_detail_include: function () {
         return [
             { model: db_opt.get_sq().models.company, paranoid: false },
+            { model: db_opt.get_sq().models.rbac_user, paranoid: false },
             { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.driver, paranoid: false },
@@ -279,12 +280,94 @@ module.exports = {
             throw { err_msg: '未找到计划或状态错误' };
         }
     },
+    authorize_user2contract:async function(_phone, _contract_id, _token)
+    {
+        let sq = db_opt.get_sq();
+        let user = await rbac_lib.add_user(_phone);
+        let company = await rbac_lib.get_company_by_token(_token);
+        let contract = await sq.models.contract.findByPk(_contract_id);
+        if (contract && user && company && await company.hasSale_contract(contract))
+        {
+            if (! await contract.hasRbac_user(user))
+            {
+                await contract.addRbac_user(user);
+            }
+        }
+        else
+        {
+            throw { err_msg: '无权限' };
+        }
+    },
+    unauthorize_user2contract: async function (_phone, _contract_id, _token) {
+        let sq = db_opt.get_sq();
+        let user = await rbac_lib.add_user(_phone);
+        let company = await rbac_lib.get_company_by_token(_token);
+        let contract = await sq.models.contract.findByPk(_contract_id);
+        if (contract && user && company && await company.hasSale_contract(contract)) {
+            if ( await contract.hasRbac_user(user)) {
+                await contract.removeRbac_user(user);
+            }
+        }
+        else {
+            throw { err_msg: '无权限' };
+        }
+    },
     confirm_single_plan: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
-            plan.status = 1;
+            let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+            let creator = await plan.getRbac_user();
+            if (creator && contracts.length == 1 && await contracts[0].hasRbac_user(creator)) {
+                plan.status = 1;
+                await plan.save();
+                await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                await this.verify_plan_pay(plan);
+            }
+            else {
+                throw { err_msg: '报计划人未授权' };
+            }
+
+        });
+    },
+    plan_enter:async function(_plan_id, _token)
+    {
+        await this.action_in_plan(_plan_id, _token, 2, async (plan) => {
+            if (plan.enter_time && plan.enter_time.length > 0)
+            {
+                throw { err_msg: '已进厂' };
+            }
+            plan.enter_time = moment().format('YYYY-MM-DD HH:mm:ss');
             await plan.save();
-            await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
-            await this.verify_plan_pay(plan);
+            await this.rp_history_enter(plan, (await rbac_lib.get_user_by_token(_token)).name);
+        });
+    },
+    plan_rollback:async function(_plan_id, _token)
+    {
+        await this.action_in_plan(_plan_id, _token, -1, async (plan) => {
+            if (plan.status == 1) {
+                plan.status = 0;
+            }
+            else if (plan.status == 2) {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    plan.enter_time = '';
+                }
+                else {
+                    plan.status = 1;
+                }
+            }
+            else if (plan.status == 3) {
+                await this.plan_undo_cost(plan);
+                plan.status = 2;
+                plan.count = 0;
+                plan.p_time = '';
+                plan.p_weight = 0;
+                plan.m_time = '';
+                plan.m_weight = 0;
+            }
+            else {
+                throw { err_msg: '无法回退' };
+            }
+            await plan.save();
+            await this.rp_history_rollback(plan, (await rbac_lib.get_user_by_token(_token)).name);
         });
     },
     get_single_plan_by_id: async function (_plan_id) {
@@ -306,6 +389,21 @@ module.exports = {
                 operator: '系统',
                 comment: '出货扣除',
                 cash_increased: -decrease_cash
+            });
+        }
+    },
+    plan_undo_cost: async function (plan) {
+        let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+        if (contracts.length == 1) {
+            let contract = contracts[0];
+            let decrease_cash = plan.unit_price * plan.count;
+            contract.balance += decrease_cash
+            await contract.save();
+            await contract.createBalance_history({
+                time: moment().format('YYYY-MM-DD HH:mm:ss'),
+                operator: '系统',
+                comment: '回退出货增加',
+                cash_increased: decrease_cash
             });
         }
     },
@@ -366,7 +464,7 @@ module.exports = {
             if (stuff) {
                 let company = stuff.company;
                 if (company && opt_company && opt_company.id == company.id) {
-                    if (plan.status == _expect_status) {
+                    if (-1 == _expect_status || plan.status == _expect_status) {
                         await _action(plan);
                     }
                     else {
@@ -385,9 +483,6 @@ module.exports = {
             throw { err_msg: '未找到计划' };
         }
     },
-    //TODO
-    // record plan as archive data
-    // confirm plan need authorizing creator
     record_plan_history: async function (_plan, _operator, _action_type) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type });
     },
@@ -399,6 +494,15 @@ module.exports = {
     },
     rp_history_pay: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '验款');
+    },
+    rp_history_enter: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '进厂');
+    },
+    rp_history_rollback: async function (_plan, _operator) {
+        if (_plan.plan_histories.length > 0) {
+            let last_action = _plan.plan_histories[_plan.plan_histories.length - 1];
+            await this.record_plan_history(_plan, _operator, '回退:' + last_action.action_type);
+        }
     },
     rp_history_deliver: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '发车');

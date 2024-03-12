@@ -17,6 +17,12 @@ const plan_detail_define = {
     drop_address: { type: String, mean: '卸货地址', example: '卸货地址' },
     register_time: { type: String, mean: '登记时间', example: '2020-01-01 12:00:00' },
     register_number: { type: Number, mean: '登记号', example: 1 },
+    enter_time: { type: String, mean: '进场时间', example: '2020-01-01 12:00:00' },
+    rbac_user:{type: Object, mean: '创建人', explain: {
+        id: { type: Number, mean: '用户ID', example: 1 },
+        name: { type: String, mean: '用户姓名', example: '用户姓名' },
+        phone: { type: String, mean: '用户电话', example: '用户电话' },
+    }},
     stuff: {
         type: Object, mean: '货物', explain: {
             id: { type: Number, mean: '货物ID', example: 1 },
@@ -268,6 +274,24 @@ function install(app) {
         }
         return { stuff: ret.rows, total: ret.count };
     }).install(app);
+    mkapi('/contract/authorize', 'plan', true, true, {
+        contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+        phone: { type: String, have_to: true, mean: '用户电话', example: '用户电话' },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '授权用户创建计划', '授权用户创建计划').add_handler(async function (body, token) {
+        await plan_lib.authorize_user2contract(body.phone, body.contract_id, token);
+        return {result:true};
+    }).install(app);
+    mkapi('/contract/unauthorize', 'plan', true, true, {
+        contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+        phone: { type: String, have_to: true, mean: '用户电话', example: '用户电话' },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '取消授权用户创建计划', '取消授权用户创建计划').add_handler(async function (body, token) {
+        await plan_lib.unauthorize_user2contract(body.phone, body.contract_id, token);
+        return {result:true};
+    }).install(app);
     mkapi('/driver/fetch', 'customer', true, true, {
         name: { type: String, have_to: true, mean: '司机姓名', example: '张三' },
         id_card: { type: String, have_to: true, mean: '司机身份证', example: '1234567890' },
@@ -315,12 +339,13 @@ function install(app) {
         };
         let user = await rbac_lib.get_user_by_token(token);
         let new_plan = await sq.models.plan.create(new_plan_req);
-        if (new_plan && stuff && buy_company && driver && main_vehicle && behind_vehicle) {
+        if (new_plan && stuff && buy_company && driver && main_vehicle && behind_vehicle && user) {
             await new_plan.setStuff(stuff);
             await new_plan.setCompany(buy_company);
             await new_plan.setDriver(driver);
             await new_plan.setMain_vehicle(main_vehicle);
             await new_plan.setBehind_vehicle(behind_vehicle);
+            await new_plan.setRbac_user(user);
             await plan_lib.rp_history_create(new_plan, user.name);
             new_plan.unit_price = stuff.price;
             new_plan.status = 0;
@@ -388,6 +413,14 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '手动验款', '手动验款').add_handler(async function (body, token) {
         await plan_lib.manual_pay_plan(body.plan_id, token);
+        return { result: true };
+    }).install(app);
+    mkapi('/plan/enter', 'scale', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '车辆入场', '车辆入场').add_handler(async function (body, token) {
+        await plan_lib.plan_enter(body.plan_id, token);
         return { result: true };
     }).install(app);
     mkapi('/driver/online', 'none', false, false, {
@@ -459,12 +492,12 @@ function install(app) {
         let sq = db_opt.get_sq();
         let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
         let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
-        if (driver && plan && await driver.hasPlan(plan)) {
+        if (driver && plan && plan.status == 2 && await driver.hasPlan(plan)) {
             await require('./field_lib').handle_driver_check_in(plan);
             return { result: true };
         }
         else {
-            throw { err_msg: '司机不存在' };
+            throw { err_msg: '无法签到' };
         }
     }).install(app);
     mkapi('/plan/deliver', 'scale', true, true, {
@@ -478,6 +511,14 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '计划发车', '计划发车').add_handler(async function (body, token) {
         await plan_lib.deliver_plan(body.plan_id, token, body.count, body.p_weight, body.m_weight, body.p_time, body.m_time);
+        return { result: true };
+    }).install(app);
+    mkapi('/plan/rollback', 'plan', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '计划回退', '计划回退').add_handler(async function (body, token) {
+        await plan_lib.plan_rollback(body.plan_id, token);
         return { result: true };
     }).install(app);
 }
