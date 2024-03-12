@@ -30,6 +30,25 @@ Update Plan While Created
     Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  ${bv_new}[plate]
     Should Be Equal As Strings  ${resp}[0][driver][phone]  ${dv_new}[phone]
     Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  ${mv_new}[plate]
+    Check New Status And History  ${plan}  0  改为  def
+
+Cancel While Created
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Cancel A Plan  ${plan}
+    Check New Status And History  ${plan}  3  取消
+
+Close While Created
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Close A Plan  ${plan}
+    Check New Status And History  ${plan}  3  关闭
 
 Disabled Action While Created
     [Teardown]  Plan Reset
@@ -52,13 +71,22 @@ Rollback Plan While Confirmed
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
     Rollback Plan  ${plan}
-    ${resp}  Search Plans Based on User  ${sc_admin_token}
-    Should Be Equal As Numbers  ${resp}[0][status]  0
+    Check New Status And History  ${plan}  0  回退  确认
     ${update_info}  Create Dictionary  comment=new_comment
     Update A Plan  ${plan}[id]  &{update_info}
     ${resp}  Search Plans Based on User  ${sc_admin_token}
     Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  ${bv}[plate]
     Should Be Equal As Strings  ${resp}[0][comment]  new_comment
+
+Close While Confirmed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Close A Plan  ${plan}
+    Check New Status And History  ${plan}  3  关闭
 
 Disabled Action While Confirmed
     [Teardown]  Plan Reset
@@ -72,6 +100,7 @@ Disabled Action While Confirmed
     Check In Failed  ${plan}  ${dv}[phone]
     Enter Failed  ${plan}
     Deliver Failed  ${plan}
+    Cancel Failed  ${plan}
 
 Rollback While Payed
     [Teardown]  Plan Reset
@@ -83,7 +112,19 @@ Rollback While Payed
     Confirm A Plan  ${plan}
     Manual Pay A Plan  ${plan}
     Rollback Plan  ${plan}
+    Check New Status And History  ${plan}  1  回退  验款
     Manual Pay A Plan  ${plan}
+
+Close While Payed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Close A Plan  ${plan}
+    Check New Status And History  ${plan}  3  关闭
 
 Disabled Action While Payed
     [Teardown]  Plan Reset
@@ -96,6 +137,7 @@ Disabled Action While Payed
     Update Failed  ${plan}
     Confirm Failed  ${plan}
     Pay Failed  ${plan}
+    Cancel Failed  ${plan}
 
 Rollback While Entered
     [Teardown]  Plan Reset
@@ -107,6 +149,7 @@ Rollback While Entered
     Manual Pay A Plan  ${plan}
     Plan Enter  ${plan}
     Rollback Plan  ${plan}
+    Check New Status And History  ${plan}  2  回退  进厂
     Plan Enter  ${plan}
 
 Disabled Action While Entered
@@ -122,6 +165,8 @@ Disabled Action While Entered
     Confirm Failed  ${plan}
     Pay Failed  ${plan}
     Enter Failed  ${plan}
+    Cancel Failed  ${plan}
+    Close Failed  ${plan}
 
 Rollback While Delivered
     [Teardown]  Plan Reset
@@ -134,6 +179,7 @@ Rollback While Delivered
     Manual Pay A Plan  ${plan}
     Deliver A Plan  ${plan}  ${20}
     Rollback Plan  ${plan}
+    Check New Status And History  ${plan}  2  回退  发车
     ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Should Be Equal As Numbers  ${new_balance}  ${cur_balance}
     Deliver A Plan  ${plan}  ${20}
@@ -154,6 +200,28 @@ Disabled Action While Delivered
     Check In Failed  ${plan}  ${dv}[phone]
     Enter Failed  ${plan}
     Deliver Failed  ${plan}
+    Cancel Failed  ${plan}
+    Close Failed  ${plan}
+
+Disabled Action While Closed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Close A Plan  ${plan}
+    Update Failed  ${plan}
+    Confirm Failed  ${plan}
+    Pay Failed  ${plan}
+    Check In Failed  ${plan}  ${dv}[phone]
+    Enter Failed  ${plan}
+    Deliver Failed  ${plan}
+    Cancel Failed  ${plan}
+    Close Failed  ${plan}
+    Rollback Failed  ${plan}
 
 *** Keywords ***
 Update Failed
@@ -193,3 +261,22 @@ Deliver Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${20}  p_time=2018-01-01  m_time=2018-01-01
     Req to Server  /plan/deliver  ${sc_admin_token}  ${req}  ${True}
+
+Cancel Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/cancel  ${bc1_user_token}  ${req}  ${True}
+
+Close Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/close  ${sc_admin_token}  ${req}  ${True}
+
+Check New Status And History
+    [Arguments]  ${plan}  ${status}  @{action_types}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  ${status}
+    ${latest_node}  Get Latest History Node  ${cur_plan}
+    FOR  ${itr}  IN  @{action_types}
+        Should Contain  ${latest_node}[action_type]  ${itr}
+    END

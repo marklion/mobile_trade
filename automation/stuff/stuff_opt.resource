@@ -265,7 +265,35 @@ Search Plans Based on User
     END
     ${resp}  Req Get to Server  ${url}  ${token}  plans  ${-1}  &{req}
     RETURN  ${resp}
+Get Plan By Id
+    [Arguments]  ${plan_id}
+    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}
+    ${plan}  Create Dictionary
+    FOR  ${itr}  IN  @{resp}
+        ${plan_found_id}  Get From Dictionary  ${itr}  id
+        IF  $plan_found_id == $plan_id
+            ${plan}  Set To Dictionary  ${itr}
+            Exit For Loop
+        END
+    END
+    RETURN  ${plan}
+Get Latest History Node
+    [Arguments]  ${plan}
+    ${history}  Copy List  ${plan}[plan_histories]
+    Reverse List  ${history}
+    RETURN  ${history}[0]
+
 Update A Plan
     [Arguments]  ${plan_id}  &{update_info}
     Set To Dictionary  ${update_info}  plan_id=${plan_id}
     Req to Server  /plan/update  ${bc1_user_token}  ${update_info}
+
+Cancel A Plan
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/cancel  ${bc1_user_token}  ${req}
+
+Close A Plan
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/close  ${sc_admin_token}  ${req}

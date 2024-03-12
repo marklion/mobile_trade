@@ -58,6 +58,7 @@ let db_opt = {
             register_number: { type: DataTypes.INTEGER ,  defaultValue: 0},
             register_comment: { type: DataTypes.STRING},
             enter_time: { type: DataTypes.STRING },
+            manual_close: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         vehicle:{
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

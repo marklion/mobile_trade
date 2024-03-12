@@ -1,6 +1,7 @@
 const mkapi = require('./api_utils');
 const plan_lib = require('./plan_lib');
 const db_opt = require('./db_opt');
+const rbac_lib = require('./rbac_lib');
 const plan_detail_define = {
     id: { type: Number, mean: '计划ID', example: 1 },
     plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
@@ -78,7 +79,6 @@ function install(app) {
         next_price: { type: Number, mean: '下次单价', example: 1 },
         change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
     }, '获取货物', '获取货物').add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         return await plan_lib.fetch_stuff(body.name, body.price, body.comment, company, body.expect_count);
     }).install(app);
@@ -95,7 +95,6 @@ function install(app) {
             }
         }
     }, '获取所有货物', '获取所有货物', true).add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         return {
             stuff: await company.getStuff(
@@ -112,7 +111,6 @@ function install(app) {
     }, {
         result: { type: Boolean, mean: '结果', example: true }
     }, '删除货物', '删除货物').add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(body.id);
@@ -127,7 +125,6 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '创建合同', '创建合同').add_handler(async function (body, token) {
         let ret = { result: false };
-        let rbac_lib = require('./rbac_lib');
         let sale_company = await rbac_lib.get_company_by_token(token);
         let buy_company = await db_opt.get_sq().models.company.findByPk(body.customer_id);
         if (buy_company && sale_company) {
@@ -143,7 +140,6 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '删除合同', '删除合同').add_handler(async function (body, token) {
         let ret = { result: false };
-        let rbac_lib = require('./rbac_lib');
         let sale_company = await rbac_lib.get_company_by_token(token);
         let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
         if (contract && sale_company && await sale_company.hasSale_contract(contract)) {
@@ -174,7 +170,6 @@ function install(app) {
             }
         }, total: { type: Number, mean: '总数', example: 1 },
     }, '获取所有销售合同', '获取所有合同', true).add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let found_ret = await plan_lib.get_all_sale_contracts(company, body.pageNo);
         return {
@@ -204,7 +199,6 @@ function install(app) {
             }
         }, total: { type: Number, mean: '总数', example: 1 },
     }, '获取所有采购合同', '获取所有合同', true).add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let found_ret = await plan_lib.get_all_buy_contracts(company, body.pageNo);
         return {
@@ -222,7 +216,7 @@ function install(app) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(body.stuff_id);
         let contract = await sq.models.contract.findByPk(body.contract_id);
-        let company = await require('./rbac_lib').get_company_by_token(token);
+        let company = await rbac_lib.get_company_by_token(token);
         if (stuff && contract && company && await company.hasSale_contract(contract)) {
             await plan_lib.add_stuff_to_contract(stuff, contract);
             ret.result = true;
@@ -239,7 +233,7 @@ function install(app) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(body.stuff_id);
         let contract = await sq.models.contract.findByPk(body.contract_id);
-        let company = await require('./rbac_lib').get_company_by_token(token);
+        let company = await rbac_lib.get_company_by_token(token);
         if (stuff && contract && company && await company.hasSale_contract(contract)) {
             await plan_lib.del_stuff_from_contract(stuff, contract);
             ret.result = true;
@@ -263,7 +257,6 @@ function install(app) {
             }
         }
     }, '获取公司货物', '获取公司货物', true).add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let ret = {
             stuff: [],
@@ -326,7 +319,6 @@ function install(app) {
     }, plan_detail_define, '创建计划', '创建计划').add_handler(async function (body, token) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-        let rbac_lib = require('./rbac_lib');
         let buy_company = await rbac_lib.get_company_by_token(token);
         let driver = await sq.models.driver.findByPk(body.driver_id);
         let main_vehicle = await sq.models.vehicle.findByPk(body.main_vehicle_id);
@@ -380,7 +372,6 @@ function install(app) {
             type: Array, mean: '计划', explain: plan_detail_define
         },
     }, '获取购买的计划', '获取购买的计划', true).add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let search_ret = await plan_lib.search_bought_plans(company, body.pageNo, body);
         return { plans: search_ret.rows, total: search_ret.count };
@@ -394,7 +385,6 @@ function install(app) {
             type: Array, mean: '计划', explain: plan_detail_define
         },
     }, '获取销售的计划', '获取销售的计划', true).add_handler(async function (body, token) {
-        let rbac_lib = require('./rbac_lib');
         let company = await rbac_lib.get_company_by_token(token);
         let search_ret = await plan_lib.search_sold_plans(company, body.pageNo, body);
         return { plans: search_ret.rows, total: search_ret.count };
@@ -519,6 +509,32 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '计划回退', '计划回退').add_handler(async function (body, token) {
         await plan_lib.plan_rollback(body.plan_id, token);
+        return { result: true };
+    }).install(app);
+    mkapi('/plan/cancel', 'customer', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '取消计划', '取消计划').add_handler(async function (body, token) {
+        let opt_company = await rbac_lib.get_company_by_token(token);
+        let user = await rbac_lib.get_user_by_token(token);
+        let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+        if (user && plan && opt_company && await opt_company.hasPlan(plan) && plan.status == 0) {
+            await plan_lib.plan_close(plan, user.name, true);
+        }
+        else {
+            throw { err_msg: '无权限' };
+        }
+        return { result: true };
+    }).install(app);
+    mkapi('/plan/close', 'plan', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '关闭计划', '关闭计划').add_handler(async function (body, token) {
+        await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+            await plan_lib.plan_close(plan, (await rbac_lib.get_user_by_token(token)).name, false);
+        });
         return { result: true };
     }).install(app);
 }

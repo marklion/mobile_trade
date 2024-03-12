@@ -328,11 +328,28 @@ module.exports = {
 
         });
     },
-    plan_enter:async function(_plan_id, _token)
-    {
+    plan_close: async function (plan, name, is_cancel = false) {
+        if (plan.status == 3) {
+            throw { err_msg: '已关闭,无法再次关闭' };
+        }
+        if (plan.enter_time && plan.enter_time.length > 0) {
+            throw { err_msg: '已进厂,无法关闭' };
+        }
+        plan.status = 3;
+        plan.manual_close = true;
+        await plan.save();
+        if (is_cancel)
+        {
+            await this.rp_history_cancel(plan, name);
+        }
+        else
+        {
+            await this.rp_history_close(plan,name);
+        }
+    },
+    plan_enter: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 2, async (plan) => {
-            if (plan.enter_time && plan.enter_time.length > 0)
-            {
+            if (plan.enter_time && plan.enter_time.length > 0) {
                 throw { err_msg: '已进厂' };
             }
             plan.enter_time = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -340,9 +357,11 @@ module.exports = {
             await this.rp_history_enter(plan, (await rbac_lib.get_user_by_token(_token)).name);
         });
     },
-    plan_rollback:async function(_plan_id, _token)
-    {
+    plan_rollback: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan) => {
+            if (plan.manual_close) {
+                throw { err_msg: '已关闭,无法回退' };
+            }
             if (plan.status == 1) {
                 plan.status = 0;
             }
@@ -513,5 +532,22 @@ module.exports = {
         }
         plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
     },
-
+    rp_history_close: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '关闭');
+        let plan = await this.get_single_plan_by_id(_plan.id);
+        let last_archive = await plan.getArchive_plan();
+        if (last_archive) {
+            await last_archive.destroy();
+        }
+        plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
+    },
+    rp_history_cancel: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '取消');
+        let plan = await this.get_single_plan_by_id(_plan.id);
+        let last_archive = await plan.getArchive_plan();
+        if (last_archive) {
+            await last_archive.destroy();
+        }
+        plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
+    },
 };
