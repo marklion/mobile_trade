@@ -173,6 +173,39 @@ Lots of Plan Explore
     ${resp}  Search Plans Based on User  ${sc_admin_token}  ${True}
     Length Should Be  ${resp}  100
 
+Directly Change Stuff Price With Plan Openned
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Change Stuff Price  ${test_stuff}[id]  ${1090}
+    @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
+    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    ${plan}  Get Plan By Id  ${plan}[id]
+    Should Not Be Equal As Numbers  ${plan}[unit_price]  ${test_stuff}[price]
+    Change Stuff Price  ${test_stuff}[id]  ${998}  ${True}
+    @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
+    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    ${plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Numbers  ${plan}[unit_price]  ${test_stuff}[price]
+    ${last_node}  Get Latest History Node  ${plan}
+    Should Contain  ${last_node}[action_type]  998
+    Change Stuff Price  ${test_stuff}[id]  ${1211}  ${True}
+
+Change Price After Plan Closed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Deliver A Plan  ${plan}  ${23}
+    ${plan}  Get Plan By Id  ${plan}[id]
+    Change Stuff Price  ${test_stuff}[id]  ${998}  ${True}
+    Should Not Be Equal As Numbers  ${plan}[unit_price]  ${998}
 
 *** Keywords ***
 Verify Plan Detail

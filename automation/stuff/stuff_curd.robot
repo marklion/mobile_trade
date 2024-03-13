@@ -7,9 +7,9 @@ Suite Teardown  Clean Up Companies And Users
 *** Test Cases ***
 Stuff For Sold Operation
     [Teardown]  Stuff Reset
-    Add A Stuff To Sale  st1  ${23}  asdfa
-    Add A Stuff To Sale  st2  ${223}  aaaaaaa
-    Add A Stuff To Sale  st1  ${23}  asdasdfasdf
+    Add A Stuff To Sale  st1  asdfa
+    Add A Stuff To Sale  st2  aaaaaaa
+    Add A Stuff To Sale  st1  asdasdfasdf
     @{stuffs_found}  Req Get to Server  /stuff/get_all  ${sc_admin_token}  stuff
     Length Should Be  ${stuffs_found}  2
     Should Be Equal As Strings  ${stuffs_found[0]}[name]  st1
@@ -41,15 +41,15 @@ Stuff via Contract Maintain
     [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset
     [Setup]  Run Keywords  Add A Company As Customer  ${buy_company1}[id]
     ...    AND  Add A Company As Customer  ${buy_company2}[id]
-    ...    AND  Add A Stuff to Sale  st1  ${112}  abcdddd
+    ...    AND  Add A Stuff to Sale  st1  abcdddd
     Add A Stuff To Contract  st1  bc1
     Add A Stuff To Contract  st1  bc2
     @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
     Length Should Be  ${stuffs_found}  1
-    Should Be Equal As Numbers  ${stuffs_found[0]}[price]  112
+    Should Be Equal As Numbers  ${stuffs_found[0]}[price]  0
     @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc2_user_token}  stuff
     Length Should Be  ${stuffs_found}  1
-    Should Be Equal As Numbers  ${stuffs_found[0]}[price]  112
+    Should Be Equal As Numbers  ${stuffs_found[0]}[price]  0
     Del A Stuff From Contract  st1  bc1
     @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
     Length Should Be  ${stuffs_found}  1
@@ -78,3 +78,17 @@ Contract Charge And Check
     ${resp}  Req Get to Server  /contract/get_company_history  ${sc_admin_token}  histories  ${-1}  &{req}
     Should Be Equal As Numbers  ${resp}[0][cash_increased]  1200
     Should Be Equal As Strings  ${resp}[0][comment]  abcd
+
+Change Stuff Price And Check
+    [Teardown]  Stuff Reset
+    Add A Stuff To Sale  st1  asdfa
+    Add A Stuff To Sale  st2  aaaaaaa
+    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${sc_admin_token}  stuff
+    Change Stuff Price  ${stuffs_found[0]}[id]  ${12341}
+    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${sc_admin_token}  stuff
+    Should Be Equal As Numbers  ${stuffs_found}[0][price]  12341
+    Should Be Equal As Numbers  ${stuffs_found}[1][price]  0
+    ${req}  Create Dictionary  stuff_id=${stuffs_found[0]}[id]
+    ${resp}  Req Get to Server  /stuff/get_price_history  ${sc_admin_token}  histories  ${-1}  &{req}
+    Should Contain  ${resp}[0][comment]  test_change
+

@@ -103,6 +103,13 @@ let db_opt = {
             id:{ type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             content: { type: DataTypes.STRING },
         },
+        price_history:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            time: { type: DataTypes.STRING },
+            operator: { type: DataTypes.STRING },
+            comment: { type: DataTypes.STRING },
+            new_price: { type: DataTypes.FLOAT, defaultValue: 0 },
+        },
     },
     make_associate:function(_sq){
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, {through: 'rbac_user_role'});
@@ -126,6 +133,8 @@ let db_opt = {
         _sq.models.contract.belongsToMany(_sq.models.stuff, {through: 'contract_stuff'});
         _sq.models.balance_history.belongsTo(_sq.models.contract);
         _sq.models.contract.hasMany(_sq.models.balance_history);
+        _sq.models.price_history.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.price_history);
 
         _sq.models.plan.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.plan);

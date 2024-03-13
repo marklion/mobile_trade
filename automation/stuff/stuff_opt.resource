@@ -54,9 +54,14 @@ Clean Up Companies And Users
     Company Reset
 
 Add A Stuff To Sale
-    [Arguments]  ${stuff_name}  ${stuff_price}  ${stuff_comment}  ${expect_count}=${22}
-    ${req}  Create Dictionary  name=${stuff_name}  price=${stuff_price}  comment=${stuff_comment}  expect_count=${expect_count}
+    [Arguments]  ${stuff_name}  ${stuff_comment}  ${expect_count}=${22}
+    ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}
     Req to Server  /stuff/fetch  ${sc_admin_token}  ${req}
+
+Change Stuff Price
+    [Arguments]  ${stuff_id}  ${new_price}  ${to_plan}=${False}  ${comment}=test_change
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  price=${new_price}  to_plan=${to_plan}  comment=${comment}
+    Req to Server  /stuff/change_price  ${sc_admin_token}  ${req}
 
 Del A Stuff From Sale
     [Arguments]  ${stuff_id}
@@ -149,9 +154,12 @@ Get Cash Of A Company
 
 Prepare Sale and Buy
     Prepare Companies And Users
-    Add A Stuff To Sale  lng  ${1211}  lng_comment
+    Add A Stuff To Sale  lng  lng_comment
     Add A Company As Customer  ${buy_company1}[id]
     Add A Stuff To Contract  lng  bc1
+    @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
+    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    Change Stuff Price  ${test_stuff}[id]  ${1212}
     @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
     Authorize User to Contract  bc1  5678
@@ -182,8 +190,11 @@ Unauthorize User to Contract
     Req to Server  /contract/unauthorize  ${sc_admin_token}  ${req}
 
 Re-Add Stuff
-    Add A Stuff To Sale  lng  ${1211}  lng_comment
+    Add A Stuff To Sale  lng  lng_comment
     Add A Stuff To Contract  lng  bc1
+    @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
+    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    Change Stuff Price  ${test_stuff}[id]  ${1212}
     @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
 

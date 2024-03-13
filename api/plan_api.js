@@ -68,7 +68,6 @@ const plan_detail_define = {
 function install(app) {
     mkapi('/stuff/fetch', 'stuff', true, true, {
         name: { type: String, have_to: true, mean: '货物名称', example: '货物名称' },
-        price: { type: Number, have_to: true, mean: '单价', example: 1 },
         comment: { type: String, have_to: false, mean: '备注', example: '备注' },
         expect_count: { type: Number, have_to: false, mean: '预期数量', example: 1 },
     }, {
@@ -80,7 +79,7 @@ function install(app) {
         change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
     }, '获取货物', '获取货物').add_handler(async function (body, token) {
         let company = await rbac_lib.get_company_by_token(token);
-        return await plan_lib.fetch_stuff(body.name, body.price, body.comment, company, body.expect_count);
+        return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count);
     }).install(app);
     mkapi('/stuff/get_all', 'stuff', false, true, {
     }, {
@@ -118,6 +117,33 @@ function install(app) {
             await stuff.destroy();
         }
         return { result: true };
+    }).install(app);
+    mkapi('/stuff/change_price', 'stuff', true, true, {
+        stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+        price:{ type: Number, have_to: true, mean: '新单价', example: 1 },
+        comment:{ type: String, have_to: true, mean: '备注', example: '备注' },
+        to_plan:{ type: Boolean, have_to: true, mean: '是否对未关闭计划生效', example: true },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '调价', '调价').add_handler(async function (body, token) {
+        await plan_lib.change_stuff_price(body.stuff_id,token, body.price, body.to_plan, body.comment);
+        return { result: true };
+    }).install(app);
+    mkapi('/stuff/get_price_history', 'stuff', false, true, {
+        stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+    }, {
+        histories: {
+            type: Array, mean: '调价历史', explain: {
+                id: { type: Number, mean: '历史ID', example: 1 },
+                time: { type: String, mean: '历史时间', example: '2020-01-01 12:00:00' },
+                operator: { type: String, mean: '操作人', example: '操作人' },
+                comment: { type: String, mean: '备注', example: '备注' },
+                new_price: { type: Number, mean: '新单价', example: 1 },
+            }
+        }
+    }, '获取调价历史', '获取调价历史', true).add_handler(async function (body, token) {
+        let ret = await plan_lib.get_price_history(body.stuff_id, token, body.pageNo);
+        return { histories: ret.rows, total: ret.count };
     }).install(app);
     mkapi('/contract/make', 'stuff', true, true, {
         customer_id: { type: Number, have_to: true, mean: '客户ID', example: 1 },

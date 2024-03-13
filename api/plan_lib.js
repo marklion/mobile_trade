@@ -13,17 +13,16 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _price, _comment, _company, _expect_count) {
+    fetch_stuff: async function (_name,  _comment, _company, _expect_count) {
         let sq = db_opt.get_sq();
         let stuff_found = await _company.getStuff({ where: { name: _name } });
         if (stuff_found.length != 1) {
-            stuff_found = await sq.models.stuff.create({ name: _name, price: _price, comment: _comment, expect_count: _expect_count });
+            stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count });
             await _company.addStuff(stuff_found);
         }
         let ret = {};
         stuff_found = await _company.getStuff({ where: { name: _name } });
         if (stuff_found.length == 1) {
-            stuff_found[0].price = _price;
             stuff_found[0].comment = _comment;
             stuff_found[0].expect_count = _expect_count;
             await stuff_found[0].save();
@@ -359,18 +358,22 @@ module.exports = {
     },
     plan_rollback: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan) => {
+            let rollback_content = '';
             if (plan.manual_close) {
                 throw { err_msg: '已关闭,无法回退' };
             }
             if (plan.status == 1) {
                 plan.status = 0;
+                rollback_content = '回退确认';
             }
             else if (plan.status == 2) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
                     plan.enter_time = '';
+                    rollback_content = '回退进厂';
                 }
                 else {
                     plan.status = 1;
+                    rollback_content = '回退验款';
                 }
             }
             else if (plan.status == 3) {
@@ -381,12 +384,13 @@ module.exports = {
                 plan.p_weight = 0;
                 plan.m_time = '';
                 plan.m_weight = 0;
+                rollback_content = '回退发车';
             }
             else {
                 throw { err_msg: '无法回退' };
             }
             await plan.save();
-            await this.rp_history_rollback(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
         });
     },
     get_single_plan_by_id: async function (_plan_id) {
@@ -517,12 +521,6 @@ module.exports = {
     rp_history_enter: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '进厂');
     },
-    rp_history_rollback: async function (_plan, _operator) {
-        if (_plan.plan_histories.length > 0) {
-            let last_action = _plan.plan_histories[_plan.plan_histories.length - 1];
-            await this.record_plan_history(_plan, _operator, '回退:' + last_action.action_type);
-        }
-    },
     rp_history_deliver: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '发车');
         let plan = await this.get_single_plan_by_id(_plan.id);
@@ -549,5 +547,66 @@ module.exports = {
             await last_archive.destroy();
         }
         plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
+    },
+    rp_history_price_change:async function(_plan, _operator, _new_price)
+    {
+        await this.record_plan_history(_plan, _operator, '价格变为:'+_new_price);
+    },
+
+    pri_change_stuff_price: async function (stuff, _new_price, _comment, _operator, _to_plan) {
+        stuff.price = _new_price;
+        await stuff.save();
+        await stuff.createPrice_history(
+            {
+                time: moment().format('YYYY-MM-DD HH:mm:ss'),
+                operator: _operator,
+                comment: _comment,
+                new_price: _new_price
+            });
+        if (_to_plan) {
+            let plans = await stuff.getPlans({
+                where: {
+                    status: {
+                        [db_opt.Op.ne]: 3
+                    }
+                }
+            });
+            for (let index = 0; index < plans.length; index++) {
+                const element = plans[index];
+                element.unit_price = _new_price;
+                await element.save();
+                await this.rp_history_price_change(element, _operator, _new_price);
+            }
+        }
+    },
+
+    change_stuff_price: async function (_stuff_id, _token, _new_price, _to_plan, _comment) {
+        let sq = db_opt.get_sq();
+        let company = await rbac_lib.get_company_by_token(_token);
+        let stuff = await sq.models.stuff.findByPk(_stuff_id);
+        if (company && stuff && await company.hasStuff(stuff)) {
+            await this.pri_change_stuff_price(stuff, _new_price, _comment, (await rbac_lib.get_user_by_token(_token)).name, _to_plan);
+        }
+        else {
+            throw { err_msg: '无权限' };
+        }
+    },
+
+    get_price_history:async function(_stuff_id,_token,  _pageNo)  {
+        let sq = db_opt.get_sq();
+        let stuff = await sq.models.stuff.findByPk(_stuff_id);
+        let company = await rbac_lib.get_company_by_token(_token);
+        let conditions = {
+            order: [['id', 'DESC']],
+            offset: _pageNo * 20,
+            limit: 20,
+        };
+        if (!stuff || !company || !await company.hasStuff(stuff)) {
+            throw { err_msg: '未找到货物' };
+        }
+
+        let rows = await stuff.getPrice_histories(conditions);
+        let count = await stuff.countPrice_histories();
+        return { rows: rows, count: count };
     },
 };
