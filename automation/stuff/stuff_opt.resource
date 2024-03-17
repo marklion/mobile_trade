@@ -23,10 +23,12 @@ Prepare Companies And Users
     Add Module To Company  ${sale_company}[id]  plan
     Add Module To Company  ${sale_company}[id]  cash
     Add Module To Company  ${sale_company}[id]  scale
+    Add Module To Company  ${sale_company}[id]  sc
     Add Module To User  ${sc_admin_token}  1234  stuff
     Add Module To User  ${sc_admin_token}  1234  plan
     Add Module To User  ${sc_admin_token}  1234  cash
     Add Module To User  ${sc_admin_token}  1234  scale
+    Add Module To User  ${sc_admin_token}  1234  sc
     ${no_need_sale_company}  Create One Company  sc_no_need
     Company Set Script  ${no_need_sale_company}[id]  normal
     ${sc_admin_no_need_token}  Login As Admin Of Company  ${no_need_sale_company}[id]  12341  sc_admin_no_need
@@ -252,6 +254,10 @@ Rollback Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /plan/rollback  ${sc_admin_token}  ${req}
+Cancel Check In Plan
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/cancel_check_in  ${sc_admin_token}  ${req}
 Search Driver by Index
     [Arguments]  ${itr}
     ${req}  Create Dictionary  name=dn_${itr}  id_card=di_${itr}  phone=dp_${itr}

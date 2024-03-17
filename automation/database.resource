@@ -41,3 +41,7 @@ Company Set Script
     Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
     Execute Sql String  update company set script = '${script_path}' where id = ${company_id};
     Disconnect From All Databases
+
+SC Reset
+    Clear Table  sc_content
+    Clear Table  sc_req

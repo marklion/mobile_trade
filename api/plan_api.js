@@ -2,6 +2,7 @@ const mkapi = require('./api_utils');
 const plan_lib = require('./plan_lib');
 const db_opt = require('./db_opt');
 const rbac_lib = require('./rbac_lib');
+const sc_lib = require('./sc_lib');
 const plan_detail_define = {
     id: { type: Number, mean: '计划ID', example: 1 },
     plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
@@ -115,6 +116,25 @@ function install(app) {
         let stuff = await sq.models.stuff.findByPk(body.id);
         if (stuff && company && company.hasStuff(stuff)) {
             await stuff.destroy();
+        }
+        return { result: true };
+    }).install(app);
+    mkapi('/stuff/sc_config', 'stuff', true, true, {
+        stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+        need_sc: { type: Boolean, have_to: true, mean: '是否需要安检', example: true },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '配置货物是否需要安检', '配置货物是否需要安检').add_handler(async function (body, token) {
+        let sq = db_opt.get_sq();
+        let company = await rbac_lib.get_company_by_token(token);
+        let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+        if (stuff && company && await company.hasStuff(stuff)) {
+            stuff.need_sc = body.need_sc;
+            await stuff.save();
+        }
+        else
+        {
+            throw { err_msg: '货物不存在' };
         }
         return { result: true };
     }).install(app);
@@ -508,13 +528,26 @@ function install(app) {
         let sq = db_opt.get_sq();
         let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
         let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
-        if (driver && plan && plan.status == 2 && await driver.hasPlan(plan)) {
+        if (driver && plan && plan.status == 2 && await driver.hasPlan(plan) && await sc_lib.plan_passed_sc(body.plan_id)) {
             await require('./field_lib').handle_driver_check_in(plan);
             return { result: true };
         }
         else {
             throw { err_msg: '无法签到' };
         }
+    }).install(app);
+    mkapi('/plan/cancel_check_in', 'scale', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '取消计划签到', '取消计划签到').add_handler(async function (body, token) {
+        await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
+            if (plan.enter_time && plan.enter_time.length > 0) {
+                throw { err_msg: '已经进厂' };
+            }
+            await require('./field_lib').handle_cancel_check_in(plan);
+        });
+        return { result: true };
     }).install(app);
     mkapi('/plan/deliver', 'scale', true, true, {
         plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },

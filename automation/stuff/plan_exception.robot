@@ -61,6 +61,7 @@ Disabled Action While Created
     Enter Failed  ${plan}
     Deliver Failed  ${plan}
     Check In Failed  ${plan}  ${dv}[phone]
+    Cancel Check In Failed  ${plan}
 
 Rollback Plan While Confirmed
     [Teardown]  Plan Reset
@@ -101,6 +102,7 @@ Disabled Action While Confirmed
     Enter Failed  ${plan}
     Deliver Failed  ${plan}
     Cancel Failed  ${plan}
+    Cancel Check In Failed  ${plan}
 
 Rollback While Payed
     [Teardown]  Plan Reset
@@ -125,6 +127,21 @@ Close While Payed
     Manual Pay A Plan  ${plan}
     Close A Plan  ${plan}
     Check New Status And History  ${plan}  3  关闭
+
+Cancel Check In While Payed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Check In A Plan  ${plan}
+    ${plan}  Get Plan By Id  ${plan}[id]
+    Should Not Be Empty  ${plan}[register_time]
+    Cancel Check In Plan  ${plan}
+    ${plan}  Get Plan By Id  ${plan}[id]
+    Dictionary Should Not Contain Key  ${plan}  register_time
 
 Disabled Action While Payed
     [Teardown]  Plan Reset
@@ -167,6 +184,7 @@ Disabled Action While Entered
     Enter Failed  ${plan}
     Cancel Failed  ${plan}
     Close Failed  ${plan}
+    Cancel Check In Failed  ${plan}
 
 Rollback While Delivered
     [Teardown]  Plan Reset
@@ -202,6 +220,7 @@ Disabled Action While Delivered
     Deliver Failed  ${plan}
     Cancel Failed  ${plan}
     Close Failed  ${plan}
+    Cancel Check In Failed  ${plan}
 
 Disabled Action While Closed
     [Teardown]  Plan Reset
@@ -222,6 +241,7 @@ Disabled Action While Closed
     Cancel Failed  ${plan}
     Close Failed  ${plan}
     Rollback Failed  ${plan}
+    Cancel Check In Failed  ${plan}
 
 *** Keywords ***
 Update Failed
@@ -271,6 +291,11 @@ Close Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /plan/close  ${sc_admin_token}  ${req}  ${True}
+
+Cancel Check In Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /plan/cancel_check_in  ${sc_admin_token}  ${req}  ${True}
 
 Check New Status And History
     [Arguments]  ${plan}  ${status}  @{action_types}

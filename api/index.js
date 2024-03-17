@@ -11,6 +11,7 @@ app.help_info = [];
 require('./rbac_api')(app);
 require('./plan_api')(app);
 require('./cash_api')(app);
+require('./sc_api')(app);
 
 const db_opt = require('./db_opt');
 
@@ -39,6 +40,7 @@ async function init_super_user() {
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('bid', '竞价模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('buy', '采购模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('stuff', '物料管理模块')).id );
+    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('sc', '安检模块')).id );
     let all_modules = await sq.models.rbac_module.findAll();
     let mkapi = require('./api_utils');
     for (let index = 0; index < all_modules.length; index++) {

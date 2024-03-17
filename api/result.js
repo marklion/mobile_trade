@@ -4,7 +4,6 @@ function copy_by_key(source, target) {
         let element = source[itr];
         let source_type = Object.prototype.toString.call(element);
         let target_type = Object.prototype.toString.call(target[itr]);
-        console.log('element:', element, 'target:', target[itr]);
         if (target[itr] != undefined && source_type == target_type) {
             if (source_type == '[object Object]') {
                 ret[itr] = copy_by_key(element, target[itr]);
