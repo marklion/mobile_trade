@@ -117,6 +117,15 @@ function install(app) {
     }, '获取计划安检状态', '获取计划安检状态', true).add_handler(async (body, token) => {
         return await sc_lib.get_plan_sc_status(body.plan_id, token, body.pageNo);
     }).install(app);
+    mkapi('/sc/check', 'sc', true, true, {
+        content_id: { type: Number, have_to: true, mean: '内容ID', example: 1 },
+        comment: { type: String, have_to: false, mean: '不通过原因', example: '内容错误' },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '安检审核', '安检审核').add_handler(async (body, token) => {
+        await sc_lib.check_sc_content(body.content_id, token, body.comment);
+        return { result: true };
+    }).install(app);
 }
 
 module.exports = install;

@@ -46,19 +46,21 @@ module.exports = {
     },
     get_sc_status_by_plan: async function (plan, pageNo) {
         let sq = db_opt.get_sq();
-        let ret = { reqs: [], total: 0, passed:false}
+        let ret = { reqs: [], total: 0, passed: false }
         let found_ret = await plan.stuff.getSc_reqs({
             order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
             limit: 20,
             offset: 20 * pageNo,
             include: [
-                {model:sq.models.sc_content, required:false, where:{
-                    [db_opt.Op.or]:[
-                        {driverId: plan.driver.id},
-                        {vehicleId: plan.main_vehicle.id},
-                        {vehicleId: plan.behind_vehicle.id},
-                    ]
-                }},
+                {
+                    model: sq.models.sc_content, required: false, where: {
+                        [db_opt.Op.or]: [
+                            { driverId: plan.driver.id },
+                            { vehicleId: plan.main_vehicle.id },
+                            { vehicleId: plan.behind_vehicle.id },
+                        ]
+                    }
+                },
             ],
         });
         let count = await plan.stuff.countSc_reqs();
@@ -78,10 +80,13 @@ module.exports = {
         return ret;
     },
     get_sc_driver_req: async function (_open_id, _plan_id, pageNo) {
-        let ret = { reqs: [], total: 0, passed: false};
+        let ret = { reqs: [], total: 0, passed: false };
         let plan = await plan_lib.get_single_plan_by_id(_plan_id);
         if (plan && plan.driver && plan.driver.open_id == _open_id && plan.stuff) {
             ret = await this.get_sc_status_by_plan(plan, pageNo);
+            if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
+                ret.passed = true;
+            }
         }
         else {
             throw { err_msg: '无权限' };
@@ -140,7 +145,7 @@ module.exports = {
                         default:
                             break;
                     }
-                    let sc_content = sc_req.getSc_contents({ where: condition });
+                    let sc_content = await sc_req.getSc_contents({ where: condition });
                     if (sc_content.length != 1 || !sc_content[0].passed) {
                         passed = false;
                         break;
@@ -204,10 +209,43 @@ module.exports = {
         let company = await rbac_lib.get_company_by_token(_token);
         if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
             ret = await this.get_sc_status_by_plan(plan, pageNo);
+            if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
+                ret.passed = true;
+            }
         }
         else {
             throw { err_msg: '无权限' };
         }
         return ret;
+    },
+    check_sc_content: async function (_content_id, _token, _comment) {
+        let sq = db_opt.get_sq();
+        let content = await sq.models.sc_content.findByPk(_content_id, {
+            include: [{
+                model: sq.models.sc_req,
+                include: [{
+                    model: sq.models.stuff,
+                    include: [sq.models.company]
+                }]
+            }]
+        });
+        let company = await rbac_lib.get_company_by_token(_token);
+        let user = await rbac_lib.get_user_by_token(_token);
+        if (user && company && content && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
+            if (!_comment) {
+                content.passed = true;
+                content.comment = '';
+            }
+            else {
+                content.passed = false;
+                content.comment = _comment;
+            }
+            content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
+            content.checker = user.name;
+            await content.save();
+        }
+        else {
+            throw { err_msg: '无权限' };
+        }
     },
 };

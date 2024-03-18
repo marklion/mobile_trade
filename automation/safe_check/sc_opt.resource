@@ -52,11 +52,14 @@ Del SC Req
     ${req}  Create Dictionary  req_id=${req_id}
     Req to Server  /sc/del_req  ${sc_admin_token}  ${req}
 Driver Get SC Status
-    [Arguments]  ${plan}  ${expect_pass}
+    [Arguments]  ${plan}  ${expect_pass}=${None}
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${plan}[id]
-    ${resp}  Req to Server  /sc/get_driver_req  none  ${req}
-    Should Be Equal  ${resp}[passed]  ${expect_pass}
+
+    IF  ${expect_pass} != ${None}
+        ${resp}  Req to Server  /sc/get_driver_req  none  ${req}
+        Should Be Equal  ${resp}[passed]  ${expect_pass}
+    END
     ${resp}  Req Get to Server  /sc/get_driver_req  none  reqs  ${-1}  &{req}
     RETURN  ${resp}
 Driver Upload SC Content
@@ -70,10 +73,26 @@ Driver Delete SC Content
     ${req}  Create Dictionary  content_id=${content_id}  open_id=${driver}[open_id]
     Req to Server  /sc/delete_content  none  ${req}
 Get SC Status By Plan
-    [Arguments]  ${plan}  ${expect_pass}
+    [Arguments]  ${plan}  ${expect_pass}=${None}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    ${resp}  Req to Server  /sc/plan_status  ${sc_admin_token}  ${req}
-    Should Be Equal  ${resp}[passed]  ${expect_pass}
+    IF  ${expect_pass} != ${None}
+        ${resp}  Req to Server  /sc/plan_status  ${sc_admin_token}  ${req}
+        Should Be Equal  ${resp}[passed]  ${expect_pass}
+    END
     ${resp}  Req Get to Server  /sc/plan_status  ${sc_admin_token}  reqs  ${-1}  &{req}
     RETURN  ${resp}
+Check Pass SC Status By Index
+    [Arguments]  ${plan}  ${index}  ${pass}=${True}
+    ${resp}  Get SC Status By Plan  ${plan}
+    @{contents}  Create List
+    FOR  ${itr}  IN  @{resp}
+        IF  'sc_content' in ${itr}
+            Append To List  ${contents}  ${itr}[sc_content][id]
+        END
+    END
+    ${req}  Create Dictionary  content_id=${contents}[${index}]
+    IF  ${pass} == ${False}
+        Set To Dictionary  ${req}  comment=cancel
+    END
+    Req to Server  /sc/check  ${sc_admin_token}  ${req}
 

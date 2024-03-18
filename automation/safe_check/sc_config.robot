@@ -80,17 +80,35 @@ Check Driver Upload SC
     ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
     Driver Upload SC Content  ${test_plan}  ${resp}[1][id]
     ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
-    ${index}  Set Variable  ${-1}
+    Check Pass SC Status By Index  ${test_plan}  0
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    Should Be True  ${resp}[-1][sc_content][passed]
+    Check Pass SC Status By Index  ${test_plan}  0  ${False}
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    Should Not Be True  ${resp}[-1][sc_content][passed]
+    Driver Upload SC Content  ${test_plan}  ${resp}[0][id]
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    Driver Upload SC Content  ${test_plan}  ${resp}[0][id]
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    Driver Upload SC Content  ${test_plan}  ${resp}[0][id]
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    Driver Upload SC Content  ${test_plan}  ${resp}[0][id]
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${True}
     FOR  ${itr}  IN  @{resp}
-        IF  'sc_content' in ${itr}
-            ${index}  Set Variable  ${itr}[sc_content][id]
-            Exit For Loop
-        END
+        Should Be True  ${itr}[sc_content][passed]
     END
-    Log  ${index}
-    Should Not Be Equal As Integers  ${index}  ${-1}
-    ${req}  Create Dictionary  content_id=${index}
-    # Req to Server  /sc/check  ${sc_admin_token}  ${req}
+    Check In A Plan  ${test_plan}
+    Cancel Check In Plan  ${test_plan}
+    Check Pass SC Status By Index  ${test_plan}  0  ${False}
+    ${driver}  Driver Online  ${test_plan}[driver][phone]  open_id_for_test  11100090909
+    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${test_plan}[id]
+    Req to Server  /plan/check_in  none  ${req}  ${True}
+
 
 *** Keywords ***
 Enable SC AND Add Some SC req

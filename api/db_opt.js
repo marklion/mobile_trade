@@ -130,6 +130,8 @@ let db_opt = {
             input: { type: DataTypes.STRING },
             passed: { type: DataTypes.BOOLEAN, defaultValue: false },
             checker: { type: DataTypes.STRING },
+            comment: { type: DataTypes.STRING },
+            check_time: { type: DataTypes.STRING },
         },
     },
     make_associate: function (_sq) {
