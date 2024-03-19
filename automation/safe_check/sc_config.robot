@@ -25,9 +25,7 @@ No SC Upload And Check In After SC Enabled
     Check In A Plan  ${test_plan}
     Cancel Check In Plan  ${test_plan}
     Fetch SC Req  ${test_stuff}[id]  s1  ${True}  ${True}  ${True}  ${0}
-    ${driver}  Driver Online  ${test_plan}[driver][phone]  open_id_for_test  11100090909
-    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${test_plan}[id]
-    Req to Server  /plan/check_in  none  ${req}  ${True}
+    Check In A Plan  ${test_plan}  ${True}
     Disable Stuff SC  ${test_stuff}[id]
     Check In A Plan  ${test_plan}
 
@@ -105,10 +103,7 @@ Check Driver Upload SC
     Check In A Plan  ${test_plan}
     Cancel Check In Plan  ${test_plan}
     Check Pass SC Status By Index  ${test_plan}  0  ${False}
-    ${driver}  Driver Online  ${test_plan}[driver][phone]  open_id_for_test  11100090909
-    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${test_plan}[id]
-    Req to Server  /plan/check_in  none  ${req}  ${True}
-
+    Check In A Plan  ${test_plan}  ${True}
 
 *** Keywords ***
 Enable SC AND Add Some SC req

@@ -20,26 +20,26 @@ Cleanup Paied Plan
     Plan Reset
     Clean Up Sale and Buy
 Enable Stuff SC
-    [Arguments]  ${stuff_id}
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  need_sc=${True}
-    Req to Server  /stuff/sc_config  ${sc_admin_token}  ${req}
+    Req to Server  /stuff/sc_config  ${token}  ${req}
 Disable Stuff SC
     [Arguments]  ${stuff_id}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  need_sc=${False}
     Req to Server  /stuff/sc_config  ${sc_admin_token}  ${req}
 Fetch SC Req
-    [Arguments]  ${stuff_id}  ${name}  ${need_attach}  ${need_input}  ${need_expired}  ${belong_type}
+    [Arguments]  ${stuff_id}  ${name}  ${need_attach}  ${need_input}  ${need_expired}  ${belong_type}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  name=${name}  need_attach=${need_attach}  need_input=${need_input}  need_expired=${need_expired}  belong_type=${belong_type}
-    Req to Server  /sc/fetch_req  ${sc_admin_token}  ${req}
-    ${added_one}  Get SC Req  ${stuff_id}  ${name}
+    Req to Server  /sc/fetch_req  ${token}  ${req}
+    ${added_one}  Get SC Req  ${stuff_id}  ${name}  ${token}
     Should Be Equal  ${added_one}[need_attach]  ${need_attach}
     Should Be Equal  ${added_one}[need_input]  ${need_input}
     Should Be Equal  ${added_one}[need_expired]  ${need_expired}
     Should Be Equal  ${added_one}[belong_type]  ${belong_type}
 Get SC Req
-    [Arguments]  ${stuff_id}  ${name}
-    ${req}  Create Dictionary  stuff_id=${test_stuff}[id]
-    ${resp}  Req Get to Server  /sc/get_req  ${sc_admin_token}  reqs  ${-1}  &{req}
+    [Arguments]  ${stuff_id}  ${name}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}
+    ${resp}  Req Get to Server  /sc/get_req  ${token}  reqs  ${-1}  &{req}
     FOR  ${itr}  IN  @{resp}
         ${itr_name}  Get From Dictionary  ${itr}  name
         IF  $itr_name == $name
@@ -53,7 +53,7 @@ Del SC Req
     Req to Server  /sc/del_req  ${sc_admin_token}  ${req}
 Driver Get SC Status
     [Arguments]  ${plan}  ${expect_pass}=${None}
-    ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
+    ${driver}  Driver Online  ${plan}[driver][phone]  open_id_${plan}[driver][phone]  11100090909
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${plan}[id]
 
     IF  ${expect_pass} != ${None}
@@ -73,17 +73,17 @@ Driver Delete SC Content
     ${req}  Create Dictionary  content_id=${content_id}  open_id=${driver}[open_id]
     Req to Server  /sc/delete_content  none  ${req}
 Get SC Status By Plan
-    [Arguments]  ${plan}  ${expect_pass}=${None}
+    [Arguments]  ${plan}  ${expect_pass}=${None}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     IF  ${expect_pass} != ${None}
-        ${resp}  Req to Server  /sc/plan_status  ${sc_admin_token}  ${req}
+        ${resp}  Req to Server  /sc/plan_status  ${token}  ${req}
         Should Be Equal  ${resp}[passed]  ${expect_pass}
     END
-    ${resp}  Req Get to Server  /sc/plan_status  ${sc_admin_token}  reqs  ${-1}  &{req}
+    ${resp}  Req Get to Server  /sc/plan_status  ${token}  reqs  ${-1}  &{req}
     RETURN  ${resp}
 Check Pass SC Status By Index
-    [Arguments]  ${plan}  ${index}  ${pass}=${True}
-    ${resp}  Get SC Status By Plan  ${plan}
+    [Arguments]  ${plan}  ${index}  ${pass}=${True}  ${token}=${sc_admin_token}
+    ${resp}  Get SC Status By Plan  ${plan}  ${None}  ${token}
     @{contents}  Create List
     FOR  ${itr}  IN  @{resp}
         IF  'sc_content' in ${itr}
@@ -94,5 +94,5 @@ Check Pass SC Status By Index
     IF  ${pass} == ${False}
         Set To Dictionary  ${req}  comment=cancel
     END
-    Req to Server  /sc/check  ${sc_admin_token}  ${req}
+    Req to Server  /sc/check  ${token}  ${req}
 

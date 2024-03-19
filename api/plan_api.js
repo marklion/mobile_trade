@@ -511,7 +511,7 @@ function install(app) {
         let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
         if (driver) {
             let ret = { plans: [], total: 0 };
-            ret.plans = await driver.getPlans({ where: { status: 2 }, limit: 20, offset: body.pageNo * 20 });
+            ret.plans = await driver.getPlans({ where: { status: 2 }, limit: 20, offset: body.pageNo * 20, include: plan_lib.plan_detail_include() });
             ret.total = await driver.countPlans({ where: { status: 2 } });
             return ret;
         }

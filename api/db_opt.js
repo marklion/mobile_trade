@@ -8,7 +8,9 @@ function get_db_handle() {
             freezeTableName: true,
         },
         logging: function (sql, time) {
-            console.log(time + '->' + sql);
+            if (time > 200) {
+                console.log(time + '->' + sql);
+            }
         },
         benchmark: true,
     });
@@ -190,6 +192,9 @@ let db_opt = {
     install: async function () {
         console.log('run install');
         let sq = this.get_sq();
+        await sq.query("PRAGMA synchronous = OFF");
+        await sq.query("PRAGMA journal_mode = DELETE");
+        await sq.query("PRAGMA temp_store = 2");
         Object.keys(this.model).forEach((key) => {
             sq.define(key, this.model[key], { paranoid: true });
         });

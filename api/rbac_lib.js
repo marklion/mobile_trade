@@ -11,8 +11,10 @@ module.exports = {
             let now = moment();
             let last = moment(user.online_time);
             if (now.diff(last, 'day') < 20) {
-                user.online_time = now.format('YYYY-MM-DD HH:mm:ss');
-                await user.save();
+                if (now.diff(last, 'day') > 1) {
+                    user.online_time = now.format('YYYY-MM-DD HH:mm:ss');
+                    await user.save();
+                }
             }
             else {
                 user = null;

@@ -56,14 +56,14 @@ Clean Up Companies And Users
     Company Reset
 
 Add A Stuff To Sale
-    [Arguments]  ${stuff_name}  ${stuff_comment}  ${expect_count}=${22}
+    [Arguments]  ${stuff_name}  ${stuff_comment}  ${expect_count}=${22}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}
-    Req to Server  /stuff/fetch  ${sc_admin_token}  ${req}
-
+    ${resp}  Req to Server  /stuff/fetch  ${token}  ${req}
+    RETURN  ${resp}
 Change Stuff Price
-    [Arguments]  ${stuff_id}  ${new_price}  ${to_plan}=${False}  ${comment}=test_change
+    [Arguments]  ${stuff_id}  ${new_price}  ${to_plan}=${False}  ${comment}=test_change  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  price=${new_price}  to_plan=${to_plan}  comment=${comment}
-    Req to Server  /stuff/change_price  ${sc_admin_token}  ${req}
+    Req to Server  /stuff/change_price  ${token}  ${req}
 
 Del A Stuff From Sale
     [Arguments]  ${stuff_id}
@@ -71,9 +71,9 @@ Del A Stuff From Sale
     Req to Server  /stuff/del  ${sc_admin_token}  ${req}
 
 Add A Company As Customer
-    [Arguments]  ${company_id}
+    [Arguments]  ${company_id}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  customer_id=${company_id}
-    Req to Server  /contract/make  ${sc_admin_token}  ${req}
+    Req to Server  /contract/make  ${token}  ${req}
 
 Del A Customer Contract
     [Arguments]  ${contract_id}
@@ -81,11 +81,11 @@ Del A Customer Contract
     Req to Server  /contract/destroy  ${sc_admin_token}  ${req}
 
 Add A Stuff To Contract
-    [Arguments]  ${stuff_name}  ${customer_name}
+    [Arguments]  ${stuff_name}  ${customer_name}  ${token}=${sc_admin_token}
     ${target_contract}  Set Variable
     ${target_stuff}  Set Variable
-    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
-    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${sc_admin_token}  stuff
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${token}  contracts
+    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${token}  stuff
     FOR  ${itr}  IN  @{found_contracts}
         ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
         IF  $buyer_name == $customer_name
@@ -101,7 +101,7 @@ Add A Stuff To Contract
         END
     END
     ${req}  Create Dictionary  stuff_id=${target_stuff}[id]  contract_id=${target_contract}[id]
-    Req to Server  /contract/add_stuff  ${sc_admin_token}  ${req}
+    Req to Server  /contract/add_stuff  ${token}  ${req}
 
 Del A Stuff From Contract
     [Arguments]  ${stuff_name}  ${customer_name}
@@ -167,13 +167,13 @@ Prepare Sale and Buy
     Authorize User to Contract  bc1  5678
 
 Authorize User to Contract
-    [Arguments]  ${company_name}  ${user_phone}
-    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
+    [Arguments]  ${company_name}  ${user_phone}  ${token}=${sc_admin_token}
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${token}  contracts
     FOR  ${itr}  IN  @{found_contracts}
         ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
         IF  $buyer_name == $company_name
             ${req}  Create Dictionary  contract_id=${itr}[id]  phone=${user_phone}
-            Req to Server  /contract/authorize  ${sc_admin_token}  ${req}
+            Req to Server  /contract/authorize  ${token}  ${req}
             Exit For Loop
         END
     END
@@ -206,7 +206,7 @@ Clean Up Sale and Buy
     Clean Up Companies And Users
 
 Create A Plan
-    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途
+    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${test_stuff}[id]
     ${req}  Create Dictionary
     ...    behind_vehicle_id=${bv_id}
     ...    main_vehicle_id=${mv_id}
@@ -214,19 +214,19 @@ Create A Plan
     ...    comment=${comment}
     ...    drop_address=${drop_address}
     ...    plan_time=${plan_time}
-    ...    stuff_id=${test_stuff}[id]
+    ...    stuff_id=${stuff_id}
     ...    use_for=${use_for}
     ${resp}  Req to Server  /plan/create_single_plan  ${token}  ${req}
     RETURN  ${resp}
 
 Confirm A Plan
-    [Arguments]  ${plan}
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/confirm_single_plan  ${sc_admin_token}  ${req}
+    Req to Server  /plan/confirm_single_plan  ${token}  ${req}
 Manual Pay A Plan
-    [Arguments]  ${plan}
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/pay  ${sc_admin_token}  ${req}
+    Req to Server  /plan/pay  ${token}  ${req}
 Plan Enter
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
@@ -239,13 +239,12 @@ Driver Online
     ${resp}  Req to Server  /driver/online  none  ${req}
     RETURN  ${resp}
 Check In A Plan
-    [Arguments]  ${plan}
+    [Arguments]  ${plan}  ${expect_fail}=${False}  ${index}=0
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
     ${req}  Create Dictionary  open_id=${driver}[open_id]
     ${resp}  Req Get to Server  /driver/self_plan  none  plans  -1  &{req}
-    Length Should Be  ${resp}  1
-    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[0]}[id]
-    Req to Server  /plan/check_in  none  ${req}
+    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]
+    Req to Server  /plan/check_in  none  ${req}  ${expect_fail}
 Deliver A Plan
     [Arguments]  ${plan}  ${count}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
@@ -259,19 +258,19 @@ Cancel Check In Plan
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /plan/cancel_check_in  ${sc_admin_token}  ${req}
 Search Driver by Index
-    [Arguments]  ${itr}
+    [Arguments]  ${itr}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  name=dn_${itr}  id_card=di_${itr}  phone=dp_${itr}
-    ${resp}  Req to Server  /driver/fetch  ${bc1_user_token}  ${req}
+    ${resp}  Req to Server  /driver/fetch  ${token}  ${req}
     RETURN  ${resp}
 Search Main Vehicle by Index
-    [Arguments]  ${itr}
+    [Arguments]  ${itr}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  plate=mv_${itr}
-    ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
+    ${resp}  Req to Server  /vehicle/fetch  ${token}  ${req}
     RETURN  ${resp}
 Search behind Vehicle by Index
-    [Arguments]  ${itr}
+    [Arguments]  ${itr}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  plate=bv_${itr}
-    ${resp}  Req to Server  /vehicle/fetch  ${bc1_user_token}  ${req}
+    ${resp}  Req to Server  /vehicle/fetch  ${token}  ${req}
     RETURN  ${resp}
 Search Plans Based on User
     [Arguments]  ${token}  ${is_sale}=${True}  ${status}=${null}

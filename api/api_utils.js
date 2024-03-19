@@ -189,6 +189,7 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
         },
         install: function (app) {
             app.post('/api/v1' + this.path, async (req, res) => {
+                let start_time = new Date().getTime();
                 let body = req.body;
                 let token = req.headers['token'];
                 let ret = result_maker(null, '未知错误');
@@ -222,7 +223,8 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                         }
                     }
                 }
-
+                let end_time = new Date().getTime();
+                console.log((end_time - start_time) + '->' + this.path);
                 res.send(ret);
             });
             app.help_info.push(this.make_help_info());

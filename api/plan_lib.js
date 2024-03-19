@@ -190,6 +190,15 @@ module.exports = {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition);
 
+        let stuff_or = [];
+        let stuff = await _company.getStuff({ paranoid: false });
+        for (let index = 0; index < stuff.length; index++) {
+            const element = stuff[index];
+            stuff_or.push({ stuffId: element.id });
+        }
+        where_condition[db_opt.Op.and].push({
+            [db_opt.Op.or]: stuff_or
+        });
         let search_condition = {
             order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
@@ -197,16 +206,8 @@ module.exports = {
             where: where_condition,
             include: this.plan_detail_include(),
         };
-        let stuff = await _company.getStuff({paranoid: false});
-        let sold_plans = [];
-        let count = 0;
-        for (let index = 0; index < stuff.length; index++) {
-            const element = stuff[index];
-            let plans = await element.getPlans(search_condition);
-            let c = await element.countPlans({ where: where_condition });
-            count += c;
-            sold_plans = sold_plans.concat(plans);
-        }
+        let sold_plans = await sq.models.plan.findAll(search_condition);
+        let count = await sq.models.plan.count(where_condition);
         let result = [];
         for (let index = 0; index < sold_plans.length; index++) {
             const element = sold_plans[index];
@@ -279,21 +280,17 @@ module.exports = {
             throw { err_msg: '未找到计划或状态错误' };
         }
     },
-    authorize_user2contract:async function(_phone, _contract_id, _token)
-    {
+    authorize_user2contract: async function (_phone, _contract_id, _token) {
         let sq = db_opt.get_sq();
         let user = await rbac_lib.add_user(_phone);
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await sq.models.contract.findByPk(_contract_id);
-        if (contract && user && company && await company.hasSale_contract(contract))
-        {
-            if (! await contract.hasRbac_user(user))
-            {
+        if (contract && user && company && await company.hasSale_contract(contract)) {
+            if (! await contract.hasRbac_user(user)) {
                 await contract.addRbac_user(user);
             }
         }
-        else
-        {
+        else {
             throw { err_msg: '无权限' };
         }
     },
@@ -303,7 +300,7 @@ module.exports = {
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await sq.models.contract.findByPk(_contract_id);
         if (contract && user && company && await company.hasSale_contract(contract)) {
-            if ( await contract.hasRbac_user(user)) {
+            if (await contract.hasRbac_user(user)) {
                 await contract.removeRbac_user(user);
             }
         }
@@ -337,13 +334,11 @@ module.exports = {
         plan.status = 3;
         plan.manual_close = true;
         await plan.save();
-        if (is_cancel)
-        {
+        if (is_cancel) {
             await this.rp_history_cancel(plan, name);
         }
-        else
-        {
-            await this.rp_history_close(plan,name);
+        else {
+            await this.rp_history_close(plan, name);
         }
     },
     plan_enter: async function (_plan_id, _token) {
@@ -548,9 +543,8 @@ module.exports = {
         }
         plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
     },
-    rp_history_price_change:async function(_plan, _operator, _new_price)
-    {
-        await this.record_plan_history(_plan, _operator, '价格变为:'+_new_price);
+    rp_history_price_change: async function (_plan, _operator, _new_price) {
+        await this.record_plan_history(_plan, _operator, '价格变为:' + _new_price);
     },
 
     pri_change_stuff_price: async function (stuff, _new_price, _comment, _operator, _to_plan) {
@@ -592,7 +586,7 @@ module.exports = {
         }
     },
 
-    get_price_history:async function(_stuff_id,_token,  _pageNo)  {
+    get_price_history: async function (_stuff_id, _token, _pageNo) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(_stuff_id);
         let company = await rbac_lib.get_company_by_token(_token);
