@@ -199,6 +199,7 @@ function install(app) {
         return ret;
     }).install(app);
     mkapi('/contract/get_all_sale', 'stuff', false, true, {
+        stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
     }, {
         contracts: {
             type: Array, mean: '合同', explain: {
@@ -217,11 +218,16 @@ function install(app) {
                         name: { type: String, mean: '公司名称', example: '公司名称' },
                     }
                 },
+                rbac_users:{type: Array, mean: '授权用户', explain: {
+                    id: { type: Number, mean: '用户ID', example: 1 },
+                    name: { type: String, mean: '用户姓名', example: '用户姓名' },
+                    phone: { type: String, mean: '用户电话', example: '用户电话' },
+                }}
             }
         }, total: { type: Number, mean: '总数', example: 1 },
     }, '获取所有销售合同', '获取所有合同', true).add_handler(async function (body, token) {
         let company = await rbac_lib.get_company_by_token(token);
-        let found_ret = await plan_lib.get_all_sale_contracts(company, body.pageNo);
+        let found_ret = await plan_lib.get_all_sale_contracts(company, body.pageNo, body.stuff_id);
         return {
             contracts: found_ret.rows,
             total: found_ret.count

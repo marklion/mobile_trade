@@ -134,6 +134,29 @@ let db_opt = {
             comment: { type: DataTypes.STRING },
             check_time: { type: DataTypes.STRING },
         },
+        bidding_config: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            total: { type: DataTypes.FLOAT, defaultValue: 0 },
+            comment: { type: DataTypes.STRING },
+            begin_time: { type: DataTypes.STRING, allowNull: false },
+            min: { type: DataTypes.FLOAT, defaultValue: 0 },
+            max: { type: DataTypes.FLOAT, defaultValue: 0 },
+            total_turn: { type: DataTypes.INTEGER, defaultValue: 0 },
+            pay_first: { type: DataTypes.FLOAT, defaultValue: 0 },
+            status: { type: DataTypes.INTEGER, defaultValue: 0 },
+        },
+        bidding_turn: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            finish: { type: DataTypes.BOOLEAN, defaultValue: false },
+            end_time: { type: DataTypes.STRING },
+            turn: { type: DataTypes.INTEGER, defaultValue: 0 },
+        },
+        bidding_item: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            price: { type: DataTypes.FLOAT, defaultValue: 0 },
+            time: { type: DataTypes.STRING },
+            accept: { type: DataTypes.BOOLEAN, defaultValue: false },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -187,6 +210,15 @@ let db_opt = {
         _sq.models.vehicle.hasMany(_sq.models.sc_content);
         _sq.models.sc_content.belongsTo(_sq.models.driver);
         _sq.models.driver.hasMany(_sq.models.sc_content);
+
+        _sq.models.bidding_config.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.bidding_config);
+        _sq.models.bidding_turn.belongsTo(_sq.models.bidding_config);
+        _sq.models.bidding_config.hasMany(_sq.models.bidding_turn);
+        _sq.models.bidding_item.belongsTo(_sq.models.bidding_turn);
+        _sq.models.bidding_turn.hasMany(_sq.models.bidding_item);
+        _sq.models.bidding_item.belongsTo(_sq.models.rbac_user);
+        _sq.models.rbac_user.hasMany(_sq.models.bidding_item);
     },
     install: async function () {
         console.log('run install');

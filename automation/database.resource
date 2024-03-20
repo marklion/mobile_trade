@@ -45,3 +45,8 @@ Company Set Script
 SC Reset
     Clear Table  sc_content
     Clear Table  sc_req
+
+Bidding Reset
+    Clear Table  bidding_config
+    Clear Table  bidding_turn
+    Clear Table  bidding_item

@@ -12,6 +12,7 @@ require('./rbac_api')(app);
 require('./plan_api')(app);
 require('./cash_api')(app);
 require('./sc_api')(app);
+require('./bidding_api')(app);
 
 const db_opt = require('./db_opt');
 

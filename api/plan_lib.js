@@ -90,7 +90,7 @@ module.exports = {
             await _contract.removeStuff(_stuff);
         }
     },
-    get_all_sale_contracts: async function (_compnay, _pageNo) {
+    get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         let conditions = {
             order: [['id', 'ASC']],
@@ -98,9 +98,14 @@ module.exports = {
             limit: 20,
             include: [
                 { model: sq.models.company, as: 'buy_company' },
-                { model: sq.models.stuff },
+                { model: sq.models.stuff,},
+                { model: sq.models.rbac_user, }
             ]
         };
+        if (stuff_id != undefined) {
+            conditions.include[1].where = { id: stuff_id };
+            conditions.include[1].required = true;
+        }
         let rows = await _compnay.getSale_contracts(conditions);
         let count = await _compnay.countSale_contracts();
         return { rows: rows, count: count };
@@ -174,12 +179,10 @@ module.exports = {
         for (let index = 0; index < bought_plans.length; index++) {
             const element = bought_plans[index];
             let arc_p = await this.replace_plan2archive(element);
-            if (arc_p)
-            {
+            if (arc_p) {
                 result.push(arc_p);
             }
-            else
-            {
+            else {
                 result.push(element);
             }
         }
@@ -612,7 +615,7 @@ module.exports = {
         let sq = db_opt.get_sq();
         let ret = { reqs: [], total: 0, passed: false }
         let search_cond = {
-            order : [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
+            order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
             include: [
                 {
                     model: sq.models.sc_content, required: false, where: {
