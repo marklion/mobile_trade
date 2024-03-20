@@ -70,6 +70,7 @@ Driver Check In
     Confirm A Plan  ${plan}
     Manual Pay A Plan  ${plan}
     Check In A Plan  ${plan}
+    ${dv}  Search Driver by Index  0
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2  ${True}
 
 Plan Enter and Check
@@ -93,6 +94,7 @@ Deliver Plan And Check
     Confirm A Plan  ${plan}
     Manual Pay A Plan  ${plan}
     Check In A Plan  ${plan}
+    ${dv}  Search Driver by Index  0
     Plan Enter  ${plan}
     Deliver A Plan  ${plan}  ${23}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
@@ -218,8 +220,6 @@ Verify Plan Detail
     IF  $check_in_time
         Should Not Be Empty  ${plan}[register_time]
     END
-
-
 
     ${history}  Copy List  ${plan}[plan_histories]
     Reverse List  ${history}

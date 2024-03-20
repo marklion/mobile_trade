@@ -3,6 +3,24 @@ const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const plan_lib = require('./plan_lib');
 module.exports = {
+    sc_req_detail: {
+        id: { type: Number, have_to: true, mean: 'ID', example: 1 },
+        name: { type: String, have_to: true, mean: '需求名称', example: '安检需求' },
+        need_attach: { type: Boolean, have_to: true, mean: '是否需要附件', example: true },
+        need_input: { type: Boolean, have_to: true, mean: '是否需要输入', example: true },
+        need_expired: { type: Boolean, have_to: true, mean: '是否需要过期时间', example: true },
+        belong_type: { type: Number, have_to: true, mean: '所属类型,0->司乘,1->主车,2->挂车', example: 0 },
+        sc_content: {
+            type: Object, have_to: false, mean: '安检内容', explain: {
+                id: { type: Number, have_to: true, mean: 'ID', example: 1 },
+                expired_time: { type: String, have_to: true, mean: '过期时间', example: '2020-01-01 00:00:00' },
+                attachment: { type: String, have_to: true, mean: '附件', example: 'http://www.baidu.com' },
+                input: { type: String, have_to: true, mean: '输入', example: '请输入' },
+                passed: { type: Boolean, have_to: true, mean: '是否通过', example: true },
+                checker: { type: String, have_to: true, mean: '检查人', example: '张三' },
+            }
+        },
+    },
     fetch_sc_req: async function (_req, _token, _stuff_id) {
         await this.sc_req_operate(_token, _stuff_id, async function (stuff) {
             let tar_req = undefined;
@@ -44,46 +62,11 @@ module.exports = {
 
         return ret;
     },
-    get_sc_status_by_plan: async function (plan, pageNo) {
-        let sq = db_opt.get_sq();
-        let ret = { reqs: [], total: 0, passed: false }
-        let found_ret = await plan.stuff.getSc_reqs({
-            order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
-            limit: 20,
-            offset: 20 * pageNo,
-            include: [
-                {
-                    model: sq.models.sc_content, required: false, where: {
-                        [db_opt.Op.or]: [
-                            { driverId: plan.driver.id },
-                            { vehicleId: plan.main_vehicle.id },
-                            { vehicleId: plan.behind_vehicle.id },
-                        ]
-                    }
-                },
-            ],
-        });
-        let count = await plan.stuff.countSc_reqs();
-        for (let index = 0; index < found_ret.length; index++) {
-            const element = found_ret[index];
-            if (element.sc_contents.length == 1) {
-                element.sc_content = element.sc_contents[0];
-            }
-            delete element.sc_contents;
-        }
-        ret.total = count;
-        ret.reqs = found_ret;
-        if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
-            ret.passed = true;
-        }
-
-        return ret;
-    },
     get_sc_driver_req: async function (_open_id, _plan_id, pageNo) {
         let ret = { reqs: [], total: 0, passed: false };
         let plan = await plan_lib.get_single_plan_by_id(_plan_id);
         if (plan && plan.driver && plan.driver.open_id == _open_id && plan.stuff) {
-            ret = await this.get_sc_status_by_plan(plan, pageNo);
+            ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
             if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
                 ret.passed = true;
             }
@@ -208,7 +191,7 @@ module.exports = {
         let plan = await plan_lib.get_single_plan_by_id(_plan_id);
         let company = await rbac_lib.get_company_by_token(_token);
         if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
-            ret = await this.get_sc_status_by_plan(plan, pageNo);
+            ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
             if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
                 ret.passed = true;
             }

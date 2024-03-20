@@ -233,9 +233,9 @@ Plan Enter
     Req to Server  /plan/enter  ${sc_admin_token}  ${req}
 Driver Online
     [Arguments]  ${phone}  ${open_id}  ${id_card}
-    ${req}  Create Dictionary  phone=${phone}  open_id=${open_id}  id_card=${id_card}
+    ${req}  Create Dictionary  phone_code=${phone}  open_id_code=${open_id}  id_card=${id_card}  name=dv_name
     Req to Server  /driver/update  none  ${req}
-    ${req}  Create Dictionary   open_id=${open_id}
+    ${req}  Create Dictionary   open_id_code=${open_id}
     ${resp}  Req to Server  /driver/online  none  ${req}
     RETURN  ${resp}
 Check In A Plan

@@ -3,6 +3,7 @@ const plan_lib = require('./plan_lib');
 const db_opt = require('./db_opt');
 const rbac_lib = require('./rbac_lib');
 const sc_lib = require('./sc_lib');
+const wx_api_util = require('./wx_api_util');
 const plan_detail_define = {
     id: { type: Number, mean: '计划ID', example: 1 },
     plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
@@ -64,6 +65,9 @@ const plan_detail_define = {
             operator: { type: String, mean: '操作人', example: '操作人' },
             action_type: { type: String, mean: '操作', example: '操作' },
         }
+    },
+    sc_info: {
+        type: Array, mean: '安检信息', explain: sc_lib.sc_req_detail
     },
 };
 function install(app) {
@@ -332,8 +336,8 @@ function install(app) {
         return {result:true};
     }).install(app);
     mkapi('/driver/fetch', 'customer', true, true, {
-        name: { type: String, have_to: true, mean: '司机姓名', example: '张三' },
-        id_card: { type: String, have_to: true, mean: '司机身份证', example: '1234567890' },
+        name: { type: String, have_to: false, mean: '司机姓名', example: '张三' },
+        id_card: { type: String, have_to: false, mean: '司机身份证', example: '1234567890' },
         phone: { type: String, have_to: true, mean: '司机电话', example: '18911992582' },
     }, {
         id: { type: Number, mean: '司机ID', example: 1 },
@@ -460,7 +464,7 @@ function install(app) {
         return { result: true };
     }).install(app);
     mkapi('/driver/online', 'none', false, false, {
-        open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' }
+        open_id_code: { type: String, have_to: true, mean: '微信open_id授权凭证', example: 'open_id' }
     }, {
         id: { type: Number, mean: '司机ID', example: 1 },
         name: { type: String, mean: '司机姓名', example: '张三' },
@@ -469,7 +473,8 @@ function install(app) {
         open_id: { type: String, mean: '微信open_id', example: 'open_id' },
     }, '司机上线', '司机上线').add_handler(async function (body, token) {
         let sq = db_opt.get_sq();
-        let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+        let open_id = await wx_api_util.get_open_id_by_code(body.open_id_code)
+        let driver = await sq.models.driver.findOne({ where: { open_id: open_id } });
         if (driver) {
             return driver;
         }
@@ -478,9 +483,9 @@ function install(app) {
         }
     }).install(app);
     mkapi('/driver/update', 'none', false, false, {
-        open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
-        name: { type: String, have_to: false, mean: '司机姓名', example: '张三' },
-        phone: { type: String, have_to: true, mean: '司机电话', example: '18911992582' },
+        open_id_code: { type: String, have_to: true, mean: '微信open_id授权码', example: 'open_id' },
+        name: { type: String, have_to: true, mean: '司机姓名', example: '张三' },
+        phone_code: { type: String, have_to: true, mean: '司机电话_授权码', example: '18911992582' },
         id_card: { type: String, have_to: true, mean: '司机身份证', example: '1234567890' },
     }, {
         id: { type: Number, mean: '司机ID', example: 1 },
@@ -490,14 +495,27 @@ function install(app) {
         open_id: { type: String, mean: '微信open_id', example: 'open_id' },
     }, '司机更新', '司机更新').add_handler(async function (body, token) {
         let sq = db_opt.get_sq();
-        let old_driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
-        if (old_driver) {
-            old_driver.open_id = '';
-            await old_driver.save();
+        let open_id = await wx_api_util.get_open_id_by_code(body.open_id_code)
+        let driver_phone = await wx_api_util.get_phone_by_code(body.phone_code);
+        let driver = await plan_lib.fetch_driver(body.name, driver_phone, body.id_card);
+        if (driver) {
+            let old_driver = await sq.models.driver.findOne({
+                where: {
+                    [db_opt.Op.and]: [
+                        { open_id: open_id },
+                        { phone: { [db_opt.Op.ne]: driver_phone } },
+                    ]
+                }
+            });
+            if (old_driver) {
+                old_driver.open_id = '';
+                await old_driver.save();
+            }
+            driver.name = body.name;
+            driver.id_card = body.id_card;
+            driver.open_id = open_id;
+            await driver.save();
         }
-        let driver = await plan_lib.fetch_driver(body.name, body.phone, body.id_card);
-        driver.open_id = body.open_id;
-        await driver.save();
         return driver;
     }).install(app);
     mkapi('/driver/self_plan', 'none', false, false, {

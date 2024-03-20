@@ -105,6 +105,31 @@ Check Driver Upload SC
     Check Pass SC Status By Index  ${test_plan}  0  ${False}
     Check In A Plan  ${test_plan}  ${True}
 
+SC Archived After Plan Finish
+    [Setup]  Enable SC AND Add Some SC req
+    [Teardown]  SC Reset
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    FOR  ${itr}  IN  @{resp}
+        Driver Upload SC Content  ${test_plan}  ${itr}[id]
+    END
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    Check Pass SC Status By Index  ${test_plan}  0
+    ${sc_rec}  Get Driver And Sale Plan SC  ${test_plan}  ${True}
+    Deliver A Plan  ${test_plan}  ${34}
+    ${resp}  Get Plan By Id  ${test_plan}[id]
+    Lists Should Be Equal  ${sc_rec}  ${resp}[sc_info]
+    Check Pass SC Status By Index  ${test_plan}  0  ${False}
+    ${sc_rec}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    ${resp}  Get Plan By Id  ${test_plan}[id]
+    FOR  ${itr}  IN  @{resp}[sc_info]
+        Should Be True  ${itr}[sc_content][passed]
+    END
+
+
+
 *** Keywords ***
 Enable SC AND Add Some SC req
     Enable Stuff SC  ${test_stuff}[id]

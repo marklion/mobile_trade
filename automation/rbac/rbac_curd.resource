@@ -27,8 +27,8 @@ Reg Company Admin
 
 User Login With Phone
     [Arguments]  ${phone}
-    ${req}  Create Dictionary  phone=${phone}
-    ${resp}  Req to Server  /rbac/login  AAAAAAAA  ${req}
+    ${req}  Create Dictionary  phone=${phone}  password=Mobile_P@ssw0rd_Trade
+    ${resp}  Req to Server  /rbac/login_password  AAAAAAAA  ${req}
     RETURN  ${resp}[token]
 
 Login As Admin Of Company
@@ -134,7 +134,7 @@ Unbind Role From User
 
 New User Login
     [Arguments]  ${phone}  ${company_name}  ${open_id}  ${name}=test_user
-    ${req}  Create Dictionary  phone=${phone}  company_name=${company_name}  open_id=${open_id}  name=${name}
+    ${req}  Create Dictionary  phone_code=${phone}  company_name=${company_name}  open_id_code=${open_id}  name=${name}
     ${resp}  Req to Server  /rbac/fetch_user  ABCDDD  ${req}
     ${token}  User Login With Phone  ${phone}
     RETURN  ${token}

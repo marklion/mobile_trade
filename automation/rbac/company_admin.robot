@@ -7,6 +7,48 @@ Suite Setup  Run Keywords  RBAC reset  AND  Company Reset
 Suite Teardown  Run Keywords  RBAC reset  AND  Company Reset
 
 *** Test Cases ***
+User Login With Multi-method
+    [Teardown]  RBAC reset
+    ${req}  Create Dictionary  login_code=op_test
+    Req to Server  /rbac/login  ACCC  ${req}  ${True}
+    ${ph_token}  New User Login  1234  cn1  op_test  abcd
+    ${resp}  Req to Server  /rbac/login  ACCC  ${req}
+    ${op_token}  Set Variable  ${resp}[token]
+    Should Be Equal As Strings  ${ph_token}  ${op_token}
+
+User Re-bind other Infor
+    [Teardown]  RBAC reset
+    ${ph_token}  New User Login  1234  cn1  op_test  abcd
+    ${req}  Create Dictionary
+    ${old_self_info}  Req to Server  /rbac/self_info  ${ph_token}  ${req}
+    ${req}  Create Dictionary  phone_code=1234  company_name=cn2  open_id_code=op_test  name=bbfg
+    ${resp}  Req to Server  /rbac/fetch_user  ABCDDD  ${req}
+    ${req}  Create Dictionary  login_code=op_test
+    ${resp}  Req to Server  /rbac/login  ACCC  ${req}
+    ${op_token}  Set Variable  ${resp}[token]
+    ${change_1st_self_info}  Req to Server  /rbac/self_info  ${op_token}  ${req}
+    Should Not Be Equal As Strings  ${old_self_info}[company]  ${change_1st_self_info}[company]
+    Should Not Be Equal As Strings  ${old_self_info}[name]  ${change_1st_self_info}[name]
+    ${req}  Create Dictionary  phone_code=1234  company_name=cn2  open_id_code=new_wx_id  name=bbfg
+    ${resp}  Req to Server  /rbac/fetch_user  ABCDDD  ${req}
+    ${req}  Create Dictionary  login_code=new_wx_id
+    ${resp}  Req to Server  /rbac/login  ACCC  ${req}
+    ${op_token}  Set Variable  ${resp}[token]
+    ${change_2nd_self_info}  Req to Server  /rbac/self_info  ${op_token}  ${req}
+    Should Not Be Equal As Strings  ${change_1st_self_info}[open_id]  ${change_2nd_self_info}[open_id]
+    ${req}  Create Dictionary  phone_code=7788  company_name=cn2  open_id_code=new_wx_id  name=bbfg
+    ${resp}  Req to Server  /rbac/fetch_user  ABCDDD  ${req}
+    ${req}  Create Dictionary  login_code=new_wx_id
+    ${resp}  Req to Server  /rbac/login  ACCC  ${req}
+    ${op_token}  Set Variable  ${resp}[token]
+    ${change_3rd_self_info}  Req to Server  /rbac/self_info  ${op_token}  ${req}
+    Should Not Be Equal As Strings  ${change_3rd_self_info}[phone]  ${change_2nd_self_info}[phone]
+    ${2nd_token}  User Login With Phone  1234
+    ${change_4rd_self_info}  Req to Server  /rbac/self_info  ${2nd_token}  ${req}
+    Should Be Empty  ${change_4rd_self_info}[open_id]
+
+
+
 Company Scope Role Add
     [Setup]  RBAC reset
     [Teardown]  RBAC reset

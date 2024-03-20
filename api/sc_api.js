@@ -4,22 +4,7 @@ const db_opt = require('./db_opt');
 const rbac_lib = require('./rbac_lib');
 const sc_lib = require('./sc_lib');
 
-const sc_req_detail = {
-    id: { type: Number, have_to: true, mean: 'ID', example: 1 },
-    name: { type: String, have_to: true, mean: '需求名称', example: '安检需求' },
-    need_attach: { type: Boolean, have_to: true, mean: '是否需要附件', example: true },
-    need_input: { type: Boolean, have_to: true, mean: '是否需要输入', example: true },
-    need_expired: { type: Boolean, have_to: true, mean: '是否需要过期时间', example: true },
-    belong_type: { type: Number, have_to: true, mean: '所属类型,0->司乘,1->主车,2->挂车', example: 0 },
-    sc_content:{type:Object, have_to:false, mean:'安检内容', explain: {
-        id: { type: Number, have_to: true, mean: 'ID', example: 1 },
-        expired_time: { type: String, have_to: true, mean: '过期时间', example: '2020-01-01 00:00:00' },
-        attachment: { type: String, have_to: true, mean: '附件', example: 'http://www.baidu.com' },
-        input: { type: String, have_to: true, mean: '输入', example: '请输入' },
-        passed: { type: Boolean, have_to: true, mean: '是否通过', example: true },
-        checker: { type: String, have_to: true, mean: '检查人', example: '张三' },
-    }},
-}
+
 
 function install(app) {
     mkapi('/sc/fetch_req', 'sc', true, true, {
@@ -38,7 +23,7 @@ function install(app) {
     mkapi('/sc/get_req', 'sc', false, true, {
         stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 }
     }, {
-        reqs: { type: Array, mean: '需求列表', explain: sc_req_detail }
+        reqs: { type: Array, mean: '需求列表', explain: sc_lib.sc_req_detail }
     }, '获取安检需求', '获取安检需求', true).add_handler(async (body, token) => {
         return await sc_lib.get_sc_req(body.stuff_id, token, body.pageNo);
     }).install(app);
@@ -54,7 +39,7 @@ function install(app) {
         open_id: { type: String, have_to: true, mean: '司机open_id', example: 'oq5s-4k1d-4k1d-4k1d' },
         plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
     }, {
-        reqs: { type: Array, mean: '需求列表', explain: sc_req_detail },
+        reqs: { type: Array, mean: '需求列表', explain: sc_lib.sc_req_detail },
         passed: { type: Boolean, mean: '是否通过', example: true }
     }, '获取司机安检需求', '获取司机安检需求', true).add_handler(async (body, token) => {
         return await sc_lib.get_sc_driver_req(body.open_id, body.plan_id, body.pageNo);
@@ -112,7 +97,7 @@ function install(app) {
     mkapi('/sc/plan_status', 'sc', false, true, {
         plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
     }, {
-        reqs: { type: Array, mean: '需求列表', explain: sc_req_detail },
+        reqs: { type: Array, mean: '需求列表', explain: sc_lib.sc_req_detail },
         passed: { type: Boolean, mean: '是否通过', example: true }
     }, '获取计划安检状态', '获取计划安检状态', true).add_handler(async (body, token) => {
         return await sc_lib.get_plan_sc_status(body.plan_id, token, body.pageNo);

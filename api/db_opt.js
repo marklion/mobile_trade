@@ -8,9 +8,7 @@ function get_db_handle() {
             freezeTableName: true,
         },
         logging: function (sql, time) {
-            if (time > 200) {
-                console.log(time + '->' + sql);
-            }
+            console.log(time + '->' + sql);
         },
         benchmark: true,
     });
@@ -29,6 +27,7 @@ let db_opt = {
             open_id: { type: DataTypes.STRING },
             phone: { type: DataTypes.STRING, unique: true },
             photo_path: { type: DataTypes.STRING },
+            password: { type: DataTypes.STRING },
         },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

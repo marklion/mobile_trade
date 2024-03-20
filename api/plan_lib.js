@@ -523,7 +523,10 @@ module.exports = {
         if (last_archive) {
             await last_archive.destroy();
         }
-        plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
+        let content = plan.toJSON();
+        content.sc_info = (await this.get_sc_status_by_plan(plan)).reqs;
+        console.log(content.sc_info);
+        plan.createArchive_plan({ content: JSON.stringify(content) });
     },
     rp_history_close: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '关闭');
@@ -532,7 +535,9 @@ module.exports = {
         if (last_archive) {
             await last_archive.destroy();
         }
-        plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
+        let content = plan.toJSON();
+        content.sc_info = (await this.get_sc_status_by_plan(plan)).reqs;
+        plan.createArchive_plan({ content: JSON.stringify(content) });
     },
     rp_history_cancel: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '取消');
@@ -602,5 +607,43 @@ module.exports = {
         let rows = await stuff.getPrice_histories(conditions);
         let count = await stuff.countPrice_histories();
         return { rows: rows, count: count };
+    },
+    get_sc_status_by_plan: async function (plan, pageNo = -1) {
+        let sq = db_opt.get_sq();
+        let ret = { reqs: [], total: 0, passed: false }
+        let search_cond = {
+            order : [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
+            include: [
+                {
+                    model: sq.models.sc_content, required: false, where: {
+                        [db_opt.Op.or]: [
+                            { driverId: plan.driver.id },
+                            { vehicleId: plan.main_vehicle.id },
+                            { vehicleId: plan.behind_vehicle.id },
+                        ]
+                    }
+                },
+            ],
+        };
+        if (-1 != pageNo) {
+            search_cond.offset = 20 * pageNo;
+            search_cond.limit = 20;
+        }
+        let found_ret = await plan.stuff.getSc_reqs(search_cond);
+        let count = await plan.stuff.countSc_reqs();
+        for (let index = 0; index < found_ret.length; index++) {
+            const element = found_ret[index].toJSON();
+            if (element.sc_contents.length == 1) {
+                element.sc_content = element.sc_contents[0];
+            }
+            delete element.sc_contents;
+            ret.reqs.push(element);
+        }
+        ret.total = count;
+        if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
+            ret.passed = true;
+        }
+
+        return ret;
     },
 };
