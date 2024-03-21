@@ -2,14 +2,14 @@
 Resource  ../stuff/stuff_opt.resource
 
 *** Variables ***
-${total_joiner}  4
+${total_joiner}  5
 @{joiners}
 
 *** Keywords ***
 Prepare Four Costomers And One Sale
     FOR  ${index}  IN RANGE  ${total_joiner}
         ${company}  Create One Company  jc_${index}
-        ${user}  New User Login  p${index}  j${index}  o${index}  n${index}
+        ${user}  New User Login  p${index}  jc_${index}  o${index}  n${index}
         ${tmp}  Create Dictionary  user_token=${user}  company=${company}  user_phone=p${index}
         Append To List  ${joiners}  ${tmp}
     END
@@ -51,3 +51,19 @@ Create A Bidding
     ...    min=${10}  max=${1000}  total_turn=${total_turn}  pay_first=${pay_first}
     ${resp}  Req to Server  /bidding/create  ${sc_admin_token}  ${req}
     RETURN  ${resp}
+
+Add All Customer To Bidding Except First One
+    [Arguments]  ${bc_id}  ${end_time}=2040-10-10
+    ${req}  Create Dictionary  stuff_id=${test_stuff}[id]
+    ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts  ${-1}  &{req}
+    @{joiner_ids}  Create List
+    FOR  ${itr}  IN  @{found_contracts}
+        ${au_users}  Get From Dictionary  ${itr}  rbac_users
+        FOR  ${sub_itr}  IN  @{au_users}
+            ${tmp}  Create Dictionary  id=${sub_itr}[id]
+            Append To List  ${joiner_ids}  ${tmp}
+        END
+    END
+    Remove From List  ${joiner_ids}  0
+    ${req}  Create Dictionary  bc_id=${bc_id}  joiner_ids=${joiner_ids}  end_time=${end_time}
+    Req to Server  /bidding/add_turn  ${sc_admin_token}  ${req}

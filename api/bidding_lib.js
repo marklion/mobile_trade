@@ -3,66 +3,73 @@ const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const plan_lib = require('./plan_lib');
 module.exports = {
-    create_bidding:async function(stuff_id, total, comment, begin_time, min, max, total_turn, pay_first, token) {
+    create_bidding: async function (stuff_id, total, comment, begin_time, min, max, total_turn, pay_first, token) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(stuff_id);
         let company = await rbac_lib.get_company_by_token(token);
-        if (stuff && company && await company.hasStuff(stuff))
-        {
+        if (stuff && company && await company.hasStuff(stuff)) {
             let bidding = await sq.models.bidding_config.create({
-                stuffId:stuff.id,
-                total:total,
-                comment:comment,
-                begin_time:begin_time,
-                min:min,
-                max:max,
-                total_turn:total_turn,
-                pay_first:pay_first,
+                stuffId: stuff.id,
+                total: total,
+                comment: comment,
+                begin_time: begin_time,
+                min: min,
+                max: max,
+                total_turn: total_turn,
+                pay_first: pay_first,
             });
-            return await sq.models.bidding_config.findByPk(bidding.id, {include:[sq.models.stuff]});
+            return await sq.models.bidding_config.findByPk(bidding.id, { include: [sq.models.stuff] });
         }
-        else
-        {
-            throw  {err_msg:'无权限'};
+        else {
+            throw { err_msg: '无权限' };
         }
     },
-    get_all_created_bidding:async function(token, pageNo) {
-        let ret = {biddings:[], total:0};
+    get_all_created_bidding: async function (token, pageNo) {
+        let ret = { biddings: [], total: 0 };
         let sq = db_opt.get_sq();
         let company = await rbac_lib.get_company_by_token(token);
-        if (company)
-        {
-            let where_cond = {[db_opt.Op.or]:[]};
-            let stuffs = await company.getStuff({paranoid:false});
+        if (company) {
+            let where_cond = { [db_opt.Op.or]: [] };
+            let stuffs = await company.getStuff({ paranoid: false });
             for (let index = 0; index < stuffs.length; index++) {
                 const element = stuffs[index];
-                where_cond[db_opt.Op.or].push({stuffId:element.id});
+                where_cond[db_opt.Op.or].push({ stuffId: element.id });
             }
             let biddings = await sq.models.bidding_config.findAndCountAll({
-                where:where_cond,
-                include:[sq.models.stuff],
-                limit:20,
-                offset:20 * pageNo,
+                where: where_cond,
+                include: [{
+                    model: sq.models.bidding_turn,
+                    include: [{
+                        model: sq.models.bidding_item,
+                        include: [{
+                            model: sq.models.rbac_user,
+                            include: [sq.models.company]
+                        }],
+                        order:[['price', 'DESC']]
+                    }]
+                },
+                sq.models.stuff],
+                limit: 20,
+                offset: 20 * pageNo,
+                order:[['id', 'DESC']]
             });
             ret.biddings = biddings.rows;
             ret.total = biddings.count;
         }
-        else
-        {
-            throw {err_msg:'无权限'};
+        else {
+            throw { err_msg: '无权限' };
         }
         return ret;
     },
-    add_bid_turn:async function(bc_id, joiner_ids, end_time, token)
-    {
+    add_bid_turn: async function (bc_id, joiner_ids, end_time, token) {
         let sq = db_opt.get_sq();
-        let bc = await sq.models.bidding_config.findByPk(bc_id, {include:[sq.models.stuff]});
+        let bc = await sq.models.bidding_config.findByPk(bc_id, { include: [sq.models.stuff] });
         let company = await rbac_lib.get_company_by_token(token);
         if (bc.stuff && company && await company.hasStuff(bc.stuff)) {
             let exist_bts = await bc.getBidding_turns({ order: [['turn', 'DESC']] });
             if (exist_bts.length == 0 || exist_bts[0].turn + 1 < bc.total_turn) {
-                let cur_turn = exist_bts.length == 0?0:(exist_bts[0].turn + 1);
-                let bt = await bc.createBidding_turn({ end_time: end_time, turn: cur_turn});
+                let cur_turn = exist_bts.length == 0 ? 0 : (exist_bts[0].turn + 1);
+                let bt = await bc.createBidding_turn({ end_time: end_time, turn: cur_turn });
                 for (let index = 0; index < joiner_ids.length; index++) {
                     const element = joiner_ids[index];
                     let joiner = await sq.models.rbac_user.findByPk(element.id);
@@ -82,6 +89,7 @@ module.exports = {
         let user = await rbac_lib.get_user_by_token(token);
         if (user) {
             let joiners = await user.getBidding_items({
+                order: [[sq.models.bidding_turn, 'finish'], [sq.models.bidding_turn, sq.models.bidding_config, 'id', 'DESC'], [sq.models.bidding_turn, 'turn', 'DESC'], ['id', 'DESC']],
                 limit: 20, offset: 20 * pageNo,
                 include: [{
                     model: sq.models.bidding_turn,
