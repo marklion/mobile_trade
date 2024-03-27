@@ -17,7 +17,13 @@ No Permission Req to Server
 Req to Server
     [Arguments]  ${url}  ${token}  ${body}  ${exception}=${False}
     ${real_url}  Set Variable  ${remote_url}${url}
-    ${headers}  Create Dictionary  token=${token}
+    ${real_token}  Set Variable  ${token}
+    IF  $token == 'admin_token'
+        ${req}  Create Dictionary  phone=18911992582  password=Mobile_P@ssw0rd_Trade
+        ${resp}  Req to Server  /rbac/login_password  AAAAAAAA  ${req}
+        ${real_token}  Set Variable  ${resp}[token]
+    END
+    ${headers}  Create Dictionary  token=${real_token}
     ${resp}  POST  url=${real_url}  headers=${headers}  json=${body}
     Log  ${resp.json()}
     IF  $exception

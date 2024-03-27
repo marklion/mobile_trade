@@ -23,7 +23,6 @@ async function init_super_user() {
         where: { phone: '18911992582' },
         defaults: {
             name: 'admin',
-            online_token: 'ABCD',
             online_time: moment().format('YYYY-MM-DD HH:mm:ss'),
         }
     });
