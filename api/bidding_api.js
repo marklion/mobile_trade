@@ -13,7 +13,6 @@ function make_bc_detail(need_turn = false) {
         },
         total: { type: Number, mean: '总量', example: 100 },
         comment: { type: String, mean: '备注', example: '备注' },
-        begin_time: { type: String, mean: '开始时间', example: '2020-01-01 00:00:00' },
         min: { type: Number, mean: '最小价格', example: 1 },
         max: { type: Number, mean: '最大价格', example: 100 },
         total_turn: { type: Number, mean: '总轮次', example: 10 },
@@ -24,6 +23,7 @@ function make_bc_detail(need_turn = false) {
         bidding_config.bidding_turns = {
             type: Array, mean: '竞价轮次', explain: {
                 id: { type: Number, mean: 'ID', example: 1 },
+                begin_time: { type: String, mean: '开始时间', example: '2020-01-01 00:00:00' },
                 end_time: { type: String, mean: '结束时间', example: '2020-01-01 00:00:00' },
                 turn: { type: Number, mean: '轮次', example: 1 },
                 finish: { type: Boolean, mean: '是否结束', example: true },
@@ -59,13 +59,12 @@ function install(app) {
         stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
         total: { type: Number, have_to: true, mean: '总量', example: 100 },
         comment: { type: String, have_to: false, mean: '备注', example: '备注' },
-        begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 00:00:00' },
         min: { type: Number, have_to: true, mean: '最小价格', example: 1 },
         max: { type: Number, have_to: true, mean: '最大价格', example: 100 },
         total_turn: { type: Number, have_to: true, mean: '总轮次', example: 10 },
         pay_first: { type: Number, have_to: true, mean: '押金额度', example: 123 },
     }, make_bc_detail(), '创建竞价', '创建竞价').add_handler(async (body, token) => {
-        return await bidding_lib.create_bidding(body.stuff_id, body.total, body.comment, body.begin_time, body.min, body.max, body.total_turn, body.pay_first, token);
+        return await bidding_lib.create_bidding(body.stuff_id, body.total, body.comment,  body.min, body.max, body.total_turn, body.pay_first, token);
     }).install(app);
     mkapi('/bidding/get_all_created', 'bid', false, true, {}, {
         biddings: { type: Array, mean: '竞价列表', explain: make_bc_detail(true)},
@@ -79,12 +78,13 @@ function install(app) {
                 id: { type: Number, have_to: true, mean: 'ID', example: 1 },
             }
         },
+        begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 00:00:00' },
         end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 00:00:00' },
     }, {
         id: { type: Number, mean: '竞价轮次ID', example: 1 },
         end_time: { type: String, mean: '结束时间', example: '2020-01-01 00:00:00' },
     }, '新增竞价轮次', '新增竞价轮次').add_handler(async (body, token) => {
-        return await bidding_lib.add_bid_turn(body.bc_id, body.joiner_ids, body.end_time, token);
+        return await bidding_lib.add_bid_turn(body.bc_id, body.joiner_ids, body.begin_time, body.end_time, token);
     }).install(app);
     mkapi('/bidding/get_all_joined', 'customer', false, true, {}, {
         items: {
@@ -98,13 +98,49 @@ function install(app) {
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 00:00:00' },
                         turn: { type: Number, mean: '轮次', example: 1 },
                         finish: { type: Boolean, mean: '是否结束', example: true },
-                        bidding_config: { type: Object, mean: '竞价配置', explain: make_bc_detail()},
+                        bidding_config: { type: Object, mean: '竞价配置', explain: make_bc_detail() },
                     }
                 },
             }
         },
     }, '获取所有参与的竞价', '获取所有参与的竞价', true).add_handler(async (body, token) => {
         return await bidding_lib.get_all_joined_bidding(token, body.pageNo);
+    }).install(app);
+    mkapi('/bidding/accept', 'customer', true, true, {
+        item_id: { type: Number, have_to: true, mean: '出价ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '是否成功', example: true }
+    }, '接受竞价', '接受竞价').add_handler(async (body, token) => {
+        await bidding_lib.accept_bidding(token, body.item_id);
+        return { result: true };
+    }).install(app);
+    mkapi('/bidding/price', 'customer', true, true, {
+        item_id: { type: Number, have_to: true, mean: '出价ID', example: 1 },
+        price: { type: Number, have_to: true, mean: '价格', example: 100 },
+    }, {
+        result: { type: Boolean, mean: '是否成功', example: true }
+    }, '出价', '出价').add_handler(async (body, token) => {
+        await bidding_lib.bid_price(token, body.item_id, body.price);
+        return {result: true};
+    }).install(app);
+    mkapi('/bidding/next_turn', 'bid', true, true, {
+        bc_id: { type: Number, have_to: true, mean: '竞价ID', example: 1 },
+        top_n: { type: Number, have_to: true, mean: '前N名', example: 3 },
+        begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 00:00:00' },
+        end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 00:00:00' },
+    }, {
+        result: { type: Boolean, mean: '是否成功', example: true }
+    }, '开启下一轮竞价', '下一轮').add_handler(async (body, token) => {
+        await bidding_lib.go_next_turn(body.bc_id, body.top_n, body.begin_time, body.end_time, token);
+        return {result: true};
+    }).install(app);
+    mkapi('/bidding/stop', 'bid', true, true, {
+        bc_id: { type: Number, have_to: true, mean: '竞价ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '是否成功', example: true }
+    }, '结束竞价', '结束竞价').add_handler(async (body, token) => {
+        await bidding_lib.stop_bidding(body.bc_id, token);
+        return {result: true};
     }).install(app);
 }
 

@@ -138,7 +138,6 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             total: { type: DataTypes.FLOAT, defaultValue: 0 },
             comment: { type: DataTypes.STRING },
-            begin_time: { type: DataTypes.STRING, allowNull: false },
             min: { type: DataTypes.FLOAT, defaultValue: 0 },
             max: { type: DataTypes.FLOAT, defaultValue: 0 },
             total_turn: { type: DataTypes.INTEGER, defaultValue: 0 },
@@ -148,7 +147,8 @@ let db_opt = {
         bidding_turn: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             finish: { type: DataTypes.BOOLEAN, defaultValue: false },
-            end_time: { type: DataTypes.STRING },
+            begin_time: { type: DataTypes.STRING, allowNull: false },
+            end_time: { type: DataTypes.STRING, allowNull: false },
             turn: { type: DataTypes.INTEGER, defaultValue: 0 },
         },
         bidding_item: {

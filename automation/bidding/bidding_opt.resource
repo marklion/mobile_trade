@@ -1,5 +1,6 @@
 *** Settings ***
 Resource  ../stuff/stuff_opt.resource
+Library  DateTime
 
 *** Variables ***
 ${total_joiner}  5
@@ -45,15 +46,14 @@ Cleanup Joiner
     Clean Up Companies And Users
 
 Create A Bidding
-    [Arguments]  ${stuff}  ${begin_time}=2024-02-13 10:11:11  ${total_turn}=${2}  ${pay_first}=${0}
+    [Arguments]  ${stuff}  ${total_turn}=${2}  ${pay_first}=${0}
     ${req}  Create Dictionary  stuff_id=${stuff}[id]  total=${50}
-    ...    comment=abcd  begin_time=${begin_time}
-    ...    min=${10}  max=${1000}  total_turn=${total_turn}  pay_first=${pay_first}
+    ...    comment=abcd  min=${10}  max=${1000}  total_turn=${total_turn}  pay_first=${pay_first}
     ${resp}  Req to Server  /bidding/create  ${sc_admin_token}  ${req}
     RETURN  ${resp}
 
 Add All Customer To Bidding Except First One
-    [Arguments]  ${bc_id}  ${end_time}=2040-10-10
+    [Arguments]  ${bc_id}  ${begin_time}=2020-02-02  ${end_time}=2040-10-10
     ${req}  Create Dictionary  stuff_id=${test_stuff}[id]
     ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts  ${-1}  &{req}
     @{joiner_ids}  Create List
@@ -65,5 +65,28 @@ Add All Customer To Bidding Except First One
         END
     END
     Remove From List  ${joiner_ids}  0
-    ${req}  Create Dictionary  bc_id=${bc_id}  joiner_ids=${joiner_ids}  end_time=${end_time}
+    ${req}  Create Dictionary  bc_id=${bc_id}  joiner_ids=${joiner_ids}  begin_time=${begin_time}  end_time=${end_time}
     Req to Server  /bidding/add_turn  ${sc_admin_token}  ${req}
+Customer Accept Bidding
+    [Arguments]  ${token}
+    ${resp}  Req Get to Server  /bidding/get_all_joined  ${token}  items
+    ${req}  Create Dictionary  item_id=${resp}[0][id]
+    Req to Server  /bidding/accept  ${token}  ${req}
+Customer Price Out
+    [Arguments]  ${token}  ${price}
+    ${resp}  Req Get to Server  /bidding/get_all_joined  ${token}  items
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${price}
+    Req to Server  /bidding/price  ${token}  ${req}
+
+Move Bidding Date
+    [Arguments]  ${to_furture}=${True}
+    ${resp}  Req Get to Server  /bidding/get_all_created  ${sc_admin_token}  biddings
+    ${future_begin_time}  Get Current Date  increment=-5hours  result_format=%Y-%m-%d %H:%M:%S
+    IF  ${to_furture}
+        ${future_begin_time}  Get Current Date  increment=5hours  result_format=%Y-%m-%d %H:%M:%S
+    END
+    Change Bidding Begin Time  ${resp}[0][bidding_turns][0][id]  ${future_begin_time}
+Go Next Turn
+    [Arguments]  ${bc_id}  ${top_n}=${2}
+    ${req}  Create Dictionary  bc_id=${bc_id}  begin_time=2020-02-02  end_time=2020-02-02  top_n=${top_n}
+    Req to Server  /bidding/next_turn  ${sc_admin_token}  ${req}

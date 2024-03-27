@@ -50,3 +50,9 @@ Bidding Reset
     Clear Table  bidding_config
     Clear Table  bidding_turn
     Clear Table  bidding_item
+
+Change Bidding Begin Time
+    [Arguments]  ${turn_id}  ${begin_time}
+    Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
+    Execute Sql String  update bidding_turn set begin_time = '${begin_time}' where id = ${turn_id};
+    Disconnect From All Databases
