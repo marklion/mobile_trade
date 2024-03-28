@@ -1,0 +1,53 @@
+{
+	"pages": [ //pages数组中第一项表示应用启动页，参考：https://uniapp.dcloud.io/collocation/pages
+		{
+			"path": "pages/Home"
+		},
+		{
+			"path": "pages/Login"
+		},
+		{
+			"path": "pages/Bind"
+		},
+		{
+			"path": "pages/Myself"
+		},
+		{
+			"path": "pages/Admin"
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "掌易助理",
+		"navigationBarBackgroundColor": "#F8F8F8",
+		"backgroundColor": "#F8F8F8",
+		"enablePullDownRefresh": true
+	},
+	"uniIdRouter": {},
+	"easycom": {
+		"autoscan": true,
+		"custom": {
+			"fui-(.*)": "@/components/firstui/fui-$1/fui-$1.vue"
+		}
+	},
+	"tabBar": {
+		"color": "#7A7E83",
+		"selectedColor": "#3cc51f",
+		"borderStyle": "black",
+		"backgroundColor": "#ffffff",
+		"list": [
+			{
+				"pagePath": "pages/Home",
+				"text": "首页",
+				"iconPath": "static/tabbar/assembly_default_3x.png",
+				"selectedIconPath": "static/tabbar/assembly_selected_3x.png"
+			},
+			{
+				"pagePath": "pages/Myself",
+				"text": "我的",
+				"iconPath": "static/tabbar/my_default_3x.png",
+				"selectedIconPath": "static/tabbar/my_selected_3x.png"
+			}
+		]
+	}
+}
