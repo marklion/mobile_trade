@@ -28,22 +28,9 @@ export default {
             },
         }
     },
-    methods: {
-        init_self_info: async function () {
-            try {
-                uni.removeStorageSync('self_info');
-                let self_info = await this.$send_req('/rbac/self_info');
-                this.self_info = self_info;
-                uni.setStorageSync('self_info', self_info);
-            } catch (error) {
-                uni.navigateTo({
-                    url: '/pages/Login'
-                });
-            }
-        },
-    },
+    methods: {},
     onLoad: function () {
-        this.init_self_info();
+        this.self_info = uni.getStorageSync('self_info');
     },
 }
 </script>

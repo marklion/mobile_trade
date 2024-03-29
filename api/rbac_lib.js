@@ -121,10 +121,21 @@ module.exports = {
         for (let index = 0; index < companys.length; index++) {
             const element = companys[index];
             element.bound_modules = [];
+            element.config_users = [];
             let modules = await element.getRbac_modules();
-            modules.forEach((itr) => {
+            for (let j = 0; j < modules.length; j++) {
+                let itr = modules[j];
                 element.bound_modules.push(itr.toJSON());
-            });
+                if (itr.name == 'config') {
+                    let config_users = [];
+                    let config_roles = await itr.getRbac_roles({where:{companyId:element.id}});
+                    for (let i = 0; i < config_roles.length; i++) {
+                        let users = await config_roles[i].getRbac_users();
+                        config_users = config_users.concat(users);
+                    }
+                    element.config_users = config_users;
+                }
+            }
         }
         return { companys, count };
     },

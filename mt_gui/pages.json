@@ -13,15 +13,20 @@
 			"path": "pages/Myself"
 		},
 		{
-			"path": "pages/Admin"
+			"path": "pages/RoleConfig"
+		},
+		{
+			"path": "pages/Admin",
+			"style": {
+				"enablePullDownRefresh": true
+			}
 		}
 	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "掌易助理",
 		"navigationBarBackgroundColor": "#F8F8F8",
-		"backgroundColor": "#F8F8F8",
-		"enablePullDownRefresh": true
+		"backgroundColor": "#F8F8F8"
 	},
 	"uniIdRouter": {},
 	"easycom": {

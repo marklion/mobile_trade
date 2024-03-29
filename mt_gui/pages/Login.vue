@@ -49,6 +49,7 @@ export default {
         submit: async function () {
             let res = await this.$send_req('/rbac/login_password', this.formData);
             uni.setStorageSync('token', res.token);
+            await this.$init_self();
             uni.reLaunch({
                 url: '/pages/Home'
             });
@@ -59,6 +60,7 @@ export default {
                     login_code: '123456'
                 });
                 uni.setStorageSync('token', res.token);
+                await this.$init_self();
                 uni.reLaunch({
                     url: '/pages/Home'
                 });

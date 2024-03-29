@@ -2,7 +2,10 @@
 <view>
     <fui-card showBorder :title="self_info.name" :headerLine="false" background="#5cdbd5" headerBackground="#5cdbd5" size="50" :tag="self_info.phone" color="black" tagColor="blue">
         <view slot="footer">
-            {{self_info.company}}
+            <view>
+                {{self_info.company}}
+            </view>
+            <fui-tag v-for="(item, index) in self_info.modules" :key="index" theme="plain" :text="item.description"></fui-tag>
         </view>
     </fui-card>
     <fui-list>
@@ -12,6 +15,11 @@
         <fui-list-cell arrow @click="rebind">
             重新绑定信息
         </fui-list-cell>
+        <module-filter require_module="config">
+            <fui-list-cell arrow @click="config_role">
+                角色配置
+            </fui-list-cell>
+        </module-filter>
     </fui-list>
     <fui-button type="danger" text="退出登录" @click="unLogin"></fui-button>
     <fui-modal width="600" :show="show_change_pwd" @click="change_pwd">
@@ -21,6 +29,7 @@
 </template>
 
 <script>
+import ModuleFilter from '../components/ModuleFilter.vue';
 export default {
     name: 'Myself',
     data: function () {
@@ -33,6 +42,9 @@ export default {
                 phone: ''
             },
         };
+    },
+    components: {
+        "module-filter": ModuleFilter
     },
     methods: {
         change_pwd: async function () {
@@ -49,6 +61,11 @@ export default {
                 url: '/pages/Bind'
             });
         },
+        config_role: function () {
+            uni.navigateTo({
+                url: '/pages/RoleConfig'
+            });
+        }
     },
     onShow: function () {
         this.self_info = uni.getStorageSync('self_info');

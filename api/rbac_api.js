@@ -51,6 +51,11 @@ function install(app) {
         phone: { type: String, mean: '用户手机号', example: '12345678901' },
         open_id: { type: String, mean: '微信open_id', example: 'open_id_example' },
         company: { type: String, mean: '公司名', example: 'company_example' },
+        modules:{type:Array,mean:'模块列表',explain:{
+            id:{type:Number,mean:'模块id',example:123},
+            name:{type:String,mean:'模块名',example:'module_example'},
+            description:{type:String,mean:'模块描述',example:'module_desp_example'}
+        }},
     }, '个人信息', '获取个人信息').add_handler(async function (body, token) {
         let ret = {};
         let user = await rbac_lib.get_user_by_token(token);
@@ -58,6 +63,18 @@ function install(app) {
             let company = await user.getCompany();
             if (company) {
                 user.company = company.name;
+            }
+            user.modules = [];
+            let roles = await user.getRbac_roles();
+            for (let index = 0; index < roles.length; index++) {
+                const element = roles[index];
+                let modules = await element.getRbac_modules();
+                for (let index = 0; index < modules.length; index++) {
+                    const element = modules[index].toJSON();
+                    if (user.modules.findIndex((value) => value.id === element.id) === -1) {
+                        user.modules.push(element);
+                    }
+                }
             }
             ret = user;
         }
@@ -99,9 +116,16 @@ function install(app) {
                         name: { type: String, mean: '模块名', example: 'module_example' },
                         description: { type: String, mean: '模块描述', example: 'module_desp_example' }
                     },
-                }
+                },
+                config_users: {
+                    type: Array, mean: '管理员用户列表', explain: {
+                        id: { type: Number, mean: '用户id', example: 123 },
+                        name: { type: String, mean: '用户姓名', example: 'user_example' },
+                        phone: { type: String, mean: '用户手机号', example: '12345678901' },
+                    },
+                },
             },
-        },
+        }
     }, '获取公司列表', '获取公司列表', true).add_handler(async function (body, token) {
         let ret = {};
         let result = await rbac_lib.get_all_company(body.pageNo);

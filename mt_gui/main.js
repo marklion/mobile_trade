@@ -36,6 +36,17 @@ Vue.prototype.$send_req = function (_url, _data) {
     })
   })
 };
+Vue.prototype.$init_self = async function () {
+  try {
+    let self_info = await Vue.prototype.$send_req('/rbac/self_info');
+    uni.setStorageSync('self_info', self_info);
+  } catch (error) {
+    uni.navigateTo({
+      url: '/pages/Login'
+    });
+  }
+};
+
 App.mpType = 'app'
 const app = new Vue({
   ...App
