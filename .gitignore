@@ -8,3 +8,5 @@ node_gen_code/
 */cmake_tmp_dir/
 node_modules/
 results/
+*/.hbuilderx/
+*/unpackage/
