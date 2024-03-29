@@ -32,7 +32,8 @@
 	"easycom": {
 		"autoscan": true,
 		"custom": {
-			"fui-(.*)": "@/components/firstui/fui-$1/fui-$1.vue"
+			"fui-(.*)": "@/components/firstui/fui-$1/fui-$1.vue",
+			"^u-(.*)": "@/uni_modules/uview-ui/components/u-$1/u-$1.vue"
 		}
 	},
 	"tabBar": {

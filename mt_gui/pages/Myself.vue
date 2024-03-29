@@ -20,6 +20,9 @@
                 角色配置
             </fui-list-cell>
         </module-filter>
+        <module-filter require_module="global">
+            <u-cell title="超级管理员" isLink url="/pages/Admin"></u-cell>
+        </module-filter>
     </fui-list>
     <fui-button type="danger" text="退出登录" @click="unLogin"></fui-button>
     <fui-modal width="600" :show="show_change_pwd" @click="change_pwd">
