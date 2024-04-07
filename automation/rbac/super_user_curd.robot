@@ -44,7 +44,6 @@ Reg New Admin
     Reg Company Admin  ${ran_com}[id]  19911991199
     ${ran_com}  Search A Company By Name  ${ran_com}[name]
     Has Module In Bound Modules  ${ran_com}[bound_modules]  config
-    Has Module In Bound Modules  ${ran_com}[bound_modules]  customer  True
     ${token}  User Login With Phone  19911991199
     Should Not Be Empty  ${token}
 

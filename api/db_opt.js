@@ -8,7 +8,9 @@ function get_db_handle() {
             freezeTableName: true,
         },
         logging: function (sql, time) {
-            console.log(time + '->' + sql);
+            if (time > 200) {
+                console.log(time + '->' + sql);
+            }
         },
         benchmark: true,
     });
@@ -28,6 +30,7 @@ let db_opt = {
             phone: { type: DataTypes.STRING, unique: true },
             photo_path: { type: DataTypes.STRING },
             password: { type: DataTypes.STRING },
+            email:{ type: DataTypes.STRING },
         },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -44,6 +47,22 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING, unique: true },
             script: { type: DataTypes.STRING },
+            address: { type: DataTypes.STRING },
+            contact: { type: DataTypes.STRING },
+            attachment: { type: DataTypes.STRING },
+            third_key: { type: DataTypes.STRING },
+            third_url: { type: DataTypes.STRING },
+            third_token: { type: DataTypes.STRING },
+            stamp_pic: { type: DataTypes.STRING },
+            zc_url: { type: DataTypes.STRING },
+            zh_ssid: { type: DataTypes.STRING },
+            event_types: { type: DataTypes.STRING },
+            remote_event_url: { type: DataTypes.STRING },
+            driver_notice: { type: DataTypes.STRING },
+            notice: { type: DataTypes.STRING },
+            zc_rpc_url: { type: DataTypes.STRING },
+            zczh_back_end: { type: DataTypes.STRING },
+            zczh_back_token: { type: DataTypes.STRING },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

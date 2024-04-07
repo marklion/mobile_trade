@@ -11,7 +11,7 @@ DOCKER_IMG_NAME="mt_deploy:v1.0"
 SRC_DIR=`dirname $(realpath $0)`/../
 
 is_in_container() {
-    cat /proc/1/cgroup | grep pids | grep docker 2>&1>/dev/null
+    ls /.dockerenv >/dev/null 2>&1
 }
 
 make_docker_img_from_dockerfile() {
@@ -28,7 +28,7 @@ get_docker_image() {
 
 start_all_server() {
     line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 115`
+    line=`expr $line - 116`
     mkdir /tmp/sys_mt
     tail -n $line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
@@ -70,8 +70,9 @@ start_docker_con() {
         SSH_PORT_ARG=""
     fi
     local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e WECHAT_MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -e MAIL_PWD="${MAIL_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
-    docker cp $0 ${CON_ID}:/root/
-    docker start ${CON_ID}
+    docker cp $0 ${CON_ID}:/root/ > /dev/null 2>&1
+    docker start ${CON_ID} > /dev/null 2>&1
+    echo ${CON_ID}
 }
 
 while getopts "sD:p:w:d:i:m:a:k:M:g:b:o:O:u:" arg

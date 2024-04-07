@@ -103,6 +103,27 @@ module.exports = {
         await one[0].save();
         return one[0];
     },
+    add_company_with_full_info:async function(body) {
+        let exist_one = await this.add_company(body.name);
+        exist_one.address = body.address;
+        exist_one.notice = body.notice;
+        exist_one.contact = body.contact;
+        exist_one.attachment = body.attachment;
+        exist_one.third_key = body.third_key;
+        exist_one.third_url = body.third_url;
+        exist_one.third_token = body.third_token;
+        exist_one.stamp_pic = body.stamp_pic;
+        exist_one.zc_url = body.zc_url;
+        exist_one.zh_ssid = body.zh_ssid;
+        exist_one.event_types = body.event_types;
+        exist_one.remote_event_url = body.remote_event_url;
+        exist_one.driver_notice = body.driver_notice;
+        exist_one.zc_rpc_url = body.zc_rpc_url;
+        exist_one.zczh_back_end = body.zczh_back_end;
+        exist_one.zczh_back_token = body.zczh_back_token;
+        await exist_one.save();
+        return exist_one;
+    },
     del_company: async function (_id) {
         let sq = db_opt.get_sq();
         let one = await sq.models.company.findByPk(_id);
@@ -128,7 +149,7 @@ module.exports = {
                 element.bound_modules.push(itr.toJSON());
                 if (itr.name == 'config') {
                     let config_users = [];
-                    let config_roles = await itr.getRbac_roles({where:{companyId:element.id}});
+                    let config_roles = await itr.getRbac_roles({ where: { companyId: element.id } });
                     for (let i = 0; i < config_roles.length; i++) {
                         let users = await config_roles[i].getRbac_users();
                         config_users = config_users.concat(users);

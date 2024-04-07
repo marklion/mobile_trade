@@ -1,13 +1,13 @@
 SHELL=/bin/bash
 SRC_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 DELIVER_PATH=$(SRC_DIR)/build
-SUB_DIR=api conf
+SUB_DIR=api conf script automation
 BUILD_MODE=build
 export BUILD_MODE
 
 pack:all
 	date '+%Y-%m-%d %H:%M:%S' > $(DELIVER_PATH)/conf/version.txt
-	tar zcf mt_deliver.tar.gz -C $(DELIVER_PATH) conf api
+	tar zcf mt_deliver.tar.gz -C $(DELIVER_PATH) conf api script automation
 	cat $(SRC_DIR)/deploy.sh mt_deliver.tar.gz > $(DELIVER_PATH)/install.sh
 	chmod +x $(DELIVER_PATH)/install.sh
 	rm mt_deliver.tar.gz
@@ -24,4 +24,7 @@ clean:
 	rm -rf $(DELIVER_PATH)
 	for sub_component in $(SUB_DIR); do make clean -C $(SRC_DIR)/$$sub_component;done
 
-.PHONY:all $(SUB_DIR) $(DELIVER_PATH) clean pack
+test:
+	$(SRC_DIR)/test.sh
+
+.PHONY:all $(SUB_DIR) $(DELIVER_PATH) clean pack test

@@ -85,13 +85,28 @@ function install(app) {
     }).install(app);
     mkapi('/rbac/company_add', 'global', true, true, {
         name: { type: String, have_to: true, mean: '公司名', example: 'company_example' },
+        address: { type:String, have_to:false, mean:'公司地址',example:'address_example'},
+        contact: { type:String, have_to:false, mean:'联系人',example:'contact_example'},
+        attachment: { type:String, have_to:false, mean:'附件',example:'attachment_example'},
+        third_key: {type:String,have_to:false,mean:'第三方key',example:'third_key_example'},
+        third_url: {type:String,have_to:false,mean:'第三方url',example:'third_url_example'},
+        third_token: {type:String,have_to:false,mean:'第三方token',example:'third_token_example'},
+        stamp_pic: {type:String,have_to:false,mean:'印章图片',example:'stamp_pic_example'},
+        zc_url: {type:String,have_to:false,mean:'卓创url',example:'zc_url_example'},
+        zh_ssid: {type:String,have_to:false,mean:'卓创旧系统ssid',example:'zh_ssid_example'},
+        event_types: {type:String,have_to:false,mean:'事件类型',example:'event_types_example'},
+        remote_event_url: {type:String,have_to:false,mean:'远程事件url',example:'remote_event_url_example'},
+        driver_notice: {type:String,have_to:false,mean:'司机通知',example:'driver_notice_example'},
+        notice: {type:String,have_to:false,mean:'通知',example:'notice_example'},
+        zc_rpc_url: {type:String,have_to:false,mean:'卓创rpc url',example:'zc_rpc_url_example'},
+        zczh_back_end: {type:String,have_to:false,mean:'卓创账户后端',example:'zczh_back_end_example'},
+        zczh_back_token: { type: String, have_to: false, mean: '卓创账户后端token', example: 'zczh_back_token_example' },
     }, {
-        result: { type: Boolean, mean: '添加结果', example: true },
+        id: { type: Number, mean: '公司id', example: 123 },
+        name: { type: String, mean: '公司名', example: 'company_example' },
     }, '添加公司', '添加公司').add_handler(async function (body, token) {
-        let ret = { result: false };
-        await rbac_lib.add_company(body.name);
-        ret.result = true;
-        return ret;
+        let company_added = await rbac_lib.add_company_with_full_info(body)
+        return company_added;
     }).install(app);
     mkapi('/rbac/company_del', 'global', true, true, {
         id: { type: Number, have_to: true, mean: '公司id', example: 123 },
@@ -223,7 +238,6 @@ function install(app) {
                 await user.setCompany(company);
                 let company_admin_role = await rbac_lib.make_company_admin_role(company);
                 if (company_admin_role) {
-                    await rbac_lib.unbind_company2module(company.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'customer' } })).id);
                     await rbac_lib.bind_company2module(company.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'config' } })).id);
                     await rbac_lib.connect_user2role(user.id, company_admin_role.id);
                     ret.result = true;
@@ -297,6 +311,7 @@ function install(app) {
         company_name: { type: String, have_to: true, mean: '公司名', example: 'company_example' },
         open_id_code: { type: String, have_to: true, mean: '微信open_id授权码', example: 'open_id_example' },
         name: { type: String, have_to: true, mean: '姓名', example: 'name_example' },
+        email: { type: String, have_to: false, mean: '邮箱', example: 'email_example' },
     }, {
         token: { type: String, mean: '登录token', example: 'ABCD' },
     }, '更新用户信息', '更新用户信息').add_handler(async function (body, token) {
@@ -311,6 +326,7 @@ function install(app) {
             await user.setCompany(company);
             user.open_id = open_id;
             user.name = body.name;
+            user.email = body.email;
             let cust_role = await rbac_lib.add_role('客户', '客户', false, company);
             await rbac_lib.connect_user2role(user.id, cust_role.id);
             await rbac_lib.connect_role2module(cust_role.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'customer' } })).id);
@@ -323,8 +339,8 @@ function install(app) {
                 old_user.open_id = '';
                 await old_user.save();
             }
+            await user.save();
         }
-        await user.save();
         ret.token = await rbac_lib.user_login(phone);
         return ret;
     }).install(app);

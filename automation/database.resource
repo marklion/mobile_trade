@@ -2,7 +2,7 @@
 Library  DatabaseLibrary
 
 *** Variables ***
-${DB_PATH}  build/mt.db
+${DB_PATH}  /database/mt.db
 
 *** Keywords ***
 Clear Table
