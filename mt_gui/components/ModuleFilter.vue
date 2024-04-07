@@ -2,6 +2,8 @@
 <view>
     <slot v-if="should_show">
     </slot>
+    <slot v-else name="instead">
+    </slot>
 </view>
 </template>
 

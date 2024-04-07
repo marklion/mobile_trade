@@ -13,6 +13,15 @@
 			"path": "pages/Myself"
 		},
 		{
+			"path": "pages/AppPanel"
+		},
+		{
+			"path": "pages/Stuff",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/RoleConfig"
 		},
 		{
@@ -45,6 +54,12 @@
 			{
 				"pagePath": "pages/Home",
 				"text": "首页",
+				"iconPath": "static/tabbar/layout_default_3x.png",
+				"selectedIconPath": "static/tabbar/layout_selected_3x.png"
+			},
+			{
+				"pagePath": "pages/AppPanel",
+				"text": "应用",
 				"iconPath": "static/tabbar/assembly_default_3x.png",
 				"selectedIconPath": "static/tabbar/assembly_selected_3x.png"
 			},

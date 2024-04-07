@@ -74,6 +74,7 @@ export default {
             this.all_data = [];
             this.page = 0;
             this.finish = false;
+            this.fetch_new();
         },
         fetch_new: async function () {
             if (!this.finish && !this.fetching) {
@@ -88,8 +89,7 @@ export default {
                     this.page++;
                 }
                 this.fetching = false;
-                if (this.show_count < 20)
-                {
+                if (this.show_count < 20) {
                     this.fetch_new();
                 }
             }

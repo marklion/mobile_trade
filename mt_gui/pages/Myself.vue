@@ -50,7 +50,17 @@ export default {
         "module-filter": ModuleFilter
     },
     methods: {
-        change_pwd: async function () {
+        change_pwd: async function (detail) {
+            if (detail.index == 1) {
+                let req = {
+                    new_password: this.new_pwd
+                };
+                await this.$send_req('/rbac/change_password', req);
+                uni.showToast({
+                    title: '修改成功',
+                    icon: 'success'
+                });
+            }
             this.show_change_pwd = false;
         },
         unLogin: function () {

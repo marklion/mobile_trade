@@ -82,6 +82,7 @@ function install(app) {
         comment: { type: String, mean: '备注', example: '备注' },
         next_price: { type: Number, mean: '下次单价', example: 1 },
         change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
+        expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
     }, '获取货物', '获取货物').add_handler(async function (body, token) {
         let company = await rbac_lib.get_company_by_token(token);
         return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count);
@@ -96,6 +97,7 @@ function install(app) {
                 comment: { type: String, mean: '备注', example: '备注' },
                 next_price: { type: Number, mean: '下次单价', example: 1 },
                 change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
+                expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
             }
         }
     }, '获取所有货物', '获取所有货物', true).add_handler(async function (body, token) {

