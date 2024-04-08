@@ -29,7 +29,7 @@ Contract Maintain
     Length Should Be  ${found_contracts}  1
     ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  2
-    Del A Customer Contract  ${found_contracts[0]}[id]
+    Del A Customer Contract  ${found_contracts[1]}[id]
     ${found_contracts}  Req Get to Server  /contract/get_all_sale  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  1
     ${found_contracts}  Req Get to Server  /contract/get_all_buy  ${bc1_user_token}  contracts
