@@ -28,6 +28,12 @@
 			}
 		},
 		{
+			"path": "pages/BuyContract",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/RoleConfig"
 		},
 		{

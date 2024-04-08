@@ -41,9 +41,14 @@ export default {
                     require_module: 'scale'
                 },{
                     name:'销售合同',
-                    icon:'addressbook',
+                    icon:'pullup',
                     require_module: 'stuff',
                     path: 'Contract'
+                },{
+                    name:'采购合同',
+                    icon:'pulldown',
+                    require_module: 'customer',
+                    path: 'BuyContract'
                 },
 
             ]
