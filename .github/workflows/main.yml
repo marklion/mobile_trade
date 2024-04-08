@@ -49,7 +49,9 @@ jobs:
           docker pull marklion/mt_deploy:v1.0
       - name: Run build-wrapper
         run: |
-          docker run -v `realpath ${{ env.BUILD_WRAPPER_OUT_DIR }}`:`realpath ${{ env.BUILD_WRAPPER_OUT_DIR }}` -v `realpath $HOME/.sonar/build-wrapper-linux-x86`:/wa_path -v `realpath .`:`realpath .` marklion/mt_deploy:v1.0 /wa_path/build-wrapper-linux-x86-64 --out-dir `realpath ${{ env.BUILD_WRAPPER_OUT_DIR }}` make
+          docker run -v `realpath ${{ env.BUILD_WRAPPER_OUT_DIR }}`:`realpath ${{ env.BUILD_WRAPPER_OUT_DIR }}` -v `realpath $HOME/.sonar/build-wrapper-linux-x86`:/wa_path -v `realpath .`:`realpath .` marklion/mt_deploy:v1.0 /wa_path/build-wrapper-linux-x86-64 --out-dir `realpath ${{ env.BUILD_WRAPPER_OUT_DIR }}` make -f `realpath .`/Makefile
+          docker tag marklion/mt_deploy:v1.0 mt_deploy:v1.0
+          make test
       - name: Run sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
