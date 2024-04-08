@@ -22,6 +22,12 @@
 			}
 		},
 		{
+			"path": "pages/Contract",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/RoleConfig"
 		},
 		{

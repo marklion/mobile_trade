@@ -173,15 +173,19 @@ function install(app) {
     }).install(app);
     mkapi('/contract/make', 'stuff', true, true, {
         customer_id: { type: Number, have_to: true, mean: '客户ID', example: 1 },
+        begin_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01 12:00:00' },
+        end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01 12:00:00' },
+        number: { type: String, have_to: false, mean: '合同号', example: 1 },
+        customer_code: { type: String, have_to: false, mean: '客户合同号', example: 1 },
     }, {
-        result: { type: Boolean, mean: '结果', example: true }
+        contract_id: { type: Number, mean: '合同ID', example: 1 }
     }, '创建合同', '创建合同').add_handler(async function (body, token) {
-        let ret = { result: false };
+        let ret = {contract_id : 0}
         let sale_company = await rbac_lib.get_company_by_token(token);
         let buy_company = await db_opt.get_sq().models.company.findByPk(body.customer_id);
         if (buy_company && sale_company) {
-            await plan_lib.make_contract(buy_company, sale_company);
-            ret.result = true;
+            ret = await plan_lib.make_contract(buy_company, sale_company, body.begin_time, body.end_time, body.number, body.customer_code);
+            ret.contract_id = ret.id;
         }
 
         return ret;
@@ -208,6 +212,10 @@ function install(app) {
                 id: { type: Number, mean: '合同ID', example: 1 },
                 sign_time: { type: String, mean: '签订时间', example: '2020-01-01 12:00:00' },
                 balance: { type: Number, mean: '余额', example: 1 },
+                begin_time: { type: String, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time:{ type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                number: { type: String, mean: '合同号', example: "abc" },
+                customer_code: { type: String, mean: '客户合同号', example: "sss" },
                 stuff: {
                     type: Array, mean: '货物', explain: {
                         id: { type: Number, mean: '货物ID', example: 1 },
@@ -220,11 +228,13 @@ function install(app) {
                         name: { type: String, mean: '公司名称', example: '公司名称' },
                     }
                 },
-                rbac_users:{type: Array, mean: '授权用户', explain: {
-                    id: { type: Number, mean: '用户ID', example: 1 },
-                    name: { type: String, mean: '用户姓名', example: '用户姓名' },
-                    phone: { type: String, mean: '用户电话', example: '用户电话' },
-                }}
+                rbac_users: {
+                    type: Array, mean: '授权用户', explain: {
+                        id: { type: Number, mean: '用户ID', example: 1 },
+                        name: { type: String, mean: '用户姓名', example: '用户姓名' },
+                        phone: { type: String, mean: '用户电话', example: '用户电话' },
+                    }
+                }
             }
         }, total: { type: Number, mean: '总数', example: 1 },
     }, '获取所有销售合同', '获取所有合同', true).add_handler(async function (body, token) {
@@ -242,6 +252,9 @@ function install(app) {
                 id: { type: Number, mean: '合同ID', example: 1 },
                 sign_time: { type: String, mean: '签订时间', example: '2020-01-01 12:00:00' },
                 balance: { type: Number, mean: '余额', example: 1 },
+                begin_time: { type: String, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time:{ type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                number: { type: String, mean: '合同号', example: "abc" },
                 stuff: {
                     type: Array, mean: '货物', explain: {
                         id: { type: Number, mean: '货物ID', example: 1 },
@@ -275,7 +288,7 @@ function install(app) {
         let stuff = await sq.models.stuff.findByPk(body.stuff_id);
         let contract = await sq.models.contract.findByPk(body.contract_id);
         let company = await rbac_lib.get_company_by_token(token);
-        if (stuff && contract && company && await company.hasSale_contract(contract)) {
+        if (stuff && contract && company && await company.hasSale_contract(contract) && await company.hasStuff(stuff)) {
             await plan_lib.add_stuff_to_contract(stuff, contract);
             ret.result = true;
         }
@@ -332,7 +345,7 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '授权用户创建计划', '授权用户创建计划').add_handler(async function (body, token) {
         await plan_lib.authorize_user2contract(body.phone, body.contract_id, token);
-        return {result:true};
+        return { result: true };
     }).install(app);
     mkapi('/contract/unauthorize', 'plan', true, true, {
         contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
@@ -341,7 +354,7 @@ function install(app) {
         result: { type: Boolean, mean: '结果', example: true }
     }, '取消授权用户创建计划', '取消授权用户创建计划').add_handler(async function (body, token) {
         await plan_lib.unauthorize_user2contract(body.phone, body.contract_id, token);
-        return {result:true};
+        return { result: true };
     }).install(app);
     mkapi('/driver/fetch', 'customer', true, true, {
         name: { type: String, have_to: false, mean: '司机姓名', example: '张三' },
@@ -418,8 +431,8 @@ function install(app) {
     }, {
         result: { type: Boolean, mean: '结果', example: true }
     }, '更新计划', '更新计划').add_handler(async function (body, token) {
-        await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, body.main_vehicle_id, body.behind_vehicle_id, body.driver_id, body.comment,  body.use_for, body.drop_address);
-        return {result: true};
+        await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, body.main_vehicle_id, body.behind_vehicle_id, body.driver_id, body.comment, body.use_for, body.drop_address);
+        return { result: true };
     }).install(app);
     mkapi('/plan/get_bought_plans', 'customer', false, true, {
         start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },

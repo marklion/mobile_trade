@@ -39,7 +39,12 @@ export default {
                     name: '现场管理',
                     icon: 'transport',
                     require_module: 'scale'
-                }
+                },{
+                    name:'销售合同',
+                    icon:'addressbook',
+                    require_module: 'stuff',
+                    path: 'Contract'
+                },
 
             ]
         }

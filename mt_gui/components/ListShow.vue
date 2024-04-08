@@ -2,7 +2,9 @@
 <view>
     <scroll-view ref="container" :style="'height: ' + height" @scrolltolower="scrollToLower" show-scrollbar scroll-y>
         <view ref="content">
-            <fui-search-bar @search="search" @cancel="cancel"></fui-search-bar>
+            <fui-sticky>
+                <fui-search-bar @search="search" @cancel="cancel"></fui-search-bar>
+            </fui-sticky>
             <view v-for="(item, index) in data2show" :key="index">
                 <slot :item="item"></slot>
             </view>
@@ -57,7 +59,6 @@ export default {
     },
     watch: {
         show_count: function () {
-            console.log(this.show_count);
             if (this.show_count < 20) {
                 this.fetch_new();
             }

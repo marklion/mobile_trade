@@ -131,7 +131,7 @@ function install(app) {
         ret.result = true;
         return ret;
     }).install(app);
-    mkapi('/rbac/company_get_all', 'global', false, true, {
+    mkapi('/rbac/company_get_all', 'none', false, false, {
     }, {
         all_company: {
             type: Array, mean: '公司列表',

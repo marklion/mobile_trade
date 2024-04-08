@@ -1,6 +1,6 @@
 <template>
 <view>
-    <fui-form ref="form" top="0" :model="formData" :show="false">
+    <fui-form ref="form" top="100" :model="formData" :show="false">
         <fui-form-item label="公司全称" asterisk prop="company_name">
             <fui-input :borderBottom="false" :padding="[0]" placeholder="请输入公司全称" v-model="formData.company_name"></fui-input>
         </fui-form-item>

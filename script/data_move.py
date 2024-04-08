@@ -46,7 +46,15 @@ def get_data_from_cur_db(sql):
     conn = sqlite3.connect("/database/mt.db")
     return get_data_from_db(conn, sql)
 
+def clean_company():
+    records = get_data_from_orig_db("SELECT * FROM company_table;")
+    for item in records:
+        found_contract = get_data_from_orig_db("SELECT * FROM contract_table WHERE a_side_ext_key = '%d' OR b_side_ext_key = '%d';" % (item[0], item[0]))
+        if len(found_contract) == 0:
+            get_data_from_orig_db("DELETE FROM company_table WHERE PRI_ID = " + str(item[0]) + ";")
+
 def company_move():
+    clean_company()
     records = get_data_from_orig_db("SELECT * FROM company_table;")
     for item in records:
         req = {
@@ -78,7 +86,15 @@ def company_move():
                 }
                 req_to_server('/rbac/company_add_module', req)
 
+def clean_user():
+    records = get_data_from_orig_db("SELECT * FROM userinfo_table;")
+    for item in records:
+        found_user = get_data_from_orig_db("SELECT * FROM company_table WHERE PRI_ID = '%d';" % item[7])
+        if len(found_user) != 1:
+            get_data_from_orig_db("DELETE FROM userinfo_table WHERE PRI_ID = " + str(item[0]) + ";")
+
 def user_move():
+    clean_user()
     orig_users = get_data_from_orig_db("SELECT * FROM userinfo_table;")
     for single_user in orig_users:
         company_name = ""
@@ -148,6 +164,53 @@ def stuff_move():
         }
         req_to_server("/stuff/sc_config", req, user_token)
 
+def contract_move():
+    orig_contracts = get_data_from_orig_db("SELECT * FROM contract_table;")
+    for single_contract in orig_contracts:
+        buy_company_name = get_data_from_orig_db("SELECT * FROM company_table WHERE PRI_ID = " + str(single_contract[5]) + ";")[0][1];
+        sale_company_found = get_data_from_orig_db("SELECT * FROM company_table WHERE PRI_ID = " + str(single_contract[6]) + ";")
+        if (len(sale_company_found) != 1):
+            continue
+        user_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE belong_company_ext_key = " + str(single_contract[6]) + ";")[0][3]
+        customer_id = get_data_from_cur_db("SELECT * FROM company WHERE name = '%s';" % buy_company_name)[0][0]
+        user_token = login(user_phone)
+        resp = req_to_server('/contract/make', {
+            "customer_id":customer_id,
+            "begin_time":single_contract[1],
+            "end_time":single_contract[2],
+            "number":single_contract[3],
+            "customer_code":single_contract[7],
+        }, user_token)["contract_id"]
+        contract_id = resp
+        try:
+            customer_user_old_id = get_data_from_orig_db( "SELECT * FROM contract_user_table WHERE belong_contract_ext_key = " + str(single_contract[0]) + ";")[0][2]
+            customer_user_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE PRI_ID = " + str(customer_user_old_id) + ";")[0][3]
+            req_to_server('/contract/authorize', {
+                "phone":customer_user_phone,
+                "contract_id":contract_id,
+            }, user_token)
+            req_to_server('/contract/charge', {
+                "cash_increased":single_contract[8],
+                "comment":'导入',
+                "contract_id":contract_id,
+            }, user_token)
+        except:
+            pass
+        focus_stuffs = get_data_from_orig_db("SELECT * FROM company_follow_table WHERE follower_ext_key = " + str(single_contract[5]) + ";")
+        for single_stuff in focus_stuffs:
+            try:
+                old_stuff = get_data_from_orig_db("SELECT * FROM stuff_type_table WHERE PRI_ID = " + str(single_stuff[1]) + ";")[0][1]
+                sales_id = get_data_from_cur_db("SELECT * FROM company WHERE name = '%s';" % sale_company_found[0][1])[0][0]
+                stuff_id = get_data_from_cur_db("SELECT * FROM stuff WHERE name = '%s' AND companyId == %d;" % (old_stuff, sales_id))[0][0]
+                req_to_server('/contract/add_stuff', {
+                    "contract_id":contract_id,
+                    "stuff_id":stuff_id,
+                }, user_token)
+            except:
+                pass
+
+
+
 def main():
     prepare_api()
     move_stage = sys.argv[1]
@@ -155,6 +218,7 @@ def main():
         company_move()
         user_move()
         stuff_move()
+        contract_move()
     else:
         eval(move_stage + '_move')()
 

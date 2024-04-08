@@ -61,13 +61,20 @@ module.exports = {
         let count = await sq.models.stuff.count();
         return { rows: ret, count: count };
     },
-    make_contract: async function (_buy_company, _sale_company) {
+    make_contract: async function (_buy_company, _sale_company, being_time, end_time, number, customer_code) {
         let sq = db_opt.get_sq();
         let exist_contract = await _buy_company.getBuy_contracts({ where: { saleCompanyId: _sale_company.id } });
         if (exist_contract.length != 0) {
             throw { err_msg: '合同已存在' };
         }
-        let new_contract = await sq.models.contract.create({ sign_time: moment().format('YYYY-MM-DD HH:mm:ss'), balance: 0 });
+        let new_contract = await sq.models.contract.create({
+            sign_time: moment().format('YYYY-MM-DD HH:mm:ss'),
+            balance: 0,
+            begin_time:being_time,
+            end_time:end_time,
+            number: number,
+            customer_code: customer_code
+        });
         await new_contract.setBuy_company(_buy_company);
         await new_contract.setSale_company(_sale_company);
         return new_contract.toJSON();
@@ -93,7 +100,7 @@ module.exports = {
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         let conditions = {
-            order: [['id', 'ASC']],
+            order: [['updatedAt', 'DESC'], ['id', 'ASC']],
             offset: _pageNo * 20,
             limit: 20,
             include: [

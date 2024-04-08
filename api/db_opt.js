@@ -110,6 +110,10 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             sign_time: { type: DataTypes.STRING },
             balance: { type: DataTypes.FLOAT, defaultValue: 0 },
+            begin_time: { type: DataTypes.STRING },
+            end_time: { type: DataTypes.STRING },
+            number: { type: DataTypes.STRING },
+            customer_code: { type: DataTypes.STRING },
         },
         plan_history: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
