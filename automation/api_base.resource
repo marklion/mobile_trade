@@ -1,14 +1,19 @@
 *** Settings ***
 Library  RequestsLibrary
 Library  Collections
+Resource  var.resource
 
 *** Variables ***
-${remote_url}  http://localhost:8080/api/v1
+${remote_url}    http://localhost:44510/api/v1
+
 
 *** Keywords ***
 No Permission Req to Server
     [Arguments]  ${url}  ${token}  ${body}
     ${real_url}  Set Variable  ${remote_url}${url}
+    IF  $server_base != ''
+        ${real_url}  Set Variable  ${server_base}${url}
+    END
     ${headers}  Create Dictionary  token=${token}
     ${resp}  POST  url=${real_url}  headers=${headers}  json=${body}
     Should Not Be Empty  ${resp.json()}[err_msg]
@@ -17,6 +22,9 @@ No Permission Req to Server
 Req to Server
     [Arguments]  ${url}  ${token}  ${body}  ${exception}=${False}
     ${real_url}  Set Variable  ${remote_url}${url}
+    IF  $server_base != ''
+        ${real_url}  Set Variable  ${server_base}${url}
+    END
     ${real_token}  Set Variable  ${token}
     IF  $token == 'admin_token'
         ${req}  Create Dictionary  phone=18911992582  password=Mobile_P@ssw0rd_Trade

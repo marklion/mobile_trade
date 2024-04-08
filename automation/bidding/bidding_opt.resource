@@ -64,7 +64,7 @@ Add All Customer To Bidding Except First One
             Append To List  ${joiner_ids}  ${tmp}
         END
     END
-    Remove From List  ${joiner_ids}  0
+    Remove From List  ${joiner_ids}  -1
     ${req}  Create Dictionary  bc_id=${bc_id}  joiner_ids=${joiner_ids}  begin_time=${begin_time}  end_time=${end_time}
     Req to Server  /bidding/add_turn  ${sc_admin_token}  ${req}
 Customer Accept Bidding

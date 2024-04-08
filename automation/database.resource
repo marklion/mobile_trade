@@ -1,18 +1,27 @@
 *** Settings ***
 Library  DatabaseLibrary
+Resource  var.resource
 
 *** Variables ***
-${DB_PATH}  /database/mt.db
+${DB_PATH}  build/mt.db
 
 *** Keywords ***
+Get DB Path
+    ${real_db_path}  Set Variable  ${DB_PATH}
+    IF  $server_db != ''
+        ${real_db_path}  Set Variable  ${server_db}
+    END
+    RETURN  ${real_db_path}
 Clear Table
     [Arguments]  ${table}
-    Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
+    ${db_p}  Get DB Path
+    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
     Delete All Rows From Table  ${table}
     Disconnect From All Databases
 
 RBAC reset
-    Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
+    ${db_p}  Get DB Path
+    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
     Execute Sql String  delete from rbac_user where phone != '18911992582';
     Execute Sql String  delete from rbac_user_role where rbacUserId not in (select id from rbac_user where phone = '18911992582');
     Execute Sql String  delete from rbac_role where companyId is not null;
@@ -38,7 +47,8 @@ Plan Reset
 
 Company Set Script
     [Arguments]  ${company_id}  ${script_path}
-    Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
+    ${db_p}  Get DB Path
+    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
     Execute Sql String  update company set script = '${script_path}' where id = ${company_id};
     Disconnect From All Databases
 
@@ -53,6 +63,7 @@ Bidding Reset
 
 Change Bidding Begin Time
     [Arguments]  ${turn_id}  ${begin_time}
-    Connect To Database Using Custom Params  sqlite3  database="${DB_PATH}"
+    ${db_p}  Get DB Path
+    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
     Execute Sql String  update bidding_turn set begin_time = '${begin_time}' where id = ${turn_id};
     Disconnect From All Databases
