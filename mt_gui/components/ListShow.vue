@@ -1,8 +1,8 @@
 <template>
 <view>
-    <scroll-view ref="container" :style="'height: ' + height + '; border-bottom:solid;'" @scrolltolower="scrollToLower" show-scrollbar scroll-y>
+    <scroll-view ref="container" :style="'height: ' + height + ';'" @scrolltolower="scrollToLower" show-scrollbar scroll-y>
         <view ref="content">
-            <fui-sticky v-if="search_key">
+            <fui-sticky v-if="search_key" z-index="20">
                 <fui-search-bar @search="search" @cancel="cancel"></fui-search-bar>
             </fui-sticky>
             <view v-for="(item, index) in data2show" :key="index">

@@ -20,9 +20,13 @@
         <view style="display:flex; justify-content: center;">
             <fui-button text="新增车辆" btnSize="small" type="success" @click="show_add_vehicle = true"></fui-button>
         </view>
-        <view style="border:solid;" v-for="(single_v, index) in vehicles" :key="index">
-            <fui-preview :previewData="make_vc_show(single_v)" @click="remove_vehicle(index)"></fui-preview>
-        </view>
+        <fui-grid :columns="2" :square="false">
+            <fui-grid-item v-for="(single_v, index) in vehicles" :key="index">
+                <view style="border:solid;">
+                    <fui-preview bdSize="26" :isBorder="false" :previewData="make_vc_show(single_v)" @click="remove_vehicle(index)"></fui-preview>
+                </view>
+            </fui-grid-item>
+        </fui-grid>
         <fui-divider></fui-divider>
         <fui-button text="提交" bold @click="submit"></fui-button>
     </fui-form>

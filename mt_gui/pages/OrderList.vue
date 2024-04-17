@@ -2,27 +2,31 @@
 <view>
     <fui-segmented-control v-if="seg_show" :values="seg" @click="change_seg"></fui-segmented-control>
     <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
-    <module-filter require_module="stuff">
-        <fui-tag theme="plain" type="purple">
-            {{stuff_filter.name}}
-            <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32" @click="show_stuff_list= true"></fui-icon>
-            <fui-icon v-else name="close" size="32" @click="reset_stuff_filter"></fui-icon>
-        </fui-tag>
-        <fui-tag theme="plain" type="success">
-            {{company_filter.name}}
-            <fui-icon v-if="!company_filter.id" name="arrowright" size="32" @click="show_company_filter= true"></fui-icon>
-            <fui-icon v-else name="close" size="32" @click="reset_company_filter"></fui-icon>
-        </fui-tag>
-    </module-filter>
+    <view style="display:flex; align-items: center;">
+        <module-filter require_module="stuff">
+            <fui-tag theme="plain" type="purple">
+                {{stuff_filter.name}}
+                <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32" @click="show_stuff_list= true"></fui-icon>
+                <fui-icon v-else name="close" size="32" @click="reset_stuff_filter"></fui-icon>
+            </fui-tag>
+            <fui-tag theme="plain" type="success">
+                {{company_filter.name}}
+                <fui-icon v-if="!company_filter.id" name="arrowright" size="32" @click="show_company_filter= true"></fui-icon>
+                <fui-icon v-else name="close" size="32" @click="reset_company_filter"></fui-icon>
+            </fui-tag>
+        </module-filter>
+        显示取消计划
+        <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
+    </view>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
         <fui-button slot="right-icon" text="选择日期" @click="show_plan_date = true" btnSize="mini" type="warning"></fui-button>
     </u-cell>
     <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="show_plan_date = false"></fui-date-picker>
 
     <module-filter v-if="seg_index == 0" require_module="plan">
-        <list-show ref="sold_plans" :fetch_function="get_sold_plans" height="80vh" search_key="search_cond">
+        <list-show ref="sold_plans" :fetch_function="get_sold_plans" height="74vh" search_key="search_cond">
             <view slot-scope="{item}">
-                <u-cell :title="item.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate">
+                <u-cell :icon="get_status_icon(item)" :title="item.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
@@ -32,9 +36,9 @@
         </list-show>
     </module-filter>
     <module-filter v-if="seg_index == 1" require_module="customer">
-        <list-show ref="buy_plans" :fetch_function="get_buy_plans" height="80vh" search_key="search_cond">
+        <list-show ref="buy_plans" :fetch_function="get_buy_plans" height="74vh" search_key="search_cond">
             <view slot-scope="{item}">
-                <u-cell :title="item.stuff.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate">
+                <u-cell :icon="get_status_icon(item)" :title="item.stuff.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
@@ -63,6 +67,81 @@
             </fui-list>
         </fui-bottom-popup>
     </module-filter>
+
+    <fui-bottom-popup :show="show_plan_detail" @close="show_plan_detail = false" z-index="1001">
+        <scroll-view style="height: 80vh;" show-scrollbar scroll-y>
+            <u-cell-group title="计划信息" class="group_sep">
+                <u-cell title="买方" :value="focus_plan.company.name">
+                    <view slot="label">
+                        <fui-text :text="focus_plan.rbac_user.name" size="24"></fui-text>
+                        <fui-text type="primary" :text="focus_plan.rbac_user.phone" size="24" textType="mobile" @click="copy_text(focus_plan.rbac_user.phone)"></fui-text>
+                    </view>
+                </u-cell>
+                <u-cell title="卖方" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
+                <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
+                <u-cell :title="'当前状态：' + plan_status">
+                    <view slot="value" style="display:flex;">
+                        <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm('/plan/cancel', '取消')"></fui-button>
+                        <module-filter require_module="plan" style="display:flex;">
+                            <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm('/plan/confirm_single_plan', '确认')"></fui-button>
+                            <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm('/plan/rollback', '回退')"></fui-button>
+                            <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm('/plan/close', '关闭')"></fui-button>
+                        </module-filter>
+                        <module-filter require_module="cash">
+                            <fui-button v-if="focus_plan.status == 1" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/plan/pay', '验款')"></fui-button>
+                        </module-filter>
+                        <module-filter require_module="scale">
+                            <fui-button v-if="focus_plan.status == 2" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
+                        </module-filter>
+                    </view>
+                </u-cell>
+            </u-cell-group>
+            <u-cell-group title="车辆信息" class="group_sep">
+                <u-cell title="主车" :value="focus_plan.main_vehicle.plate"></u-cell>
+                <u-cell title="挂车" :value="focus_plan.behind_vehicle.plate"></u-cell>
+                <u-cell :title="'司机:' + focus_plan.driver.name" :value="focus_plan.driver.phone" clickable @click="copy_text(focus_plan.driver.phone)"></u-cell>
+                <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
+            </u-cell-group>
+            <u-cell-group title="出入信息" class="group_sep">
+                <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
+                <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time"></u-cell>
+            </u-cell-group>
+
+            <u-cell-group title="装卸信息" class="group_sep">
+                <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
+                <u-cell title="装车量" :value="focus_plan.count"></u-cell>
+                <u-cell v-if="focus_plan.p_time" title="一次重量" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
+                <u-cell v-if="focus_plan.m_time" title="二次重量" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
+            </u-cell-group>
+            <u-cell-group title="操作历史" class="group_sep">
+                <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
+            </u-cell-group>
+            <u-cell-group v-if="focus_plan.sc_info" title="安检信息" class="group_sep">
+                <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="'到期时间：' + sc_node.expired_time">
+                    <view slot="value">
+                        {{sc_node.sc_content.input}}
+                        <fui-avatar v-if="sc_node.sc_content.attachment" :src="sc_node.sc_content.attachment"></fui-avatar>
+                    </view>
+                </u-cell>
+            </u-cell-group>
+        </scroll-view>
+    </fui-bottom-popup>
+    <fui-gallery :urls="sc_attach_urls" :show="show_sc" @hide="show_sc = false"></fui-gallery>
+
+    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？'" :show="show_xxx_confirm" @click="do_xxx">
+    </fui-modal>
+    <fui-modal :zIndex="1002" width="600" :show="show_scale_input" @click="deliver">
+        <fui-form ref="deliver" top="100">
+            <fui-input label="一次称重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
+            <fui-input label="一次称重时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
+            <fui-input label="二次称重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
+            <fui-input label="二次称重时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
+            <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
+                <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
+            </fui-input>
+        </fui-form>
+    </fui-modal>
+    <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
 </view>
 </template>
 
@@ -70,6 +149,7 @@
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilterVue from '../components/ModuleFilter.vue';
+import $fui from '@/components/firstui/fui-clipboard';
 export default {
     name: 'OrderList',
     components: {
@@ -78,6 +158,92 @@ export default {
     },
     data: function () {
         return {
+            need_show_close: false,
+            show_deliver_date: false,
+            show_scale_input: false,
+            deliver_req: {
+                count: "",
+                m_time: '',
+                m_weight: '',
+                p_time: '',
+                p_weight: '',
+            },
+            xxx_url: '',
+            confirm_info: '',
+            show_xxx_confirm: false,
+            show_sc: false,
+            focus_plan: {
+                "behind_vehicle": {
+                    "id": 1,
+                    "plate": "车牌"
+                },
+                "comment": "备注",
+                "company": {
+                    "id": 1,
+                    "name": "公司名称"
+                },
+                "count": 1,
+                "driver": {
+                    "id": 1,
+                    "id_card": "司机身份证",
+                    "name": "司机名称",
+                    "phone": "司机电话"
+                },
+                "drop_address": "卸货地址",
+                "enter_time": "2020-01-01 12:00:00",
+                "from_bidding": true,
+                "id": 1,
+                "m_time": "2020-01-01 12:00:00",
+                "m_weight": 1,
+                "main_vehicle": {
+                    "id": 1,
+                    "plate": "车牌"
+                },
+                "p_time": "2020-01-01 12:00:00",
+                "p_weight": 1,
+                "plan_histories": [{
+                    "action_type": "操作",
+                    "id": 1,
+                    "operator": "操作人",
+                    "time": "2020-01-01 12:00:00"
+                }],
+                "plan_time": "2020-01-01 12:00:00",
+                "rbac_user": {
+                    "id": 1,
+                    "name": "用户姓名",
+                    "phone": "用户电话"
+                },
+                "register_number": 1,
+                "register_time": "2020-01-01 12:00:00",
+                "sc_info": [{
+                    "belong_type": 0,
+                    "id": 1,
+                    "name": "安检需求",
+                    "need_attach": true,
+                    "need_expired": true,
+                    "need_input": true,
+                    "sc_content": {
+                        "attachment": "http://www.baidu.com",
+                        "checker": "张三",
+                        "expired_time": "2020-01-01 00:00:00",
+                        "id": 1,
+                        "input": "请输入",
+                        "passed": true
+                    }
+                }],
+                "status": 1,
+                "stuff": {
+                    "company": {
+                        "id": 1,
+                        "name": "公司名称"
+                    },
+                    "id": 1,
+                    "name": "货物名称"
+                },
+                "unit_price": 1,
+                "use_for": "用途"
+            },
+            show_plan_detail: false,
             seg: ['销售', '采购'],
             seg_index: -1,
             seg_show: false,
@@ -95,6 +261,7 @@ export default {
             focus_status: undefined,
             begin_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
             end_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
+            deliver_time: utils.dateFormatter(new Date(), 'y-m-d h:i:s', 4, false),
             tabs: [{
                 name: "全部",
             }, {
@@ -108,10 +275,38 @@ export default {
                 badge: 0,
             }, {
                 name: "已关闭",
-            }]
+            }],
+            deliver_time_type: '',
         }
     },
     computed: {
+        plan_status: function () {
+            let ret = '';
+            if (this.focus_plan.status == 0) {
+                ret = '未确认';
+            } else if (this.focus_plan.status == 1) {
+                ret = '未付款';
+            } else if (this.focus_plan.status == 2) {
+                ret = '未发车';
+            } else if (this.focus_plan.status == 3) {
+                ret = '已关闭';
+            }
+            return ret;
+        },
+        sc_attach_urls: function () {
+            let ret = [];
+            if (this.focus_plan.sc_info) {
+                this.focus_plan.sc_info.forEach(ele => {
+                    if (ele.sc_content.attachment) {
+                        ret.push({
+                            src: ele.sc_content.attachment,
+                            descr: ele.name
+                        });
+                    }
+                });
+            }
+            return ret;
+        },
         plan_filter: function () {
             return {
                 start_time: this.begin_time,
@@ -119,10 +314,119 @@ export default {
                 status: this.focus_status,
                 stuff_id: this.stuff_filter.id,
                 company_id: this.company_filter.id,
+                hide_manual_close: !this.need_show_close,
             }
+        },
+        plan_owner: function () {
+            let ret = false;
+            let self = uni.getStorageSync('self_info');
+            if (self.id == this.focus_plan.rbac_user.id) {
+                ret = true;
+            }
+
+            return ret;
         },
     },
     methods: {
+        copy_text: function (e) {
+            $fui.getClipboardData(e, res => {
+                if (res) {
+                    uni.showToast({
+                        title: '复制成功',
+                        icon: 'success',
+                        duration: 2000
+                    });
+                }
+            });
+        },
+        get_status_icon: function (item) {
+            let ret = '';
+            let status = item.status;
+            if (status == 0) {
+                ret = 'info';
+            } else if (status == 1) {
+                ret = 'rmb';
+            } else if (status == 2) {
+                ret = 'hourglass';
+            } else if (status == 3) {
+                ret = 'checkmark';
+            }
+            if (item.manual_close) {
+                ret = 'close';
+            }
+            return ret;
+        },
+        change_need_show: function () {
+            this.refresh_plans();
+        },
+        calc_count: function () {
+            this.deliver_req.count = Math.abs(this.deliver_req.p_weight - this.deliver_req.m_weight);
+            this.deliver_req.count = utils.moneyFormatter(this.deliver_req.count)
+        },
+        deliver: async function (e) {
+            if (e.index == 1) {
+
+                let rules = [{
+                    name: 'count',
+                    rule: ['required'],
+                    msg: ['请输入装载量']
+                }, {
+                    name: 'p_weight',
+                    rule: ['isAmount'],
+                    msg: ['重量需要是数字']
+                }, {
+                    name: 'm_weight',
+                    rule: ['isAmount'],
+                    msg: ['重量需要是数字']
+                }, ];
+                let val_ret = await this.$refs.deliver.validator(this.deliver_req, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                this.deliver_req.plan_id = this.focus_plan.id;
+                this.deliver_req.count = parseFloat(this.deliver_req.count);
+                this.deliver_req.p_weight = parseFloat(this.deliver_req.p_weight);
+                this.deliver_req.m_weight = parseFloat(this.deliver_req.m_weight);
+                await this.$send_req('/plan/deliver', this.deliver_req);
+                this.show_plan_detail = false;
+                this.deliver_req = {
+                    count: "",
+                    m_time: '',
+                    m_weight: '',
+                    p_time: '',
+                    p_weight: '',
+                };
+                uni.startPullDownRefresh();
+            }
+            this.show_scale_input = false;
+        },
+        prepare_deliver_date_pick: function (time_type) {
+            this.deliver_time_type = time_type;
+            this.show_deliver_date = true;
+        },
+        choose_deliver_date: function (e) {
+            this.deliver_req[this.deliver_time_type] = e.result;
+            this.show_deliver_date = false;
+        },
+        do_xxx: async function (e) {
+            if (e.index == 1) {
+                await this.$send_req(this.xxx_url, {
+                    plan_id: this.focus_plan.id
+                });
+                this.show_plan_detail = false;
+                uni.startPullDownRefresh();
+            }
+            this.show_xxx_confirm = false;
+        },
+        prepare_xxx_confirm: function (url, info) {
+            this.show_xxx_confirm = true;
+            this.confirm_info = info;
+            this.xxx_url = url;
+        },
+        prepare_plan_detail: function (item) {
+            this.focus_plan = item;
+            this.show_plan_detail = true;
+        },
         change_seg: function (e) {
             this.seg_index = e.index;
             this.$nextTick(() => {
@@ -244,6 +548,9 @@ export default {
         uni.stopPullDownRefresh();
     },
     onShow() {
+        let tom = new Date();
+        tom.setDate(tom.getDate() + 1);
+        this.end_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
         let mods = uni.getStorageSync('self_info').modules;
         let modules = [];
@@ -264,6 +571,14 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
+.group_sep:nth-child(odd) {
+    background-color: #ffffff;
+    /* 更深的颜色 */
+}
 
+.group_sep:nth-child(even) {
+    background-color: #f1f1f1;
+    /* 更浅的颜色 */
+}
 </style>

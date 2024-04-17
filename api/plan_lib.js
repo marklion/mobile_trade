@@ -164,6 +164,9 @@ module.exports = {
         if (_condition.company_id != undefined) {
             where_condition[db_opt.Op.and].push({ companyId: _condition.company_id });
         }
+        if (_condition.hide_manual_close) {
+            where_condition[db_opt.Op.and].push({ manual_close: false});
+        }
         return where_condition;
     },
     replace_plan2archive: async function (_plan) {

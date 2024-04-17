@@ -21,11 +21,14 @@ const plan_detail_define = {
     register_time: { type: String, mean: '登记时间', example: '2020-01-01 12:00:00' },
     register_number: { type: Number, mean: '登记号', example: 1 },
     enter_time: { type: String, mean: '进场时间', example: '2020-01-01 12:00:00' },
-    rbac_user:{type: Object, mean: '创建人', explain: {
-        id: { type: Number, mean: '用户ID', example: 1 },
-        name: { type: String, mean: '用户姓名', example: '用户姓名' },
-        phone: { type: String, mean: '用户电话', example: '用户电话' },
-    }},
+    manual_close: { type: Boolean, mean: '手动关闭', example: true },
+    rbac_user: {
+        type: Object, mean: '创建人', explain: {
+            id: { type: Number, mean: '用户ID', example: 1 },
+            name: { type: String, mean: '用户姓名', example: '用户姓名' },
+            phone: { type: String, mean: '用户电话', example: '用户电话' },
+        }
+    },
     stuff: {
         type: Object, mean: '货物', explain: {
             id: { type: Number, mean: '货物ID', example: 1 },
@@ -444,6 +447,7 @@ function install(app) {
         end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
         status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
         stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
+        hide_manual_close: { type: Boolean, have_to: false, mean: '隐藏手动关闭', example: true },
     }, {
         plans: {
             type: Array, mean: '计划', explain: plan_detail_define
@@ -459,6 +463,7 @@ function install(app) {
         status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
         stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
         company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
+        hide_manual_close: { type: Boolean, have_to: false, mean: '隐藏手动关闭', example: true },
     }, {
         plans: {
             type: Array, mean: '计划', explain: plan_detail_define
