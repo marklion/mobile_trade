@@ -34,6 +34,15 @@
 			}
 		},
 		{
+			"path": "pages/OrderList",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/OrderCreate"
+		},
+		{
 			"path": "pages/RoleConfig"
 		},
 		{
@@ -68,6 +77,12 @@
 				"text": "首页",
 				"iconPath": "static/tabbar/layout_default_3x.png",
 				"selectedIconPath": "static/tabbar/layout_selected_3x.png"
+			},
+			{
+				"pagePath": "pages/OrderList",
+				"text": "订单",
+				"iconPath": "static/tabbar/mod_default_3x.png",
+				"selectedIconPath": "static/tabbar/mod_selected_3x.png"
 			},
 			{
 				"pagePath": "pages/AppPanel",

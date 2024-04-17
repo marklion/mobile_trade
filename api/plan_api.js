@@ -30,6 +30,12 @@ const plan_detail_define = {
         type: Object, mean: '货物', explain: {
             id: { type: Number, mean: '货物ID', example: 1 },
             name: { type: String, mean: '货物名称', example: '货物名称' },
+            company: {
+                type: Object, mean: '购买公司', explain: {
+                    id: { type: Number, mean: '公司ID', example: 1 },
+                    name: { type: String, mean: '公司名称', example: '公司名称' },
+                }
+            },
         }
     },
     company: {
@@ -138,21 +144,20 @@ function install(app) {
             stuff.need_sc = body.need_sc;
             await stuff.save();
         }
-        else
-        {
+        else {
             throw { err_msg: '货物不存在' };
         }
         return { result: true };
     }).install(app);
     mkapi('/stuff/change_price', 'stuff', true, true, {
         stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
-        price:{ type: Number, have_to: true, mean: '新单价', example: 1 },
-        comment:{ type: String, have_to: true, mean: '备注', example: '备注' },
-        to_plan:{ type: Boolean, have_to: true, mean: '是否对未关闭计划生效', example: true },
+        price: { type: Number, have_to: true, mean: '新单价', example: 1 },
+        comment: { type: String, have_to: true, mean: '备注', example: '备注' },
+        to_plan: { type: Boolean, have_to: true, mean: '是否对未关闭计划生效', example: true },
     }, {
         result: { type: Boolean, mean: '结果', example: true }
     }, '调价', '调价').add_handler(async function (body, token) {
-        await plan_lib.change_stuff_price(body.stuff_id,token, body.price, body.to_plan, body.comment);
+        await plan_lib.change_stuff_price(body.stuff_id, token, body.price, body.to_plan, body.comment);
         return { result: true };
     }).install(app);
     mkapi('/stuff/get_price_history', 'stuff', false, true, {
@@ -180,7 +185,7 @@ function install(app) {
     }, {
         contract_id: { type: Number, mean: '合同ID', example: 1 }
     }, '创建合同', '创建合同').add_handler(async function (body, token) {
-        let ret = {contract_id : 0}
+        let ret = { contract_id: 0 }
         let sale_company = await rbac_lib.get_company_by_token(token);
         let buy_company = await db_opt.get_sq().models.company.findByPk(body.customer_id);
         if (buy_company && sale_company) {
@@ -213,7 +218,7 @@ function install(app) {
                 sign_time: { type: String, mean: '签订时间', example: '2020-01-01 12:00:00' },
                 balance: { type: Number, mean: '余额', example: 1 },
                 begin_time: { type: String, mean: '开始时间', example: '2020-01-01 12:00:00' },
-                end_time:{ type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                 number: { type: String, mean: '合同号', example: "abc" },
                 customer_code: { type: String, mean: '客户合同号', example: "sss" },
                 stuff: {
@@ -253,7 +258,7 @@ function install(app) {
                 sign_time: { type: String, mean: '签订时间', example: '2020-01-01 12:00:00' },
                 balance: { type: Number, mean: '余额', example: 1 },
                 begin_time: { type: String, mean: '开始时间', example: '2020-01-01 12:00:00' },
-                end_time:{ type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                 number: { type: String, mean: '合同号', example: "abc" },
                 stuff: {
                     type: Array, mean: '货物', explain: {
@@ -438,6 +443,7 @@ function install(app) {
         start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
         end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
         status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
+        stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
     }, {
         plans: {
             type: Array, mean: '计划', explain: plan_detail_define
@@ -451,6 +457,8 @@ function install(app) {
         start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
         end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
         status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
+        stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
+        company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
     }, {
         plans: {
             type: Array, mean: '计划', explain: plan_detail_define
@@ -634,6 +642,23 @@ function install(app) {
             await plan_lib.plan_close(plan, (await rbac_lib.get_user_by_token(token)).name, false);
         });
         return { result: true };
+    }).install(app);
+    mkapi('/plan/get_self_vehicle_pairs', 'none', false, false, {
+    }, {
+        pairs: {
+            type: Array, mean: '车辆对', explain: {
+                main_vehicle_plate: { type: String, mean: '主车车牌', example: '主车车牌' },
+                behind_vehicle_plate: { type: String, mean: '挂车车牌', example: '挂车车牌' },
+                driver_phone: { type: String, mean: '司机电话', example: '司机电话' },
+                driver_name: { type: String, mean: '司机姓名', example: '司机姓名' },
+            }
+        },
+    }, '获取自己的车辆对', '获取自己的车辆对', true).add_handler(async function (body, token) {
+        let ret = await plan_lib.get_self_vehicle_pairs(token, body.pageNo);
+        return {
+            pairs: ret.rows,
+            total: ret.count
+        }
     }).install(app);
 }
 

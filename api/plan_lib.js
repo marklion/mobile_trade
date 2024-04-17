@@ -158,6 +158,12 @@ module.exports = {
         if (_condition.status != undefined) {
             where_condition[db_opt.Op.and].push({ status: _condition.status });
         }
+        if (_condition.stuff_id != undefined) {
+            where_condition[db_opt.Op.and].push({ stuffId: _condition.stuff_id });
+        }
+        if (_condition.company_id != undefined) {
+            where_condition[db_opt.Op.and].push({ companyId: _condition.company_id });
+        }
         return where_condition;
     },
     replace_plan2archive: async function (_plan) {
@@ -217,7 +223,7 @@ module.exports = {
             include: this.plan_detail_include(),
         };
         let sold_plans = await sq.models.plan.findAll(search_condition);
-        let count = await sq.models.plan.count(where_condition);
+        let count = await sq.models.plan.count({where:where_condition});
         let result = [];
         for (let index = 0; index < sold_plans.length; index++) {
             const element = sold_plans[index];
@@ -655,5 +661,31 @@ module.exports = {
         }
 
         return ret;
+    },
+    get_self_vehicle_pairs:async function(token, pageNo) {
+        let rows = [];
+        let company = await rbac_lib.get_company_by_token(token);
+        let result = await company.getPlans({
+            group:'mainVehicleId',
+            offset: 20 * pageNo,
+            limit: 20,
+        });
+        let count = await company.countPlans({group:'mainVehicleId'});
+        for (let index = 0; index < result.length; index++) {
+            const element = result[index];
+            let tmp = {};
+            let main_vehicle = await element.getMain_vehicle()
+            let behind_vehicle = await element.getBehind_vehicle();
+            let driver = await element.getDriver();
+            if (main_vehicle && behind_vehicle && driver)
+            {
+                tmp.driver_phone = driver.phone;
+                tmp.main_vehicle_plate = main_vehicle.plate;
+                tmp.behind_vehicle_plate = behind_vehicle.plate;
+                tmp.driver_name = driver.name;
+                rows.push(tmp);
+            }
+        }
+        return {rows:rows, count:count};
     },
 };

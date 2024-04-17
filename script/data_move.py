@@ -3,6 +3,7 @@ import sqlite3
 import requests
 import sys
 import time
+import traceback
 
 admin_token = ""
 
@@ -14,12 +15,12 @@ def req_to_server(url, req, token=None):
     response = requests.post('http://localhost:8080/api/v1' + url, headers={"Content-Type": "application/json", "token":token}, json=req)
     ret = response.json()
     result = ''
+    end_time = time.time_ns()
     if ret["err_msg"] == '':
         result = ret["result"]
     else:
+        print("API:%s Time taken: %d, resp:%s" % (url, (end_time - begin_time)/1000000, ret))
         raise Exception(ret["err_msg"])
-    end_time = time.time_ns()
-    print("API:%s Time taken: %d, resp:%s" % (url, (end_time - begin_time)/1000000, ret))
     return result
 
 def login(phone):
@@ -36,6 +37,8 @@ def get_data_from_db(conn, sql):
     rows = cursor.fetchall()
     conn.commit()
     conn.close()
+    if len(rows) == 0:
+        print("No data found for sql: %s" % sql)
     return rows
 
 def get_data_from_orig_db(sql):
@@ -49,6 +52,8 @@ def get_data_from_cur_db(sql):
 def clean_company():
     records = get_data_from_orig_db("SELECT * FROM company_table;")
     for item in records:
+        if "内蒙古中能天然气有限公司" == item[1]:
+            continue
         found_contract = get_data_from_orig_db("SELECT * FROM contract_table WHERE a_side_ext_key = '%d' OR b_side_ext_key = '%d';" % (item[0], item[0]))
         if len(found_contract) == 0:
             get_data_from_orig_db("DELETE FROM company_table WHERE PRI_ID = " + str(item[0]) + ";")
@@ -209,7 +214,83 @@ def contract_move():
             except:
                 pass
 
+def clean_old_order():
+    plans = get_data_from_orig_db(
+        "SELECT * FROM plan_table where plan_time NOT LIKE "
+        "'2024-%' OR plan_time LIKE '2024-01-%' OR plan_time "
+        "LIKE '2024-02-%' OR plan_time LIKE '2024-04-%' OR plan_time LIKE 2024-04-0%;"
+    )
+    for single_plan in plans:
+        get_data_from_orig_db("DELETE FROM plan_table WHERE PRI_ID = " + str(single_plan[0]) + ";")
 
+def move_closed_plans():
+    plans = get_data_from_orig_db("SELECT * FROM plan_table where status == 4;")
+    for single_plan in plans:
+        try:
+            ar_plan = get_data_from_orig_db("select * from archive_plan_table where PRI_ID == %d;" % single_plan[9])[0]
+            ar_single_vehicles = get_data_from_orig_db("select * from archive_vichele_plan_table where belong_plan_ext_key == %d AND finish == 1;" % ar_plan[0])
+            for single_v in ar_single_vehicles:
+                try:
+                    bvid = req_to_server('/vehicle/fetch', {
+                        "plate": single_v[1]
+                    })["id"]
+                    mvid = req_to_server('/vehicle/fetch', {
+                        "plate": single_v[2]
+                    })["id"]
+                    did = req_to_server('/driver/fetch', {
+                        "name": single_v[3],
+                        "phone": single_v[4]
+                    })["id"]
+                    sale_id = get_data_from_cur_db("select * from company where name == '%s';" % (ar_plan[9]))[0][0]
+                    buy_id = get_data_from_cur_db("select * from company where name == '%s';" % (ar_plan[10]))[0][0]
+                    old_sale_id = get_data_from_orig_db("select * from company_table where name == '%s';" % (ar_plan[9]))[0][0]
+                    old_buy_id = get_data_from_orig_db("select * from company_table where name == '%s';" % (ar_plan[10]))[0][0]
+                    user_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE name == '%s' AND belong_company_ext_key = %d" % (ar_plan[3], old_buy_id))[0][3]
+                    user_token = login(user_phone)
+                    sid = get_data_from_cur_db("select * from stuff where name == '%s' AND companyId == %d;" % (ar_plan[4], sale_id))[0][0]
+                    create_req = {
+                        "behind_vehicle_id": bvid,
+                        "comment": "导入",
+                        "driver_id": did,
+                        "drop_address": single_v[5],
+                        "main_vehicle_id": mvid,
+                        "plan_time": ar_plan[8][0:10],
+                        "stuff_id": sid,
+                        "use_for": single_v[6]
+                    }
+                    sale_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE belong_company_ext_key = " + str(old_sale_id)+ ";")[0][3]
+                    sale_token = login(sale_phone)
+                    plan_id = req_to_server('/plan/create_single_plan', create_req, user_token)["id"]
+                    old_price = ar_plan[6]
+                    get_data_from_cur_db("update plan set unit_price = 0 where id == %d;" % plan_id)
+                    req_to_server('/plan/confirm_single_plan', {
+                        "plan_id": plan_id
+                    }, sale_token)
+                    contract = get_data_from_cur_db("select * from contract where buyCompanyId = %d AND saleCompanyId = %s;" % (buy_id, sale_id))[0][0]
+                    req_to_server('/contract/charge', {
+                        "cash_increased": float(old_price) * float(single_v[7]),
+                        "comment": "导入计划预存",
+                        "contract_id": contract
+                    }, sale_token)
+                    req_to_server('/plan/deliver', {
+                        "plan_id": plan_id,
+                        "count": float( single_v[7]),
+                        "m_time":single_v[9],
+                        "m_weight":float( single_v[12]),
+                        "p_time":single_v[13],
+                        "p_weight": float(single_v[11]),
+                    }, sale_token)
+                except:
+                    traceback.print_exc()
+                    continue
+        except:
+            traceback.print_exc()
+            continue
+
+
+def order_move():
+    clean_old_order()
+    move_closed_plans()
 
 def main():
     prepare_api()
@@ -219,6 +300,7 @@ def main():
         user_move()
         stuff_move()
         contract_move()
+        order_move()
     else:
         eval(move_stage + '_move')()
 
