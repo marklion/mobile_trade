@@ -40,6 +40,12 @@
 			}
 		},
 		{
+			"path": "pages/ScConfig",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/OrderCreate"
 		},
 		{

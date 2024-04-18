@@ -10,6 +10,7 @@ module.exports = {
         need_input: { type: Boolean, have_to: true, mean: '是否需要输入', example: true },
         need_expired: { type: Boolean, have_to: true, mean: '是否需要过期时间', example: true },
         belong_type: { type: Number, have_to: true, mean: '所属类型,0->司乘,1->主车,2->挂车', example: 0 },
+        prompt: { type: String, have_to: false, mean: '提示', example: '请输入' },
         sc_content: {
             type: Object, have_to: false, mean: '安检内容', explain: {
                 id: { type: Number, have_to: true, mean: 'ID', example: 1 },
@@ -38,6 +39,7 @@ module.exports = {
                 tar_req.need_input = _req.need_input;
                 tar_req.need_expired = _req.need_expired;
                 tar_req.belong_type = _req.belong_type;
+                tar_req.prompt = _req.prompt;
                 await tar_req.save();
             }
             else {

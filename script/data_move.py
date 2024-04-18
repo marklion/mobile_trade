@@ -292,6 +292,39 @@ def order_move():
     clean_old_order()
     move_closed_plans()
 
+def sc_config_move():
+    old_sc_configs = get_data_from_orig_db("select * from license_require_table;")
+    for sc_config in  old_sc_configs:
+        try:
+            user_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE belong_company_ext_key = " + str(sc_config[5]) + ";")[0][3]
+            user_token = login(user_phone)
+            method_input = False
+            method_attach = False
+            if ('0' in sc_config[4]):
+                method_attach = True
+            if ('1' in sc_config[4]):
+                method_input = True
+            need_expired = True
+            if (len(sc_config) == 7 and 1 == sc_config[6]):
+                need_expired = False
+            stuff_info = req_to_server('/stuff/fetch', {"name": 'LNG'}, user_token)
+            req = {
+                "belong_type": sc_config[3],
+                "name": sc_config[1],
+                "need_attach": method_attach,
+                "need_expired": need_expired,
+                "need_input": method_input,
+                "stuff_id": stuff_info["id"],
+                "prompt":sc_config[2],
+            }
+            req_to_server('/sc/fetch_req', req, user_token)
+        except:
+            traceback.print_exc()
+            continue
+
+def sc_move():
+    sc_config_move()
+
 def main():
     prepare_api()
     move_stage = sys.argv[1]

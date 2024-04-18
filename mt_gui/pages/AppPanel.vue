@@ -39,16 +39,22 @@ export default {
                     name: '现场管理',
                     icon: 'transport',
                     require_module: 'scale'
-                },{
-                    name:'销售合同',
-                    icon:'pullup',
+                }, {
+                    name: '销售合同',
+                    icon: 'pullup',
                     require_module: 'stuff',
                     path: 'Contract'
-                },{
-                    name:'采购合同',
-                    icon:'pulldown',
+                }, {
+                    name: '采购合同',
+                    icon: 'pulldown',
                     require_module: 'customer',
                     path: 'BuyContract'
+                },
+                {
+                    name: '安检配置',
+                    icon: 'keyboard',
+                    require_module: 'sc',
+                    path: 'ScConfig'
                 },
 
             ]

@@ -14,6 +14,7 @@ function install(app) {
         need_input: { type: Boolean, have_to: true, mean: '是否需要输入', example: true },
         need_expired: { type: Boolean, have_to: true, mean: '是否需要过期时间', example: true },
         belong_type: { type: Number, have_to: true, mean: '所属类型,0->司乘,1->主车,2->挂车', example: 0 },
+        prompt: { type: String, have_to: false, mean: '提示', example: '请输入' }
     }, {
         result: { type: Boolean, mean: '结果', example: true }
     }, '新增或修改安检需求', '新增或修改安检需求').add_handler(async (body, token) => {

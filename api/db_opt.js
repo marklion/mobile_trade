@@ -146,6 +146,7 @@ let db_opt = {
             need_input: { type: DataTypes.BOOLEAN, defaultValue: false },
             need_expired: { type: DataTypes.BOOLEAN, defaultValue: false },
             belong_type: { type: DataTypes.INTEGER, defaultValue: 0 },
+            prompt: { type: DataTypes.STRING },
         },
         sc_content: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
