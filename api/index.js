@@ -58,7 +58,27 @@ async function init_super_user() {
     }
 }
 init_super_user();
-
+const multer  = require('multer');
+const upload = multer({ dest: '/database/uploads/' });
+app.post('/api/v1/upload_file', upload.single('file'), (req, res) => {
+    const path = require('path');
+    const fs = require('fs');
+    let fileExtension = path.extname(req.file.originalname);
+    fs.readFile(req.file.path, (err, data) => {
+        if (err) {
+            console.error(err);
+            res.send({ err_msg: '文件读取失败' });
+            return;
+        }
+        let base64Content = data.toString('base64');
+        const decodedData = Buffer.from(base64Content, 'base64');
+        const uuid = require('uuid');
+        real_file_name = uuid.v4();
+        const filePath = '/uploads/' + real_file_name + fileExtension;
+        fs.writeFileSync('/database' + filePath, decodedData);
+        res.send(filePath);
+    });
+});
 app.get('/api/help', (req, res) => {
     let out_json = app.help_info;
     const MarkdownIt = require('markdown-it');

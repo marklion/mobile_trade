@@ -106,7 +106,21 @@
                 <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
                 <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time"></u-cell>
             </u-cell-group>
-
+            <u-cell-group v-if="focus_plan.sc_info" title="安检信息" class="group_sep">
+                <view v-if="focus_plan.status == 3 ">
+                    <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
+                        <view slot="value" v-if="sc_node.sc_content">
+                            {{sc_node.sc_content.input}}
+                            <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
+                        </view>
+                    </u-cell>
+                </view>
+            </u-cell-group>
+            <module-filter v-else require_module="sc">
+                <u-cell title="安检执行">
+                    <fui-button slot="right-icon" btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
+                </u-cell>
+            </module-filter>
             <u-cell-group title="装卸信息" class="group_sep">
                 <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
                 <u-cell title="装车量" :value="focus_plan.count"></u-cell>
@@ -116,18 +130,60 @@
             <u-cell-group title="操作历史" class="group_sep">
                 <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
             </u-cell-group>
-            <u-cell-group v-if="focus_plan.sc_info" title="安检信息" class="group_sep">
-                <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="'到期时间：' + sc_node.expired_time">
-                    <view slot="value">
-                        {{sc_node.sc_content.input}}
-                        <fui-avatar v-if="sc_node.sc_content.attachment" :src="sc_node.sc_content.attachment"></fui-avatar>
-                    </view>
-                </u-cell>
-            </u-cell-group>
+
         </scroll-view>
     </fui-bottom-popup>
     <fui-gallery :urls="sc_attach_urls" :show="show_sc" @hide="show_sc = false"></fui-gallery>
-
+    <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
+        <u-cell title="安检结果">
+            <view slot="value">
+                <fui-text v-if="sc_passed" type="success" text="通过"></fui-text>
+                <fui-text v-else type="danger" text="未通过"></fui-text>
+            </view>
+        </u-cell>
+        <list-show ref="sc_confirm" :fetch_function="get_plan_sc" height="70vh">
+            <view slot-scope="{item}">
+                <u-cell>
+                    <view slot="icon">
+                        <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="代传" @click="prepare_upload_sc(item)"></fui-button>
+                        <fui-button v-else type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
+                    </view>
+                    <view v-if="item.sc_content" slot="label" style="font-size:14px;color:gray;">
+                        <view>
+                            {{item.need_expired?('到期时间：' + item.sc_content.expired_time):'长期有效'}}
+                        </view>
+                        <view v-if="item.sc_content">
+                            <view v-if="item.sc_content.checker">
+                                审批人：{{item.sc_content.checker}}
+                            </view>
+                            <view v-if="item.sc_content.comment">
+                                附言：{{item.sc_content.comment}}
+                            </view>
+                            <view v-if="item.sc_content.check_time">
+                                审批时间：{{item.sc_content.check_time}}
+                            </view>
+                        </view>
+                    </view>
+                    <view slot="title">
+                        {{item.name}}
+                        <fui-tag theme="plain" :text="sc_status_string(item.sc_content).text" :scaleRatio="0.8" :type="sc_status_string(item.sc_content).type"></fui-tag>
+                    </view>
+                    <view slot="value" v-if="item.sc_content">
+                        {{item.sc_content.input}}
+                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
+                    </view>
+                    <view slot="right-icon">
+                        <view v-if="item.sc_content">
+                            <fui-button type="success" v-if="!item.sc_content.passed" btnSize="mini" text="通过" @click="pass_sc(item.sc_content.id)"></fui-button>
+                            <fui-button type="danger" v-else btnSize="mini" text="反审" @click="prepare_reject_sc(item)"></fui-button>
+                            <fui-button type="warning" v-if="!item.sc_content.passed" btnSize="mini" text="附言" @click="prepare_reject_sc(item)"></fui-button>
+                        </view>
+                    </view>
+                </u-cell>
+            </view>
+        </list-show>
+    </fui-bottom-popup>
+    <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
     <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？'" :show="show_xxx_confirm" @click="do_xxx">
     </fui-modal>
     <fui-modal :zIndex="1002" width="600" :show="show_scale_input" @click="deliver">
@@ -141,7 +197,13 @@
             </fui-input>
         </fui-form>
     </fui-modal>
+    <fui-modal :zIndex="1004" width="600" :show="show_reject_sc" @click="reject_sc">
+        <fui-input required label="附言" borderTop placeholder="请输入附言" v-model="reject_sc_comment"></fui-input>
+    </fui-modal>
     <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
+    <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
+    <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
+    </fui-modal>
 </view>
 </template>
 
@@ -150,14 +212,33 @@ import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilterVue from '../components/ModuleFilter.vue';
 import $fui from '@/components/firstui/fui-clipboard';
+import ScUpload from '../components/ScUpload.vue';
 export default {
     name: 'OrderList',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilterVue,
+        "sc-upload": ScUpload,
     },
     data: function () {
         return {
+            show_delete_sc_content: false,
+            upload_sc: {
+                plan_id: 0,
+                open_id: '',
+                req_id: 0,
+                content_id: 0,
+                need_attach: false,
+                need_expired: false,
+                need_input: false,
+            },
+            focus_sc_content_id: 0,
+            show_reject_sc: false,
+            reject_sc_comment: '',
+            one_att: [''],
+            show_one_att: false,
+            sc_passed: false,
+            show_sc_confirm: false,
             need_show_close: false,
             show_deliver_date: false,
             show_scale_input: false,
@@ -192,7 +273,7 @@ export default {
                 "drop_address": "卸货地址",
                 "enter_time": "2020-01-01 12:00:00",
                 "from_bidding": true,
-                "id": 1,
+                "id": 0,
                 "m_time": "2020-01-01 12:00:00",
                 "m_weight": 1,
                 "main_vehicle": {
@@ -299,7 +380,7 @@ export default {
                 this.focus_plan.sc_info.forEach(ele => {
                     if (ele.sc_content.attachment) {
                         ret.push({
-                            src: ele.sc_content.attachment,
+                            src: this.$convert_attach_url(ele.sc_content.attachment),
                             descr: ele.name
                         });
                     }
@@ -328,6 +409,89 @@ export default {
         },
     },
     methods: {
+        delete_sc_content: async function (e) {
+            if (e.index == 1) {
+                await this.$send_req('/sc/delete_content', {
+                    content_id: this.upload_sc.content_id,
+                    open_id: ''
+                });
+                this.$refs.sc_confirm.refresh();
+            }
+            this.show_delete_sc_content = false;
+        },
+        prepare_delete_sc: function (item) {
+            this.upload_sc.content_id = item.sc_content.id;
+            this.show_delete_sc_content = true;
+        },
+        prepare_upload_sc: function (item) {
+            this.upload_sc.req_id = item.id;
+            this.upload_sc.plan_id = this.focus_plan.id;
+            this.upload_sc.open_id = this.focus_plan.driver.open_id;
+            if (item.sc_content) {
+                this.upload_sc.content_id = item.sc_content.id;
+            }
+            this.upload_sc.need_attach = item.need_attach;
+            this.upload_sc.need_expired = item.need_expired;
+            this.upload_sc.need_input = item.need_input;
+            this.$refs.sc_up.show_modal();
+        },
+        prepare_reject_sc: function (item) {
+            this.show_reject_sc = true;
+            this.focus_sc_content_id = item.sc_content.id;
+            this.reject_sc_comment = '';
+        },
+        reject_sc: async function (e) {
+            if (e.index == 1) {
+                if (!this.reject_sc_comment) {
+                    uni.showToast({
+                        title: '请填写附言',
+                        icon: 'none',
+                        duration: 2000
+                    });
+                    return;
+                }
+                await this.pass_sc(this.focus_sc_content_id, this.reject_sc_comment);
+            }
+            this.show_reject_sc = false;
+        },
+        pass_sc: async function (id, comment) {
+            await this.$send_req('/sc/check', {
+                content_id: id,
+                comment: comment
+            });
+            this.$refs.sc_confirm.refresh();
+        },
+        sc_status_string: function (item) {
+            let ret = {
+                text: '未上传',
+                type: 'warning'
+            }
+            if (item) {
+                if (item.passed) {
+                    ret.text = '已通过';
+                    ret.type = 'success';
+                } else {
+                    ret.text = '未通过';
+                    ret.type = 'danger';
+                }
+            }
+            return ret;
+        },
+        get_plan_sc: async function (pageNo) {
+            if (!this.focus_plan.id) {
+                return [];
+            }
+            let res = await this.$send_req('/sc/plan_status', {
+                pageNo: pageNo,
+                plan_id: this.focus_plan.id
+            });
+            this.sc_passed = res.passed;
+            return res.reqs;
+        },
+        prepare_sc_confirm: function () {
+            this.show_sc_confirm = true;
+            this.$refs.sc_confirm.refresh();
+        },
         copy_text: function (e) {
             $fui.getClipboardData(e, res => {
                 if (res) {

@@ -659,29 +659,32 @@ module.exports = {
             ret.reqs.push(element);
         }
         ret.total = count;
-        if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
+
+        delete search_cond.offset
+        delete search_cond.limit
+        let first_one = await plan.stuff.getSc_reqs(search_cond);
+        if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
             ret.passed = true;
         }
 
         return ret;
     },
-    get_self_vehicle_pairs:async function(token, pageNo) {
+    get_self_vehicle_pairs: async function (token, pageNo) {
         let rows = [];
         let company = await rbac_lib.get_company_by_token(token);
         let result = await company.getPlans({
-            group:'mainVehicleId',
+            group: 'mainVehicleId',
             offset: 20 * pageNo,
             limit: 20,
         });
-        let count = await company.countPlans({group:'mainVehicleId'});
+        let count = await company.countPlans({ group: 'mainVehicleId' });
         for (let index = 0; index < result.length; index++) {
             const element = result[index];
             let tmp = {};
             let main_vehicle = await element.getMain_vehicle()
             let behind_vehicle = await element.getBehind_vehicle();
             let driver = await element.getDriver();
-            if (main_vehicle && behind_vehicle && driver)
-            {
+            if (main_vehicle && behind_vehicle && driver) {
                 tmp.driver_phone = driver.phone;
                 tmp.main_vehicle_plate = main_vehicle.plate;
                 tmp.behind_vehicle_plate = behind_vehicle.plate;
@@ -689,6 +692,6 @@ module.exports = {
                 rows.push(tmp);
             }
         }
-        return {rows:rows, count:count};
+        return { rows: rows, count: count };
     },
 };

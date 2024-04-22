@@ -6,11 +6,20 @@ import uView from '@/uni_modules/uview-ui'
 Vue.use(uView)
 import './uni.promisify.adaptor'
 Vue.config.productionTip = false
+Vue.prototype.$remote_url = function() {
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:44510';
+  }
+  else
+  {
+    return 'https://zyzl.d8sis.cn';
+  }
+};
 Vue.prototype.$send_req = function (_url, _data) {
   return new Promise((resolve, reject) => {
     uni.showLoading({ title: '加载中...', mask: true });
     uni.request({
-      url: 'http://localhost:44510/api/v1' + _url,
+      url: Vue.prototype.$remote_url() + '/api/v1' + _url,
       data: _data,
       method: 'POST',
       header: {
@@ -48,6 +57,11 @@ Vue.prototype.$init_self = async function () {
     });
   }
 };
+Vue.prototype.$convert_attach_url = function(url) {
+  let ret =  Vue.prototype.$remote_url() + url;
+  return ret;
+};
+
 
 App.mpType = 'app'
 const app = new Vue({

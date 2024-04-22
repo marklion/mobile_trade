@@ -4,6 +4,7 @@ import requests
 import sys
 import time
 import traceback
+from datetime import datetime, timedelta
 
 admin_token = ""
 
@@ -215,13 +216,10 @@ def contract_move():
                 pass
 
 def clean_old_order():
-    plans = get_data_from_orig_db(
-        "SELECT * FROM plan_table where plan_time NOT LIKE "
-        "'2024-%' OR plan_time LIKE '2024-01-%' OR plan_time "
-        "LIKE '2024-02-%' OR plan_time LIKE '2024-04-%' OR plan_time LIKE 2024-04-0%;"
-    )
-    for single_plan in plans:
-        get_data_from_orig_db("DELETE FROM plan_table WHERE PRI_ID = " + str(single_plan[0]) + ";")
+    now = datetime.now()
+    three_days_ago = now - timedelta(days=2)
+    date_str = three_days_ago.strftime('%Y-%m-%d')
+    get_data_from_orig_db("delete from plan_table where date(substr(plan_time, 1, 10)) < date('%s');"%date_str)
 
 def move_closed_plans():
     plans = get_data_from_orig_db("SELECT * FROM plan_table where status == 4;")
@@ -231,10 +229,10 @@ def move_closed_plans():
             ar_single_vehicles = get_data_from_orig_db("select * from archive_vichele_plan_table where belong_plan_ext_key == %d AND finish == 1;" % ar_plan[0])
             for single_v in ar_single_vehicles:
                 try:
-                    bvid = req_to_server('/vehicle/fetch', {
+                    mvid = req_to_server('/vehicle/fetch', {
                         "plate": single_v[1]
                     })["id"]
-                    mvid = req_to_server('/vehicle/fetch', {
+                    bvid = req_to_server('/vehicle/fetch', {
                         "plate": single_v[2]
                     })["id"]
                     did = req_to_server('/driver/fetch', {
@@ -317,10 +315,55 @@ def sc_config_move():
                 "stuff_id": stuff_info["id"],
                 "prompt":sc_config[2],
             }
-            req_to_server('/sc/fetch_req', req, user_token)
+            id = req_to_server('/sc/fetch_req', req, user_token)["id"]
+            sc_content_move(id, sc_config[0])
         except:
             traceback.print_exc()
             continue
+def sc_content_move(id, orig_id):
+    sc_cts = get_data_from_orig_db("select * from sec_check_data_table where belong_lr_ext_key == %d;"% orig_id)
+    cur_time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    for sc_content in sc_cts:
+        try:
+            v_found = get_data_from_cur_db("select * from vehicle where plate == '%s';" % sc_content[4])
+            d_found = get_data_from_cur_db("select * from driver where phone == '%s';" % sc_content[4])
+            vid = 0
+            did = 0
+            if len(v_found) == 1:
+                vid = v_found[0][0]
+            elif len(d_found) == 1:
+                did = d_found[0][0]
+            add_sql = "insert into sc_content values (null, '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s', null, %d, %d, %d);" % (
+                sc_content[3],
+                sc_content[2],
+                sc_content[1],
+                sc_content[5],
+                sc_content[8],
+                sc_content[7],
+                cur_time_str,
+                cur_time_str,
+                cur_time_str,
+                id,
+                vid,
+                did
+                )
+            get_data_from_cur_db(add_sql)
+        except:
+            traceback.print_exc()
+            continue
+def base_move():
+    all_orig_v = get_data_from_orig_db("select * from vichele_table group by number;")
+    all_orig_v.extend(get_data_from_orig_db("select * from vichele_behind_table group by number;"))
+    all_orig_d = get_data_from_orig_db("select * from driver_table group by phone;")
+    for sv in all_orig_v:
+        req_to_server('/vehicle/fetch', {
+            "plate": sv[1]
+        })
+    for sd in all_orig_d:
+        req_to_server('/driver/fetch', {
+            "phone": sd[2],
+            "name": sd[1]
+        })
 
 def sc_move():
     sc_config_move()
@@ -331,9 +374,11 @@ def main():
     if ('all' == move_stage):
         company_move()
         user_move()
+        base_move()
         stuff_move()
         contract_move()
         order_move()
+        sc_move()
     else:
         eval(move_stage + '_move')()
 

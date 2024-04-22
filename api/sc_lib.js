@@ -19,10 +19,13 @@ module.exports = {
                 input: { type: String, have_to: true, mean: '输入', example: '请输入' },
                 passed: { type: Boolean, have_to: true, mean: '是否通过', example: true },
                 checker: { type: String, have_to: true, mean: '检查人', example: '张三' },
+                comment: { type: String, have_to: false, mean: '备注', example: '备注' },
+                check_time: { type: String, have_to: false, mean: '检查时间', example: '2020-01-01 00:00:00' }
             }
         },
     },
     fetch_sc_req: async function (_req, _token, _stuff_id) {
+        let ret = {};
         await this.sc_req_operate(_token, _stuff_id, async function (stuff) {
             let tar_req = undefined;
             let reqs = await stuff.getSc_reqs({ where: { name: _req.name } });
@@ -41,12 +44,14 @@ module.exports = {
                 tar_req.belong_type = _req.belong_type;
                 tar_req.prompt = _req.prompt;
                 await tar_req.save();
+                ret = tar_req;
             }
             else {
                 throw { err_msg: '创建安检需求失败' };
             }
 
         });
+        return ret;
     },
     get_sc_req: async function (_stuff_id, _token, pageNo) {
         let ret = { reqs: [], total: 0 };
@@ -69,9 +74,6 @@ module.exports = {
         let plan = await plan_lib.get_single_plan_by_id(_plan_id);
         if (plan && plan.driver && plan.driver.open_id == _open_id && plan.stuff) {
             ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
-            if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
-                ret.passed = true;
-            }
         }
         else {
             throw { err_msg: '无权限' };
@@ -146,11 +148,12 @@ module.exports = {
 
         return ret;
     },
-    driver_upload_content: async function (_open_id, _req_id, _plan_id, _input, _attachment, _expired_time) {
+    driver_upload_content: async function (_open_id, _req_id, _plan_id, _input, _attachment, _expired_time, token) {
         let sq = await db_opt.get_sq();
         let sc_req = await sq.models.sc_req.findByPk(_req_id, { include: [sq.models.stuff] });
         let plan = await plan_lib.get_single_plan_by_id(_plan_id);
-        if (sc_req && plan && plan.driver && plan.driver.open_id == _open_id && plan.stuff && plan.stuff.id == sc_req.stuff.id) {
+        let company = await rbac_lib.get_company_by_token(token);
+        if (sc_req && plan && plan.driver && plan.stuff && (plan.driver.open_id == _open_id || (company && await company.hasStuff(plan.stuff))) && plan.stuff.id == sc_req.stuff.id) {
             let condition = undefined;
             switch (sc_req.belong_type) {
                 case 0:
@@ -194,9 +197,6 @@ module.exports = {
         let company = await rbac_lib.get_company_by_token(_token);
         if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
             ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
-            if (ret.reqs.length <= 0 || (ret.reqs[0].sc_content && ret.reqs[0].sc_content.passed)) {
-                ret.passed = true;
-            }
         }
         else {
             throw { err_msg: '无权限' };

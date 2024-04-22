@@ -53,6 +53,7 @@ const plan_detail_define = {
             name: { type: String, mean: '司机名称', example: '司机名称' },
             phone: { type: String, mean: '司机电话', example: '司机电话' },
             id_card: { type: String, mean: '司机身份证', example: '司机身份证' },
+            open_id: { type: String, mean: '司机open_id', example: '司机open_id' },
         }
     },
     main_vehicle: {
