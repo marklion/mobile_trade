@@ -1,6 +1,8 @@
 <template>
 <view>
     <fui-modal :zIndex="1003" width="600" :show="show" @click="upload_sc">
+        <fui-section :title="title"></fui-section>
+        <fui-notice-bar v-if="prompt" :content="prompt" single></fui-notice-bar>
         <fui-form ref="upload">
             <fui-input v-if="need_input" label="证件内容" borderTop placeholder="请输入内容" v-model="upload_req.input"></fui-input>
             <fui-form-item v-if="need_attach" label="附件">
@@ -42,6 +44,14 @@ export default {
             type: Boolean,
             default: false
         },
+        prompt: {
+            type: String,
+            default: ''
+        },
+        title: {
+            type: String,
+            default: ''
+        },
 
     },
     data: function () {
@@ -80,6 +90,32 @@ export default {
         },
         upload_sc: async function (e) {
             if (e.index == 1) {
+                let rules = [];
+                if (this.need_input) {
+                    rules.push({
+                        name: 'input',
+                        rule: ['required'],
+                        msg: ['请输入证件内容']
+                    });
+                }
+                if (this.need_attach) {
+                    rules.push({
+                        name: 'attachment',
+                        rule: ['required'],
+                        msg: ['请上传附件']
+                    });
+                }
+                if (this.need_expired) {
+                    rules.push({
+                        name: 'expired_time',
+                        rule: ['required'],
+                        msg: ['请选择到期日期']
+                    });
+                }
+                let val_ret = await this.$refs.upload.validator(this.upload_req, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
                 this.upload_req.open_id = this.open_id;
                 this.upload_req.plan_id = this.plan_id;
                 this.upload_req.req_id = this.req_id;

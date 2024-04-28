@@ -63,6 +63,9 @@ let db_opt = {
             zc_rpc_url: { type: DataTypes.STRING },
             zczh_back_end: { type: DataTypes.STRING },
             zczh_back_token: { type: DataTypes.STRING },
+            pos_lat: { type: DataTypes.FLOAT, defaultValue: 0 },
+            pos_lon: { type: DataTypes.FLOAT, defaultValue: 0 },
+            distance_limit: { type: DataTypes.FLOAT, defaultValue: 0 },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -83,6 +86,7 @@ let db_opt = {
             register_comment: { type: DataTypes.STRING },
             enter_time: { type: DataTypes.STRING },
             manual_close: { type: DataTypes.BOOLEAN, defaultValue: false },
+            call_time: { type: DataTypes.STRING },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

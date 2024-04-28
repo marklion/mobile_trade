@@ -20,6 +20,8 @@ const plan_detail_define = {
     drop_address: { type: String, mean: '卸货地址', example: '卸货地址' },
     register_time: { type: String, mean: '登记时间', example: '2020-01-01 12:00:00' },
     register_number: { type: Number, mean: '登记号', example: 1 },
+    register_comment: { type: String, mean: '登记备注', example: '登记备注' },
+    call_time: { type: String, mean: '叫车时间', example: '2020-01-01 12:00:00' },
     enter_time: { type: String, mean: '进场时间', example: '2020-01-01 12:00:00' },
     manual_close: { type: Boolean, mean: '手动关闭', example: true },
     rbac_user: {
@@ -565,6 +567,16 @@ function install(app) {
         if (driver) {
             let ret = { plans: [], total: 0 };
             ret.plans = await driver.getPlans({ where: { status: 2 }, limit: 20, offset: body.pageNo * 20, include: plan_lib.plan_detail_include() });
+            for (let index = 0; index < ret.plans.length; index++) {
+                const element = ret.plans[index];
+                let wc = await plan_lib.get_wait_count(element);
+                if (wc > 0) {
+                    element.register_comment = '还需要等待' + wc + '辆车';
+                }
+                else {
+                    element.register_comment = '下一个就是你';
+                }
+            }
             ret.total = await driver.countPlans({ where: { status: 2 } });
             return ret;
         }
@@ -574,16 +586,28 @@ function install(app) {
     }).install(app);
     mkapi('/plan/check_in', 'none', false, false, {
         open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
-        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+        lat: { type: Number, have_to: true, mean: '纬度', example: 1 },
+        lon: { type: Number, have_to: true, mean: '经度', example: 1 },
     }, {
         result: { type: Boolean, mean: '结果', example: true }
     }, '司机签到', '司机签到').add_handler(async function (body, token) {
         let sq = db_opt.get_sq();
         let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
         let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
-        if (driver && plan && plan.status == 2 && await driver.hasPlan(plan) && await sc_lib.plan_passed_sc(body.plan_id)) {
-            await require('./field_lib').handle_driver_check_in(plan);
-            return { result: true };
+        if (driver && plan && plan.status == 2 && await driver.hasPlan(plan)) {
+            if (await sc_lib.plan_passed_sc(body.plan_id)) {
+                if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
+                    await require('./field_lib').handle_driver_check_in(plan);
+                    return { result: true };
+                }
+                else {
+                    throw { err_msg: '当前位置超出要求范围' };
+                }
+            }
+            else {
+                throw { err_msg: '安检未通过，请先安检' };
+            }
         }
         else {
             throw { err_msg: '无法签到' };
@@ -663,6 +687,60 @@ function install(app) {
         let ret = await plan_lib.get_self_vehicle_pairs(token, body.pageNo);
         return {
             pairs: ret.rows,
+            total: ret.count
+        }
+    }).install(app);
+    mkapi('/plan/get_checkin_config', 'plan', false, true, {}, {
+        lat: { type: Number, mean: '纬度', example: 1 },
+        lon: { type: Number, mean: '经度', example: 1 },
+        distance_limit: { type: Number, mean: '距离限制', example: 1 },
+    }, '获取签到配置', '获取签到配置').add_handler(async function (body, token) {
+        let company = await rbac_lib.get_company_by_token(token);
+        return {
+            lat: company.pos_lat,
+            lon: company.pos_lon,
+            distance_limit: company.distance_limit,
+        }
+    }).install(app);
+    mkapi('/plan/set_checkin_config', 'plan', true, true, {
+        lat: { type: Number, have_to: true, mean: '纬度', example: 1 },
+        lon: { type: Number, have_to: true, mean: '经度', example: 1 },
+        distance_limit: { type: Number, have_to: true, mean: '距离限制', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '设置签到配置', '设置签到配置').add_handler(async function (body, token) {
+        let company = await rbac_lib.get_company_by_token(token);
+        company.pos_lat = body.lat;
+        company.pos_lon = body.lon;
+        company.distance_limit = body.distance_limit;
+        await company.save();
+        return { result: true };
+    }).install(app);
+    mkapi('/plan/call_vehicle', 'scale', true, true, {
+        plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '呼叫车辆', '呼叫车辆').add_handler(async function (body, token) {
+        await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
+            if (plan.register_time && plan.register_time.length > 0) {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    throw { err_msg: '已经进厂' };
+                }
+                await require('./field_lib').handle_call_vehicle(plan);
+            }
+            else {
+                throw { err_msg: '未签到' };
+            }
+        });
+    }).install(app);
+    mkapi('/plan/wait_que', 'scale', false, true, {}, {
+        plans: {
+            type: Array, mean: '计划', explain: plan_detail_define
+        },
+    }, '获取等待队列', '获取等待队列', true).add_handler(async function (body, token) {
+        let ret = await plan_lib.get_wait_que(body.pageNo, token);
+        return {
+            plans: ret.rows,
             total: ret.count
         }
     }).install(app);

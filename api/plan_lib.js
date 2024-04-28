@@ -694,4 +694,84 @@ module.exports = {
         }
         return { rows: rows, count: count };
     },
+    verify_plan_location: async function (plan, lat, lon) {
+        let pos_lat = plan.stuff.company.pos_lat;
+        let pos_lon = plan.stuff.company.pos_lon;
+        let distance_limit = plan.stuff.company.distance_limit;
+        if (distance_limit == 0) {
+            return true;
+        }
+        // 将度数转换为弧度
+        let deg2rad = function (deg) {
+            return deg * (Math.PI / 180)
+        }
+
+        let R = 6371; // 地球半径，单位：公里
+        let dLat = deg2rad(pos_lat - lat);
+        let dLon = deg2rad(pos_lon - lon);
+        let a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(deg2rad(lat)) * Math.cos(deg2rad(pos_lat)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2)
+            ;
+        let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        let distance = R * c; // 距离，单位：公里
+
+        // 检查距离是否在限制范围内
+        return distance <= distance_limit;
+    },
+    get_wait_count: async function (plan) {
+        let ret = 0;
+        let stuff = await plan.getStuff();
+        let sq = db_opt.get_sq();
+        if (stuff) {
+            ret = await stuff.countPlans({
+                where: {
+                    [db_opt.Op.and]: [
+                        {call_time: null},
+                        { register_time: { [db_opt.Op.ne]: null } },
+                        { status: { [db_opt.Op.ne]: 3 } },
+                        sq.where(sq.fn('datetime', sq.col('register_time')), {
+                            [db_opt.Op.lt]: sq.fn('datetime', plan.register_time)
+                        }),
+                    ],
+                }
+            })
+        }
+        return ret;
+    },
+    get_wait_que:async function(pageNo, token) {
+        let sq = db_opt.get_sq();
+        let stuff_array = [0];
+        let company = await rbac_lib.get_company_by_token(token);
+        if (company) {
+            let tmp = await company.getStuff();
+            for (let index = 0; index < tmp.length; index++) {
+                const element = tmp[index];
+                stuff_array.push(element.id);
+            }
+        }
+        let cond = {
+            [db_opt.Op.and]: [
+                { register_time: { [db_opt.Op.ne]: null } },
+                { status: { [db_opt.Op.ne]: 3 } },
+                {
+                    stuffId: {
+                        [db_opt.Op.or]: stuff_array
+                    }
+                }
+            ],
+        };
+        let plans = await sq.models.plan.findAll({
+            where: cond,
+            order: [[sq.fn('datetime', sq.col('register_time')), 'ASC']],
+            offset: pageNo * 20,
+            limit: 20,
+            include: this.plan_detail_include(),
+        });
+        let count = await sq.models.plan.count({
+            where: cond,
+        });
+        return { rows: plans, count: count };
+    }
 };

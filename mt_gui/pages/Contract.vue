@@ -90,7 +90,7 @@
             <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id]" search_key="search_cond" height="40vh">
                 <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased">
                     <view slot="label">
-                        {{item.time}}充值原因:{{item.comment}}
+                        {{item.time}}:{{item.comment}}
                     </view>
                 </u-cell>
             </list-show>
@@ -170,7 +170,7 @@ export default {
             if (detail.index == 1) {
                 let rules = [{
                     name: 'cash',
-                    rule: ['required', 'isNumber'],
+                    rule: ['required', 'isAmount'],
                     msg: ['请输入金额', "金额需要填写数字"]
                 }, {
                     name: 'comment',

@@ -264,6 +264,7 @@ def move_closed_plans():
                     req_to_server('/plan/confirm_single_plan', {
                         "plan_id": plan_id
                     }, sale_token)
+                    get_data_from_cur_db("update plan set unit_price = %f where id == %d;" % (old_price,plan_id))
                     contract = get_data_from_cur_db("select * from contract where buyCompanyId = %d AND saleCompanyId = %s;" % (buy_id, sale_id))[0][0]
                     req_to_server('/contract/charge', {
                         "cash_increased": float(old_price) * float(single_v[7]),

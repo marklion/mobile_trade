@@ -40,9 +40,16 @@
 			}
 		},
 		{
+			"path": "pages/Field",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/Driver",
 			"style": {
-				"disableSwipeBack": true
+				"disableSwipeBack": true,
+				"enablePullDownRefresh": true
 			}
 		},
 		{

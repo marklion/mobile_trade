@@ -149,7 +149,7 @@
                 <u-cell>
                     <view slot="icon">
                         <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="代传" @click="prepare_upload_sc(item)"></fui-button>
-                        <fui-button v-else type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
+                        <fui-button v-else-if="!item.sc_content.passed" type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
                     </view>
                     <view slot="label" style="font-size:14px;color:gray;">
                         <view v-if="item.sc_content">
@@ -208,7 +208,7 @@
         <fui-input required label="附言" borderTop placeholder="请输入附言" v-model="reject_sc_comment"></fui-input>
     </fui-modal>
     <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
-    <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
+    <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
     <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
 </view>
@@ -243,6 +243,8 @@ export default {
                 need_attach: false,
                 need_expired: false,
                 need_input: false,
+                name: '',
+                prompt: '',
             },
             focus_sc_content_id: 0,
             show_reject_sc: false,
@@ -473,6 +475,8 @@ export default {
             this.upload_sc.need_attach = item.need_attach;
             this.upload_sc.need_expired = item.need_expired;
             this.upload_sc.need_input = item.need_input;
+            this.upload_sc.name = item.name;
+            this.upload_sc.prompt = item.prompt;
             this.$refs.sc_up.show_modal();
         },
         prepare_reject_sc: function (item) {
@@ -525,8 +529,7 @@ export default {
                 pageNo: pageNo,
                 plan_id: id
             });
-            if (res.reqs.length > 0)
-            {
+            if (res.reqs.length > 0) {
                 res.reqs[0].passed_total = res.passed;
             }
             return res.reqs;

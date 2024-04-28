@@ -26,7 +26,7 @@
                 <u-cell>
                     <view slot="right-icon">
                         <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="上传" @click="prepare_upload_sc(item)"></fui-button>
-                        <fui-button v-else type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
+                        <fui-button v-else-if="!item.sc_content.passed" type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
                     </view>
                     <view slot="label" style="font-size:14px;color:gray;">
                         <view v-if="item.sc_content">
@@ -61,7 +61,7 @@
         </list-show>
     </fui-bottom-popup>
     <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
-    <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
+    <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
 
     <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
@@ -132,9 +132,11 @@ export default {
                 need_attach: false,
                 need_expired: false,
                 need_input: false,
+                name:'',
+                prompt:'',
             },
             plan_show: function (item) {
-                return {
+                let ret = {
                     label: item.stuff.company.name,
                     value: item.stuff.name,
                     list: [{
@@ -151,17 +153,47 @@ export default {
                         value: item.plan_time,
                     }, ],
                     buttons: [{
-                            text: '安检',
-                            color: 'green',
-                            item: item,
-                        },
-                        {
-                            text: '排号',
-                            color: 'blue',
-                            item: item,
-                        },
-                    ],
+                        text: '安检',
+                        color: 'green',
+                        item: item,
+                    }, ],
+                };
+                if (item.register_time) {
+                    ret.list.push({
+                        label: '排号时间',
+                        value: item.register_time,
+                    });
+                    ret.list.push({
+                        label: '序号',
+                        value: item.register_number,
+                    });
+                    ret.list.push({
+                        label: '排号信息',
+                        value: item.register_comment,
+                        valueColor: 'red'
+                    });
+                } else {
+                    ret.buttons.push({
+                        text: '排号',
+                        color: 'blue',
+                        item: item,
+                    });
                 }
+                if (item.call_time) {
+                    for (let index = 0; index < ret.list.length; index++) {
+                        const reg_com = ret.list[index];
+                        if (reg_com.label == '排号信息') {
+                            reg_com.value = "可以进厂";
+                            reg_com.valueColor = "green";
+                            break;
+                        }
+                    }
+                    ret.list.push({
+                        label: '叫号时间',
+                        value: item.call_time,
+                    });
+                }
+                return ret;
             },
         };
     },
@@ -190,6 +222,8 @@ export default {
             this.upload_sc.req_id = item.id;
             this.upload_sc.plan_id = this.focus_plan.id;
             this.upload_sc.open_id = this.driver_self.open_id;
+            this.upload_sc.name = item.name;
+            this.upload_sc.prompt = item.prompt;
             if (item.sc_content) {
                 this.upload_sc.content_id = item.sc_content.id;
             }
@@ -229,13 +263,44 @@ export default {
             return res.reqs;
         },
         handle_button: async function (e) {
-            console.log(e);
+            let vue_this = this;
             if (e.index == 0) {
                 this.focus_plan = e.item;
                 this.show_sc = true;
                 this.$nextTick(() => {
                     this.$refs.sc_confirm.refresh();
                 });
+            } else if (e.index == 1) {
+
+                uni.authorize({
+                    scope: 'scope.userLocation',
+                    success() {
+                        uni.getLocation({
+                            success: async function (res) {
+                                await vue_this.$send_req('/plan/check_in', {
+                                    plan_id: e.item.id,
+                                    open_id: vue_this.driver_self.open_id,
+                                    lat: res.latitude,
+                                    lon: res.longitude
+                                });
+                                uni.startPullDownRefresh();
+                            },
+                            fail: function (err) {
+                                console.log(err);
+                                uni.showToast({
+                                    title: '获取位置失败',
+                                    icon: 'none'
+                                })
+                            }
+                        });
+                    },
+                    fail() {
+                        uni.showToast({
+                            title: '获取位置失败',
+                            icon: 'none'
+                        })
+                    }
+                })
             }
         },
         rebind_info: function () {
@@ -298,6 +363,10 @@ export default {
     },
     onShow: function () {
         this.driver_login();
+    },
+    onPullDownRefresh: function () {
+        this.driver_login();
+        uni.stopPullDownRefresh();
     },
 }
 </script>

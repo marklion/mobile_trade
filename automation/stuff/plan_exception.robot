@@ -269,7 +269,7 @@ Pay Failed
 Check In Failed
     [Arguments]  ${plan}  ${dv_phone}
     ${do_info}  Driver Online  ${dv_phone}  1231312  12312312
-    ${req}  Create Dictionary  open_id=${do_info}[open_id]  plan_id=${plan}[id]
+    ${req}  Create Dictionary  open_id=${do_info}[open_id]  plan_id=${plan}[id]  lat=${123}  lon=${333}
     Req to Server  /plan/check_in  none  ${req}  ${True}
 
 Enter Failed

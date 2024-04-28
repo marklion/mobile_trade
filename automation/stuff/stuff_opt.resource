@@ -243,7 +243,7 @@ Check In A Plan
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
     ${req}  Create Dictionary  open_id=${driver}[open_id]
     ${resp}  Req Get to Server  /driver/self_plan  none  plans  -1  &{req}
-    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]
+    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  lat=${123}  lon=${333}
     Req to Server  /plan/check_in  none  ${req}  ${expect_fail}
 Deliver A Plan
     [Arguments]  ${plan}  ${count}

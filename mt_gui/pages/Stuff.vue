@@ -110,8 +110,8 @@ export default {
             if (detail.index == 1) {
                 let rules = [{
                     name: 'price',
-                    rule: ['required', 'isNumber'],
-                    msg: ['请输入新价格', '请填写数字']
+                    rule: ['required', 'isAmount'],
+                    msg: ['请输入新价格', '价格请填写数字']
                 }, {
                     name: 'comment',
                     rule: ['required'],
@@ -166,8 +166,8 @@ export default {
                     msg: ['请输入物料名']
                 }, {
                     name: 'expect_count',
-                    rule: ['isNumber'],
-                    msg: ['请填写数字']
+                    rule: ['isAmount'],
+                    msg: ['预计装货量请填写数字']
                 }];
                 let val_ret = await this.$refs.form.validator(this.stuff_ready_fetch, rules);
                 if (!val_ret.isPassed) {

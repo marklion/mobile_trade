@@ -34,11 +34,12 @@ export default {
                 }, {
                     name: '竞价管理',
                     icon: 'bankcard',
-                    require_module: 'bid'
+                    require_module: 'bid',
                 }, {
                     name: '现场管理',
                     icon: 'transport',
-                    require_module: 'scale'
+                    require_module: 'scale',
+                    path: 'Field',
                 }, {
                     name: '销售合同',
                     icon: 'pullup',

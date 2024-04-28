@@ -55,7 +55,13 @@
             "urlCheck" : false
         },
         "usingComponents" : true,
-        "scopedSlotsCompiler":"legacy"
+        "scopedSlotsCompiler":"legacy",
+        "permission": {
+            "scope.userLocation": {
+              "desc": "您的位置信息将用于判断是否到达装卸货区域" // 高速公路行驶持续后台定位
+            }
+        },
+        "requiredPrivateInfos":["getLocation"]
     },
     "mp-alipay" : {
         "usingComponents" : true
