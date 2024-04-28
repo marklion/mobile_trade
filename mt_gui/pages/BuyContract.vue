@@ -1,7 +1,7 @@
 <template>
 <view>
-    <list-show :fetch_function="get_self_contract" height="100vh" search_key="search_cond">
-        <u-cell slot-scope="{item}" :title="item.sale_company.name" :value="item.balance">
+    <list-show v-model="data2show" :fetch_function="get_self_contract" height="100vh" search_key="search_cond">
+        <u-cell v-for="item in data2show" :key="item.id" :title="item.sale_company.name" :value="item.balance">
             <view slot="label">
                 <view style="display:flex; flex-wrap: wrap;">
                     <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" :scaleRatio="0.8" type="purple">
@@ -25,8 +25,8 @@
     </list-show>
     <fui-bottom-popup :show="show_charge_history" @close="show_charge_history = false">
         <fui-list>
-            <list-show ref="history" :fetch_function="get_history" search_key="search_cond" height="40vh">
-                <u-cell slot-scope="{item}" :title="item.operator" :value="'￥' + item.cash_increased">
+            <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id]" search_key="search_cond" height="40vh">
+                <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased">
                     <view slot="label">
                         {{item.time}}充值原因:{{item.comment}}
                     </view>
@@ -46,6 +46,8 @@ export default {
     },
     data: function () {
         return {
+            histories_data2show: [],
+            data2show:[],
             show_charge_history: false,
             focus_item: {
                 id: 0
@@ -67,14 +69,16 @@ export default {
         prepare_charge_history: function (item) {
             this.show_charge_history = true;
             this.focus_item = item;
-            this.$refs.history.refresh();
+            this.$nextTick(() => {
+                this.$refs.history.refresh();
+            });
         },
-        get_history: async function (_pageNo) {
-            if (this.focus_item.id == 0) {
+        get_history: async function (_pageNo, [id]) {
+            if (id == 0) {
                 return [];
             }
             let ret = await this.$send_req('/contract/get_self_history', {
-                contract_id: this.focus_item.id,
+                contract_id: id,
                 pageNo: _pageNo
             });
             ret.histories.forEach(item => {

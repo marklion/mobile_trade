@@ -1,7 +1,7 @@
 <template>
 <view>
-    <list-show ref="stuff_ref" :fetch_function="get_all_stuff" search_key="name" height="90vh">
-        <u-cell slot-scope="{item}" size="large" :title="item.name" :value="item.price">
+    <list-show ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
+        <u-cell v-for="(item, index) in data2show2" :key="index" size="large" :title="item.name" :value="item.price">
             <view slot="label">
                 <view style="display:flex;">
                     <fui-tag v-if="item.comment" :text="item.comment" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
@@ -37,8 +37,8 @@
     </fui-modal>
     <fui-bottom-popup :show="show_history" @close="show_history = false">
         <view>
-            <list-show ref="history" :fetch_function="get_price_history" search_key="comment" height="40vh">
-                <u-cell slot-scope="{item}" size="large" :title="item.operator" :value="item.new_price">
+            <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id]" search_key="comment" height="40vh">
+                <u-cell v-for="(item, index) in data2show" :key="index" size="large" :title="item.operator" :value="item.new_price">
                     <template #label>
                         <view style="display:flex;">
                             <fui-tag :text="item.comment" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
@@ -83,25 +83,28 @@ export default {
             stuff_for_history: {
                 id: 0,
             },
+            data2show: [],
+            data2show2: []
         }
     },
     methods: {
-        get_price_history: async function (_pageNo) {
-            console.log('get_price_history', this.stuff_for_history.id);
-            if (this.stuff_for_history.id == 0) {
+        get_price_history: async function (_pageNo, params) {
+            if (params[0] == 0) {
                 return [];
             }
             let ret = await this.$send_req('/stuff/get_price_history', {
                 pageNo: _pageNo,
-                stuff_id: this.stuff_for_history.id
+                stuff_id: params[0]
             });
 
             return ret.histories;
         },
         prepare_history: function (item) {
             this.show_history = true;
-            this.stuff_for_history = item;
-            this.$refs.history.refresh();
+            this.stuff_for_history = item
+            this.$nextTick(() => {
+                this.$refs.history.refresh();
+            });
         },
         change_price: async function (detail) {
             if (detail.index == 1) {

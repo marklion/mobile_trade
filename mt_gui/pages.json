@@ -40,6 +40,12 @@
 			}
 		},
 		{
+			"path": "pages/Driver",
+			"style": {
+				"disableSwipeBack": true
+			}
+		},
+		{
 			"path": "pages/ScConfig",
 			"style": {
 				"enablePullDownRefresh": true

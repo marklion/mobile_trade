@@ -43,15 +43,15 @@
             <fui-button btnSize="mini" type="purple" text="选择" @click="show_pick_vehicles = true"></fui-button>
         </fui-input>
         <fui-input label="挂车牌" v-model="new_vehicle.behind_vehicle_plate"></fui-input>
-        <fui-input label="司机姓名" v-model="new_vehicle.driver_phone"></fui-input>
-        <fui-input label="司机电话" v-model="new_vehicle.driver_name"></fui-input>
+        <fui-input label="司机姓名" v-model="new_vehicle.driver_name"></fui-input>
+        <fui-input label="司机电话" v-model="new_vehicle.driver_phone"></fui-input>
         <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
         <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_pick_vehicles" @close="show_pick_vehicles = false">
         <fui-list>
-            <list-show :fetch_function="get_vehicles" search_key="search_cond" height="40vh">
-                <fui-list-cell arrow slot-scope="{item}" @click="choose_vehicles(item)">
+            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh">
+                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="choose_vehicles(item)">
                     {{item.main_vehicle_plate}}-{{item.behind_vehicle_plate}}-{{item.driver_name}}-{{item.driver_phone}}
                 </fui-list-cell>
             </list-show>
@@ -68,6 +68,7 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            data2show: [],
             show_pick_vehicles: false,
             new_vehicle: {
                 main_vehicle_plate: '',

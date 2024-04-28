@@ -19,13 +19,12 @@
         <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
     </view>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
-        <fui-button slot="right-icon" text="选择日期" @click="show_plan_date = true" btnSize="mini" type="warning"></fui-button>
+        <fui-button slot="right-icon" text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
     </u-cell>
-    <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="show_plan_date = false"></fui-date-picker>
-
+    <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
     <module-filter v-if="seg_index == 0" require_module="plan">
-        <list-show ref="sold_plans" :fetch_function="get_sold_plans" height="74vh" search_key="search_cond">
-            <view slot-scope="{item}">
+        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="74vh" search_key="search_cond" :fetch_params="[plan_filter]">
+            <view v-for="item in sp_data2show" :key="item.id">
                 <u-cell :icon="get_status_icon(item)" :title="item.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
@@ -36,8 +35,8 @@
         </list-show>
     </module-filter>
     <module-filter v-if="seg_index == 1" require_module="customer">
-        <list-show ref="buy_plans" :fetch_function="get_buy_plans" height="74vh" search_key="search_cond">
-            <view slot-scope="{item}">
+        <list-show ref="buy_plans" v-model="bp_data2show" :fetch_function="get_buy_plans" height="74vh" search_key="search_cond" :fetch_params="[plan_filter]">
+            <view v-for="item in bp_data2show" :key="item.id">
                 <u-cell :icon="get_status_icon(item)" :title="item.stuff.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
@@ -50,8 +49,8 @@
     <module-filter require_module="stuff">
         <fui-bottom-popup :show="show_stuff_list" @close="show_stuff_list = false">
             <fui-list>
-                <list-show :fetch_function="get_stuff" search_key="name" height="40vh">
-                    <fui-list-cell arrow slot-scope="{item}" @click="choose_stuff(item)">
+                <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
+                    <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="choose_stuff(item)">
                         {{item.name}}
                     </fui-list-cell>
                 </list-show>
@@ -59,8 +58,8 @@
         </fui-bottom-popup>
         <fui-bottom-popup :show="show_company_filter" @close="show_company_filter= false">
             <fui-list>
-                <list-show :fetch_function="get_customers" search_key="search_cond" height="40vh">
-                    <fui-list-cell arrow slot-scope="{item}" @click="choose_company(item)">
+                <list-show v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh">
+                    <fui-list-cell arrow v-for="item in customer_data2show" :key="item.id" @click="choose_company(item)">
                         {{item.buy_company.name}}
                     </fui-list-cell>
                 </list-show>
@@ -109,9 +108,13 @@
             <u-cell-group v-if="focus_plan.sc_info" title="安检信息" class="group_sep">
                 <view v-if="focus_plan.status == 3 ">
                     <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
-                        <view slot="value" v-if="sc_node.sc_content">
-                            {{sc_node.sc_content.input}}
-                            <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
+                        <view slot="value">
+                            <view v-if="sc_node.sc_content">
+                                <view>
+                                    {{sc_node.sc_content.input}}
+                                </view>
+                                <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
+                            </view>
                         </view>
                     </u-cell>
                 </view>
@@ -137,30 +140,32 @@
     <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
         <u-cell title="安检结果">
             <view slot="value">
-                <fui-text v-if="sc_passed" type="success" text="通过"></fui-text>
+                <fui-text v-if="(sc_data2show && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
                 <fui-text v-else type="danger" text="未通过"></fui-text>
             </view>
         </u-cell>
-        <list-show ref="sc_confirm" :fetch_function="get_plan_sc" height="70vh">
-            <view slot-scope="{item}">
+        <list-show ref="sc_confirm" v-model="sc_data2show" :fetch_function="get_plan_sc" height="70vh" :fetch_params="[focus_plan.id]">
+            <view v-for="item in sc_data2show" :key="item.id">
                 <u-cell>
                     <view slot="icon">
                         <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="代传" @click="prepare_upload_sc(item)"></fui-button>
                         <fui-button v-else type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
                     </view>
-                    <view v-if="item.sc_content" slot="label" style="font-size:14px;color:gray;">
-                        <view>
-                            {{item.need_expired?('到期时间：' + item.sc_content.expired_time):'长期有效'}}
-                        </view>
+                    <view slot="label" style="font-size:14px;color:gray;">
                         <view v-if="item.sc_content">
-                            <view v-if="item.sc_content.checker">
-                                审批人：{{item.sc_content.checker}}
+                            <view>
+                                {{item.need_expired?('到期时间：' + item.sc_content.expired_time):'长期有效'}}
                             </view>
-                            <view v-if="item.sc_content.comment">
-                                附言：{{item.sc_content.comment}}
-                            </view>
-                            <view v-if="item.sc_content.check_time">
-                                审批时间：{{item.sc_content.check_time}}
+                            <view v-if="item.sc_content">
+                                <view v-if="item.sc_content.checker">
+                                    审批人：{{item.sc_content.checker}}
+                                </view>
+                                <view v-if="item.sc_content.comment">
+                                    附言：{{item.sc_content.comment}}
+                                </view>
+                                <view v-if="item.sc_content.check_time">
+                                    审批时间：{{item.sc_content.check_time}}
+                                </view>
                             </view>
                         </view>
                     </view>
@@ -168,9 +173,11 @@
                         {{item.name}}
                         <fui-tag theme="plain" :text="sc_status_string(item.sc_content).text" :scaleRatio="0.8" :type="sc_status_string(item.sc_content).type"></fui-tag>
                     </view>
-                    <view slot="value" v-if="item.sc_content">
-                        {{item.sc_content.input}}
-                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
+                    <view slot="value">
+                        <view v-if="item.sc_content">
+                            {{item.sc_content.input}}
+                            <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
+                        </view>
                     </view>
                     <view slot="right-icon">
                         <view v-if="item.sc_content">
@@ -222,6 +229,11 @@ export default {
     },
     data: function () {
         return {
+            sc_data2show: [],
+            customer_data2show: [],
+            stuff_data2show: [],
+            sp_data2show: [],
+            bp_data2show: [],
             show_delete_sc_content: false,
             upload_sc: {
                 plan_id: 0,
@@ -358,6 +370,7 @@ export default {
                 name: "已关闭",
             }],
             deliver_time_type: '',
+
         }
     },
     computed: {
@@ -378,7 +391,7 @@ export default {
             let ret = [];
             if (this.focus_plan.sc_info) {
                 this.focus_plan.sc_info.forEach(ele => {
-                    if (ele.sc_content.attachment) {
+                    if (ele.sc_content && ele.sc_content.attachment) {
                         ret.push({
                             src: this.$convert_attach_url(ele.sc_content.attachment),
                             descr: ele.name
@@ -409,6 +422,33 @@ export default {
         },
     },
     methods: {
+        close_pick_plan_date: function () {
+            this.show_plan_date = false;
+        },
+        show_pick_plan_date: function () {
+            console.log('test_click');
+            this.show_plan_date = true;
+        },
+        get_status_icon: function (item) {
+            let ret = '';
+            if (item) {
+                let status = item.status;
+                if (status == 0) {
+                    ret = 'info';
+                } else if (status == 1) {
+                    ret = 'rmb';
+                } else if (status == 2) {
+                    ret = 'hourglass';
+                } else if (status == 3) {
+                    ret = 'checkmark';
+                }
+                if (item.manual_close) {
+                    ret = 'close';
+                }
+            }
+
+            return ret;
+        },
         delete_sc_content: async function (e) {
             if (e.index == 1) {
                 await this.$send_req('/sc/delete_content', {
@@ -477,20 +517,25 @@ export default {
             }
             return ret;
         },
-        get_plan_sc: async function (pageNo) {
-            if (!this.focus_plan.id) {
+        get_plan_sc: async function (pageNo, [id]) {
+            if (!id) {
                 return [];
             }
             let res = await this.$send_req('/sc/plan_status', {
                 pageNo: pageNo,
-                plan_id: this.focus_plan.id
+                plan_id: id
             });
-            this.sc_passed = res.passed;
+            if (res.reqs.length > 0)
+            {
+                res.reqs[0].passed_total = res.passed;
+            }
             return res.reqs;
         },
         prepare_sc_confirm: function () {
             this.show_sc_confirm = true;
-            this.$refs.sc_confirm.refresh();
+            this.$nextTick(() => {
+                this.$refs.sc_confirm.refresh();
+            });
         },
         copy_text: function (e) {
             $fui.getClipboardData(e, res => {
@@ -503,23 +548,7 @@ export default {
                 }
             });
         },
-        get_status_icon: function (item) {
-            let ret = '';
-            let status = item.status;
-            if (status == 0) {
-                ret = 'info';
-            } else if (status == 1) {
-                ret = 'rmb';
-            } else if (status == 2) {
-                ret = 'hourglass';
-            } else if (status == 3) {
-                ret = 'checkmark';
-            }
-            if (item.manual_close) {
-                ret = 'close';
-            }
-            return ret;
-        },
+
         change_need_show: function () {
             this.refresh_plans();
         },
@@ -593,9 +622,7 @@ export default {
         },
         change_seg: function (e) {
             this.seg_index = e.index;
-            this.$nextTick(() => {
-                this.refresh_plans();
-            });
+            this.refresh_plans();
         },
         reset_company_filter: function () {
             this.company_filter = {
@@ -612,12 +639,17 @@ export default {
             this.refresh_plans();
         },
         refresh_plans: function () {
-            if (this.seg_index == 0) {
-                this.$refs.sold_plans.refresh();
-            } else if (this.seg_index == 1) {
-                this.$refs.buy_plans.refresh();
-            }
-            this.init_number_of_sold_plan();
+            this.$nextTick(() => {
+                this.init_number_of_sold_plan();
+            });
+            this.$nextTick(() => {
+                if (this.seg_index == 0) {
+                    this.$refs.sold_plans.refresh();
+                } else if (this.seg_index == 1) {
+                    this.$refs.buy_plans.refresh();
+                }
+            })
+
         },
         choose_company: function (item) {
             this.company_filter = {
@@ -650,9 +682,9 @@ export default {
             }
             this.refresh_plans();
         },
-        get_buy_plans: async function (pageNo) {
+        get_buy_plans: async function (pageNo, [plan_filter]) {
             let res = await this.$send_req('/plan/get_bought_plans', {
-                ...this.plan_filter,
+                ...plan_filter,
                 pageNo: pageNo,
             });
             let ret = [];
@@ -662,9 +694,9 @@ export default {
             });
             return ret;
         },
-        get_sold_plans: async function (pageNo) {
+        get_sold_plans: async function (pageNo, [plan_filter]) {
             let res = await this.$send_req('/plan/get_sold_plans', {
-                ...this.plan_filter,
+                ...plan_filter,
                 pageNo: pageNo,
             });
             let ret = [];
@@ -692,19 +724,29 @@ export default {
             }
         },
         get_stuff: async function (pageNo) {
-            let ret = await this.$send_req('/stuff/get_all', {
-                pageNo: pageNo
-            });
-            return ret.stuff;
+            let mods = uni.getStorageSync('self_info').modules;
+            if (mods.indexOf('stuff') != -1) {
+                let ret = await this.$send_req('/stuff/get_all', {
+                    pageNo: pageNo
+                });
+                return ret.stuff;
+            } else {
+                return [];
+            }
         },
         get_customers: async function (pageNo) {
-            let ret = await this.$send_req('/contract/get_all_sale', {
-                pageNo: pageNo
-            });
-            ret.contracts.forEach(item => {
-                item.search_cond = item.buy_company.name + item.stuff.map(ele => ele.name).join('') + item.rbac_users.map(ele => ele.name + ele.phone).join('');
-            });
-            return ret.contracts;
+            let mods = uni.getStorageSync('self_info').modules;
+            if (mods.indexOf('stuff') != -1) {
+                let ret = await this.$send_req('/contract/get_all_sale', {
+                    pageNo: pageNo
+                });
+                ret.contracts.forEach(item => {
+                    item.search_cond = item.buy_company.name + item.stuff.map(ele => ele.name).join('') + item.rbac_users.map(ele => ele.name + ele.phone).join('');
+                });
+                return ret.contracts;
+            } else {
+                return [];
+            }
         },
     },
     onPullDownRefresh() {

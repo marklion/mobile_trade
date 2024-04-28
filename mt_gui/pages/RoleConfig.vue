@@ -1,20 +1,20 @@
 <template>
 <view>
-    <list-show ref="roles" :fetch_function="get_all_roles" height="80vh" search_key="name">
-        <view slot-scope="{item}">
+    <list-show ref="roles" v-model="data2show2" :fetch_function="get_all_roles" height="80vh" search_key="name">
+        <view v-for="(item, indexx) in data2show2" :key="indexx">
             <fui-card :title="item.name + (item.is_readonly?'(只读)':'')" :tag="item.description" showBorder>
-                <fui-tag v-for="(user, index) in item.related_users" :key="index" type="danger" theme="light">
+                <fui-tag v-for="(user, index1) in item.related_users" :key="index1" type="danger" theme="light">
                     {{user.name + '|' + user.phone}}
-                    <fui-icon name="close" size="32" @click="show_confirm_user_unbind = true;focus_role = item.id;user_phone=user.phone"></fui-icon>
+                    <fui-icon name="close" size="32" @click="show_confirm_user_unbind = true; focus_role = item.id; user_phone = user.phone"></fui-icon>
                 </fui-tag>
                 <fui-divider></fui-divider>
-                <fui-tag v-for="(mod, index) in item.related_modules" :key="index" type="primary" theme="light">
+                <fui-tag v-for="(mod, index2) in item.related_modules" :key="index2" type="primary" theme="light">
                     {{mod.description}}
                     <fui-icon name="close" size="32" @click="show_confirm_module_unbind = true;focus_role = item.id;mod_id=mod.id"></fui-icon>
                 </fui-tag>
                 <template #footer>
                     <view style="display: flex;">
-                        <fui-button btn-size="mini" text="新增用户" style="margin-right: 10px;" @click="focus_role = item.id;show_user_add = true" type="warning"></fui-button>
+                        <fui-button btn-size="mini" text="新增用户" style="margin-right: 10px;" @click="show_user_add = true" type="warning"></fui-button>
                         <fui-button btn-size="mini" text="新增模块" style="margin-right: 10px;" @click="focus_role = item.id;show_module_add = true"></fui-button>
                         <fui-button btn-size="mini" text="删除角色" style="margin-right: 10px;" @click="focus_role = item.id;show_delete_role = true" type="danger"></fui-button>
                     </view>
@@ -29,8 +29,8 @@
     </fui-dialog>
     <fui-bottom-popup :show="show_module_add" @close="show_module_add= false">
         <fui-list>
-            <list-show :fetch_function="get_module_list" search_key="description" height="40vh">
-                <fui-list-cell arrow slot-scope="{item}" @click="bind_role_module(item.id)">
+            <list-show v-model="data2show" :fetch_function="get_module_list" search_key="description" height="40vh">
+                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="bind_role_module(item.id)">
                     {{item.description}}
                 </fui-list-cell>
             </list-show>
@@ -68,6 +68,8 @@ export default {
     },
     data() {
         return {
+            data2show: [],
+            data2show2: [],
             focus_role: 0,
             show_module_add: false,
             show_user_add: false,

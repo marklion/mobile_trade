@@ -85,19 +85,22 @@ export default {
                 this.upload_req.req_id = this.req_id;
                 await this.$send_req('/sc/upload_sc_content', this.upload_req);
                 this.$emit('uploaded')
+                this.upload_req = {
+                    "attachment": "",
+                    "expired_time": "",
+                    "input": "",
+                    "open_id": "",
+                    "plan_id": 1,
+                    "req_id": 1
+                };
+                this.fileList = [];
+                this.default_date = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
             }
-            this.show = false;
+            this.$nextTick(() => {
+                this.show = false;
+            });
         },
         show_modal: function () {
-            this.upload_req = {
-                "attachment": "",
-                "expired_time": "",
-                "input": "",
-                "open_id": "",
-                "plan_id": 1,
-                "req_id": 1
-            };
-            this.fileList = [];
             this.show = true;
         },
     },

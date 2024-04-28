@@ -1,7 +1,7 @@
 <template>
 <view>
-    <list-show ref="contracts" :fetch_function="get_sale_contract" height="90vh" search_key="search_cond">
-        <u-cell slot-scope="{item}" size="large" :title="item.buy_company.name" :value="'￥' + item.balance">
+    <list-show ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="90vh" search_key="search_cond">
+        <u-cell v-for="item in data2show" :key="item.id" size="large" :title="item.buy_company.name" :value="'￥' + item.balance">
             <view slot="label">
                 <view style="display:flex; flex-wrap: wrap;">
                     <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" :scaleRatio="0.8" type="purple">
@@ -9,7 +9,7 @@
                         <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
                     </fui-tag>
                     <fui-tag text="新增物料" :scaleRatio="0.8" type="purple" @click="prepare_add_stuff(item)"></fui-tag>
-                    <fui-tag v-for="(single_user, jndex) in item.rbac_users" :key="jndex + 'j'" theme="plain" :scaleRatio="0.8" type="success">
+                    <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" :scaleRatio="0.8" type="success">
                         {{single_user.name + '|' + single_user.phone}}
                         <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
                     </fui-tag>
@@ -50,8 +50,8 @@
     </fui-modal>
     <fui-bottom-popup :show="show_customers" @close="show_customers= false">
         <fui-list>
-            <list-show :fetch_function="get_customers" search_key="name" height="40vh">
-                <fui-list-cell arrow slot-scope="{item}" @click="select_company(item)">
+            <list-show v-model="customers_data2show" :fetch_function="get_customers" search_key="name" height="40vh">
+                <fui-list-cell arrow v-for="item in customers_data2show" :key="item.id" @click="select_company(item)">
                     {{item.name}}
                 </fui-list-cell>
             </list-show>
@@ -60,8 +60,8 @@
     <fui-date-picker range :show="show_date_range" type="3" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
-            <list-show :fetch_function="get_stuff" search_key="name" height="40vh">
-                <fui-list-cell arrow slot-scope="{item}" @click="add_stuff2contract(item)">
+            <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
+                <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2contract(item)">
                     {{item.name}}
                 </fui-list-cell>
             </list-show>
@@ -87,8 +87,8 @@
     </fui-modal>
     <fui-bottom-popup :show="show_charge_history" @close="show_charge_history = false">
         <fui-list>
-            <list-show ref="history" :fetch_function="get_history" search_key="search_cond" height="40vh">
-                <u-cell slot-scope="{item}" :title="item.operator" :value="'￥' + item.cash_increased">
+            <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id]" search_key="search_cond" height="40vh">
+                <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased">
                     <view slot="label">
                         {{item.time}}充值原因:{{item.comment}}
                     </view>
@@ -106,6 +106,10 @@ export default {
     name: 'Contract',
     data: function () {
         return {
+            histories_data2show: [],
+            stuff_data2show: [],
+            customers_data2show: [],
+            data2show: [],
             show_charge_history: false,
             cash: '',
             comment: '',
@@ -142,12 +146,12 @@ export default {
         "module-filter": ModuleFilter
     },
     methods: {
-        get_history: async function (_pageNo) {
-            if (this.focus_item.id == 0) {
+        get_history: async function (_pageNo, [id]) {
+            if (id == 0) {
                 return [];
             }
             let ret = await this.$send_req('/contract/get_company_history', {
-                contract_id: this.focus_item.id,
+                contract_id: id,
                 pageNo: _pageNo
             });
             ret.histories.forEach(item => {
@@ -158,7 +162,9 @@ export default {
         prepare_charge_history: function (item) {
             this.show_charge_history = true;
             this.focus_item = item;
-            this.$refs.history.refresh();
+            this.$nextTick(() => {
+                this.$refs.history.refresh();
+            });
         },
         charge: async function (detail) {
             if (detail.index == 1) {

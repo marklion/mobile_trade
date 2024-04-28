@@ -5,9 +5,8 @@
             <fui-sticky v-if="search_key" z-index="20">
                 <fui-search-bar @search="search" @cancel="cancel"></fui-search-bar>
             </fui-sticky>
-            <view v-for="(item, index) in data2show" :key="index">
-                <slot :item="item"></slot>
-            </view>
+            <slot>
+            </slot>
         </view>
         <fui-divider v-if="finish" text="没有更多了"></fui-divider>
     </scroll-view>
@@ -18,6 +17,10 @@
 import PinyinMatch from 'pinyin-match'
 export default {
     name: 'ListShow',
+    model: {
+        prop: 'value',
+        event: 'input'
+    },
     data: function () {
         return {
             search_condition: '',
@@ -46,6 +49,14 @@ export default {
         }
     },
     props: {
+        value: {
+            type: Array,
+            default: () => [],
+        },
+        fetch_params: {
+            type: Array,
+            default: () => [],
+        },
         height: {
             type: String,
             default: '100%'
@@ -64,6 +75,9 @@ export default {
                 this.fetch_new();
             }
         },
+        data2show: function () {
+            this.$emit('input', this.data2show);
+        }
     },
     methods: {
         cancel: function () {
@@ -81,7 +95,7 @@ export default {
         fetch_new: async function () {
             if (!this.finish && !this.fetching) {
                 this.fetching = true;
-                let new_data = await this.fetch_function(this.page);
+                let new_data = await this.fetch_function(this.page, this.fetch_params);
                 if (new_data.length == 0) {
                     this.finish = true;
                 } else {

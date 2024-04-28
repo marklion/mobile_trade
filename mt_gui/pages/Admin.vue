@@ -1,14 +1,12 @@
 <template>
 <view>
-    <list-show ref="cp_ref" height="95vh" :fetch_function="get_company" search_key="head">
-        <template slot-scope="{item}">
-            <fui-panel :panelData="item">
-                <view style="display: flex;">
-                    <fui-button btn-size="mini" text="管理员配置" style="margin-right: 10px;" @click="show_admin_config = true;focus_company=item.id"></fui-button>
-                    <fui-button btn-size="mini" text="模块配置" @click="open_module_config(item)"></fui-button>
-                </view>
-            </fui-panel>
-        </template>
+    <list-show v-model="data2show" ref="cp_ref" height="95vh" :fetch_function="get_company" search_key="head">
+        <fui-panel v-for="item in data2show" :key="item.id" :panelData="item">
+            <view style="display: flex;">
+                <fui-button btn-size="mini" text="管理员配置" style="margin-right: 10px;" @click="show_admin_config = true;focus_company=item.id"></fui-button>
+                <fui-button btn-size="mini" text="模块配置" @click="open_module_config(item)"></fui-button>
+            </view>
+        </fui-panel>
     </list-show>
     <fui-bottom-popup :show="show_admin_config" @close="show_admin_config = false">
         <view>
@@ -19,8 +17,8 @@
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_module_config" @close="show_module_config= false">
         <fui-checkbox-group v-model="valid_modules">
-            <list-show :fetch_function="get_module_list" search_key="description" height="40vh">
-                <view slot-scope="{item}">
+            <list-show v-model="module_data2show" :fetch_function="get_module_list" search_key="description" height="40vh">
+                <view v-for="item in module_data2show" :key="item.id">
                     <fui-label>
                         <fui-list-cell>
                             <text>{{item.description}}</text>
@@ -91,7 +89,6 @@ export default {
             company.bound_modules.forEach(ele => {
                 this.modules_pool.push(ele.id);
             });
-            console.log(this.modules_pool);
         },
         change_module: function (e) {
             console.log(e);

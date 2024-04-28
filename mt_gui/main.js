@@ -12,7 +12,7 @@ Vue.prototype.$remote_url = function() {
   }
   else
   {
-    return 'https://zyzl.d8sis.cn';
+    return 'https://www.d8sis.cn/mt_api';
   }
 };
 Vue.prototype.$send_req = function (_url, _data) {
@@ -60,6 +60,18 @@ Vue.prototype.$init_self = async function () {
 Vue.prototype.$convert_attach_url = function(url) {
   let ret =  Vue.prototype.$remote_url() + url;
   return ret;
+};
+Vue.prototype.$get_login_code = function() {
+  return new Promise((resolve, reject) => {
+    uni.login({
+      success: res => {
+        resolve(res.code);
+      },
+      fail: res => {
+        reject(res);
+      }
+    });
+  });
 };
 
 

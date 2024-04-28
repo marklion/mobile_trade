@@ -1,8 +1,8 @@
 <template>
 <view>
     <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
-    <list-show ref="sc_config" :fetch_function="get_sc_config" height="83vh">
-        <view slot-scope="{item}">
+    <list-show ref="sc_config" v-model="data2show" :fetch_function="get_sc_config" height="83vh" :fetch_params="[focus_stuff_id]">
+        <view v-for="(item, index) in data2show" :key="index">
             <u-cell :title="item.name" :value="belong_type_string(item.belong_type)">
                 <view slot="label">
                     <fui-tag theme="plain" :scaleRatio="0.8" v-if="item.need_attach" text="上传图片" type="primary"></fui-tag>
@@ -78,6 +78,8 @@ export default {
     },
     data: function () {
         return {
+            data2show: [],
+            vue_this: this,
             show_delete: false,
             input_method: [],
             show_fetch: false,
@@ -173,15 +175,17 @@ export default {
         change_tab: function (e) {
             let index = e.index
             this.focus_stuff_id = this.tabs[index].id;
-            this.$refs.sc_config.refresh()
+            this.$nextTick(() => {
+                this.$refs.sc_config.refresh()
+            })
         },
-        get_sc_config: async function (pageNo) {
-            if (this.focus_stuff_id == 0) {
+        get_sc_config: async function (pageNo, params) {
+            if (params[0] == 0) {
                 return [];
             }
             let res = await this.$send_req('/sc/get_req', {
                 pageNo: pageNo,
-                stuff_id: this.focus_stuff_id
+                stuff_id: params[0]
             });
             return res.reqs;
         },
@@ -206,7 +210,9 @@ export default {
         this.all_stuff = stuff;
         if (this.all_stuff.length > 0) {
             this.focus_stuff_id = this.all_stuff[0].id;
-            this.$refs.sc_config.refresh()
+            this.$nextTick(() => {
+                this.$refs.sc_config.refresh()
+            })
         }
     },
 }

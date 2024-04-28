@@ -16,7 +16,7 @@
         <fui-button text="微信登录" type="success" @click="wx_login"></fui-button>
     </view>
     <view v-else>
-        <fui-form ref="form"  top="100" :model="formData" :show="false">
+        <fui-form ref="form" top="100" :model="formData" :show="false">
             <fui-form-item label="手机号码" asterisk prop="phone">
                 <fui-input :borderBottom="false" :padding="[0]" placeholder="请输入手机号码" v-model="formData.phone"></fui-input>
             </fui-form-item>
@@ -57,7 +57,7 @@ export default {
         wx_login: async function () {
             try {
                 let res = await this.$send_req('/rbac/login', {
-                    login_code: '123456'
+                    login_code: await this.$get_login_code()
                 });
                 uni.setStorageSync('token', res.token);
                 await this.$init_self();

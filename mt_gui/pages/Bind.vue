@@ -5,9 +5,9 @@
             <fui-input :borderBottom="false" :padding="[0]" placeholder="请输入公司全称" v-model="formData.company_name"></fui-input>
         </fui-form-item>
         <fui-form-item label="姓名" asterisk prop="name">
-            <fui-input :borderBottom="false" :padding="[0]"  placeholder="请输入姓名" v-model="formData.name"></fui-input>
+            <fui-input :borderBottom="false" :padding="[0]" placeholder="请输入姓名" v-model="formData.name"></fui-input>
         </fui-form-item>
-        <fui-button text="绑定" bold @click="submit"></fui-button>
+        <fui-button text="绑定" open-type="getPhoneNumber" bold @getphonenumber="submit"></fui-button>
     </fui-form>
 </view>
 </template>
@@ -26,7 +26,9 @@ export default {
         }
     },
     methods: {
-        submit: async function () {
+        submit: async function (phone_param) {
+            this.formData.phone_code = phone_param.code;
+            this.formData.open_id_code = await this.$get_login_code();
             let res = await this.$send_req('/rbac/fetch_user', this.formData);
             uni.setStorageSync('token', res.token);
             uni.reLaunch({
