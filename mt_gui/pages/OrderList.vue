@@ -727,7 +727,7 @@ export default {
             }
         },
         get_stuff: async function (pageNo) {
-            let mods = uni.getStorageSync('self_info').modules;
+            let mods = uni.getStorageSync('self_info').modules.map(ele=>{return ele.name})
             if (mods.indexOf('stuff') != -1) {
                 let ret = await this.$send_req('/stuff/get_all', {
                     pageNo: pageNo
@@ -738,7 +738,7 @@ export default {
             }
         },
         get_customers: async function (pageNo) {
-            let mods = uni.getStorageSync('self_info').modules;
+            let mods = uni.getStorageSync('self_info').modules.map(ele=>{return ele.name})
             if (mods.indexOf('stuff') != -1) {
                 let ret = await this.$send_req('/contract/get_all_sale', {
                     pageNo: pageNo
