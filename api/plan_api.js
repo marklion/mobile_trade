@@ -597,13 +597,19 @@ function install(app) {
         let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
         if (driver && plan && plan.status == 2 && await driver.hasPlan(plan)) {
             if (await sc_lib.plan_passed_sc(body.plan_id)) {
-                if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
-                    await require('./field_lib').handle_driver_check_in(plan);
-                    return { result: true };
+                if (await plan_lib.check_if_never_checkin(driver)) {
+                    if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
+                        await require('./field_lib').handle_driver_check_in(plan);
+                        return { result: true };
+                    }
+                    else {
+                        throw { err_msg: '当前位置超出要求范围' };
+                    }
                 }
                 else {
-                    throw { err_msg: '当前位置超出要求范围' };
+                    throw { err_msg: '已经签到其他计划' };
                 }
+
             }
             else {
                 throw { err_msg: '安检未通过，请先安检' };

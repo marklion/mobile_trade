@@ -773,5 +773,20 @@ module.exports = {
             where: cond,
         });
         return { rows: plans, count: count };
-    }
+    },
+    check_if_never_checkin: async function (driver) {
+        let ret = false;
+        let checkin_count = await driver.countPlans({
+            where: {
+                [db_opt.Op.and]: [
+                    { status: { [db_opt.Op.ne]: 3 } },
+                    { register_time: { [db_opt.Op.ne]: null } },
+                ],
+            }
+        });
+        if (checkin_count == 0) {
+            ret = true;
+        }
+        return ret;
+    },
 };

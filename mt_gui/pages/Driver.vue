@@ -2,7 +2,7 @@
 <view>
     <fui-preview v-if="driver_self.id" :previewData="previewData" @click="rebind_info"></fui-preview>
     <fui-divider text="拉运信息"></fui-divider>
-    <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="80vh" :fetch_params="[is_online, driver_self.open_id]">
+    <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="65vh" :fetch_params="[is_online, driver_self.open_id]">
         <view v-for="item in data2show" :key="item.id">
             <fui-preview bdSize="26" :previewData="plan_show(item)" @click="handle_button"></fui-preview>
         </view>
@@ -71,6 +71,8 @@
 <script>
 import ListShow from '../components/ListShow.vue';
 import ScUpload from '../components/ScUpload.vue';
+import utils from '@/components/firstui/fui-utils';
+
 export default {
     name: 'Driver',
     components: {
@@ -132,10 +134,15 @@ export default {
                 need_attach: false,
                 need_expired: false,
                 need_input: false,
-                name:'',
-                prompt:'',
+                name: '',
+                prompt: '',
             },
             plan_show: function (item) {
+                let today_date = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
+                let is_today = false;
+                if (today_date == item.plan_time.substr(0, 10)) {
+                    is_today = true;
+                }
                 let ret = {
                     label: item.stuff.company.name,
                     value: item.stuff.name,
@@ -150,7 +157,9 @@ export default {
                         value: item.behind_vehicle.plate,
                     }, {
                         label: '计划时间',
-                        value: item.plan_time,
+                        value: (is_today ? '今天' : item.plan_time),
+                        labelColor: (is_today ? 'green' : 'red'),
+                        valueColor: (is_today ? 'green' : 'red')
                     }, ],
                     buttons: [{
                         text: '安检',
