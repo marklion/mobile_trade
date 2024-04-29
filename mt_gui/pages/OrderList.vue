@@ -2,7 +2,7 @@
 <view>
     <fui-segmented-control v-if="seg_show" :values="seg" @click="change_seg"></fui-segmented-control>
     <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
-    <view style="display:flex; align-items: center;">
+    <view>
         <module-filter require_module="stuff">
             <fui-tag theme="plain" type="purple">
                 {{stuff_filter.name}}
@@ -14,9 +14,13 @@
                 <fui-icon v-if="!company_filter.id" name="arrowright" size="32" @click="show_company_filter= true"></fui-icon>
                 <fui-icon v-else name="close" size="32" @click="reset_company_filter"></fui-icon>
             </fui-tag>
+            <fui-tag type="primary" text="批量确认" @click="batch_confirm">
+            </fui-tag>
         </module-filter>
-        显示取消计划
-        <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
+        <view style="display:flex; align-items: center;">
+            显示取消计划
+            <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
+        </view>
     </view>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
         <fui-button slot="right-icon" text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
@@ -424,6 +428,10 @@ export default {
         },
     },
     methods: {
+        batch_confirm: async function () {
+            await this.$send_req('/plan/batch_confirm', this.plan_filter);
+            this.refresh_plans();
+        },
         close_pick_plan_date: function () {
             this.show_plan_date = false;
         },
@@ -727,7 +735,9 @@ export default {
             }
         },
         get_stuff: async function (pageNo) {
-            let mods = uni.getStorageSync('self_info').modules.map(ele=>{return ele.name})
+            let mods = uni.getStorageSync('self_info').modules.map(ele => {
+                return ele.name
+            })
             if (mods.indexOf('stuff') != -1) {
                 let ret = await this.$send_req('/stuff/get_all', {
                     pageNo: pageNo
@@ -738,7 +748,9 @@ export default {
             }
         },
         get_customers: async function (pageNo) {
-            let mods = uni.getStorageSync('self_info').modules.map(ele=>{return ele.name})
+            let mods = uni.getStorageSync('self_info').modules.map(ele => {
+                return ele.name
+            })
             if (mods.indexOf('stuff') != -1) {
                 let ret = await this.$send_req('/contract/get_all_sale', {
                     pageNo: pageNo

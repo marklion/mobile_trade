@@ -1,4 +1,7 @@
 const { Sequelize, DataTypes, Op } = require('sequelize');
+const cls = require('cls-hooked');
+const namespace = cls.createNamespace('my-very-own-namespace');
+Sequelize.useCLS(namespace);
 function get_db_handle() {
     const sequelize = new Sequelize({
         dialect: 'sqlite',

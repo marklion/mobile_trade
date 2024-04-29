@@ -338,7 +338,7 @@ module.exports = {
                 await this.verify_plan_pay(plan);
             }
             else {
-                throw { err_msg: '报计划人未授权' };
+                throw { err_msg: plan.company.name + '的报计划人未授权' };
             }
 
         });
@@ -788,5 +788,32 @@ module.exports = {
             ret = true;
         }
         return ret;
+    },
+    batch_confirm: async function (body, token) {
+        let err_msg = '';
+        await db_opt.get_sq().transaction(async (t) => {
+            let company = await rbac_lib.get_company_by_token(token);
+            let all_plans = [];
+            let pageNo = 0;
+            while (true) {
+                let tmp = await this.search_sold_plans(company, pageNo, body);
+                all_plans = all_plans.concat(tmp.rows);
+                pageNo++;
+                if (tmp.rows.length <= 0) {
+                    break;
+                }
+            }
+            for (let index = 0; index < all_plans.length; index++) {
+                const element = all_plans[index];
+                try {
+                    await this.confirm_single_plan(element.id, token);
+                } catch (error) {
+                    err_msg += error.err_msg + '\n';
+                    throw error;
+                }
+            }
+        });
+        console.log(err_msg);
+        return err_msg;
     },
 };

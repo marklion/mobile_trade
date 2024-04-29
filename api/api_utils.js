@@ -136,11 +136,17 @@ function api_param_walk_check(api_param_req, input) {
 function api_param_check(param_req, input) {
     let ret = '';
     let all_cols = Object.keys(param_req);
+    let tmp = {...input};
+    input = [];
     all_cols.forEach(itr => {
-        let sub_ret = api_param_walk_check(param_req[itr], input[itr]);
+        let sub_ret = api_param_walk_check(param_req[itr], tmp[itr]);
         if (sub_ret.length > 0) {
             ret = itr + sub_ret;
             return ret;
+        }
+        else
+        {
+            input[itr] = tmp[itr];
         }
     });
 

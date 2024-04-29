@@ -750,6 +750,23 @@ function install(app) {
             total: ret.count
         }
     }).install(app);
+    mkapi('/plan/batch_confirm', 'plan', true, true, {
+        start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+        end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+        status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
+        stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
+        company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
+    }, {
+        result: { type: Boolean, mean: '结果', example: true }
+    }, '批量确认计划', '批量确认计划').add_handler(async function (body, token) {
+        let ret = await plan_lib.batch_confirm(body, token);
+        if (ret) {
+            throw { err_msg: '批量确认失败:' + ret };
+        }
+        else {
+            return { result: true };
+        }
+    }).install(app);
 }
 
 module.exports = install;
