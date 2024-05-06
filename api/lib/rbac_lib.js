@@ -1,4 +1,4 @@
-const db_opt = require('./db_opt');
+const db_opt = require('../db_opt');
 const moment = require('moment');
 
 module.exports = {
@@ -39,7 +39,8 @@ module.exports = {
         }
         let user = await this.get_user_by_token(_online_token);
         if (user) {
-            ret = '无权限，需要' + _req_module + '模块的' + (_is_write ? '写' : '读') + '权限';
+            let module_desc = (await sq.models.rbac_module.findOne({where:{name:_req_module}})).description;
+            ret = '无权限，需要<' + module_desc + '>模块的' + (_is_write ? '写' : '读') + '权限';
             let roles = await user.getRbac_roles();
             for (let i = 0; i < roles.length; i++) {
                 let modules = await roles[i].getRbac_modules();

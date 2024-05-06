@@ -1,4 +1,4 @@
-const db_opt = require('./db_opt');
+const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const plan_lib = require('./plan_lib');

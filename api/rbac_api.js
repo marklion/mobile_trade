@@ -1,5 +1,5 @@
 const mkapi = require('./api_utils');
-const rbac_lib = require('./rbac_lib');
+const rbac_lib = require('./lib/rbac_lib');
 const db_opt = require('./db_opt');
 const wx_api_util = require('./wx_api_util');
 function install(app) {

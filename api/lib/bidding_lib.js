@@ -1,8 +1,6 @@
-const db_opt = require('./db_opt');
+const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
-const plan_lib = require('./plan_lib');
-const cash_lib = require('./cash_lib');
 module.exports = {
     create_bidding: async function (stuff_id, total, comment,  min, max, total_turn, pay_first, token) {
         let sq = db_opt.get_sq();

@@ -1,38 +1,9 @@
 const mkapi = require('./api_utils');
-const plan_lib = require('./plan_lib');
+const plan_lib = require('./lib/plan_lib');
 const db_opt = require('./db_opt');
-const rbac_lib = require('./rbac_lib');
-const sc_lib = require('./sc_lib');
-
-
-
+const rbac_lib = require('./lib/rbac_lib');
+const sc_lib = require('./lib/sc_lib');
 function install(app) {
-    mkapi('/sc/fetch_req', 'sc', true, true, {
-        stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
-        name: { type: String, have_to: true, mean: '需求名称', example: '安检需求' },
-        need_attach: { type: Boolean, have_to: true, mean: '是否需要附件', example: true },
-        need_input: { type: Boolean, have_to: true, mean: '是否需要输入', example: true },
-        need_expired: { type: Boolean, have_to: true, mean: '是否需要过期时间', example: true },
-        belong_type: { type: Number, have_to: true, mean: '所属类型,0->司乘,1->主车,2->挂车', example: 0 },
-        prompt: { type: String, have_to: false, mean: '提示', example: '请输入' }
-    }, sc_lib.sc_req_detail, '新增或修改安检需求', '新增或修改安检需求').add_handler(async (body, token) => {
-        return await sc_lib.fetch_sc_req(body, token, body.stuff_id);
-    }).install(app);
-    mkapi('/sc/get_req', 'sc', false, true, {
-        stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 }
-    }, {
-        reqs: { type: Array, mean: '需求列表', explain: sc_lib.sc_req_detail }
-    }, '获取安检需求', '获取安检需求', true).add_handler(async (body, token) => {
-        return await sc_lib.get_sc_req(body.stuff_id, token, body.pageNo);
-    }).install(app);
-    mkapi('/sc/del_req', 'sc', true, true, {
-        req_id: { type: Number, have_to: true, mean: '需求ID', example: 1 }
-    }, {
-        result: { type: Boolean, mean: '结果', example: true }
-    }, '删除安检需求', '删除安检需求').add_handler(async (body, token) => {
-        await sc_lib.del_sc_req(body.req_id, token);
-        return { result: true };
-    }).install(app);
     mkapi('/sc/get_driver_req', 'none', false, false, {
         open_id: { type: String, have_to: true, mean: '司机open_id', example: 'oq5s-4k1d-4k1d-4k1d' },
         plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }

@@ -1,5 +1,5 @@
 const mkapi = require('./api_utils');
-const cash_lib = require('./cash_lib');
+const cash_lib = require('./lib/cash_lib');
 function install(app) {
     mkapi('/contract/charge', 'cash', true, true, {
         contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },

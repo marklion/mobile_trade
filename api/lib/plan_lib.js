@@ -1,4 +1,4 @@
-const db_opt = require('./db_opt');
+const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 
@@ -13,7 +13,7 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name,  _comment, _company, _expect_count) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count) {
         let sq = db_opt.get_sq();
         let stuff_found = await _company.getStuff({ where: { name: _name } });
         if (stuff_found.length != 1) {
@@ -70,8 +70,8 @@ module.exports = {
         let new_contract = await sq.models.contract.create({
             sign_time: moment().format('YYYY-MM-DD HH:mm:ss'),
             balance: 0,
-            begin_time:being_time,
-            end_time:end_time,
+            begin_time: being_time,
+            end_time: end_time,
             number: number,
             customer_code: customer_code
         });
@@ -105,7 +105,7 @@ module.exports = {
             limit: 20,
             include: [
                 { model: sq.models.company, as: 'buy_company' },
-                { model: sq.models.stuff,},
+                { model: sq.models.stuff, },
                 { model: sq.models.rbac_user, }
             ]
         };
@@ -165,7 +165,7 @@ module.exports = {
             where_condition[db_opt.Op.and].push({ companyId: _condition.company_id });
         }
         if (_condition.hide_manual_close) {
-            where_condition[db_opt.Op.and].push({ manual_close: false});
+            where_condition[db_opt.Op.and].push({ manual_close: false });
         }
         return where_condition;
     },
@@ -226,7 +226,7 @@ module.exports = {
             include: this.plan_detail_include(),
         };
         let sold_plans = await sq.models.plan.findAll(search_condition);
-        let count = await sq.models.plan.count({where:where_condition});
+        let count = await sq.models.plan.count({ where: where_condition });
         let result = [];
         for (let index = 0; index < sold_plans.length; index++) {
             const element = sold_plans[index];
@@ -728,7 +728,7 @@ module.exports = {
             ret = await stuff.countPlans({
                 where: {
                     [db_opt.Op.and]: [
-                        {call_time: null},
+                        { call_time: null },
                         { register_time: { [db_opt.Op.ne]: null } },
                         { status: { [db_opt.Op.ne]: 3 } },
                         sq.where(sq.fn('datetime', sq.col('register_time')), {
@@ -740,7 +740,7 @@ module.exports = {
         }
         return ret;
     },
-    get_wait_que:async function(pageNo, token) {
+    get_wait_que: async function (pageNo, token) {
         let sq = db_opt.get_sq();
         let stuff_array = [0];
         let company = await rbac_lib.get_company_by_token(token);

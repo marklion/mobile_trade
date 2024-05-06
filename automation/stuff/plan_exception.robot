@@ -249,12 +249,12 @@ Update Failed
     ${bv_new}  Search behind Vehicle by Index  333
     ${update_info}  Create Dictionary  behind_vehicle_id=${bv_new}[id]  plan_time=2021-10-10 11:12:11  use_for=abcd  drop_address=def
     Set To Dictionary  ${update_info}  plan_id=${plan}[id]
-    Req to Server  /plan/update  ${bc1_user_token}  ${update_info}  ${True}
+    Req to Server  /customer/order_buy_update  ${bc1_user_token}  ${update_info}  ${True}
 
 Confirm Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/confirm_single_plan  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /sale_management/order_sale_confirm  ${sc_admin_token}  ${req}  ${True}
 
 Rollback Failed
     [Arguments]  ${plan}
@@ -264,7 +264,7 @@ Rollback Failed
 Pay Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/pay  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /sale_management/order_sale_pay  ${sc_admin_token}  ${req}  ${True}
 
 Check In Failed
     [Arguments]  ${plan}  ${dv_phone}
@@ -285,7 +285,7 @@ Deliver Failed
 Cancel Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/cancel  ${bc1_user_token}  ${req}  ${True}
+    Req to Server  /customer/order_buy_cancel  ${bc1_user_token}  ${req}  ${True}
 
 Close Failed
     [Arguments]  ${plan}

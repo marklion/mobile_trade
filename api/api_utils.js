@@ -1,5 +1,5 @@
 const result_maker = require('./result');
-const rbac_lib = require('./rbac_lib');
+const rbac_lib = require('./lib/rbac_lib');
 //params = {
 //         version:{have_to:true, type:String, mean:'版本号', example:'V1.1'},
 //         detail:{have_to:false,  type:Object, mean:'详细信息',
@@ -168,7 +168,8 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
         },
         make_help_info: function () {
             let ret = []
-            ret.push({ h1: this.title });
+            console.log(this.title)
+            ret.push({ h1: this.module + '--' + this.title });
             ret.push({ code: { content: this.path } });
             ret.push({ h2: '描述' });
             ret.push({ p: description });

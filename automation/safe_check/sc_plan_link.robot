@@ -16,7 +16,7 @@ Diff Vehicle Plan
     @{all_driver}  Create List
     ${index}  Set Variable  ${0}
     FOR  ${itr}  IN  @{customer_user}
-        @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${itr}  stuff
+        @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${itr}  stuff
         FOR  ${sub_itr}  IN  @{stuffs_found}
             FOR  ${pc}  IN RANGE  ${plan_count_per_stuff}
                 ${mv}  Search Main Vehicle by Index  ${index}${sub_itr}[id]_${pc}  ${itr}
@@ -110,11 +110,13 @@ Prepare Lots of Company And SC
         Add Module To Company  ${sale_company}[id]  cash
         Add Module To Company  ${sale_company}[id]  scale
         Add Module To Company  ${sale_company}[id]  sc
+        Add Module To Company  ${sale_company}[id]  sale_management
         Add Module To User  ${sc_admin_token}  9999_${index}  stuff
         Add Module To User  ${sc_admin_token}  9999_${index}  plan
         Add Module To User  ${sc_admin_token}  9999_${index}  cash
         Add Module To User  ${sc_admin_token}  9999_${index}  scale
         Add Module To User  ${sc_admin_token}  9999_${index}  sc
+        Add Module To User  ${sc_admin_token}  9999_${index}  sale_management
         FOR  ${j}  IN RANGE  0  ${index+2}
             ${stuff}  Add A Stuff To Sale  wl_${j}  wl_comment_${j}  ${22}  ${sc_admin_token}
             Change Stuff Price  ${stuff}[id]  ${j+1212}  ${False}  test_change  ${sc_admin_token}

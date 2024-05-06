@@ -12,9 +12,25 @@ require('./rbac_api')(app);
 require('./plan_api')(app);
 require('./cash_api')(app);
 require('./sc_api')(app);
-require('./bidding_api')(app);
+let mkapi = require('./api_utils');
 
 const db_opt = require('./db_opt');
+const rbac_lib = require('./lib/rbac_lib');
+
+async function module_install(admin_role_id, app, module) {
+    let mo = module;
+    await rbac_lib.connect_role2module(admin_role_id, (await rbac_lib.add_module(mo.name, mo.description)).id );
+    Object.keys(mo.methods).forEach(itr => {
+        let method_name = itr;
+        let method = mo.methods[itr];
+        mkapi('/' + mo.name + '/' + method_name,
+        mo.name, method.is_write, method.need_rbac,
+        method.params, method.result, method.name,
+        method.description, method.is_get_api).add_handler(
+            method.func
+        ).install(app);
+    });
+}
 
 async function init_super_user() {
     await db_opt.install();
@@ -26,23 +42,22 @@ async function init_super_user() {
             online_time: moment().format('YYYY-MM-DD HH:mm:ss'),
         }
     });
-    const rbac_lib = require('./rbac_lib');
     let role = await rbac_lib.add_role('admin', '超级管理员', false, null);
     if (user_one[0] && role) {
         await rbac_lib.connect_user2role(user_one[0].id, role.id);
     }
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('global', '全局模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('config', '公司配置管理模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('customer', '客户模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('plan', '计划管理模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('cash', '资金管理模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('scale', '计量模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('bid', '竞价模块')).id );
     await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('buy', '采购模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('stuff', '物料管理模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('sc', '安检模块')).id );
+    await module_install(role.id, app, require('./module/customer_module'));
+    await module_install(role.id, app, require('./module/sale_management_module'));
+    await module_install(role.id, app, require('./module/bidding_module'));
+    await module_install(role.id, app, require('./module/stuff_module'));
+    await module_install(role.id, app, require('./module/safe_check_module'));
     let all_modules = await sq.models.rbac_module.findAll();
-    let mkapi = require('./api_utils');
     for (let index = 0; index < all_modules.length; index++) {
         const element = all_modules[index];
         mkapi('/rbac/verify_' + element.name + '_write', element.name, true, true, {}, {
@@ -120,13 +135,13 @@ app.get('/api/help', (req, res) => {
             position: fixed;
             left: 0;
             top: 0;
-            width: 300px;
+            width: 400px;
             height: 100%;
             overflow: auto;
             border-right: 1px solid #000;
         }
         #content {
-            margin-left: 310px;
+            margin-left: 410px;
         }
         #toc a {
             display: block;
@@ -143,12 +158,19 @@ app.get('/api/help', (req, res) => {
     window.onload = function() {
         const toc = document.getElementById('toc');
         const links = document.querySelectorAll('#content h1 a');
-
+        let titels = [];
         links.forEach((link, index) => {
             const newLink = document.createElement('a');
             newLink.href = link.href;
-            newLink.textContent = (index + 1) + '. ' +link.textContent;
-            toc.appendChild(newLink);
+            newLink.textContent = link.textContent;
+            titels.push(newLink);
+        });
+        titels.sort((a, b) => {
+            return a.textContent.localeCompare(b.textContent);
+        });
+        titels.forEach((link,index) => {
+            link.textContent = (index + 1) + '. ' +link.textContent;
+            toc.appendChild(link);
         });
     }
     </script>

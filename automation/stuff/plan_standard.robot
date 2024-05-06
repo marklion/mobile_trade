@@ -37,7 +37,7 @@ Plan Confirm with No User Authorized
     Unauthorize User to Contract  ${buy_company1}[name]  5678
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/confirm_single_plan  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /sale_management/order_sale_confirm  ${sc_admin_token}  ${req}  ${True}
     Authorize User to Contract  ${buy_company1}[name]  5678
 
 Charge After Plan Confirmed
@@ -183,12 +183,12 @@ Directly Change Stuff Price With Plan Openned
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
     Change Stuff Price  ${test_stuff}[id]  ${1090}
-    @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
+    @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
     ${plan}  Get Plan By Id  ${plan}[id]
     Should Not Be Equal As Numbers  ${plan}[unit_price]  ${test_stuff}[price]
     Change Stuff Price  ${test_stuff}[id]  ${998}  ${True}
-    @{stuffs_found}  Req Get to Server  /stuff/get_stuff_on_sale  ${bc1_user_token}  stuff
+    @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
     ${plan}  Get Plan By Id  ${plan}[id]
     Should Be Equal As Numbers  ${plan}[unit_price]  ${test_stuff}[price]
