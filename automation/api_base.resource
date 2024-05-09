@@ -28,7 +28,7 @@ Req to Server
     ${real_token}  Set Variable  ${token}
     IF  $token == 'admin_token'
         ${req}  Create Dictionary  phone=18911992582  password=Mobile_P@ssw0rd_Trade
-        ${resp}  Req to Server  /rbac/login_password  AAAAAAAA  ${req}
+        ${resp}  Req to Server  /global/pwd_login  AAAAAAAA  ${req}
         ${real_token}  Set Variable  ${resp}[token]
     END
     ${headers}  Create Dictionary  token=${real_token}

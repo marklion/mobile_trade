@@ -1,4 +1,4 @@
-const all_plugin = require('./plugin/all_plugin');
+const all_plugin = require('../plugin/all_plugin');
 const moment = require('moment');
 let currentDay = moment().format('YYYY-MM-DD');
 let currentNumber = 0;

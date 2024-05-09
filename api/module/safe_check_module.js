@@ -9,7 +9,7 @@ module.exports = {
         fetch_req: {
             name: '新增或修改安检需求',
             description: '新增或修改安检需求',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -29,7 +29,7 @@ module.exports = {
         get_req: {
             name: '获取安检需求',
             description: '获取安检需求',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {
@@ -46,7 +46,7 @@ module.exports = {
         del_req: {
             name: '删除安检需求',
             description: '删除安检需求',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -57,6 +57,39 @@ module.exports = {
             },
             func: async function (body, token) {
                 await sc_lib.del_sc_req(body.req_id, token);
+                return { result: true };
+            },
+        },
+        plan_status: {
+            name: '安检计划状态',
+            description: '安检计划状态',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
+            },
+            result: {
+                reqs: { type: Array, mean: '需求列表', explain: sc_lib.sc_req_detail },
+                passed: { type: Boolean, mean: '是否通过', example: true }
+            },
+            func: async function (body, token) {
+                return await sc_lib.get_plan_sc_status(body.plan_id, token, body.pageNo);
+            },
+        },
+        check: {
+            name: '安检审核',
+            description: '安检审核',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                content_id: { type: Number, have_to: true, mean: '内容ID', example: 1 },
+                comment: { type: String, have_to: false, mean: '不通过原因', example: '内容错误' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
+            },
+            func: async function (body, token) {
+                await sc_lib.check_sc_content(body.content_id, token, body.comment);
                 return { result: true };
             },
         },

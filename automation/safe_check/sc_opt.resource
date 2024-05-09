@@ -57,21 +57,21 @@ Driver Get SC Status
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${plan}[id]
 
     IF  ${expect_pass} != ${None}
-        ${resp}  Req to Server  /sc/get_driver_req  none  ${req}
+        ${resp}  Req to Server  /global/driver_get_sc_req  none  ${req}
         Should Be Equal  ${resp}[passed]  ${expect_pass}
     END
-    ${resp}  Req Get to Server  /sc/get_driver_req  none  reqs  ${-1}  &{req}
+    ${resp}  Req Get to Server  /global/driver_get_sc_req  none  reqs  ${-1}  &{req}
     RETURN  ${resp}
 Driver Upload SC Content
     [Arguments]  ${plan}  ${req_id}  ${input}=isc  ${attachment}=asc  ${expired_time}=2029-12-12
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
     ${req}  Create Dictionary  plan_id=${plan}[id]  open_id=${driver}[open_id]  req_id=${req_id}  input=${input}  attachment=${attachment}  expired_time=${expired_time}
-    Req to Server  /sc/upload_sc_content  none  ${req}
+    Req to Server  /global/driver_upload_sc_content  none  ${req}
 Driver Delete SC Content
     [Arguments]  ${plan}  ${content_id}
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
     ${req}  Create Dictionary  content_id=${content_id}  open_id=${driver}[open_id]
-    Req to Server  /sc/delete_content  none  ${req}
+    Req to Server  /global/driver_delete_sc_content  none  ${req}
 Get SC Status By Plan
     [Arguments]  ${plan}  ${expect_pass}=${None}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]

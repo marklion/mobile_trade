@@ -156,7 +156,7 @@ module.exports = {
             for (let j = 0; j < modules.length; j++) {
                 let itr = modules[j];
                 element.bound_modules.push(itr.toJSON());
-                if (itr.name == 'config') {
+                if (itr.name == 'rbac') {
                     let config_users = [];
                     let config_roles = await itr.getRbac_roles({ where: { companyId: element.id } });
                     for (let i = 0; i < config_roles.length; i++) {
@@ -284,7 +284,7 @@ module.exports = {
         let sq = db_opt.get_sq();
         let role = await this.add_role('公司管理员', '公司内最高权限', false, _company);
         if (role) {
-            await this.connect_role2module(role.id, (await sq.models.rbac_module.findOne({ where: { name: 'config' } })).id);
+            await this.connect_role2module(role.id, (await sq.models.rbac_module.findOne({ where: { name: 'rbac' } })).id);
         }
 
         return role;

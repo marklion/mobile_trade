@@ -38,7 +38,7 @@ Diff Vehicle Plan
     FOR  ${itr}  IN  @{all_driver}
         ${resp}  Driver Online  ${itr}  ${itr}_open_id  ${itr}_id_card
         ${req}  Create Dictionary  open_id=${resp}[open_id]
-        ${resp}  Req Get to Server  /driver/self_plan  none  plans  -1  &{req}
+        ${resp}  Req Get to Server  /global/driver_get_order  none  plans  -1  &{req}
         ${plan}  Set Variable  ${resp}[0]
         ${plan_id}  Get From Dictionary  ${plan}  id
         IF  $plan_id % 4 == 0
@@ -80,7 +80,7 @@ Diff Vehicle Plan
     FOR  ${itr}  IN  @{all_driver}
         ${resp}  Driver Online  ${itr}  ${itr}_open_id  ${itr}_id_card
         ${req}  Create Dictionary  open_id=${resp}[open_id]
-        ${resp}  Req Get to Server  /driver/self_plan  none  plans  -1  &{req}
+        ${resp}  Req Get to Server  /global/driver_get_order  none  plans  -1  &{req}
         ${plan}  Set Variable  ${resp}[0]
         ${plan_id}  Get From Dictionary  ${plan}  id
         ${resp}  Driver Get SC Status  ${plan}
@@ -106,13 +106,11 @@ Prepare Lots of Company And SC
         ${sc_admin_token}  Login As Admin Of Company  ${sale_company}[id]  9999_${index}  sc_admin_${index}
         Append To List  ${sale_admin}  ${sc_admin_token}
         Add Module To Company  ${sale_company}[id]  stuff
-        Add Module To Company  ${sale_company}[id]  plan
         Add Module To Company  ${sale_company}[id]  cash
         Add Module To Company  ${sale_company}[id]  scale
         Add Module To Company  ${sale_company}[id]  sc
         Add Module To Company  ${sale_company}[id]  sale_management
         Add Module To User  ${sc_admin_token}  9999_${index}  stuff
-        Add Module To User  ${sc_admin_token}  9999_${index}  plan
         Add Module To User  ${sc_admin_token}  9999_${index}  cash
         Add Module To User  ${sc_admin_token}  9999_${index}  scale
         Add Module To User  ${sc_admin_token}  9999_${index}  sc

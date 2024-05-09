@@ -12,7 +12,7 @@ module.exports = {
         contract_get: {
             name: '获取合同',
             description: '获取合同',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {},
@@ -52,7 +52,7 @@ module.exports = {
         get_charge_history: {
             name: '获取充值历史',
             description: '获取充值历史',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {
@@ -79,7 +79,7 @@ module.exports = {
         get_stuff_on_sale: {
             name: '获取在售货物',
             description: '获取在售货物',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {},
@@ -113,10 +113,11 @@ module.exports = {
         },
         fetch_driver: common.fetch_driver,
         fetch_vehicle: common.fetch_vehicle,
+        get_vehicle_pair: common.get_vehicle_pair,
         order_buy_create: {
             name: '创建采购订单',
             description: '创建采购订单',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -166,7 +167,7 @@ module.exports = {
         order_buy_update: {
             name: '更新采购订单',
             description: '更新采购订单',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -190,7 +191,7 @@ module.exports = {
         order_buy_cancel: {
             name: '取消采购单',
             description: '取消采购单',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -215,7 +216,7 @@ module.exports = {
         order_buy_search: {
             name: '查询采购单',
             description: '查询采购单',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: api_param_result_define.order_search_cond,
@@ -231,7 +232,7 @@ module.exports = {
         bidding_search: {
             name: '查询竞标单',
             description: '查询竞标单',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {},
@@ -243,7 +244,7 @@ module.exports = {
         bidding_accept: {
             name: '接受竞标',
             description: '接受竞标',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -260,7 +261,7 @@ module.exports = {
         bidding_price: {
             name: '出价',
             description: '出价',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {

@@ -3,7 +3,7 @@ module.exports = {
     fetch_driver: {
         name: '获取或创建司机',
         description: '获取或创建司机',
-        need_rbac: true,
+
         is_write: true,
         is_get_api: false,
         params: {
@@ -24,7 +24,7 @@ module.exports = {
     fetch_vehicle: {
         name: '获取或创建车辆信息',
         description: '获取或创建车辆信息',
-        need_rbac: true,
+
         is_write: true,
         is_get_api: false,
         params: {
@@ -39,5 +39,30 @@ module.exports = {
             let lastChar = body.plate.charAt(body.plate.length - 1);
             return await plan_lib.fetch_vehicle(body.plate, (lastChar === '挂'));
         },
+    },
+    get_vehicle_pair: {
+        name: '获取车辆历史数据',
+        description: '获取车辆历史数据',
+        is_write: false,
+        is_get_api: true,
+        params: {
+        },
+        result: {
+            pairs: {
+                type: Array, mean: '车辆对', explain: {
+                    main_vehicle_plate: { type: String, mean: '主车车牌', example: '主车车牌' },
+                    behind_vehicle_plate: { type: String, mean: '挂车车牌', example: '挂车车牌' },
+                    driver_phone: { type: String, mean: '司机电话', example: '司机电话' },
+                    driver_name: { type: String, mean: '司机姓名', example: '司机姓名' },
+                }
+            },
+        },
+        func: async function (body, token) {
+            let ret = await plan_lib.get_self_vehicle_pairs(token, body.pageNo);
+            return {
+                pairs: ret.rows,
+                total: ret.count
+            }
+        }
     },
 }

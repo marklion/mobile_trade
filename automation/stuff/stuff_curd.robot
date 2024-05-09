@@ -75,7 +75,7 @@ Contract Charge And Check
     Should Be Equal As Numbers  ${resp}[0][cash_increased]  1200
     Should Be Equal As Strings  ${resp}[0][comment]  abcd
     ${req}  Create Dictionary  contract_id=${contract_id}
-    ${resp}  Req Get to Server  /contract/get_company_history  ${sc_admin_token}  histories  ${-1}  &{req}
+    ${resp}  Req Get to Server  /cash/history  ${sc_admin_token}  histories  ${-1}  &{req}
     Should Be Equal As Numbers  ${resp}[0][cash_increased]  1200
     Should Be Equal As Strings  ${resp}[0][comment]  abcd
 

@@ -1,7 +1,6 @@
 const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
-const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 module.exports = {
     name: 'sale_management',
@@ -10,7 +9,7 @@ module.exports = {
         order_sale_confirm: {
             name: '销售订单确认',
             description: '销售订单确认',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -24,10 +23,37 @@ module.exports = {
                 return { result: true };
             },
         },
+        order_batch_confirm: {
+            name: '批量确认',
+            description: '批量确认',
+
+            is_write: true,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
+                stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
+                company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
+            },
+            result: {
+
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let ret = await plan_lib.batch_confirm(body, token);
+                if (ret) {
+                    throw { err_msg: '批量确认失败:' + ret };
+                }
+                else {
+                    return { result: true };
+                }
+            },
+        },
         order_sale_pay: {
             name: '手工验款',
             description: '手工验款',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -44,7 +70,7 @@ module.exports = {
         order_search: {
             name: '销售订单查询',
             description: '销售订单查询',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {
@@ -66,10 +92,90 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        order_rollback: {
+            name: '销售订单回滚',
+            description: '销售订单回滚',
+
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.plan_rollback(body.plan_id, token);
+                return { result: true };
+            }
+        },
+        close: {
+            name: '关闭销售订单',
+            description: '关闭销售订单',
+
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    await plan_lib.plan_close(plan, (await rbac_lib.get_user_by_token(token)).name, false);
+                });
+                return { result: true };
+            }
+        },
+        get_checkin_config: {
+            name: '获取签到配置',
+            description: '获取签到配置',
+
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                lat: { type: Number, mean: '纬度', example: 1 },
+                lon: { type: Number, mean: '经度', example: 1 },
+                distance_limit: { type: Number, mean: '距离限制', example: 1 },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return {
+                    lat: company.pos_lat,
+                    lon: company.pos_lon,
+                    distance_limit: company.distance_limit,
+                }
+            },
+        },
+        set_checkin_config: {
+            name: '设置签到配置',
+            description: '设置签到配置',
+
+            is_write: true,
+            is_get_api: false,
+            params: {
+                lat: { type: Number, have_to: true, mean: '纬度', example: 1 },
+                lon: { type: Number, have_to: true, mean: '经度', example: 1 },
+                distance_limit: { type: Number, have_to: true, mean: '距离限制', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                company.pos_lat = body.lat;
+                company.pos_lon = body.lon;
+                company.distance_limit = body.distance_limit;
+                await company.save();
+                return { result: true };
+            },
+        },
         contract_make: {
             name: '生成合同',
             description: '生成合同',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -96,7 +202,7 @@ module.exports = {
         contract_destroy: {
             name: '销毁合同',
             description: '销毁合同',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -119,7 +225,7 @@ module.exports = {
         contract_get: {
             name: '获取合同',
             description: '获取合同',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {
@@ -170,7 +276,7 @@ module.exports = {
         contract_add_stuff: {
             name: '合同添加货物',
             description: '合同添加货物',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -195,7 +301,7 @@ module.exports = {
         contract_del_stuff: {
             name: '合同删除货物',
             description: '合同删除货物',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -220,7 +326,7 @@ module.exports = {
         authorize_user: {
             name: '授权用户',
             description: '授权用户',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -238,7 +344,7 @@ module.exports = {
         unauthorize_user: {
             name: '取消授权用户',
             description: '取消授权用户',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {

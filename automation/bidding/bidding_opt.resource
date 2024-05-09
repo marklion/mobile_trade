@@ -18,14 +18,12 @@ Prepare Four Costomers And One Sale
     Company Set Script  ${sale_company}[id]  normal
     ${sc_admin_token}  Login As Admin Of Company  ${sale_company}[id]  1234  sc_admin
     Add Module To Company  ${sale_company}[id]  stuff
-    Add Module To Company  ${sale_company}[id]  plan
     Add Module To Company  ${sale_company}[id]  cash
     Add Module To Company  ${sale_company}[id]  scale
     Add Module To Company  ${sale_company}[id]  sc
     Add Module To Company  ${sale_company}[id]  bid
     Add Module To Company  ${sale_company}[id]  sale_management
     Add Module To User  ${sc_admin_token}  1234  stuff
-    Add Module To User  ${sc_admin_token}  1234  plan
     Add Module To User  ${sc_admin_token}  1234  cash
     Add Module To User  ${sc_admin_token}  1234  scale
     Add Module To User  ${sc_admin_token}  1234  sc

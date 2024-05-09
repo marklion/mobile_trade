@@ -20,13 +20,11 @@ Prepare Companies And Users
     Company Set Script  ${sale_company}[id]  normal
     ${sc_admin_token}  Login As Admin Of Company  ${sale_company}[id]  1234  sc_admin
     Add Module To Company  ${sale_company}[id]  stuff
-    Add Module To Company  ${sale_company}[id]  plan
     Add Module To Company  ${sale_company}[id]  cash
     Add Module To Company  ${sale_company}[id]  scale
     Add Module To Company  ${sale_company}[id]  sc
     Add Module To Company  ${sale_company}[id]  sale_management
     Add Module To User  ${sc_admin_token}  1234  stuff
-    Add Module To User  ${sc_admin_token}  1234  plan
     Add Module To User  ${sc_admin_token}  1234  cash
     Add Module To User  ${sc_admin_token}  1234  scale
     Add Module To User  ${sc_admin_token}  1234  sc
@@ -35,12 +33,10 @@ Prepare Companies And Users
     Company Set Script  ${no_need_sale_company}[id]  normal
     ${sc_admin_no_need_token}  Login As Admin Of Company  ${no_need_sale_company}[id]  12341  sc_admin_no_need
     Add Module To Company  ${no_need_sale_company}[id]  stuff
-    Add Module To Company  ${no_need_sale_company}[id]  plan
     Add Module To Company  ${no_need_sale_company}[id]  cash
     Add Module To Company  ${no_need_sale_company}[id]  scale
     Add Module To Company  ${no_need_sale_company}[id]  sale_management
     Add Module To User  ${sc_admin_no_need_token}  12341  stuff
-    Add Module To User  ${sc_admin_no_need_token}  12341  plan
     Add Module To User  ${sc_admin_no_need_token}  12341  cash
     Add Module To User  ${sc_admin_no_need_token}  12341  scale
     Add Module To User  ${sc_admin_no_need_token}  12341  sale_management
@@ -142,7 +138,7 @@ Charge To A Company
         END
     END
     ${req}  Create Dictionary  contract_id=${contract_id}   cash_increased=${cash}  comment=${comment}
-    Req to Server  /contract/charge  ${sc_admin_token}  ${req}
+    Req to Server  /cash/charge  ${sc_admin_token}  ${req}
     RETURN  ${contract_id}
 
 Get Cash Of A Company
@@ -234,33 +230,33 @@ Manual Pay A Plan
 Plan Enter
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/enter  ${sc_admin_token}  ${req}
+    Req to Server  /scale/vehicle_enter  ${sc_admin_token}  ${req}
 Driver Online
     [Arguments]  ${phone}  ${open_id}  ${id_card}
     ${req}  Create Dictionary  phone_code=${phone}  open_id_code=${open_id}  id_card=${id_card}  name=dv_name
-    Req to Server  /driver/update  none  ${req}
+    Req to Server  /global/driver_update  none  ${req}
     ${req}  Create Dictionary   open_id_code=${open_id}
-    ${resp}  Req to Server  /driver/online  none  ${req}
+    ${resp}  Req to Server  /global/driver_online  none  ${req}
     RETURN  ${resp}
 Check In A Plan
     [Arguments]  ${plan}  ${expect_fail}=${False}  ${index}=0
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
     ${req}  Create Dictionary  open_id=${driver}[open_id]
-    ${resp}  Req Get to Server  /driver/self_plan  none  plans  -1  &{req}
+    ${resp}  Req Get to Server  /global/driver_get_order  none  plans  -1  &{req}
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  lat=${123}  lon=${333}
-    Req to Server  /plan/check_in  none  ${req}  ${expect_fail}
+    Req to Server  /global/driver_checkin  none  ${req}  ${expect_fail}
 Deliver A Plan
     [Arguments]  ${plan}  ${count}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
-    Req to Server  /plan/deliver  ${sc_admin_token}  ${req}
+    Req to Server  /scale/deliver  ${sc_admin_token}  ${req}
 Rollback Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/rollback  ${sc_admin_token}  ${req}
+    Req to Server  /sale_management/order_rollback  ${sc_admin_token}  ${req}
 Cancel Check In Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/cancel_check_in  ${sc_admin_token}  ${req}
+    Req to Server  /scale/cancel_check_in  ${sc_admin_token}  ${req}
 Search Driver by Index
     [Arguments]  ${itr}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  name=dn_${itr}  id_card=di_${itr}  phone=dp_${itr}
@@ -317,4 +313,4 @@ Cancel A Plan
 Close A Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/close  ${sc_admin_token}  ${req}
+    Req to Server  /sale_management/close  ${sc_admin_token}  ${req}

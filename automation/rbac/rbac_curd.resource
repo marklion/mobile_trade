@@ -3,7 +3,7 @@ Resource  ../api_base.resource
 
 *** Keywords ***
 Get All Company
-    ${ret}  Req Get to Server  /rbac/company_get_all  admin_token  all_company
+    ${ret}  Req Get to Server  /global/company_get_all  admin_token  all_company
     RETURN  ${ret}
 
 Search A Company By Name
@@ -22,13 +22,13 @@ Search A Company By Name
 Reg Company Admin
     [Arguments]  ${company_id}  ${phone}  ${name}=company_admin
     ${req}  Create Dictionary  company_id=${company_id}  phone=${phone}  name=${name}
-    ${resp}  Req to Server  /rbac/reg_company_admin  admin_token  ${req}
+    ${resp}  Req to Server  /global/reg_company_admin  admin_token  ${req}
     Should Be True  ${resp}[result]
 
 User Login With Phone
     [Arguments]  ${phone}
     ${req}  Create Dictionary  phone=${phone}  password=Mobile_P@ssw0rd_Trade
-    ${resp}  Req to Server  /rbac/login_password  AAAAAAAA  ${req}
+    ${resp}  Req to Server  /global/pwd_login  AAAAAAAA  ${req}
     RETURN  ${resp}[token]
 
 Login As Admin Of Company
@@ -39,7 +39,7 @@ Login As Admin Of Company
 Create Several Company And Pick One
     FOR  ${itr}  IN RANGE  11
         ${add_req}  Create Dictionary  name=test_company_${itr}
-        Req to Server  /rbac/company_add  admin_token  ${add_req}
+        Req to Server  /global/company_add  admin_token  ${add_req}
     END
     ${ran_no}  Evaluate  random.randint(0, 10)
     ${found}  Search A Company By Name  test_company_${ran_no}
@@ -48,7 +48,7 @@ Create Several Company And Pick One
 Create One Company
     [Arguments]  ${company_name}
     ${add_req}  Create Dictionary  name=${company_name}
-    ${resp}  Req to Server  /rbac/company_add  admin_token  ${add_req}
+    ${resp}  Req to Server  /global/company_add  admin_token  ${add_req}
     ${found}  Search A Company By Name  ${company_name}
     RETURN  ${found}
 
@@ -135,7 +135,7 @@ Unbind Role From User
 New User Login
     [Arguments]  ${phone}  ${company_name}  ${open_id}  ${name}=test_user
     ${req}  Create Dictionary  phone_code=${phone}  company_name=${company_name}  open_id_code=${open_id}  name=${name}
-    ${resp}  Req to Server  /rbac/fetch_user  ABCDDD  ${req}
+    ${resp}  Req to Server  /global/fetch_user  ABCDDD  ${req}
     ${token}  User Login With Phone  ${phone}
     RETURN  ${token}
 
@@ -160,18 +160,18 @@ Add Module To Company
     [Arguments]  ${company_id}  ${module_name}
     ${module_added}  Get Self Module By Name  admin_token  ${module_name}
     ${req}  Create Dictionary  company_id=${company_id}  module_id=${module_added}[id]
-    ${resp}  Req to Server  /rbac/company_add_module  admin_token  ${req}
+    ${resp}  Req to Server  /global/company_add_module  admin_token  ${req}
     Should Be True  ${resp}[result]
 
 Del Module from Company
     [Arguments]  ${company_id}  ${module_name}
     ${module_added}  Get Self Module By Name  admin_token  ${module_name}
     ${req}  Create Dictionary  company_id=${company_id}  module_id=${module_added}[id]
-    ${resp}  Req to Server  /rbac/company_del_module  admin_token  ${req}
+    ${resp}  Req to Server  /global/company_del_module  admin_token  ${req}
     Should Be True  ${resp}[result]
 
 Get Self User
     [Arguments]  ${token}
     ${req}  Create Dictionary
-    ${resp}  Req to Server  /rbac/user_get_self  ${token}  ${req}
+    ${resp}  Req to Server  /global/get_user_role  ${token}  ${req}
     RETURN  ${resp}

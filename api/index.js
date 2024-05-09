@@ -8,27 +8,26 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
 
-require('./rbac_api')(app);
-require('./plan_api')(app);
-require('./cash_api')(app);
-require('./sc_api')(app);
 let mkapi = require('./api_utils');
-
 const db_opt = require('./db_opt');
 const rbac_lib = require('./lib/rbac_lib');
 
 async function module_install(admin_role_id, app, module) {
     let mo = module;
     await rbac_lib.connect_role2module(admin_role_id, (await rbac_lib.add_module(mo.name, mo.description)).id );
+    let need_rbac = true;
     Object.keys(mo.methods).forEach(itr => {
         let method_name = itr;
         let method = mo.methods[itr];
+        if (mo.name === 'global') {
+            need_rbac = method.need_rbac;
+        }
         mkapi('/' + mo.name + '/' + method_name,
-        mo.name, method.is_write, method.need_rbac,
-        method.params, method.result, method.name,
-        method.description, method.is_get_api).add_handler(
-            method.func
-        ).install(app);
+            mo.name, method.is_write, need_rbac,
+            method.params, method.result, method.name,
+            method.description, method.is_get_api).add_handler(
+                method.func
+            ).install(app);
     });
 }
 
@@ -46,34 +45,32 @@ async function init_super_user() {
     if (user_one[0] && role) {
         await rbac_lib.connect_user2role(user_one[0].id, role.id);
     }
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('global', '全局模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('config', '公司配置管理模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('plan', '计划管理模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('cash', '资金管理模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('scale', '计量模块')).id );
-    await rbac_lib.connect_role2module(role.id, (await rbac_lib.add_module('buy', '采购模块')).id );
+    await module_install(role.id, app, require('./module/global_module'));
     await module_install(role.id, app, require('./module/customer_module'));
     await module_install(role.id, app, require('./module/sale_management_module'));
     await module_install(role.id, app, require('./module/bidding_module'));
     await module_install(role.id, app, require('./module/stuff_module'));
     await module_install(role.id, app, require('./module/safe_check_module'));
+    await module_install(role.id, app, require('./module/cash_module'));
+    await module_install(role.id, app, require('./module/scale_module'));
+    await module_install(role.id, app, require('./module/rbac_module'));
     let all_modules = await sq.models.rbac_module.findAll();
     for (let index = 0; index < all_modules.length; index++) {
         const element = all_modules[index];
         mkapi('/rbac/verify_' + element.name + '_write', element.name, true, true, {}, {
-            result:{type:Boolean, mean:'无意义', example:true}
-        },element.name + '权限读写校验', '验证是否有' + element.description + '的读写权限').add_handler(async (body, token) => {
-            return {result:true};
+            result: { type: Boolean, mean: '无意义', example: true }
+        }, element.name + '权限读写校验', '验证是否有' + element.description + '的读写权限').add_handler(async (body, token) => {
+            return { result: true };
         }).install(app);
         mkapi('/rbac/verify_' + element.name + '_read', element.name, false, true, {}, {
-            result:{type:Boolean, mean:'无意义', example:true}
-        },element.name + '权限只读校验', '验证是否有' + element.description + '的读权限').add_handler(async (body, token) => {
-            return {result:true};
+            result: { type: Boolean, mean: '无意义', example: true }
+        }, element.name + '权限只读校验', '验证是否有' + element.description + '的读权限').add_handler(async (body, token) => {
+            return { result: true };
         }).install(app);
     }
 }
 init_super_user();
-const multer  = require('multer');
+const multer = require('multer');
 const upload = multer({ dest: '/database/uploads/' });
 app.post('/api/v1/upload_file', upload.single('file'), (req, res) => {
     const path = require('path');

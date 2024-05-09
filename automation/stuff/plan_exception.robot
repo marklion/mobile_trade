@@ -259,7 +259,7 @@ Confirm Failed
 Rollback Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/rollback  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /sale_management/order_rollback  ${sc_admin_token}  ${req}  ${True}
 
 Pay Failed
     [Arguments]  ${plan}
@@ -270,17 +270,17 @@ Check In Failed
     [Arguments]  ${plan}  ${dv_phone}
     ${do_info}  Driver Online  ${dv_phone}  1231312  12312312
     ${req}  Create Dictionary  open_id=${do_info}[open_id]  plan_id=${plan}[id]  lat=${123}  lon=${333}
-    Req to Server  /plan/check_in  none  ${req}  ${True}
+    Req to Server  /global/driver_checkin  none  ${req}  ${True}
 
 Enter Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/enter  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /scale/vehicle_enter  ${sc_admin_token}  ${req}  ${True}
 
 Deliver Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${20}  p_time=2018-01-01  m_time=2018-01-01
-    Req to Server  /plan/deliver  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /scale/deliver  ${sc_admin_token}  ${req}  ${True}
 
 Cancel Failed
     [Arguments]  ${plan}
@@ -290,12 +290,12 @@ Cancel Failed
 Close Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/close  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /sale_management/close  ${sc_admin_token}  ${req}  ${True}
 
 Cancel Check In Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /plan/cancel_check_in  ${sc_admin_token}  ${req}  ${True}
+    Req to Server  /scale/cancel_check_in  ${sc_admin_token}  ${req}  ${True}
 
 Check New Status And History
     [Arguments]  ${plan}  ${status}  @{action_types}

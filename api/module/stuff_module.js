@@ -10,7 +10,7 @@ module.exports = {
         fetch: {
             name: '获取或更新物料',
             description: '获取或更新物料',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -35,7 +35,7 @@ module.exports = {
         get_all: {
             name: '获取所有物料',
             description: '获取所有物料',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {},
@@ -69,7 +69,7 @@ module.exports = {
         del: {
             name: '删除物料',
             description: '删除物料',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -91,7 +91,7 @@ module.exports = {
         sc_config: {
             name: '配置货物是否需要安检',
             description: '配置货物是否需要安检',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -118,7 +118,7 @@ module.exports = {
         change_price: {
             name: '调价',
             description: '调价',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -138,7 +138,7 @@ module.exports = {
         get_price_history:{
             name: '获取调价历史',
             description: '获取调价历史',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {

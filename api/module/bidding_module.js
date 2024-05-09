@@ -10,7 +10,7 @@ module.exports = {
         create: {
             name: '创建竞价',
             description: '创建竞价',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -30,7 +30,7 @@ module.exports = {
         get_all_created: {
             name: '获取所有创建的竞价',
             description: '获取所有创建的竞价',
-            need_rbac: true,
+
             is_write: false,
             is_get_api: true,
             params: {},
@@ -44,7 +44,7 @@ module.exports = {
         add_turn: {
             name: '添加竞价轮次',
             description: '添加竞价轮次',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -68,7 +68,7 @@ module.exports = {
         next_turn: {
             name: '开启下一轮竞价',
             description: '开启下一轮竞价',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
@@ -88,7 +88,7 @@ module.exports = {
         stop: {
             name: '结束竞价',
             description: '结束竞价',
-            need_rbac: true,
+
             is_write: true,
             is_get_api: false,
             params: {
