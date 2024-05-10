@@ -54,6 +54,8 @@ async function init_super_user() {
     await module_install(role.id, app, require('./module/cash_module'));
     await module_install(role.id, app, require('./module/scale_module'));
     await module_install(role.id, app, require('./module/rbac_module'));
+    await module_install(role.id, app, require('./module/buy_management_module'));
+    await module_install(role.id, app, require('./module/supplier_module'));
     let all_modules = await sq.models.rbac_module.findAll();
     for (let index = 0; index < all_modules.length; index++) {
         const element = all_modules[index];

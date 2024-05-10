@@ -138,13 +138,13 @@ export default {
             }
         },
         add_vehicle: async function () {
-            let mv = await this.$send_req('/vehicle/fetch', {
+            let mv = await this.$send_req('/customer/fetch_vehicle', {
                 plate: this.new_vehicle.main_vehicle_plate,
             });
-            let bv = await this.$send_req('/vehicle/fetch', {
+            let bv = await this.$send_req('/customer/fetch_vehicle', {
                 plate: this.new_vehicle.behind_vehicle_plate,
             });
-            let dr = await this.$send_req('/driver/fetch', {
+            let dr = await this.$send_req('/customer/fetch_driver', {
                 phone: this.new_vehicle.driver_phone,
                 name: this.new_vehicle.driver_name,
             });
@@ -174,7 +174,7 @@ export default {
             this.show_add_vehicle = false;
         },
         get_vehicles: async function (pageNo) {
-            let res = await this.$send_req('/plan/get_self_vehicle_pairs', {
+            let res = await this.$send_req('/customer/get_vehicle_pair', {
                 pageNo: pageNo,
             });
             res.pairs.forEach(ele => {
@@ -235,7 +235,7 @@ export default {
                     behind_vehicle_id: ele.behind_vehicle.id,
                     driver_id: ele.driver.id
                 };
-                await this.$send_req('/plan/create_single_plan', req);
+                await this.$send_req('/customer/order_buy_create', req);
             }
             uni.switchTab({
                 url: '/pages/OrderList',

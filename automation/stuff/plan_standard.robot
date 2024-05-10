@@ -3,6 +3,13 @@ Resource  stuff_opt.resource
 Suite Setup  Prepare Sale and Buy
 Suite Teardown  Clean Up Sale and Buy
 *** Test Cases ***
+Order Create and Check
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${order}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Search And Verify Order   ${mv}  ${bv}  ${dv}  ${order}[id]  0
 Plan Create and Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -10,6 +17,14 @@ Plan Create and Check
     ${dv}  Search Driver by Index  0
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  0
+Order Confirm
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
 Plan Confirm with No Cash and Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -72,6 +87,11 @@ Driver Check In
     Check In A Plan  ${plan}
     ${dv}  Search Driver by Index  0
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2  ${True}
+    Close A Plan  ${plan}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Check In A Plan  ${plan}
+    Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1  ${True}
 
 Plan Enter and Check
     [Teardown]  Plan Reset
@@ -83,6 +103,10 @@ Plan Enter and Check
     Manual Pay A Plan  ${plan}
     Plan Enter  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2  ${False}  ${True}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Plan Enter  ${plan}
+    Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1  ${False}  ${True}
 
 Deliver Plan And Check
     [Teardown]  Plan Reset
@@ -210,6 +234,64 @@ Change Price After Plan Closed
     Should Not Be Equal As Numbers  ${plan}[unit_price]  ${998}
 
 *** Keywords ***
+Verify Order Detail
+    [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
+    Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
+    Should Be Equal As Strings  ${plan}[main_vehicle][plate]  ${mv}[plate]
+    Should Be Equal As Strings  ${plan}[driver][id_card]  ${dv}[id_card]
+    Should Be Equal As Numbers  ${plan}[unit_price]  ${price}
+    Should Be Equal As Integers  ${plan}[status]  ${status}
+    IF  $check_in_time
+        Should Not Be Empty  ${plan}[register_time]
+    END
+
+    ${history}  Copy List  ${plan}[plan_histories]
+    Reverse List  ${history}
+    IF  ${status} >= 0
+        ${found_node}  Set Variable  ${False}
+        FOR  ${itr}  IN  @{history}
+            ${action}  Get From Dictionary  ${itr}  action_type
+            IF  $action == '创建'
+                Should Be Equal As Strings  ${itr}[operator]  bu1
+                ${found_node}  Set Variable  ${True}
+            END
+        END
+        Should Be True  ${found_node}
+    END
+    IF  ${status} >= 1
+        ${found_node}  Set Variable  ${False}
+        FOR  ${itr}  IN  @{history}
+            ${action}  Get From Dictionary  ${itr}  action_type
+            IF  $action == '确认'
+                Should Be Equal As Strings  ${itr}[operator]  sc_admin
+                ${found_node}  Set Variable  ${True}
+            END
+        END
+        Should Be True  ${found_node}
+    END
+    IF  ${status} >= 3
+        ${found_node}  Set Variable  ${False}
+        FOR  ${itr}  IN  @{history}
+            ${action}  Get From Dictionary  ${itr}  action_type
+            IF  $action == '发车'
+                ${found_node}  Set Variable  ${True}
+                Should Be Equal As Strings  ${itr}[operator]  sc_admin
+            END
+        END
+        Should Be True  ${found_node}
+    END
+    IF  $enter_check
+        Should Not Be Empty  ${plan}[enter_time]
+        ${found_node}  Set Variable  ${False}
+        FOR  ${itr}  IN  @{history}
+            ${action}  Get From Dictionary  ${itr}  action_type
+            IF  $action == '进厂'
+                ${found_node}  Set Variable  ${True}
+                Should Be Equal As Strings  ${itr}[operator]  sc_admin
+            END
+        END
+        Should Be True  ${found_node}
+    END
 Verify Plan Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
@@ -279,15 +361,40 @@ Verify Plan Detail
         Should Be True  ${found_node}
     END
 
+Search And Verify Order
+    [Arguments]  ${mv}  ${bv}  ${dv}  ${plan_id}  ${status}  ${check_in_time}=${False}  ${enter_check}=${False}
+    ${resp}  Search Orders Based on User  ${bc2_user_token}  ${True}
+    Length Should Be  ${resp}  0
+    ${resp}  Search Orders Based on User  ${sc_admin_no_need_token}  ${False}
+    Length Should Be  ${resp}  0
+    ${resp}  Search Orders Based on User  ${bc1_user_token}  ${True}
+    ${plan}  Create Dictionary
+    FOR  ${itr}  IN  @{resp}
+        ${plan_found_id}  Get From Dictionary  ${itr}  id
+        IF  $plan_found_id == $plan_id
+            ${plan}  Set To Dictionary  ${itr}
+            Exit For Loop
+        END
+    END
+    Verify Order Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${23}  ${status}  ${order_stuff}[name]  ${check_in_time}  ${enter_check}
+    ${resp}  Search Orders Based on User  ${sc_admin_token}  ${False}
+    ${plan}  Create Dictionary
+    FOR  ${itr}  IN  @{resp}
+        ${plan_found_id}  Get From Dictionary  ${itr}  id
+        IF  $plan_found_id == $plan_id
+            ${plan}  Set To Dictionary  ${itr}
+            Exit For Loop
+        END
+    END
+    Verify Order Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${23}  ${status}  ${order_stuff}[name]  ${check_in_time}  ${enter_check}
+
+
 Search And Verify Plan
     [Arguments]  ${mv}  ${bv}  ${dv}  ${plan_id}  ${status}  ${check_in_time}=${False}  ${enter_check}=${False}
-
     ${resp}  Search Plans Based on User  ${bc2_user_token}  ${False}
     Length Should Be  ${resp}  0
-
     ${resp}  Search Plans Based on User  ${sc_admin_no_need_token}  ${True}
     Length Should Be  ${resp}  0
-
     ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}
     ${plan}  Create Dictionary
     FOR  ${itr}  IN  @{resp}

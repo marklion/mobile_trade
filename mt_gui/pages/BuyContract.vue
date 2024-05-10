@@ -57,7 +57,7 @@ export default {
     },
     methods: {
         get_self_contract: async function (pageNo) {
-            let ret = await this.$send_req('/contract/get_all_buy', {
+            let ret = await this.$send_req('/customer/contract_get', {
                 pageNo: pageNo,
             });
             ret.contracts.forEach(item => {
@@ -77,7 +77,7 @@ export default {
             if (id == 0) {
                 return [];
             }
-            let ret = await this.$send_req('/contract/get_self_history', {
+            let ret = await this.$send_req('/customer/get_charge_history', {
                 contract_id: id,
                 pageNo: _pageNo
             });

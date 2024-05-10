@@ -66,14 +66,14 @@ export default {
                     company_id: this.focus_company,
                     module_id: need_delete[i]
                 };
-                await this.$send_req('/rbac/company_del_module', req);
+                await this.$send_req('/global/company_add', req);
             }
             for (let i = 0; i < this.valid_modules.length; i++) {
                 let req = {
                     company_id: this.focus_company,
                     module_id: this.valid_modules[i]
                 };
-                await this.$send_req('/rbac/company_add_module', req);
+                await this.$send_req('/global/company_add_module', req);
             }
 
             this.show_module_config = false;
@@ -103,7 +103,7 @@ export default {
         },
         get_company: async function (_pageNo) {
             let ret = [];
-            let res = await this.$send_req('/rbac/company_get_all', {
+            let res = await this.$send_req('/global/company_get_all', {
                 pageNo: _pageNo
             });
             res.all_company.forEach(ele => {
@@ -131,7 +131,7 @@ export default {
                 name: this.admin_config.name,
                 phone: this.admin_config.phone
             };
-            await this.$send_req('/rbac/reg_company_admin', req);
+            await this.$send_req('/global/reg_company_admin', req);
             this.show_admin_config = false;
             uni.startPullDownRefresh();
         },

@@ -90,6 +90,7 @@ let db_opt = {
             enter_time: { type: DataTypes.STRING },
             manual_close: { type: DataTypes.BOOLEAN, defaultValue: false },
             call_time: { type: DataTypes.STRING },
+            is_buy: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -112,6 +113,7 @@ let db_opt = {
             change_last_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
             expect_count: { type: DataTypes.FLOAT, defaultValue: 0 },
             need_sc: { type: DataTypes.BOOLEAN, defaultValue: false },
+            use_for_buy: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

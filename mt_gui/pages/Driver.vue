@@ -215,7 +215,7 @@ export default {
         },
         delete_sc_content: async function (e) {
             if (e.index == 1) {
-                await this.$send_req('/sc/delete_content', {
+                await this.$send_req('/global/driver_delete_sc_content', {
                     content_id: this.upload_sc.content_id,
                     open_id: this.driver_self.open_id
                 });
@@ -261,7 +261,7 @@ export default {
             if (!id) {
                 return [];
             }
-            let res = await this.$send_req('/sc/get_driver_req', {
+            let res = await this.$send_req('/global/driver_get_sc_req', {
                 pageNo: pageNo,
                 plan_id: id,
                 open_id: open_id
@@ -286,7 +286,7 @@ export default {
                     success() {
                         uni.getLocation({
                             success: async function (res) {
-                                await vue_this.$send_req('/plan/check_in', {
+                                await vue_this.$send_req('/global/driver_checkin', {
                                     plan_id: e.item.id,
                                     open_id: vue_this.driver_self.open_id,
                                     lat: res.latitude,
@@ -337,14 +337,14 @@ export default {
             }
             this.bind_req.phone_code = phone_param.code;
             this.bind_req.open_id_code = await this.$get_login_code();
-            await this.$send_req('/driver/update', this.bind_req);
+            await this.$send_req('/global/driver_update', this.bind_req);
             await this.driver_login();
             this.show_bind_id_card = false;
         },
         driver_login: async function () {
             let code = await this.$get_login_code();
             try {
-                this.driver_self = await this.$send_req('/driver/online', {
+                this.driver_self = await this.$send_req('/global/driver_online', {
                     open_id_code: code,
                 });
             } catch (error) {
@@ -363,7 +363,7 @@ export default {
             if (!is_online) {
                 return [];
             }
-            let res = await this.$send_req('/driver/self_plan', {
+            let res = await this.$send_req('/global/driver_get_order', {
                 pageNo: pageNo,
                 open_id: open_id,
             });

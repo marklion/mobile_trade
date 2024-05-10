@@ -150,7 +150,7 @@ export default {
             if (id == 0) {
                 return [];
             }
-            let ret = await this.$send_req('/contract/get_company_history', {
+            let ret = await this.$send_req('/cash/history', {
                 contract_id: id,
                 pageNo: _pageNo
             });
@@ -184,7 +184,7 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                await this.$send_req('/contract/charge', {
+                await this.$send_req('/cash/charge', {
                     contract_id: this.focus_item.id,
                     cash_increased: parseFloat(this.cash),
                     comment: this.comment
@@ -199,7 +199,7 @@ export default {
         },
         del_contract: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/contract/destroy', {
+                await this.$send_req('/sale_management/contract_destroy', {
                     contract_id: this.focus_item.id
                 });
                 uni.startPullDownRefresh();
@@ -212,7 +212,7 @@ export default {
         },
         unauth_user: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/contract/unauthorize', {
+                await this.$send_req('/sale_management/unauthorize_user', {
                     contract_id: this.focus_item.id,
                     phone: this.focus_user.phone,
                 });
@@ -222,7 +222,7 @@ export default {
         },
         add_auth: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/contract/authorize', {
+                await this.$send_req('/sale_management/authorize_user', {
                     contract_id: this.focus_item.id,
                     phone: this.phone
                 });
@@ -236,7 +236,7 @@ export default {
         },
         del_stuff: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/contract/del_stuff', {
+                await this.$send_req('/sale_management/contract_del_stuff', {
                     contract_id: this.focus_item.id,
                     stuff_id: this.focus_stuff.id
                 });
@@ -249,7 +249,7 @@ export default {
                 contract_id: this.focus_item.id,
                 stuff_id: item.id
             };
-            await this.$send_req('/contract/add_stuff', req);
+            await this.$send_req('/sale_management/contract_add_stuff', req);
             uni.startPullDownRefresh();
             this.show_add_stuff = false;
         },
@@ -274,7 +274,7 @@ export default {
             this.show_customers = false;
         },
         get_customers: async function (pageNo) {
-            let ret = await this.$send_req('/rbac/company_get_all', {
+            let ret = await this.$send_req('/global/company_get_all', {
                 pageNo: pageNo
             });
             return ret.all_company;
@@ -292,7 +292,7 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                await this.$send_req('/contract/make', this.new_contract);
+                await this.$send_req('/sale_management/contract_make', this.new_contract);
                 uni.startPullDownRefresh();
             }
             this.show_add_contract = false;
@@ -308,7 +308,7 @@ export default {
             this.focus_user = single_user;
         },
         get_sale_contract: async function (pageNo) {
-            let ret = await this.$send_req('/contract/get_all_sale', {
+            let ret = await this.$send_req('/sale_management/contract_get', {
                 pageNo: pageNo
             });
             ret.contracts.forEach(item => {

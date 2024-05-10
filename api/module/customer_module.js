@@ -79,7 +79,6 @@ module.exports = {
         get_stuff_on_sale: {
             name: '获取在售货物',
             description: '获取在售货物',
-
             is_write: false,
             is_get_api: true,
             params: {},
@@ -117,7 +116,6 @@ module.exports = {
         order_buy_create: {
             name: '创建采购订单',
             description: '创建采购订单',
-
             is_write: true,
             is_get_api: false,
             params: {

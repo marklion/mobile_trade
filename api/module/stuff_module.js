@@ -10,13 +10,13 @@ module.exports = {
         fetch: {
             name: '获取或更新物料',
             description: '获取或更新物料',
-
             is_write: true,
             is_get_api: false,
             params: {
                 name: { type: String, have_to: true, mean: '货物名称', example: '货物名称' },
                 comment: { type: String, have_to: false, mean: '备注', example: '备注' },
                 expect_count: { type: Number, have_to: false, mean: '预期数量', example: 1 },
+                use_for_buy:{type:Boolean, have_to:false, mean:'用于采购', example:false}
             },
             result: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -26,10 +26,11 @@ module.exports = {
                 next_price: { type: Number, mean: '下次单价', example: 1 },
                 change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
                 expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
+                use_for_buy:{type:Boolean, mean:'用于采购', example:false}
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count);
+                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy);
             }
         },
         get_all: {
@@ -49,7 +50,7 @@ module.exports = {
                         next_price: { type: Number, mean: '下次单价', example: 1 },
                         change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
                         expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
-
+                        use_for_buy: { type: Boolean, mean: '用于采购', example: false }
                     }
                 },
             },
@@ -135,7 +136,7 @@ module.exports = {
                 return { result: true };
             },
         },
-        get_price_history:{
+        get_price_history: {
             name: '获取调价历史',
             description: '获取调价历史',
 

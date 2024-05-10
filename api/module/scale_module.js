@@ -75,7 +75,6 @@ module.exports = {
         vehicle_enter: {
             name: '车辆进场',
             description: '车辆进场',
-
             is_write: true,
             is_get_api: false,
             params: {

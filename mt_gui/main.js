@@ -49,7 +49,7 @@ Vue.prototype.$send_req = function (_url, _data) {
 };
 Vue.prototype.$init_self = async function () {
   try {
-    let self_info = await Vue.prototype.$send_req('/rbac/self_info');
+    let self_info = await Vue.prototype.$send_req('/global/self_info');
     uni.setStorageSync('self_info', self_info);
   } catch (error) {
     uni.navigateTo({

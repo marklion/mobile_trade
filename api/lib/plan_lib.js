@@ -13,7 +13,7 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy) {
         let sq = db_opt.get_sq();
         let stuff_found = await _company.getStuff({ where: { name: _name } });
         if (stuff_found.length != 1) {
@@ -25,6 +25,9 @@ module.exports = {
         if (stuff_found.length == 1) {
             stuff_found[0].comment = _comment;
             stuff_found[0].expect_count = _expect_count;
+            if (use_for_buy) {
+                stuff_found[0].use_for_buy = use_for_buy;
+            }
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
@@ -33,9 +36,10 @@ module.exports = {
         }
         return ret;
     },
-    get_stuff_on_sale: async function (_buy_company, pageNo) {
+    get_stuff_need_buy: async function (_sale_company, pageNo) {
         let sq = db_opt.get_sq();
-        let stuffs = await sq.models.stuff.findAll({
+        let ret = await sq.models.stuff.findAndCountAll({
+            where: { use_for_buy: true },
             offset: pageNo * 20,
             limit: 20,
             order: [
@@ -43,7 +47,33 @@ module.exports = {
                 ['id', 'ASC'],
             ],
             include: [
-                { model: sq.models.company }
+                {
+                    model: sq.models.company, required: true, include: [
+                        {
+                            model: sq.models.contract, where: {
+                                saleCompanyId: _sale_company.id
+                            }, required: true, as:'buy_contracts'
+                        }
+                    ]
+                }
+            ]
+        });
+        return ret;
+    },
+    get_stuff_on_sale: async function (_buy_company, pageNo) {
+        let sq = db_opt.get_sq();
+        let stuffs = await sq.models.stuff.findAll({
+            where:{
+                use_for_buy: false,
+            },
+            offset: pageNo * 20,
+            limit: 20,
+            order: [
+                ['companyId', 'ASC'],
+                ['id', 'ASC'],
+            ],
+            include: [
+                { model: sq.models.company, }
             ]
         });
         let ret = [];
@@ -73,7 +103,7 @@ module.exports = {
             begin_time: being_time,
             end_time: end_time,
             number: number,
-            customer_code: customer_code
+            customer_code: customer_code,
         });
         await new_contract.setBuy_company(_buy_company);
         await new_contract.setSale_company(_sale_company);
@@ -143,7 +173,7 @@ module.exports = {
             { model: db_opt.get_sq().models.plan_history, order: [[db_opt.get_sq().fn('datetime', db_opt.get_sq().col('time')), 'ASC']], paranoid: false }
         ];
     },
-    make_plan_where_condition: function (_condition) {
+    make_plan_where_condition: function (_condition, search_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = {
             [db_opt.Op.and]: [
@@ -155,6 +185,9 @@ module.exports = {
                 }),
             ]
         };
+        if (search_buy) {
+            where_condition[db_opt.Op.and].push({ is_buy: true });
+        }
         if (_condition.status != undefined) {
             where_condition[db_opt.Op.and].push({ status: _condition.status });
         }
@@ -180,9 +213,9 @@ module.exports = {
 
         return ret;
     },
-    search_bought_plans: async function (_company, _pageNo, _condition) {
+    search_bought_plans: async function (_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
-        let where_condition = this.make_plan_where_condition(_condition);
+        let where_condition = this.make_plan_where_condition(_condition, is_buy);
         let search_condition = {
             order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
@@ -205,9 +238,9 @@ module.exports = {
         let count = await _company.countPlans({ where: where_condition });
         return { rows: result, count: count };
     },
-    search_sold_plans: async function (_company, _pageNo, _condition) {
+    search_sold_plans: async function (_company, _pageNo, _condition, is_buy=false) {
         let sq = db_opt.get_sq();
-        let where_condition = this.make_plan_where_condition(_condition);
+        let where_condition = this.make_plan_where_condition(_condition, is_buy);
 
         let stuff_or = [];
         let stuff = await _company.getStuff({ paranoid: false });
@@ -335,7 +368,9 @@ module.exports = {
                 plan.status = 1;
                 await plan.save();
                 await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
-                await this.verify_plan_pay(plan);
+                if (!plan.is_buy) {
+                    await this.verify_plan_pay(plan);
+                }
             }
             else {
                 throw { err_msg: plan.company.name + '的报计划人未授权' };
@@ -361,7 +396,12 @@ module.exports = {
         }
     },
     plan_enter: async function (_plan_id, _token) {
-        await this.action_in_plan(_plan_id, _token, 2, async (plan) => {
+        let tmp_plan = await this.get_single_plan_by_id(_plan_id);
+        let status_req = 2;
+        if (tmp_plan && tmp_plan.is_buy){
+            status_req = 1;
+        }
+        await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             if (plan.enter_time && plan.enter_time.length > 0) {
                 throw { err_msg: '已进厂' };
             }

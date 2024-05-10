@@ -42,7 +42,7 @@ export default {
             });
         },
         get_stuff2buy: async function (pageNo) {
-            let res = await this.$send_req('/stuff/get_stuff_on_sale', {
+            let res = await this.$send_req('/customer/get_stuff_on_sale', {
                 pageNo: pageNo,
             });
             return res.stuff;

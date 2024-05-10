@@ -41,7 +41,7 @@ export default {
     methods: {
         pass_vehicle: async function (e) {
             if (e.index == 1) {
-                await this.$send_req('/plan/cancel_check_in', {
+                await this.$send_req('/scale/cancel_check_in', {
                     plan_id: this.focus_plan_id
                 })
                 uni.startPullDownRefresh();
@@ -63,7 +63,7 @@ export default {
             return ret;
         },
         get_wait_que: async function (pageNo) {
-            let ret = await this.$send_req('/plan/wait_que', {
+            let ret = await this.$send_req('/scale/wait_que', {
                 pageNo: pageNo
             });
             ret.plans.forEach(ele => {
@@ -83,7 +83,7 @@ export default {
             });
         },
         call_vehicle: async function (item) {
-            await this.$send_req('/plan/call_vehicle', {
+            await this.$send_req('/scale/call_vehicle', {
                 plan_id: item.id
             });
             uni.startPullDownRefresh();

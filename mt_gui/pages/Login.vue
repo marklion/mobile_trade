@@ -47,7 +47,7 @@ export default {
             this.cur_tab = e.index;
         },
         submit: async function () {
-            let res = await this.$send_req('/rbac/login_password', this.formData);
+            let res = await this.$send_req('/global/pwd_login', this.formData);
             uni.setStorageSync('token', res.token);
             await this.$init_self();
             uni.reLaunch({
@@ -56,7 +56,7 @@ export default {
         },
         wx_login: async function () {
             try {
-                let res = await this.$send_req('/rbac/login', {
+                let res = await this.$send_req('/global/wx_login', {
                     login_code: await this.$get_login_code()
                 });
                 uni.setStorageSync('token', res.token);

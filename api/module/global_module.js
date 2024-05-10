@@ -91,17 +91,25 @@ module.exports = {
                 open_id: { type: String, have_to: true, mean: '司机open_id', example: 'oq5s-4k1d-4k1d-4k1d' }
             },
             result: {
-
                 plans: {
                     type: Array, mean: '计划', explain: api_param_result_define.plan_detail_define
                 },
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
+                let plan_get_where = {
+                    [db_opt.Op.or]: [{
+                        status: 1,
+                        is_buy: true,
+                    },{
+                        status: 2,
+                        is_buy: false,
+                    }],
+                };
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 if (driver) {
                     let ret = { plans: [], total: 0 };
-                    ret.plans = await driver.getPlans({ where: { status: 2 }, limit: 20, offset: body.pageNo * 20, include: plan_lib.plan_detail_include() });
+                    ret.plans = await driver.getPlans({ where: plan_get_where, limit: 20, offset: body.pageNo * 20, include: plan_lib.plan_detail_include() });
                     for (let index = 0; index < ret.plans.length; index++) {
                         const element = ret.plans[index];
                         let wc = await plan_lib.get_wait_count(element);
@@ -224,7 +232,7 @@ module.exports = {
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
-                if (driver && plan && plan.status == 2 && await driver.hasPlan(plan)) {
+                if (driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     if (await sc_lib.plan_passed_sc(body.plan_id)) {
                         if (await plan_lib.check_if_never_checkin(driver)) {
                             if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
@@ -583,9 +591,10 @@ module.exports = {
                     user.open_id = open_id;
                     user.name = body.name;
                     user.email = body.email;
-                    let cust_role = await rbac_lib.add_role('客户', '客户', false, company);
+                    let cust_role = await rbac_lib.add_role('一般用户', '一般用户', false, company);
                     await rbac_lib.connect_user2role(user.id, cust_role.id);
                     await rbac_lib.connect_role2module(cust_role.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'customer' } })).id);
+                    await rbac_lib.connect_role2module(cust_role.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'supplier' } })).id);
                     let old_user = await sq.models.rbac_user.findOne({
                         where: {
                             [db_opt.Op.and]: [{ open_id: open_id }, { id: { [db_opt.Op.ne]: user.id } }]

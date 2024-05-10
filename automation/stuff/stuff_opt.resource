@@ -12,6 +12,7 @@ ${sc_admin_no_need_token}
 ${bc1_user_token}
 ${bc2_user_token}
 ${test_stuff}
+${order_stuff}
 *** Keywords ***
 Prepare Companies And Users
     ${buy_company1}  Create One Company  bc1
@@ -24,11 +25,13 @@ Prepare Companies And Users
     Add Module To Company  ${sale_company}[id]  scale
     Add Module To Company  ${sale_company}[id]  sc
     Add Module To Company  ${sale_company}[id]  sale_management
+    Add Module To Company  ${sale_company}[id]  buy_management
     Add Module To User  ${sc_admin_token}  1234  stuff
     Add Module To User  ${sc_admin_token}  1234  cash
     Add Module To User  ${sc_admin_token}  1234  scale
     Add Module To User  ${sc_admin_token}  1234  sc
     Add Module To User  ${sc_admin_token}  1234  sale_management
+    Add Module To User  ${sc_admin_token}  1234  buy_management
     ${no_need_sale_company}  Create One Company  sc_no_need
     Company Set Script  ${no_need_sale_company}[id]  normal
     ${sc_admin_no_need_token}  Login As Admin Of Company  ${no_need_sale_company}[id]  12341  sc_admin_no_need
@@ -36,10 +39,12 @@ Prepare Companies And Users
     Add Module To Company  ${no_need_sale_company}[id]  cash
     Add Module To Company  ${no_need_sale_company}[id]  scale
     Add Module To Company  ${no_need_sale_company}[id]  sale_management
+    Add Module To Company  ${no_need_sale_company}[id]  buy_management
     Add Module To User  ${sc_admin_no_need_token}  12341  stuff
     Add Module To User  ${sc_admin_no_need_token}  12341  cash
     Add Module To User  ${sc_admin_no_need_token}  12341  scale
     Add Module To User  ${sc_admin_no_need_token}  12341  sale_management
+    Add Module To User  ${sc_admin_no_need_token}  12341  buy_management
     ${bc1_user_token}  New User Login  5678  ${buy_company1}[name]  2233  bu1
     ${bc2_user_token}  New User Login  9987  ${buy_company2}[name]  1123  bu2
     Set Suite Variable  ${buy_company1}
@@ -60,6 +65,12 @@ Add A Stuff To Sale
     ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}
     ${resp}  Req to Server  /stuff/fetch  ${token}  ${req}
     RETURN  ${resp}
+
+Add A Stuff To Buy
+    [Arguments]  ${stuff_name}  ${stuff_comment}  ${expect_count}=${22}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}  use_for_buy=${True}
+    ${resp}  Req to Server  /stuff/fetch  ${token}  ${req}
+    RETURN  ${resp}
 Change Stuff Price
     [Arguments]  ${stuff_id}  ${new_price}  ${to_plan}=${False}  ${comment}=test_change  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  price=${new_price}  to_plan=${to_plan}  comment=${comment}
@@ -75,10 +86,20 @@ Add A Company As Customer
     ${req}  Create Dictionary  customer_id=${company_id}
     Req to Server  /sale_management/contract_make  ${token}  ${req}
 
+Add A Company As Supplier
+    [Arguments]  ${company_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  supplier_id=${company_id}
+    Req to Server  /buy_management/contract_make  ${token}  ${req}
+
 Del A Customer Contract
     [Arguments]  ${contract_id}
     ${req}  Create Dictionary  contract_id=${contract_id}
     Req to Server  /sale_management/contract_destroy  ${sc_admin_token}  ${req}
+
+Del A Supplier Contract
+    [Arguments]  ${contract_id}
+    ${req}  Create Dictionary  contract_id=${contract_id}
+    Req to Server  /buy_management/contract_destroy  ${sc_admin_token}  ${req}
 
 Add A Stuff To Contract
     [Arguments]  ${stuff_name}  ${customer_name}  ${token}=${sc_admin_token}
@@ -157,7 +178,9 @@ Get Cash Of A Company
 Prepare Sale and Buy
     Prepare Companies And Users
     Add A Stuff To Sale  lng  lng_comment
+    Add A Stuff To Buy  LT  lt_comment
     Add A Company As Customer  ${buy_company1}[id]
+    Add A Company As Supplier  ${buy_company1}[id]
     Add A Stuff To Contract  lng  bc1
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
@@ -165,6 +188,8 @@ Prepare Sale and Buy
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
     Authorize User to Contract  bc1  5678
+    @{stuffs_found}  Req Get to Server  /supplier/get_stuff_need_buy  ${bc1_user_token}  stuff
+    Set Suite Variable  ${order_stuff}  ${stuffs_found}[0]
 
 Authorize User to Contract
     [Arguments]  ${company_name}  ${user_phone}  ${token}=${sc_admin_token}
@@ -205,6 +230,20 @@ Clean Up Sale and Buy
     Contract Reset
     Clean Up Companies And Users
 
+Create A Order
+    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${order_stuff}[id]
+    ${req}  Create Dictionary
+    ...    behind_vehicle_id=${bv_id}
+    ...    main_vehicle_id=${mv_id}
+    ...    driver_id=${dv_id}
+    ...    comment=${comment}
+    ...    drop_address=${drop_address}
+    ...    plan_time=${plan_time}
+    ...    stuff_id=${stuff_id}
+    ...    price=${23}
+    ${resp}  Req to Server  /supplier/order_sale_create  ${token}  ${req}
+    RETURN  ${resp}
+
 Create A Plan
     [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${test_stuff}[id]
     ${req}  Create Dictionary
@@ -218,7 +257,10 @@ Create A Plan
     ...    use_for=${use_for}
     ${resp}  Req to Server  /customer/order_buy_create  ${token}  ${req}
     RETURN  ${resp}
-
+Confirm A Order
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /buy_management/order_buy_confirm  ${token}  ${req}
 Confirm A Plan
     [Arguments]  ${plan}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]
@@ -271,6 +313,16 @@ Search behind Vehicle by Index
     [Arguments]  ${itr}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  plate=bv_${itr}
     ${resp}  Req to Server  /customer/fetch_vehicle  ${token}  ${req}
+    RETURN  ${resp}
+Search Orders Based on User
+    [Arguments]  ${token}  ${is_sale}=${False}  ${status}=${null}
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${status}
+    ${url}  Set Variable  /supplier/order_sale_search
+    ${data_name}  Set Variable  plans
+    IF  $is_sale == False
+        ${url}  Set Variable  /buy_management/order_search
+    END
+    ${resp}  Req Get to Server  ${url}  ${token}  ${data_name}  ${-1}  &{req}
     RETURN  ${resp}
 Search Plans Based on User
     [Arguments]  ${token}  ${is_sale}=${True}  ${status}=${null}

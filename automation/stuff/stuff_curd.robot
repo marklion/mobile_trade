@@ -24,8 +24,16 @@ Contract Maintain
     [Teardown]  Contract Reset
     Add A Company As Customer  ${buy_company1}[id]
     Add A Company As Customer  ${buy_company2}[id]
+    Add A Company As Supplier  ${buy_company1}[id]
+    Add A Company As Supplier  ${buy_company2}[id]
     ${req}  Create Dictionary
     ${found_contracts}  Req Get to Server  /customer/contract_get  ${bc1_user_token}  contracts
+    Length Should Be  ${found_contracts}  1
+    ${found_contracts}  Req Get to Server  /supplier/contract_get  ${bc1_user_token}  contracts
+    Length Should Be  ${found_contracts}  1
+    ${found_contracts}  Req Get to Server  /customer/contract_get  ${bc2_user_token}  contracts
+    Length Should Be  ${found_contracts}  1
+    ${found_contracts}  Req Get to Server  /supplier/contract_get  ${bc2_user_token}  contracts
     Length Should Be  ${found_contracts}  1
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  2
@@ -34,8 +42,21 @@ Contract Maintain
     Length Should Be  ${found_contracts}  1
     ${found_contracts}  Req Get to Server  /customer/contract_get  ${bc1_user_token}  contracts
     Length Should Be  ${found_contracts}  0
-    ${found_contracts}  Req Get to Server  /customer/contract_get  ${bc2_user_token}  contracts
+    ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
+    Length Should Be  ${found_contracts}  2
+    Del A Supplier Contract  ${found_contracts[0]}[id]
+    ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  1
+    ${found_contracts}  Req Get to Server  /supplier/contract_get  ${bc2_user_token}  contracts
+    Length Should Be  ${found_contracts}  1
+
+Stuff For Buy
+    [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset
+    Add A Company As Supplier  ${buy_company1}[id]
+    Add A Stuff To Buy  bt1  bt1_name
+    @{stuffs_found}  Req Get to Server  /supplier/get_stuff_need_buy  ${bc1_user_token}  stuff
+    Length Should Be  ${stuffs_found}  1
+
 
 Stuff via Contract Maintain
     [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset

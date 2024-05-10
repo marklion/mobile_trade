@@ -25,7 +25,7 @@ def req_to_server(url, req, token=None):
     return result
 
 def login(phone):
-    token = req_to_server('/rbac/login_password', {"phone": phone, "password":"Mobile_P@ssw0rd_Trade"}, '')["token"]
+    token = req_to_server('/global/pwd_login', {"phone": phone, "password":"Mobile_P@ssw0rd_Trade"}, '')["token"]
     return token
 
 def prepare_api():
@@ -82,7 +82,7 @@ def company_move():
             "zczh_back_end":item[22],
             "zczh_back_token":item[23],
         }
-        company_id = req_to_server('/rbac/company_add', req)["id"]
+        company_id = req_to_server('/global/company_add', req)["id"]
         if item[4] == 1:
             all_modules = [2,3,4,5,6,7,8,9,10]
             for single_module in all_modules:
@@ -90,7 +90,7 @@ def company_move():
                     "company_id":company_id,
                     "module_id":single_module,
                 }
-                req_to_server('/rbac/company_add_module', req)
+                req_to_server('/global/company_add_module', req)
 
 def clean_user():
     records = get_data_from_orig_db("SELECT * FROM userinfo_table;")
@@ -116,7 +116,7 @@ def user_move():
             "email":single_user[6],
             "company_name":company_name,
         }
-        user_token = req_to_server('/rbac/fetch_user', req)["token"]
+        user_token = req_to_server('/global/fetch_user', req)["token"]
         new_comp = get_data_from_cur_db("select * from company where name = '%s'" % company_name);
         new_comp_id = 0
         if (len(new_comp) == 1):
@@ -129,7 +129,7 @@ def user_move():
                 "name":single_user[1],
                 "phone":single_user[3],
             }
-            req_to_server('/rbac/reg_company_admin', req)
+            req_to_server('/global/reg_company_admin', req)
             role_id = req_to_server('/rbac/role_get_all', {}, user_token)["all_role"][0]["id"]
             all_modules = [2,3,4,5,6,7,8,9,10]
             for single_module in all_modules:
@@ -180,7 +180,7 @@ def contract_move():
         user_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE belong_company_ext_key = " + str(single_contract[6]) + ";")[0][3]
         customer_id = get_data_from_cur_db("SELECT * FROM company WHERE name = '%s';" % buy_company_name)[0][0]
         user_token = login(user_phone)
-        resp = req_to_server('/contract/make', {
+        resp = req_to_server('/sale_management/contract_make', {
             "customer_id":customer_id,
             "begin_time":single_contract[1],
             "end_time":single_contract[2],
@@ -191,11 +191,11 @@ def contract_move():
         try:
             customer_user_old_id = get_data_from_orig_db( "SELECT * FROM contract_user_table WHERE belong_contract_ext_key = " + str(single_contract[0]) + ";")[0][2]
             customer_user_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE PRI_ID = " + str(customer_user_old_id) + ";")[0][3]
-            req_to_server('/contract/authorize', {
+            req_to_server('/sale_management/authorize_user', {
                 "phone":customer_user_phone,
                 "contract_id":contract_id,
             }, user_token)
-            req_to_server('/contract/charge', {
+            req_to_server('/cash/charge', {
                 "cash_increased":single_contract[8],
                 "comment":'导入',
                 "contract_id":contract_id,
@@ -208,7 +208,7 @@ def contract_move():
                 old_stuff = get_data_from_orig_db("SELECT * FROM stuff_type_table WHERE PRI_ID = " + str(single_stuff[1]) + ";")[0][1]
                 sales_id = get_data_from_cur_db("SELECT * FROM company WHERE name = '%s';" % sale_company_found[0][1])[0][0]
                 stuff_id = get_data_from_cur_db("SELECT * FROM stuff WHERE name = '%s' AND companyId == %d;" % (old_stuff, sales_id))[0][0]
-                req_to_server('/contract/add_stuff', {
+                req_to_server('/sale_management/contract_add_stuff', {
                     "contract_id":contract_id,
                     "stuff_id":stuff_id,
                 }, user_token)
@@ -229,13 +229,13 @@ def move_closed_plans():
             ar_single_vehicles = get_data_from_orig_db("select * from archive_vichele_plan_table where belong_plan_ext_key == %d AND finish == 1;" % ar_plan[0])
             for single_v in ar_single_vehicles:
                 try:
-                    mvid = req_to_server('/vehicle/fetch', {
+                    mvid = req_to_server('/customer/fetch_vehicle', {
                         "plate": single_v[1]
                     })["id"]
-                    bvid = req_to_server('/vehicle/fetch', {
+                    bvid = req_to_server('/customer/fetch_vehicle', {
                         "plate": single_v[2]
                     })["id"]
-                    did = req_to_server('/driver/fetch', {
+                    did = req_to_server('/customer/fetch_driver', {
                         "name": single_v[3],
                         "phone": single_v[4]
                     })["id"]
@@ -258,20 +258,20 @@ def move_closed_plans():
                     }
                     sale_phone = get_data_from_orig_db( "SELECT * FROM userinfo_table WHERE belong_company_ext_key = " + str(old_sale_id)+ ";")[0][3]
                     sale_token = login(sale_phone)
-                    plan_id = req_to_server('/plan/create_single_plan', create_req, user_token)["id"]
+                    plan_id = req_to_server('/customer/order_buy_create', create_req, user_token)["id"]
                     old_price = ar_plan[6]
                     get_data_from_cur_db("update plan set unit_price = 0 where id == %d;" % plan_id)
-                    req_to_server('/plan/confirm_single_plan', {
+                    req_to_server('/sale_management/order_sale_confirm', {
                         "plan_id": plan_id
                     }, sale_token)
                     get_data_from_cur_db("update plan set unit_price = %f where id == %d;" % (old_price,plan_id))
                     contract = get_data_from_cur_db("select * from contract where buyCompanyId = %d AND saleCompanyId = %s;" % (buy_id, sale_id))[0][0]
-                    req_to_server('/contract/charge', {
+                    req_to_server('/cash/charge', {
                         "cash_increased": float(old_price) * float(single_v[7]),
                         "comment": "导入计划预存",
                         "contract_id": contract
                     }, sale_token)
-                    req_to_server('/plan/deliver', {
+                    req_to_server('/scale/deliver', {
                         "plan_id": plan_id,
                         "count": float( single_v[7]),
                         "m_time":single_v[9],
@@ -334,6 +334,9 @@ def sc_content_move(id, orig_id):
                 vid = v_found[0][0]
             elif len(d_found) == 1:
                 did = d_found[0][0]
+            check_time = cur_time_str
+            if sc_content[5] == 0:
+                check_time = ''
             add_sql = "insert into sc_content values (null, '%s', '%s', '%s', %d, '%s', '%s', '%s', '%s', '%s', null, %d, %d, %d);" % (
                 sc_content[3],
                 sc_content[2],
@@ -341,7 +344,7 @@ def sc_content_move(id, orig_id):
                 sc_content[5],
                 sc_content[8],
                 sc_content[7],
-                cur_time_str,
+                check_time,
                 cur_time_str,
                 cur_time_str,
                 id,
@@ -357,11 +360,11 @@ def base_move():
     all_orig_v.extend(get_data_from_orig_db("select * from vichele_behind_table group by number;"))
     all_orig_d = get_data_from_orig_db("select * from driver_table group by phone;")
     for sv in all_orig_v:
-        req_to_server('/vehicle/fetch', {
+        req_to_server('/customer/fetch_vehicle', {
             "plate": sv[1]
         })
     for sd in all_orig_d:
-        req_to_server('/driver/fetch', {
+        req_to_server('/customer/fetch_driver', {
             "phone": sd[2],
             "name": sd[1]
         })

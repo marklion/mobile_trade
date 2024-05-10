@@ -29,7 +29,7 @@ export default {
         submit: async function (phone_param) {
             this.formData.phone_code = phone_param.code;
             this.formData.open_id_code = await this.$get_login_code();
-            let res = await this.$send_req('/rbac/fetch_user', this.formData);
+            let res = await this.$send_req('/global/fetch_user', this.formData);
             uni.setStorageSync('token', res.token);
             uni.reLaunch({
                 url: '/pages/Home'

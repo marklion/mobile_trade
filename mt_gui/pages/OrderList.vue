@@ -26,7 +26,7 @@
         <fui-button slot="right-icon" text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
     </u-cell>
     <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
-    <module-filter v-if="seg_index == 0" require_module="plan">
+    <module-filter v-if="seg_index == 0" require_module="sale_management">
         <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="74vh" search_key="search_cond" :fetch_params="[plan_filter]">
             <view v-for="item in sp_data2show" :key="item.id">
                 <u-cell :icon="get_status_icon(item)" :title="item.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
@@ -84,14 +84,12 @@
                 <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
                 <u-cell :title="'当前状态：' + plan_status">
                     <view slot="value" style="display:flex;">
-                        <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm('/plan/cancel', '取消')"></fui-button>
-                        <module-filter require_module="plan" style="display:flex;">
-                            <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm('/plan/confirm_single_plan', '确认')"></fui-button>
-                            <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm('/plan/rollback', '回退')"></fui-button>
-                            <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm('/plan/close', '关闭')"></fui-button>
-                        </module-filter>
-                        <module-filter require_module="cash">
-                            <fui-button v-if="focus_plan.status == 1" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/plan/pay', '验款')"></fui-button>
+                        <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm('/customer/order_buy_cancel', '取消')"></fui-button>
+                        <module-filter require_module="sale_management" style="display:flex;">
+                            <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm('/sale_management/order_sale_confirm', '确认')"></fui-button>
+                            <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm('/sale_management/order_rollback', '回退')"></fui-button>
+                            <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm('/sale_management/close', '关闭')"></fui-button>
+                            <fui-button v-if="focus_plan.status == 1" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
                         </module-filter>
                         <module-filter require_module="scale">
                             <fui-button v-if="focus_plan.status == 2" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
@@ -429,7 +427,7 @@ export default {
     },
     methods: {
         batch_confirm: async function () {
-            await this.$send_req('/plan/batch_confirm', this.plan_filter);
+            await this.$send_req('/sale_management/order_batch_confirm', this.plan_filter);
             this.refresh_plans();
         },
         close_pick_plan_date: function () {
@@ -461,7 +459,7 @@ export default {
         },
         delete_sc_content: async function (e) {
             if (e.index == 1) {
-                await this.$send_req('/sc/delete_content', {
+                await this.$send_req('/global/driver_delete_sc_content', {
                     content_id: this.upload_sc.content_id,
                     open_id: ''
                 });
@@ -591,7 +589,7 @@ export default {
                 this.deliver_req.count = parseFloat(this.deliver_req.count);
                 this.deliver_req.p_weight = parseFloat(this.deliver_req.p_weight);
                 this.deliver_req.m_weight = parseFloat(this.deliver_req.m_weight);
-                await this.$send_req('/plan/deliver', this.deliver_req);
+                await this.$send_req('/scale/deliver', this.deliver_req);
                 this.show_plan_detail = false;
                 this.deliver_req = {
                     count: "",
@@ -694,7 +692,7 @@ export default {
             this.refresh_plans();
         },
         get_buy_plans: async function (pageNo, [plan_filter]) {
-            let res = await this.$send_req('/plan/get_bought_plans', {
+            let res = await this.$send_req('/customer/order_buy_search', {
                 ...plan_filter,
                 pageNo: pageNo,
             });
@@ -706,7 +704,7 @@ export default {
             return ret;
         },
         get_sold_plans: async function (pageNo, [plan_filter]) {
-            let res = await this.$send_req('/plan/get_sold_plans', {
+            let res = await this.$send_req('/sale_management/order_search', {
                 ...plan_filter,
                 pageNo: pageNo,
             });
@@ -720,9 +718,9 @@ export default {
         init_number_of_sold_plan: async function () {
             let url = '';
             if (this.seg_index == 1) {
-                url = '/plan/get_bought_plans';
+                url = '/customer/order_buy_search';
             } else if (this.seg_index == 0) {
-                url = '/plan/get_sold_plans';
+                url = '/sale_management/order_search';
             }
             if (url) {
                 for (let i = 0; i < 3; i++) {
@@ -752,7 +750,7 @@ export default {
                 return ele.name
             })
             if (mods.indexOf('stuff') != -1) {
-                let ret = await this.$send_req('/contract/get_all_sale', {
+                let ret = await this.$send_req('/sale_management/contract_get', {
                     pageNo: pageNo
                 });
                 ret.contracts.forEach(item => {
@@ -782,7 +780,7 @@ export default {
             this.seg_show = true;
             this.seg_index = 0;
         } else {
-            if (modules.indexOf('plan') != -1) {
+            if (modules.indexOf('sale_management') != -1) {
                 this.seg_index = 0;
             } else {
                 this.seg_index = 1;

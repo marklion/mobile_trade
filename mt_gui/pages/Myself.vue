@@ -15,7 +15,7 @@
         <fui-list-cell arrow @click="rebind">
             重新绑定信息
         </fui-list-cell>
-        <module-filter require_module="config">
+        <module-filter require_module="rbac">
             <fui-list-cell arrow @click="config_role">
                 角色配置
             </fui-list-cell>
@@ -23,7 +23,7 @@
         <module-filter require_module="global">
             <u-cell title="超级管理员" isLink url="/pages/Admin"></u-cell>
         </module-filter>
-        <module-filter require_module="plan">
+        <module-filter require_module="sale_management">
             <fui-list-cell arrow @click="show_checkin_config = true">
                 司机排号设置
             </fui-list-cell>
@@ -69,7 +69,7 @@ export default {
     },
     methods: {
         get_checkin_config: async function () {
-            let res = await this.$send_req('/plan/get_checkin_config');
+            let res = await this.$send_req('/sale_management/get_checkin_config');
             this.checkin_config = res;
         },
         config_checkin: async function (e) {
@@ -94,7 +94,7 @@ export default {
                 this.checkin_config.lat = parseFloat(this.checkin_config.lat);
                 this.checkin_config.lon = parseFloat(this.checkin_config.lon);
                 this.checkin_config.distance_limit = parseFloat(this.checkin_config.distance_limit);
-                await this.$send_req('/plan/set_checkin_config', this.checkin_config);
+                await this.$send_req('/sale_management/set_checkin_config', this.checkin_config);
             }
             await this.get_checkin_config();
             this.show_checkin_config = false;
@@ -104,7 +104,7 @@ export default {
                 let req = {
                     new_password: this.new_pwd
                 };
-                await this.$send_req('/rbac/change_password', req);
+                await this.$send_req('/global/change_password', req);
                 uni.showToast({
                     title: '修改成功',
                     icon: 'success'

@@ -119,7 +119,7 @@ export default {
                 this.upload_req.open_id = this.open_id;
                 this.upload_req.plan_id = this.plan_id;
                 this.upload_req.req_id = this.req_id;
-                await this.$send_req('/sc/upload_sc_content', this.upload_req);
+                await this.$send_req('/global/driver_upload_sc_content', this.upload_req);
                 this.$emit('uploaded')
                 this.upload_req = {
                     "attachment": "",
