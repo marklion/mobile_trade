@@ -8,7 +8,6 @@ module.exports = {
         cancel_check_in: {
             name: '取消排号',
             description: '取消排号',
-
             is_write: true,
             is_get_api: false,
             params: {

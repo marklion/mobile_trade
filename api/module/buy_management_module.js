@@ -131,5 +131,39 @@ module.exports = {
                 return { result: true };
             },
         },
+        close: {
+            name: '关闭采购订单',
+            description: '关闭采购订单',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    await plan_lib.plan_close(plan, (await rbac_lib.get_user_by_token(token)).name, false);
+                });
+                return { result: true };
+            }
+        },
+        order_rollback: {
+            name: '采购订单回滚',
+            description: '采购订单回滚',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.plan_rollback(body.plan_id, token);
+                return { result: true };
+            }
+        },
     }
 }

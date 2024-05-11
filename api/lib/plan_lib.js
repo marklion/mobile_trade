@@ -417,8 +417,14 @@ module.exports = {
                 throw { err_msg: '已关闭,无法回退' };
             }
             if (plan.status == 1) {
-                plan.status = 0;
-                rollback_content = '回退确认';
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    plan.enter_time = '';
+                    rollback_content = '回退进厂';
+                }
+                else {
+                    plan.status = 0;
+                    rollback_content = '回退确认';
+                }
             }
             else if (plan.status == 2) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
@@ -431,8 +437,13 @@ module.exports = {
                 }
             }
             else if (plan.status == 3) {
-                await this.plan_undo_cost(plan);
-                plan.status = 2;
+                if (plan.is_buy) {
+                    plan.status = 1;
+                }
+                else {
+                    await this.plan_undo_cost(plan);
+                    plan.status = 2;
+                }
                 plan.count = 0;
                 plan.p_time = '';
                 plan.p_weight = 0;
@@ -523,7 +534,7 @@ module.exports = {
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time) {
         let tmp_plan = await this.get_single_plan_by_id(_plan_id);
         let status_req = 2;
-        if (tmp_plan && tmp_plan.is_buy){
+        if (tmp_plan && tmp_plan.is_buy) {
             status_req = 1;
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {

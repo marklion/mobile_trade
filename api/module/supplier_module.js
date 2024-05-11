@@ -108,6 +108,30 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        order_sale_cancel: {
+            name: '取消销售单',
+            description: '取消销售单',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '单据ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
+            },
+            func: async function (body, token) {
+                let opt_company = await rbac_lib.get_company_by_token(token);
+                let user = await rbac_lib.get_user_by_token(token);
+                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                if (user && plan && opt_company && await opt_company.hasPlan(plan) && plan.status == 0) {
+                    await plan_lib.plan_close(plan, user.name, true);
+                }
+                else {
+                    throw { err_msg: '无权限' };
+                }
+                return { result: true };
+            },
+        },
         get_stuff_need_buy: {
             name: '获取待购货物',
             description: '获取待购买货物',

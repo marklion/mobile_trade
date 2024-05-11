@@ -293,6 +293,10 @@ Deliver A Plan
     [Arguments]  ${plan}  ${count}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
     Req to Server  /scale/deliver  ${sc_admin_token}  ${req}
+Rollback Order
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /buy_management/order_rollback  ${sc_admin_token}  ${req}
 Rollback Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
@@ -359,11 +363,20 @@ Update A Plan
     Set To Dictionary  ${update_info}  plan_id=${plan_id}
     Req to Server  /customer/order_buy_update  ${bc1_user_token}  ${update_info}
 
+Cancel A Order
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /supplier/order_sale_cancel  ${bc1_user_token}  ${req}
+
 Cancel A Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /customer/order_buy_cancel  ${bc1_user_token}  ${req}
 
+Close A Order
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /buy_management/close  ${sc_admin_token}  ${req}
 Close A Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]

@@ -31,7 +31,6 @@ Update Plan While Created
     Should Be Equal As Strings  ${resp}[0][driver][phone]  ${dv_new}[phone]
     Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  ${mv_new}[plate]
     Check New Status And History  ${plan}  0  改为  def
-
 Cancel While Created
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -40,7 +39,9 @@ Cancel While Created
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Cancel A Plan  ${plan}
     Check New Status And History  ${plan}  3  取消
-
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Cancel A Order  ${plan}
+    Check New Status And History  ${plan}  3  取消
 Close While Created
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -49,7 +50,9 @@ Close While Created
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Close A Plan  ${plan}
     Check New Status And History  ${plan}  3  关闭
-
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Close A Order  ${plan}
+    Check New Status And History  ${plan}  3  关闭
 Disabled Action While Created
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -60,6 +63,11 @@ Disabled Action While Created
     Rollback Failed  ${plan}
     Enter Failed  ${plan}
     Deliver Failed  ${plan}
+    Check In Failed  ${plan}  ${dv}[phone]
+    Cancel Check In Failed  ${plan}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Order Rollback Failed  ${plan}
+    Enter Failed  ${plan}
     Check In Failed  ${plan}  ${dv}[phone]
     Cancel Check In Failed  ${plan}
 
@@ -78,6 +86,12 @@ Rollback Plan While Confirmed
     ${resp}  Search Plans Based on User  ${sc_admin_token}
     Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  ${bv}[plate]
     Should Be Equal As Strings  ${resp}[0][comment]  new_comment
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Rollback Order  ${plan}
+    Check New Status And History  ${plan}  0  回退  确认
+    ${resp}  Search Orders Based on User  ${sc_admin_token}
+    Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  ${bv}[plate]
 
 Close While Confirmed
     [Teardown]  Plan Reset
@@ -87,6 +101,10 @@ Close While Confirmed
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
     Close A Plan  ${plan}
+    Check New Status And History  ${plan}  3  关闭
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Close A Order  ${plan}
     Check New Status And History  ${plan}  3  关闭
 
 Disabled Action While Confirmed
@@ -103,6 +121,10 @@ Disabled Action While Confirmed
     Deliver Failed  ${plan}
     Cancel Failed  ${plan}
     Cancel Check In Failed  ${plan}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Order Confirm Failed  ${plan}
+    Order Cancel Failed  ${plan}
 
 Rollback While Payed
     [Teardown]  Plan Reset
@@ -168,6 +190,12 @@ Rollback While Entered
     Rollback Plan  ${plan}
     Check New Status And History  ${plan}  2  回退  进厂
     Plan Enter  ${plan}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Plan Enter  ${plan}
+    Rollback Order  ${plan}
+    Check New Status And History  ${plan}  1  回退  进厂
+    Plan Enter  ${plan}
 
 Disabled Action While Entered
     [Teardown]  Plan Reset
@@ -185,6 +213,14 @@ Disabled Action While Entered
     Cancel Failed  ${plan}
     Close Failed  ${plan}
     Cancel Check In Failed  ${plan}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Plan Enter  ${plan}
+    Order Confirm Failed  ${plan}
+    Enter Failed  ${plan}
+    Order Cancel Failed  ${plan}
+    Order Close Failed  ${plan}
+    Cancel Check In Failed  ${plan}
 
 Rollback While Delivered
     [Teardown]  Plan Reset
@@ -200,6 +236,12 @@ Rollback While Delivered
     Check New Status And History  ${plan}  2  回退  发车
     ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Should Be Equal As Numbers  ${new_balance}  ${cur_balance}
+    Deliver A Plan  ${plan}  ${20}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Deliver A Plan  ${plan}  ${20}
+    Rollback Order  ${plan}
+    Check New Status And History  ${plan}  1  回退  发车
     Deliver A Plan  ${plan}  ${20}
 
 Disabled Action While Delivered
@@ -220,6 +262,16 @@ Disabled Action While Delivered
     Deliver Failed  ${plan}
     Cancel Failed  ${plan}
     Close Failed  ${plan}
+    Cancel Check In Failed  ${plan}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Deliver A Plan  ${plan}  ${20}
+    Order Confirm Failed  ${plan}
+    Check In Failed  ${plan}  ${dv}[phone]
+    Enter Failed  ${plan}
+    Deliver Failed  ${plan}
+    Order Cancel Failed  ${plan}
+    Order Close Failed  ${plan}
     Cancel Check In Failed  ${plan}
 
 Disabled Action While Closed
@@ -242,6 +294,18 @@ Disabled Action While Closed
     Close Failed  ${plan}
     Rollback Failed  ${plan}
     Cancel Check In Failed  ${plan}
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Close A Order  ${plan}
+    Order Confirm Failed  ${plan}
+    Check In Failed  ${plan}  ${dv}[phone]
+    Enter Failed  ${plan}
+    Deliver Failed  ${plan}
+    Order Cancel Failed  ${plan}
+    Order Close Failed  ${plan}
+    Order Rollback Failed  ${plan}
+    Cancel Check In Failed  ${plan}
+
 
 *** Keywords ***
 Update Failed
@@ -251,10 +315,20 @@ Update Failed
     Set To Dictionary  ${update_info}  plan_id=${plan}[id]
     Req to Server  /customer/order_buy_update  ${bc1_user_token}  ${update_info}  ${True}
 
+Order Confirm Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /buy_management/order_buy_confirm  ${sc_admin_token}  ${req}  ${True}
+
 Confirm Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /sale_management/order_sale_confirm  ${sc_admin_token}  ${req}  ${True}
+
+Order Rollback Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /buy_management/order_rollback  ${sc_admin_token}  ${req}  ${True}
 
 Rollback Failed
     [Arguments]  ${plan}
@@ -282,11 +356,20 @@ Deliver Failed
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${20}  p_time=2018-01-01  m_time=2018-01-01
     Req to Server  /scale/deliver  ${sc_admin_token}  ${req}  ${True}
 
+Order Cancel Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /supplier/order_sale_cancel  ${bc1_user_token}  ${req}  ${True}
+
 Cancel Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /customer/order_buy_cancel  ${bc1_user_token}  ${req}  ${True}
 
+Order Close Failed
+    [Arguments]  ${plan}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /buy_management/close  ${sc_admin_token}  ${req}  ${True}
 Close Failed
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
