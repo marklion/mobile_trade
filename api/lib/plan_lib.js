@@ -521,7 +521,12 @@ module.exports = {
         });
     },
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time) {
-        await this.action_in_plan(_plan_id, _token, 2, async (plan) => {
+        let tmp_plan = await this.get_single_plan_by_id(_plan_id);
+        let status_req = 2;
+        if (tmp_plan && tmp_plan.is_buy){
+            status_req = 1;
+        }
+        await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             plan.status = 3;
             plan.count = _count;
             plan.p_time = p_time;
@@ -530,7 +535,9 @@ module.exports = {
             plan.m_weight = m_weight;
             await plan.save();
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);
-            await this.plan_cost(plan);
+            if (!plan.is_buy) {
+                await this.plan_cost(plan);
+            }
         });
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action) {

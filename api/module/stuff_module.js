@@ -119,7 +119,6 @@ module.exports = {
         change_price: {
             name: '调价',
             description: '调价',
-
             is_write: true,
             is_get_api: false,
             params: {

@@ -108,6 +108,21 @@ Plan Enter and Check
     Plan Enter  ${plan}
     Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1  ${False}  ${True}
 
+Deliver Order And Check
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Check In A Plan  ${plan}
+    ${dv}  Search Driver by Index  0
+    Plan Enter  ${plan}
+    Deliver A Plan  ${plan}  ${23}
+    Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
+    Del A Stuff From Sale  ${order_stuff}[id]
+    Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
+    Re-Add Stuff
 Deliver Plan And Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0

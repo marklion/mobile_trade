@@ -91,7 +91,6 @@ module.exports = {
         deliver: {
             name: '发货',
             description: '发货',
-
             is_write: true,
             is_get_api: false,
             params: {

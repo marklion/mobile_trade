@@ -75,7 +75,6 @@ Change Stuff Price
     [Arguments]  ${stuff_id}  ${new_price}  ${to_plan}=${False}  ${comment}=test_change  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  price=${new_price}  to_plan=${to_plan}  comment=${comment}
     Req to Server  /stuff/change_price  ${token}  ${req}
-
 Del A Stuff From Sale
     [Arguments]  ${stuff_id}
     ${req}  Create Dictionary  id=${stuff_id}
@@ -115,8 +114,8 @@ Add A Stuff To Contract
         END
     END
     FOR  ${itr}  IN  @{stuffs_found}
-        ${stuff_name}  Get From Dictionary  ${itr}  name
-        IF  $stuff_name == $stuff_name
+        ${got_stuff_name}  Get From Dictionary  ${itr}  name
+        IF  $got_stuff_name == $stuff_name
             ${target_stuff}  Set Variable  ${itr}
             Exit For Loop
         END
@@ -224,6 +223,9 @@ Re-Add Stuff
     Change Stuff Price  ${test_stuff}[id]  ${1212}
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
     Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    Add A Stuff To Buy  LT  lt_comment
+    @{stuffs_found}  Req Get to Server  /supplier/get_stuff_need_buy  ${bc1_user_token}  stuff
+    Set Suite Variable  ${order_stuff}  ${stuffs_found}[0]
 
 Clean Up Sale and Buy
     Stuff Reset
