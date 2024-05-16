@@ -7,7 +7,7 @@ module.exports = {
         let user = await sq.models.rbac_user.findOne({
             where: { online_token: _token },
         });
-        if (user) {
+        if (user && !user.fixed) {
             let now = moment();
             let last = moment(user.online_time);
             if (now.diff(last, 'day') < 20) {

@@ -29,7 +29,6 @@ module.exports = {
         wait_que: {
             name: '获取等待队列',
             description: '获取等待队列',
-
             is_write: false,
             is_get_api: true,
             params: {

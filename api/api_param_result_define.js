@@ -101,6 +101,9 @@ module.exports = {
         enter_time: { type: String, mean: '进场时间', example: '2020-01-01 12:00:00' },
         manual_close: { type: Boolean, mean: '手动关闭', example: true },
         is_buy: { type: Boolean, mean: '是否是采购单', example: true },
+        seal_no: { type: String, mean: '封号', example: '封号' },
+        ticket_no: { type: String, mean: '票号', example: '票号' },
+        trans_company_name: { type: String, mean: '运输公司名称', example: '运输公司名称' },
         rbac_user: {
             type: Object, mean: '创建人', explain: {
                 id: { type: Number, mean: '用户ID', example: 1 },

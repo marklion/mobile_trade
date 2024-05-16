@@ -88,7 +88,7 @@
     <fui-bottom-popup :show="show_charge_history" @close="show_charge_history = false">
         <fui-list>
             <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id]" search_key="search_cond" height="40vh">
-                <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased">
+                <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased.toFixed(2)">
                     <view slot="label">
                         {{item.time}}:{{item.comment}}
                     </view>

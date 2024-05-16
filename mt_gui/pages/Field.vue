@@ -10,6 +10,7 @@
                 <view slot="value" style="display:flex; flex-direction: column;">
                     <fui-text :text="item.driver.name" size="24"></fui-text>
                     <fui-text type="primary" :text="item.driver.phone" size="24" textType="mobile" @click="copy_text(item.driver.phone)"></fui-text>
+                    <fui-text :text="'序号:' + item.register_number" size="24"></fui-text>
                 </view>
                 <view slot="right-icon">
                     <fui-button btnSize="mini" v-if="item.call_time" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>

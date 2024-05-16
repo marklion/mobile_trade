@@ -57,11 +57,21 @@ Vue.prototype.$init_self = async function () {
     });
   }
 };
-Vue.prototype.$convert_attach_url = function(url) {
-  let ret =  Vue.prototype.$remote_url() + url;
+Vue.prototype.$has_module = function(mod_name) {
+  let ret = false;
+  let mods = uni.getStorageSync('self_info').modules.map(ele => {
+    return ele.name
+  })
+  if (mods.indexOf(mod_name) != -1) {
+    ret = true;
+  }
   return ret;
 };
-Vue.prototype.$get_login_code = function() {
+Vue.prototype.$convert_attach_url = function (url) {
+  let ret = Vue.prototype.$remote_url() + url;
+  return ret;
+};
+Vue.prototype.$get_login_code = function () {
   return new Promise((resolve, reject) => {
     uni.login({
       success: res => {

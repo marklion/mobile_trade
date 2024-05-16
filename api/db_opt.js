@@ -34,6 +34,7 @@ let db_opt = {
             photo_path: { type: DataTypes.STRING },
             password: { type: DataTypes.STRING },
             email:{ type: DataTypes.STRING },
+            fixed:{type:DataTypes.BOOLEAN},
         },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -91,6 +92,9 @@ let db_opt = {
             manual_close: { type: DataTypes.BOOLEAN, defaultValue: false },
             call_time: { type: DataTypes.STRING },
             is_buy: { type: DataTypes.BOOLEAN, defaultValue: false },
+            ticket_no:{ type: DataTypes.STRING },
+            seal_no:{ type: DataTypes.STRING },
+            trans_company_name:{ type: DataTypes.STRING },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -190,6 +194,21 @@ let db_opt = {
             time: { type: DataTypes.STRING },
             accept: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
+        hd_base_info:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            base_id: { type: DataTypes.STRING },
+            unit: { type: DataTypes.STRING },
+            type: { type: DataTypes.STRING },
+            code: { type: DataTypes.STRING },
+            pid: { type: DataTypes.STRING },
+        },
+        dc_status:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            mac: { type: DataTypes.STRING },
+            status: { type: DataTypes.INTEGER, defaultValue: 0 },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -252,6 +271,12 @@ let db_opt = {
         _sq.models.bidding_turn.hasMany(_sq.models.bidding_item);
         _sq.models.bidding_item.belongsTo(_sq.models.rbac_user);
         _sq.models.rbac_user.hasMany(_sq.models.bidding_item);
+
+        _sq.models.hd_base_info.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.hd_base_info);
+
+        _sq.models.dc_status.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.dc_status);
     },
     install: async function () {
         console.log('run install');
