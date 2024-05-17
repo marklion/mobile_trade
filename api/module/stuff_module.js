@@ -160,5 +160,53 @@ module.exports = {
                 return { histories: ret.rows, total: ret.count };
             }
         },
+        get_notice: {
+            name: '获取通知',
+            description: '获取通知',
+            is_write: false,
+            is_get_api: false,
+            params: {
+            },
+            result: {
+                notice:{type:String, mean:'通知', example:'通知'},
+                driver_notice:{type:String, mean:'司机通知', example:'司机通知'}
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company){
+                    return {
+                        notice:company.notice,
+                        driver_notice:company.driver_notice
+                    }
+                }
+                return {
+                    notice:'',
+                    driver_notice:''
+                }
+            }
+        },
+        set_notice: {
+            name: '设置通知',
+            description: '设置通知',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                notice: { type: String, have_to:false, mean: '通知', example: '通知' },
+                driver_notice: { type: String, have_to:false, mean: '司机通知', example: '司机通知' }
+            },
+            result: {
+                result:{type:Boolean, mean:'结果', example:true}
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let ret = {result:true};
+                if (company) {
+                    company.notice = body.notice;
+                    company.driver_notice = body.driver_notice;
+                    await company.save();
+                }
+                return ret;
+            }
+        },
     }
 }

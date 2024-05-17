@@ -40,6 +40,14 @@
             </list-show>
         </view>
     </module-filter>
+    <module-filter require_module="stuff">
+        <view class="brief_section">
+            <fui-section title="通知管理"></fui-section>
+            <fui-textarea isCounter label="下单通知" maxlength="2000" placeholder="请输入内容" v-model="notice.notice"></fui-textarea>
+            <fui-textarea isCounter label="司机通知" maxlength="2000" placeholder="请输入内容" v-model="notice.driver_notice"></fui-textarea>
+            <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
+        </view>
+    </module-filter>
 
 </view>
 </template>
@@ -61,10 +69,18 @@ export default {
             },
             stuff2buy: [],
             stuff2sale: [],
-            charts: []
+            charts: [],
+            notice: {
+                notice: '',
+                driver_notice: '',
+            },
         }
     },
     methods: {
+        save_notice: async function () {
+            await this.$send_req('/stuff/set_notice', this.notice);
+            uni.startPullDownRefresh();
+        },
         chart_opt: function (title, subtitle) {
             return {
                 timing: "easeOut",
@@ -248,9 +264,14 @@ export default {
                 this.$set(this.charts, index, JSON.parse(JSON.stringify(item)))
             });
         },
+        init_notice: async function () {
+            let res = await this.$send_req('/stuff/get_notice');
+            this.notice = res;
+        },
         init_brief_info: async function () {
             this.self_info = uni.getStorageSync('self_info');
             await this.init_data_brief();
+            await this.init_notice();
         },
     },
     onPullDownRefresh: async function () {

@@ -73,68 +73,80 @@
 
     <fui-bottom-popup :show="show_plan_detail" @close="show_plan_detail = false" z-index="1001">
         <scroll-view style="height: 80vh;" show-scrollbar scroll-y>
-            <u-cell-group title="计划信息" class="group_sep">
-                <u-cell title="买方" :value="focus_plan.company.name">
-                    <view slot="label">
-                        <fui-text :text="focus_plan.rbac_user.name" size="24"></fui-text>
-                        <fui-text type="primary" :text="focus_plan.rbac_user.phone" size="24" textType="mobile" @click="copy_text(focus_plan.rbac_user.phone)"></fui-text>
-                    </view>
-                </u-cell>
-                <u-cell title="卖方" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
-                <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
-                <u-cell :title="'当前状态：' + plan_status">
-                    <view slot="value" style="display:flex;">
-                        <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm('/customer/order_buy_cancel', '取消')"></fui-button>
-                        <module-filter require_module="sale_management" style="display:flex;">
-                            <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm('/sale_management/order_sale_confirm', '确认')"></fui-button>
-                            <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm('/sale_management/order_rollback', '回退')"></fui-button>
-                            <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm('/sale_management/close', '关闭')"></fui-button>
-                            <fui-button v-if="focus_plan.status == 1" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
-                        </module-filter>
-                        <module-filter require_module="scale">
-                            <fui-button v-if="focus_plan.status == 2" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
-                        </module-filter>
-                    </view>
-                </u-cell>
-            </u-cell-group>
-            <u-cell-group title="车辆信息" class="group_sep">
-                <u-cell title="主车" :value="focus_plan.main_vehicle.plate"></u-cell>
-                <u-cell title="挂车" :value="focus_plan.behind_vehicle.plate"></u-cell>
-                <u-cell :title="'司机:' + focus_plan.driver.name" :value="focus_plan.driver.phone" clickable @click="copy_text(focus_plan.driver.phone)"></u-cell>
-                <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
-            </u-cell-group>
-            <u-cell-group title="出入信息" class="group_sep">
-                <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
-                <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time"></u-cell>
-            </u-cell-group>
-            <u-cell-group v-if="focus_plan.sc_info" title="安检信息" class="group_sep">
-                <view v-if="focus_plan.status == 3 ">
-                    <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
-                        <view slot="value">
-                            <view v-if="sc_node.sc_content">
-                                <view>
-                                    {{sc_node.sc_content.input}}
-                                </view>
-                                <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
-                            </view>
+            <view class="group_sep">
+                <u-cell-group title="计划信息">
+                    <u-cell title="买方" :value="focus_plan.company.name">
+                        <view slot="label">
+                            <fui-text :text="focus_plan.rbac_user.name" size="24"></fui-text>
+                            <fui-text type="primary" :text="focus_plan.rbac_user.phone" size="24" textType="mobile" @click="copy_text(focus_plan.rbac_user.phone)"></fui-text>
                         </view>
                     </u-cell>
-                </view>
-            </u-cell-group>
-            <module-filter v-else require_module="sc">
-                <u-cell title="安检执行">
-                    <fui-button slot="right-icon" btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
-                </u-cell>
-            </module-filter>
-            <u-cell-group title="装卸信息" class="group_sep">
-                <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
-                <u-cell title="装车量" :value="focus_plan.count"></u-cell>
-                <u-cell v-if="focus_plan.p_time" title="一次重量" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
-                <u-cell v-if="focus_plan.m_time" title="二次重量" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
-            </u-cell-group>
-            <u-cell-group title="操作历史" class="group_sep">
-                <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
-            </u-cell-group>
+                    <u-cell title="卖方" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
+                    <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
+                    <u-cell :title="'当前状态：' + plan_status">
+                        <view slot="value" style="display:flex;">
+                            <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm('/customer/order_buy_cancel', '取消')"></fui-button>
+                            <module-filter require_module="sale_management" style="display:flex;">
+                                <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm('/sale_management/order_sale_confirm', '确认')"></fui-button>
+                                <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm('/sale_management/order_rollback', '回退')"></fui-button>
+                                <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm('/sale_management/close', '关闭')"></fui-button>
+                                <fui-button v-if="focus_plan.status == 1" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
+                            </module-filter>
+                            <module-filter require_module="scale">
+                                <fui-button v-if="focus_plan.status == 2" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
+                            </module-filter>
+                        </view>
+                    </u-cell>
+                </u-cell-group>
+            </view>
+            <view class="group_sep">
+                <u-cell-group title="车辆信息">
+                    <u-cell title="主车" :value="focus_plan.main_vehicle.plate"></u-cell>
+                    <u-cell title="挂车" :value="focus_plan.behind_vehicle.plate"></u-cell>
+                    <u-cell :title="'司机:' + focus_plan.driver.name" :value="focus_plan.driver.phone" clickable @click="copy_text(focus_plan.driver.phone)"></u-cell>
+                    <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
+                </u-cell-group>
+            </view>
+            <view class="group_sep">
+                <u-cell-group title="出入信息">
+                    <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
+                    <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time"></u-cell>
+                </u-cell-group>
+            </view>
+            <view class="group_sep">
+                <u-cell-group v-if="focus_plan.sc_info" title="安检信息">
+                    <view v-if="focus_plan.status == 3 ">
+                        <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
+                            <view slot="value">
+                                <view v-if="sc_node.sc_content">
+                                    <view>
+                                        {{sc_node.sc_content.input}}
+                                    </view>
+                                    <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
+                                </view>
+                            </view>
+                        </u-cell>
+                    </view>
+                </u-cell-group>
+                <module-filter v-else require_module="sc">
+                    <u-cell title="安检执行">
+                        <fui-button slot="right-icon" btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
+                    </u-cell>
+                </module-filter>
+            </view>
+            <view class="group_sep">
+                <u-cell-group title="装卸信息">
+                    <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
+                    <u-cell title="装车量" :value="focus_plan.count"></u-cell>
+                    <u-cell v-if="focus_plan.p_time" title="一次重量" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
+                    <u-cell v-if="focus_plan.m_time" title="二次重量" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
+                </u-cell-group>
+            </view>
+            <view class="group_sep">
+                <u-cell-group title="操作历史">
+                    <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
+                </u-cell-group>
+            </view>
 
         </scroll-view>
     </fui-bottom-popup>
@@ -222,12 +234,14 @@ import utils from '@/components/firstui/fui-utils';
 import ModuleFilterVue from '../components/ModuleFilter.vue';
 import $fui from '@/components/firstui/fui-clipboard';
 import ScUpload from '../components/ScUpload.vue';
+import Admin from './Admin.vue';
 export default {
     name: 'OrderList',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilterVue,
         "sc-upload": ScUpload,
+        Admin,
     },
     data: function () {
         return {
