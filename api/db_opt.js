@@ -209,6 +209,11 @@ let db_opt = {
             mac: { type: DataTypes.STRING },
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
         },
+        vehicle_team:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            team_member:{ type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -277,6 +282,9 @@ let db_opt = {
 
         _sq.models.dc_status.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.dc_status);
+
+        _sq.models.vehicle_team.belongsTo(_sq.models.rbac_user);
+        _sq.models.rbac_user.hasMany(_sq.models.vehicle_team);
     },
     install: async function () {
         console.log('run install');

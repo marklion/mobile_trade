@@ -188,6 +188,9 @@ module.exports = {
         if (search_buy) {
             where_condition[db_opt.Op.and].push({ is_buy: true });
         }
+        else {
+            where_condition[db_opt.Op.and].push({ is_buy: false });
+        }
         if (_condition.status != undefined) {
             where_condition[db_opt.Op.and].push({ status: _condition.status });
         }
@@ -238,7 +241,7 @@ module.exports = {
         let count = await _company.countPlans({ where: where_condition });
         return { rows: result, count: count };
     },
-    search_sold_plans: async function (_company, _pageNo, _condition, is_buy=false) {
+    search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
 
@@ -398,7 +401,7 @@ module.exports = {
     plan_enter: async function (_plan_id, _token) {
         let tmp_plan = await this.get_single_plan_by_id(_plan_id);
         let status_req = 2;
-        if (tmp_plan && tmp_plan.is_buy){
+        if (tmp_plan && tmp_plan.is_buy) {
             status_req = 1;
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {

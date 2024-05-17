@@ -4,9 +4,16 @@
     <fui-section :title="self_info.company" size="50" isLine></fui-section>
     <fui-divider></fui-divider>
     <view class="brief_section">
-        <fui-section title="采购概况"></fui-section>
-        <fui-notice-bar scrollable activeMode="forwards" speed="60" :content="buy_brief" ></fui-notice-bar>
-        <module-filter require_module="customer">
+        <fui-section title="数据统计"></fui-section>
+        <view style="display:flex">
+            <view class="charts-box" v-for="(single_cts, index) in charts" :key="index">
+                <qiun-data-charts type="ring" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
+            </view>
+        </view>
+    </view>
+    <module-filter require_module="customer">
+        <view class="brief_section">
+            <fui-section title="采购提单"></fui-section>
             <list-show :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
                 <view>
                     <u-cell v-for="(item, index) in stuff2buy" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
@@ -16,8 +23,23 @@
                     </u-cell>
                 </view>
             </list-show>
-        </module-filter>
-    </view>
+        </view>
+    </module-filter>
+
+    <module-filter require_module="supplier">
+        <view class="brief_section">
+            <fui-section title="销售提单"></fui-section>
+            <list-show :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
+                <view>
+                    <u-cell v-for="(item, index) in stuff2sale" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment">
+                        <view slot="right-icon">
+                            <fui-button v-if="item.price != -1" btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
+                        </view>
+                    </u-cell>
+                </view>
+            </list-show>
+        </view>
+    </module-filter>
 
 </view>
 </template>
@@ -38,22 +60,127 @@ export default {
                 company: '',
             },
             stuff2buy: [],
-            buy_brief: "",
+            stuff2sale: [],
+            charts: []
         }
     },
     methods: {
+        chart_opt: function (title, subtitle) {
+            return {
+                timing: "easeOut",
+                duration: 1000,
+                rotate: false,
+                rotateLock: false,
+                color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
+                padding: [5, 5, 5, 5],
+                fontSize: 13,
+                fontColor: "#666666",
+                dataLabel: false,
+                dataPointShape: true,
+                dataPointShapeType: "solid",
+                touchMoveLimit: 60,
+                enableScroll: false,
+                enableMarkLine: false,
+                legend: {
+                    show: true,
+                    position: "bottom",
+                    lineHeight: 25,
+                    float: "center",
+                    padding: 5,
+                    margin: 5,
+                    backgroundColor: "rgba(0,0,0,0)",
+                    borderColor: "rgba(0,0,0,0)",
+                    borderWidth: 0,
+                    fontSize: 13,
+                    fontColor: "#666666",
+                    hiddenColor: "#CECECE",
+                    itemGap: 10
+                },
+                title: {
+                    name: title,
+                    fontSize: 15,
+                    color: "#666666",
+                    offsetX: 0,
+                    offsetY: 0
+                },
+                subtitle: {
+                    name: subtitle,
+                    fontSize: 25,
+                    color: "#7cb5ec",
+                    offsetX: 0,
+                    offsetY: 0
+                },
+                extra: {
+                    ring: {
+                        ringWidth: 30,
+                        activeOpacity: 0.5,
+                        activeRadius: 10,
+                        offsetAngle: 0,
+                        labelWidth: 15,
+                        border: true,
+                        borderWidth: 3,
+                        borderColor: "#FFFFFF",
+                        centerColor: "#FFFFFF",
+                        customRadius: 0,
+                        linearType: "none"
+                    },
+                    tooltip: {
+                        showBox: true,
+                        showArrow: true,
+                        showCategory: false,
+                        borderWidth: 0,
+                        borderRadius: 0,
+                        borderColor: "#000000",
+                        borderOpacity: 0.7,
+                        bgColor: "#000000",
+                        bgOpacity: 0.7,
+                        gridType: "solid",
+                        dashLength: 4,
+                        gridColor: "#CCCCCC",
+                        boxPadding: 3,
+                        fontSize: 13,
+                        lineHeight: 20,
+                        fontColor: "#FFFFFF",
+                        legendShow: true,
+                        legendShape: "auto",
+                        splitLine: true,
+                        horizentalLine: false,
+                        xAxisLabel: false,
+                        yAxisLabel: false,
+                        labelBgColor: "#FFFFFF",
+                        labelBgOpacity: 0.7,
+                        labelFontColor: "#666666"
+                    }
+                }
+            }
+        },
         start_plan_creation: function (item) {
             uni.navigateTo({
                 url: '/pages/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name,
             });
         },
         get_stuff2buy: async function (pageNo) {
-            let res = await this.$send_req('/customer/get_stuff_on_sale', {
-                pageNo: pageNo,
-            });
-            return res.stuff;
+            if (this.$has_module('customer')) {
+                let res = await this.$send_req('/customer/get_stuff_on_sale', {
+                    pageNo: pageNo,
+                });
+                return res.stuff;
+            } else {
+                return []
+            }
         },
-        init_buy_brief: async function () {
+        get_stuff2sale: async function (pageNo) {
+            if (this.$has_module('supplier')) {
+                let res = await this.$send_req('/supplier/get_stuff_need_buy', {
+                    pageNo: pageNo,
+                });
+                return res.stuff;
+            } else {
+                return []
+            }
+        },
+
+        init_data_brief: async function () {
             let cond = function (day_offset, status) {
                 let date = new Date();
                 date.setDate(date.getDate() + day_offset);
@@ -64,21 +191,66 @@ export default {
                     hide_manual_close: true,
                 };
             };
-            let today_unfinish_count =
-                (await this.$send_req('/customer/order_buy_search', cond(0, 1))).total +
-                (await this.$send_req('/customer/order_buy_search', cond(0, 2))).total;
-            let today_finished_count =
-                (await this.$send_req('/customer/order_buy_search', cond(0, 3))).total;
-            let yst_count = (await this.$send_req('/customer/order_buy_search', cond(-1, 3))).total;
-            let tmr_count =
-                (await this.$send_req('/customer/order_buy_search', cond(1, 1))).total +
-                (await this.$send_req('/customer/order_buy_search', cond(1, 2))).total;
-            this.buy_brief =
-                `今日一共${today_finished_count + today_unfinish_count}车,完成${today_finished_count}车,未完成${today_unfinish_count}车;昨日共完成${yst_count}车,明日还有${tmr_count}车`
+            let get_count = async (url, cond) => {
+                return (await this.$send_req(url, cond)).total
+            }
+            let make_data = async (url, title, subtitle) => {
+                let db = {
+                    today_unfinish_count: await get_count(url, cond(0, 1)) +
+                        await get_count(url, cond(0, 2)),
+                    today_finished_count: await get_count(url, cond(0, 3)),
+                    yst_count: await get_count(url, cond(-1, 3)),
+                    tmr_count: await get_count(url, cond(1, 1)) +
+                        await get_count(url, cond(1, 2)),
+                }
+                return {
+                    opts: this.chart_opt(title, subtitle),
+                    chartData: {
+                        series: [{
+                                data: [{
+                                        name: '今日未完成:' + db.today_unfinish_count,
+                                        value: db.today_unfinish_count
+                                    },
+                                    {
+                                        name: '今日已完成:' + db.today_finished_count,
+                                        value: db.today_finished_count
+                                    },
+                                    {
+                                        name: '昨日:' + db.yst_count,
+                                        value: db.yst_count
+                                    },
+                                    {
+                                        name: '明日:' + db.tmr_count,
+                                        value: db.tmr_count
+                                    },
+                                ]
+                            },
+
+                        ],
+                    },
+                }
+            }
+            let tmp = []
+            if (this.$has_module('customer')) {
+                tmp.push(await make_data('/customer/order_buy_search', '我方下单', '采购'))
+            }
+            if (this.$has_module('buy_management')) {
+                tmp.push(await make_data('/buy_management/order_search', '对方下单', '采购'))
+            }
+            if (this.$has_module('supplier')) {
+                tmp.push(await make_data('/supplier/order_sale_search', '我方下单', '销售'))
+            }
+            if (this.$has_module('sale_management')) {
+                tmp.push(await make_data('/sale_management/order_search', '对方下单', '销售'))
+            }
+            this.charts = []
+            tmp.forEach((item, index) => {
+                this.$set(this.charts, index, JSON.parse(JSON.stringify(item)))
+            });
         },
         init_brief_info: async function () {
             this.self_info = uni.getStorageSync('self_info');
-            await this.init_buy_brief();
+            await this.init_data_brief();
         },
     },
     onPullDownRefresh: async function () {
@@ -97,5 +269,10 @@ export default {
     border-radius: 10px;
     /* 添加圆角 */
     margin-bottom: 20px;
+}
+
+.charts-box {
+    width: 50%;
+    height: 300px;
 }
 </style>
