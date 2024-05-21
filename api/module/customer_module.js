@@ -127,6 +127,7 @@ module.exports = {
                 main_vehicle_id: { type: Number, have_to: true, mean: '主车ID', example: 1 },
                 behind_vehicle_id: { type: Number, have_to: true, mean: '挂车ID', example: 1 },
                 driver_id: { type: Number, have_to: true, mean: '司机ID', example: 1 },
+                trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
             },
             result: api_param_result_define.plan_detail_define,
             func: async function (body, token) {
@@ -154,6 +155,7 @@ module.exports = {
                     await plan_lib.rp_history_create(new_plan, user.name);
                     new_plan.unit_price = stuff.price;
                     new_plan.status = 0;
+                    new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();
                 }
                 else {

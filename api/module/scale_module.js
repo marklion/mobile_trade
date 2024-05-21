@@ -1,6 +1,7 @@
 const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
+const rbac_lib = require('../lib/rbac_lib');
 module.exports = {
     name: 'scale',
     description: '计量管理',
@@ -98,14 +99,49 @@ module.exports = {
                 m_weight: { type: Number, have_to: false, mean: '毛重', example: 1 },
                 p_time: { type: String, have_to: false, mean: '皮重时间', example: '2020-01-01 12:00:00' },
                 m_time: { type: String, have_to: false, mean: '毛重时间', example: '2020-01-01 12:00:00' },
+                ticket_no: { type: String, have_to: false, mean: '磅单号', example: '11112222' },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.deliver_plan(body.plan_id, token, body.count, body.p_weight, body.m_weight, body.p_time, body.m_time);
+                await plan_lib.deliver_plan(body.plan_id, token, body.count, body.p_weight, body.m_weight, body.p_time, body.m_time, body.ticket_no);
                 return { result: true };
             },
+        },
+        get_stamp_pic:{
+            name:'获取磅单印章',
+            description:'获取磅单印章',
+            is_write:false,
+            is_get_api:false,
+            params:{},
+            result:{
+                stamp_pic:{type:String,mean:'印章图片',example:'印章图片'}
+            },
+            func:async function(body,token){
+                let company = await rbac_lib.get_company_by_token(token);
+                return {
+                    stamp_pic:company.stamp_pic
+                }
+            }
+        },
+        set_stamp_pic:{
+            name:'设置磅单印章',
+            description:'设置磅单印章',
+            is_write:true,
+            is_get_api:false,
+            params:{
+                stamp_pic:{type:String,have_to:true,mean:'印章图片',example:'印章图片'}
+            },
+            result:{
+                result:{type:Boolean,mean:'结果',example:true}
+            },
+            func:async function(body,token){
+                let company = await rbac_lib.get_company_by_token(token);
+                company.stamp_pic = body.stamp_pic;
+                await company.save();
+                return {result:true};
+            }
         },
     }
 }

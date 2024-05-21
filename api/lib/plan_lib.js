@@ -367,7 +367,7 @@ module.exports = {
         await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
             let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
             let creator = await plan.getRbac_user();
-            if (creator && contracts.length == 1 && await contracts[0].hasRbac_user(creator)) {
+            if (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy)) {
                 plan.status = 1;
                 await plan.save();
                 await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
@@ -534,7 +534,7 @@ module.exports = {
             await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
         });
     },
-    deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time) {
+    deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no) {
         let tmp_plan = await this.get_single_plan_by_id(_plan_id);
         let status_req = 2;
         if (tmp_plan && tmp_plan.is_buy) {
@@ -542,10 +542,11 @@ module.exports = {
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             plan.status = 3;
+            plan.ticket_no = (ticket_no?ticket_no:(moment().format('YYYYMMDDHHmmss') + _plan_id));
             plan.count = _count;
-            plan.p_time = p_time;
+            plan.p_time = (p_time?p_time:moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.p_weight = p_weight;
-            plan.m_time = m_time;
+            plan.m_time = (m_time?m_time:moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.m_weight = m_weight;
             await plan.save();
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);

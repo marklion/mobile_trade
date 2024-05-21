@@ -1,9 +1,9 @@
 <template>
 <view>
-    <fui-segmented-control v-if="seg_show" :values="seg" @click="change_seg"></fui-segmented-control>
+    <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
     <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
     <view>
-        <module-filter require_module="stuff">
+        <module-filter :rm_array="['sale_management', 'buy_management']">
             <fui-tag theme="plain" type="purple">
                 {{stuff_filter.name}}
                 <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32" @click="show_stuff_list= true"></fui-icon>
@@ -14,7 +14,7 @@
                 <fui-icon v-if="!company_filter.id" name="arrowright" size="32" @click="show_company_filter= true"></fui-icon>
                 <fui-icon v-else name="close" size="32" @click="reset_company_filter"></fui-icon>
             </fui-tag>
-            <fui-tag type="primary" text="批量确认" @click="batch_confirm">
+            <fui-tag v-if="focus_status == 0" type="primary" text="批量确认" @click="batch_confirm">
             </fui-tag>
         </module-filter>
         <view style="display:flex; align-items: center;">
@@ -26,30 +26,17 @@
         <fui-button slot="right-icon" text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
     </u-cell>
     <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
-    <module-filter v-if="seg_index == 0" require_module="sale_management">
-        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="74vh" search_key="search_cond" :fetch_params="[plan_filter]">
-            <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :icon="get_status_icon(item)" :title="item.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
-                    <view slot="value" style="display:flex; flex-direction: column;">
-                        <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
-                        <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
-                    </view>
-                </u-cell>
-            </view>
-        </list-show>
-    </module-filter>
-    <module-filter v-if="seg_index == 1" require_module="customer">
-        <list-show ref="buy_plans" v-model="bp_data2show" :fetch_function="get_buy_plans" height="74vh" search_key="search_cond" :fetch_params="[plan_filter]">
-            <view v-for="item in bp_data2show" :key="item.id">
-                <u-cell :icon="get_status_icon(item)" :title="item.stuff.company.name + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
-                    <view slot="value" style="display:flex; flex-direction: column;">
-                        <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
-                        <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
-                    </view>
-                </u-cell>
-            </view>
-        </list-show>
-    </module-filter>
+    <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
+        <view v-for="item in sp_data2show" :key="item.id">
+            <u-cell :icon="get_status_icon(item)" :title="item.company_show + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
+                <view slot="value" style="display:flex; flex-direction: column;">
+                    <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
+                    <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
+                </view>
+            </u-cell>
+        </view>
+    </list-show>
     <module-filter require_module="stuff">
         <fui-bottom-popup :show="show_stuff_list" @close="show_stuff_list = false">
             <fui-list>
@@ -75,26 +62,31 @@
         <scroll-view style="height: 80vh;" show-scrollbar scroll-y>
             <view class="group_sep">
                 <u-cell-group title="计划信息">
-                    <u-cell title="买方" :value="focus_plan.company.name">
+                    <u-cell :title="comp_title(focus_plan.is_buy).a_title" :value="focus_plan.company.name">
                         <view slot="label">
                             <fui-text :text="focus_plan.rbac_user.name" size="24"></fui-text>
                             <fui-text type="primary" :text="focus_plan.rbac_user.phone" size="24" textType="mobile" @click="copy_text(focus_plan.rbac_user.phone)"></fui-text>
                         </view>
                     </u-cell>
-                    <u-cell title="卖方" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
+                    <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
+                    <u-cell v-if="focus_plan.trans_company_name"  title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
+                            <module-filter :rm_array="['customer', 'supplier']"></module-filter>
                             <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm('/customer/order_buy_cancel', '取消')"></fui-button>
-                            <module-filter require_module="sale_management" style="display:flex;">
+                            <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
                                 <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm('/sale_management/order_sale_confirm', '确认')"></fui-button>
                                 <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm('/sale_management/order_rollback', '回退')"></fui-button>
                                 <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm('/sale_management/close', '关闭')"></fui-button>
-                                <fui-button v-if="focus_plan.status == 1" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
+                                <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
                             </module-filter>
                             <module-filter require_module="scale">
-                                <fui-button v-if="focus_plan.status == 2" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
+                                <fui-button v-if="(focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
                             </module-filter>
+                        </view>
+                        <view slot="label">
+                            <fui-text v-if="focus_plan.status == 3 && !focus_plan.manual_close" type="primary" text="查看磅单" :size="28" decoration="underline" @click="go_to_ticket"></fui-text>
                         </view>
                     </u-cell>
                 </u-cell-group>
@@ -138,8 +130,8 @@
                 <u-cell-group title="装卸信息">
                     <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
                     <u-cell title="装车量" :value="focus_plan.count"></u-cell>
-                    <u-cell v-if="focus_plan.p_time" title="一次重量" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
-                    <u-cell v-if="focus_plan.m_time" title="二次重量" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
+                    <u-cell v-if="focus_plan.p_time" title="皮重" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
+                    <u-cell v-if="focus_plan.m_time" title="毛重" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
                 </u-cell-group>
             </view>
             <view class="group_sep">
@@ -154,7 +146,7 @@
     <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
         <u-cell title="安检结果">
             <view slot="value">
-                <fui-text v-if="(sc_data2show && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
+                <fui-text v-if="(sc_data2show.length > 0 && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
                 <fui-text v-else type="danger" text="未通过"></fui-text>
             </view>
         </u-cell>
@@ -209,10 +201,10 @@
     </fui-modal>
     <fui-modal :zIndex="1002" width="600" :show="show_scale_input" @click="deliver">
         <fui-form ref="deliver" top="100">
-            <fui-input label="一次称重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
-            <fui-input label="一次称重时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
-            <fui-input label="二次称重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
-            <fui-input label="二次称重时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
+            <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
+            <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
+            <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
+            <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
             <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
                 <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
             </fui-input>
@@ -245,11 +237,26 @@ export default {
     },
     data: function () {
         return {
+            comp_title: function (is_buy) {
+                let ret = {
+                    a_title: '买方',
+                    b_title: '卖方'
+                }
+                if (is_buy) {
+                    ret = {
+                        a_title: '卖方',
+                        b_title: '买方',
+                    }
+                }
+                return ret;
+            },
+            cur_get_url: '',
+            cur_is_motion: false,
+            cur_is_buy: false,
             sc_data2show: [],
             customer_data2show: [],
             stuff_data2show: [],
             sp_data2show: [],
-            bp_data2show: [],
             show_delete_sc_content: false,
             upload_sc: {
                 plan_id: 0,
@@ -355,9 +362,7 @@ export default {
                 "use_for": "用途"
             },
             show_plan_detail: false,
-            seg: ['销售', '采购'],
-            seg_index: -1,
-            seg_show: false,
+            seg: [],
             company_filter: {
                 name: '全部公司',
                 id: undefined,
@@ -373,22 +378,9 @@ export default {
             begin_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
             end_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
             deliver_time: utils.dateFormatter(new Date(), 'y-m-d h:i:s', 4, false),
-            tabs: [{
-                name: "全部",
-            }, {
-                name: "未确认",
-                badge: 0,
-            }, {
-                name: "未付款",
-                badge: 0,
-            }, {
-                name: "未发车",
-                badge: 0,
-            }, {
-                name: "已关闭",
-            }],
-            deliver_time_type: '',
 
+            deliver_time_type: '',
+            tabs: [],
         }
     },
     computed: {
@@ -440,6 +432,11 @@ export default {
         },
     },
     methods: {
+        go_to_ticket: function () {
+            uni.navigateTo({
+                url: '/pages/Ticket?id=' + this.focus_plan.id
+            });
+        },
         batch_confirm: async function () {
             await this.$send_req('/sale_management/order_batch_confirm', this.plan_filter);
             this.refresh_plans();
@@ -643,8 +640,32 @@ export default {
             this.focus_plan = item;
             this.show_plan_detail = true;
         },
+        init_tabs: function () {
+            this.tabs = [{
+                name: "全部",
+            }, {
+                name: "未确认",
+                badge: 0,
+            }, ]
+            if (!this.cur_is_buy) {
+                this.tabs.push({
+                    name: "未付款",
+                    badge: 0,
+                });
+            }
+            this.tabs.push({
+                name: "未发车",
+                badge: 0,
+            });
+            this.tabs.push({
+                name: "已关闭",
+            });
+        },
         change_seg: function (e) {
-            this.seg_index = e.index;
+            this.cur_get_url = e.url;
+            this.cur_is_motion = e.motion;
+            this.cur_is_buy = e.is_buy;
+            this.init_tabs();
             this.refresh_plans();
         },
         reset_company_filter: function () {
@@ -666,11 +687,7 @@ export default {
                 this.init_number_of_sold_plan();
             });
             this.$nextTick(() => {
-                if (this.seg_index == 0) {
-                    this.$refs.sold_plans.refresh();
-                } else if (this.seg_index == 1) {
-                    this.$refs.buy_plans.refresh();
-                }
+                this.$refs.sold_plans.refresh();
             })
 
         },
@@ -700,50 +717,45 @@ export default {
             let index = e.index
             if (index > 0) {
                 this.focus_status = index - 1;
+                if (this.focus_status == 2 && this.cur_is_buy) {
+                    this.focus_status = 3;
+                }
             } else {
                 this.focus_status = undefined;
             }
             this.refresh_plans();
         },
-        get_buy_plans: async function (pageNo, [plan_filter]) {
-            let res = await this.$send_req('/customer/order_buy_search', {
-                ...plan_filter,
-                pageNo: pageNo,
-            });
-            let ret = [];
-            res.plans.forEach(element => {
-                element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
-                ret.push(element)
-            });
-            return ret;
+        make_plan_get_url: function () {
+            return this.cur_get_url;
         },
-        get_sold_plans: async function (pageNo, [plan_filter]) {
-            let res = await this.$send_req('/sale_management/order_search', {
+        get_sold_plans: async function (pageNo, [plan_filter, cur_get_url, cur_is_motion]) {
+            let res = await this.$send_req(cur_get_url, {
                 ...plan_filter,
                 pageNo: pageNo,
             });
             let ret = [];
             res.plans.forEach(element => {
                 element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
+                if (cur_is_motion) {
+                    element.company_show = element.stuff.company.name;
+                } else {
+                    element.company_show = element.company.name;
+                }
                 ret.push(element)
             });
             return ret;
         },
         init_number_of_sold_plan: async function () {
-            let url = '';
-            if (this.seg_index == 1) {
-                url = '/customer/order_buy_search';
-            } else if (this.seg_index == 0) {
-                url = '/sale_management/order_search';
+            let max_status = 3;
+            if (this.cur_is_buy) {
+                max_status = 2;
             }
-            if (url) {
-                for (let i = 0; i < 3; i++) {
-                    let res = await this.$send_req(url, {
-                        ...this.plan_filter,
-                        status: i
-                    });
-                    this.tabs[i + 1].badge = res.total;
-                }
+            for (let i = 0; i < max_status; i++) {
+                let res = await this.$send_req(this.make_plan_get_url(), {
+                    ...this.plan_filter,
+                    status: i
+                });
+                this.tabs[i + 1].badge = res.total;
             }
         },
         get_stuff: async function (pageNo) {
@@ -775,31 +787,58 @@ export default {
                 return [];
             }
         },
+        init_top_seg: function () {
+            this.seg = []
+            if (this.$has_module('customer')) {
+                this.seg.push({
+                    name: '主动采购',
+                    url: '/customer/order_buy_search',
+                    motion: true,
+                    is_buy: false,
+                });
+            }
+            if (this.$has_module('sale_management')) {
+                this.seg.push({
+                    name: '被动销售',
+                    url: '/sale_management/order_search',
+                    motion: false,
+                    is_buy: false,
+                });
+            }
+            if (this.$has_module('supplier')) {
+                this.seg.push({
+                    name: '主动销售',
+                    url: '/supplier/order_sale_search',
+                    motion: true,
+                    is_buy: true,
+                });
+            }
+            if (this.$has_module('buy_management')) {
+                this.seg.push({
+                    name: '被动采购',
+                    url: '/buy_management/order_search',
+                    motion: false,
+                    is_buy: true,
+                });
+            }
+            if (this.seg.length > 0) {
+                this.cur_get_url = this.seg[0].url;
+                this.cur_is_motion = this.seg[0].motion;
+                this.cur_is_buy = this.seg[0].is_buy;
+                this.init_tabs();
+            }
+        },
     },
     onPullDownRefresh() {
         this.refresh_plans();
         uni.stopPullDownRefresh();
     },
     onShow() {
+        this.init_top_seg();
         let tom = new Date();
         tom.setDate(tom.getDate() + 1);
         this.end_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
-        let mods = uni.getStorageSync('self_info').modules;
-        let modules = [];
-        mods.forEach(element => {
-            modules.push(element.name);
-        });
-        if (modules.indexOf('customer') != -1 && modules.indexOf('plan') != -1) {
-            this.seg_show = true;
-            this.seg_index = 0;
-        } else {
-            if (modules.indexOf('sale_management') != -1) {
-                this.seg_index = 0;
-            } else {
-                this.seg_index = 1;
-            }
-        }
     },
 }
 </script>

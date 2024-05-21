@@ -68,6 +68,9 @@
 			"path": "pages/RoleConfig"
 		},
 		{
+			"path": "pages/Ticket"
+		},
+		{
 			"path": "pages/Admin",
 			"style": {
 				"enablePullDownRefresh": true

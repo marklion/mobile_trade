@@ -17,10 +17,23 @@ export default {
     },
     props: {
         require_module: String,
+        rm_array: Array,
     },
     computed: {
         should_show: function () {
-            return this.modules.indexOf(this.require_module) != -1;
+            let ret = this.modules.indexOf(this.require_module) != -1;
+            if (false == ret && this.rm_array)
+            {
+                for (let i = 0; i < this.rm_array.length; i++)
+                {
+                    if (this.modules.indexOf(this.rm_array[i]) != -1)
+                    {
+                        ret = true;
+                        break;
+                    }
+                }
+            }
+            return ret;
         }
     },
     mounted: function () {

@@ -69,6 +69,9 @@ export default {
     },
     methods: {
         get_checkin_config: async function () {
+            if (this.$has_module('sale_management') == false) {
+                return;
+            }
             let res = await this.$send_req('/sale_management/get_checkin_config');
             this.checkin_config = res;
         },
@@ -80,7 +83,7 @@ export default {
                     msg: ['请输入纬度']
                 }, {
                     name: 'lon',
-                    rule: ['required',],
+                    rule: ['required', ],
                     msg: ['请输入经度']
                 }, {
                     name: 'distance_limit',

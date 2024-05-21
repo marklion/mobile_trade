@@ -17,6 +17,9 @@
                 <fui-input placeholder="请输入卸车地点" disabled v-model="plan.drop_address"></fui-input>
             </fui-form-item>
         </pick-regions>
+        <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
+            <fui-input placeholder="请输入承运公司" v-model="plan.trans_company_name"></fui-input>
+        </fui-form-item>
         <view style="display:flex; justify-content: center;">
             <fui-button text="新增车辆" btnSize="small" type="success" @click="show_add_vehicle = true"></fui-button>
         </view>
@@ -89,7 +92,8 @@ export default {
                 drop_address: "",
                 plan_time: "",
                 stuff_id: 0,
-                use_for: ""
+                use_for: "",
+                trans_company_name:'',
             },
             stuff_name: '',
             saler_name: '',

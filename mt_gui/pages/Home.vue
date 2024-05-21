@@ -15,10 +15,10 @@
         <view class="brief_section">
             <fui-section title="采购提单"></fui-section>
             <list-show :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
-                <view>
-                    <u-cell v-for="(item, index) in stuff2buy" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
+                <view v-for="(item, index) in stuff2buy" :key="index">
+                    <u-cell v-if="item.price != -1" :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
                         <view slot="right-icon">
-                            <fui-button v-if="item.price != -1" btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
+                            <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
                         </view>
                     </u-cell>
                 </view>
@@ -265,6 +265,9 @@ export default {
             });
         },
         init_notice: async function () {
+            if (this.$has_module('stuff') == false) {
+                return
+            }
             let res = await this.$send_req('/stuff/get_notice');
             this.notice = res;
         },
