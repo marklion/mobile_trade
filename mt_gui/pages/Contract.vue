@@ -1,20 +1,23 @@
 <template>
 <view>
-    <list-show ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="90vh" search_key="search_cond">
-        <u-cell v-for="item in data2show" :key="item.id" size="large" :title="item.buy_company.name" :value="'￥' + item.balance">
+    <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
+    <list-show ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" search_key="search_cond" :fetch_params="[cur_urls]">
+        <u-cell v-for="item in data2show" :key="item.id" size="large" :title="item.company.name" :value="'￥' + item.balance">
             <view slot="label">
-                <view style="display:flex; flex-wrap: wrap;">
-                    <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" :scaleRatio="0.8" type="purple">
-                        {{single_stuff.name}}
-                        <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
-                    </fui-tag>
-                    <fui-tag text="新增物料" :scaleRatio="0.8" type="purple" @click="prepare_add_stuff(item)"></fui-tag>
-                    <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" :scaleRatio="0.8" type="success">
-                        {{single_user.name + '|' + single_user.phone}}
-                        <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
-                    </fui-tag>
-                    <fui-tag :scaleRatio="0.8" type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
-                </view>
+                <module-filter require_module="sale_management">
+                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su">
+                        <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" :scaleRatio="0.8" type="purple">
+                            {{single_stuff.name}}
+                            <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
+                        </fui-tag>
+                        <fui-tag text="新增物料" :scaleRatio="0.8" type="purple" @click="prepare_add_stuff(item)"></fui-tag>
+                        <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" :scaleRatio="0.8" type="success">
+                            {{single_user.name + '|' + single_user.phone}}
+                            <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
+                        </fui-tag>
+                        <fui-tag :scaleRatio="0.8" type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
+                    </view>
+                </module-filter>
                 <view>
                     <view v-if="item.begin_time && item.end_time" style="color: blue;">
                         {{item.begin_time}}至{{item.end_time}}
@@ -23,28 +26,28 @@
                         合同编号: {{item.number}}
                     </view>
                     <view v-if="item.customer_code" style="color: red;">
-                        客户编码: {{item.customer_code}}
+                        客商编码: {{item.customer_code}}
                     </view>
 
                 </view>
                 <view style="display:flex; flex-wrap: wrap;">
-                    <module-filter require_module="cash">
+                    <module-filter require_module="cash" v-if="cur_urls.need_su">
                         <fui-tag :scaleRatio="0.8" type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
                         <fui-tag :scaleRatio="0.8" type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
                     </module-filter>
-                    <fui-tag :scaleRatio="0.8" type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
+                    <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
                 </view>
             </view>
 
         </u-cell>
     </list-show>
-    <fui-button type="success" text="新增" @click="show_add_contract = true"></fui-button>
+    <fui-button v-if="cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
     <fui-modal width="600" :show="show_add_contract" @click="add_contract">
         <fui-form ref="add_contract" top="100">
-            <fui-input label="客户" borderTop placeholder="点击选择客户" v-model="company_name" disabled @click="show_customers = true"></fui-input>
+            <fui-input label="客商" borderTop placeholder="点击选择客商" v-model="company_name" disabled @click="show_customers = true"></fui-input>
             <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="show_date_range = true"></fui-input>
             <fui-input label="结束时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.end_time" @click="show_date_range = true"></fui-input>
-            <fui-input label="客户编码" borderTop placeholder="请输入客户编码" v-model="new_contract.customer_code"></fui-input>
+            <fui-input label="客商编码" borderTop placeholder="请输入客商编码" v-model="new_contract.customer_code"></fui-input>
             <fui-input label="合同编号" borderTop placeholder="请输入合同编号" v-model="new_contract.number"></fui-input>
         </fui-form>
     </fui-modal>
@@ -67,7 +70,7 @@
             </list-show>
         </fui-list>
     </fui-bottom-popup>
-    <fui-modal width="600" :descr="'确定要取消' + focus_item.buy_company.name + '关注' + focus_stuff.name + '吗？'" :show="show_del_stuff" @click="del_stuff">
+    <fui-modal width="600" :descr="'确定要取消' + focus_item.company.name + '关注' + focus_stuff.name + '吗？'" :show="show_del_stuff" @click="del_stuff">
     </fui-modal>
 
     <fui-modal width="600" :show="show_add_auth" @click="add_auth">
@@ -77,7 +80,7 @@
     </fui-modal>
     <fui-modal width="600" :descr="'确定要取消授权' + focus_user.phone + '吗？'" :show="show_unauth" @click="unauth_user">
     </fui-modal>
-    <fui-modal width="600" :descr="'确定要删除' + focus_item.buy_company.name + '吗？'" :show="show_del" @click="del_contract">
+    <fui-modal width="600" :descr="'确定要删除' + focus_item.company.name + '吗？'" :show="show_del" @click="del_contract">
     </fui-modal>
     <fui-modal width="600" :show="show_charge" @click="charge">
         <fui-form ref="charge" top="100">
@@ -106,6 +109,7 @@ export default {
     name: 'Contract',
     data: function () {
         return {
+            seg: [],
             histories_data2show: [],
             stuff_data2show: [],
             customers_data2show: [],
@@ -125,7 +129,7 @@ export default {
             show_add_contract: false,
             show_customers: false,
             focus_item: {
-                buy_company: {
+                company: {
                     name: ''
                 },
                 id: 0,
@@ -139,6 +143,14 @@ export default {
                 customer_id: 0,
                 customer_code: '',
             },
+            cur_urls: {
+                get_url: '',
+                make_url: '',
+                del_url: '',
+                need_su: false,
+                motive: false,
+            },
+
         };
     },
     components: {
@@ -146,6 +158,62 @@ export default {
         "module-filter": ModuleFilter
     },
     methods: {
+        change_seg: function (e) {
+            this.cur_urls.get_url = e.get_url;
+            this.cur_urls.make_url = e.make_url;
+            this.cur_urls.del_url = e.del_url;
+            this.cur_urls.need_su = e.need_su;
+            this.cur_urls.motive = e.motive;
+            this.$nextTick(() => {
+                this.$refs.contracts.refresh();
+            });
+        },
+        init_top_seg: function () {
+            this.seg = []
+            if (this.$has_module('customer')) {
+                this.seg.push({
+                    name: '采购被签订',
+                    get_url: '/customer/contract_get',
+                    need_su: false,
+                    motive: false,
+                });
+            }
+            if (this.$has_module('sale_management')) {
+                this.seg.push({
+                    name: '销售签订',
+                    get_url: '/sale_management/contract_get',
+                    make_url: '/sale_management/contract_make',
+                    del_url: '/sale_management/contract_destroy',
+                    need_su: true,
+                    motive: true,
+                });
+            }
+            if (this.$has_module('supplier')) {
+                this.seg.push({
+                    name: '销售被签订',
+                    get_url: '/supplier/contract_get',
+                    need_su: false,
+                    motive: false,
+                });
+            }
+            if (this.$has_module('buy_management')) {
+                this.seg.push({
+                    name: '采购签订',
+                    get_url: '/buy_management/contract_get',
+                    make_url: '/buy_management/contract_make',
+                    del_url: '/buy_management/contract_destroy',
+                    need_su: false,
+                    motive: true,
+                });
+            }
+            if (this.seg.length > 0) {
+                this.cur_urls.get_url = this.seg[0].get_url;
+                this.cur_urls.make_url = this.seg[0].make_url;
+                this.cur_urls.del_url = this.seg[0].del_url;
+                this.cur_urls.motive = this.seg[0].motive;
+                this.cur_urls.need_su = this.seg[0].need_su;
+            }
+        },
         get_history: async function (_pageNo, [id]) {
             if (id == 0) {
                 return [];
@@ -199,7 +267,7 @@ export default {
         },
         del_contract: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/sale_management/contract_destroy', {
+                await this.$send_req(this.cur_urls.del_url, {
                     contract_id: this.focus_item.id
                 });
                 uni.startPullDownRefresh();
@@ -254,6 +322,9 @@ export default {
             this.show_add_stuff = false;
         },
         get_stuff: async function (pageNo) {
+            if (this.$has_module('stuff') == false) {
+                return [];
+            }
             let ret = await this.$send_req('/stuff/get_all', {
                 pageNo: pageNo
             });
@@ -270,6 +341,7 @@ export default {
         },
         select_company: function (item) {
             this.new_contract.customer_id = item.id;
+            this.new_contract.supplier_id = item.id;
             this.company_name = item.name;
             this.show_customers = false;
         },
@@ -284,7 +356,7 @@ export default {
                 let rules = [{
                     name: 'company_name',
                     rule: ['required'],
-                    msg: ['请选择客户']
+                    msg: ['请选择客商']
                 }];
                 let val_ret = await this.$refs.add_contract.validator({
                     company_name: this.company_name
@@ -292,7 +364,7 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                await this.$send_req('/sale_management/contract_make', this.new_contract);
+                await this.$send_req(this.cur_urls.make_url, this.new_contract);
                 uni.startPullDownRefresh();
             }
             this.show_add_contract = false;
@@ -307,15 +379,18 @@ export default {
             this.focus_item = item;
             this.focus_user = single_user;
         },
-        get_sale_contract: async function (pageNo) {
-            let ret = await this.$send_req('/sale_management/contract_get', {
+        get_sale_contract: async function (pageNo, [cur_urls]) {
+            let ret = await this.$send_req(cur_urls.get_url, {
                 pageNo: pageNo
             });
             ret.contracts.forEach(item => {
-                item.search_cond = item.buy_company.name + item.stuff.map(ele => ele.name).join('') + item.rbac_users.map(ele => ele.name + ele.phone).join('');
+                item.search_cond = item.company.name;
             });
             return ret.contracts;
         }
+    },
+    onShow: function () {
+        this.init_top_seg();
     },
     onPullDownRefresh: function () {
         this.$refs.contracts.refresh();

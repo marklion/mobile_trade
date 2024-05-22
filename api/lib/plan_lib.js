@@ -52,7 +52,7 @@ module.exports = {
                         {
                             model: sq.models.contract, where: {
                                 saleCompanyId: _sale_company.id
-                            }, required: true, as:'buy_contracts'
+                            }, required: true, as: 'buy_contracts'
                         }
                     ]
                 }
@@ -63,7 +63,7 @@ module.exports = {
     get_stuff_on_sale: async function (_buy_company, pageNo) {
         let sq = db_opt.get_sq();
         let stuffs = await sq.models.stuff.findAll({
-            where:{
+            where: {
                 use_for_buy: false,
             },
             offset: pageNo * 20,
@@ -145,6 +145,9 @@ module.exports = {
         }
         let rows = await _compnay.getSale_contracts(conditions);
         let count = await _compnay.countSale_contracts();
+        rows.forEach(item => {
+            item.company = item.buy_company
+        })
         return { rows: rows, count: count };
     },
     get_all_buy_contracts: async function (_compnay, _pageNo) {
@@ -160,6 +163,9 @@ module.exports = {
         };
         let rows = await _compnay.getBuy_contracts(conditions);
         let count = await _compnay.countBuy_contracts();
+        rows.forEach(item => {
+            item.company = item.sale_company
+        });
         return { rows: rows, count: count };
     },
     plan_detail_include: function () {
@@ -542,11 +548,11 @@ module.exports = {
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             plan.status = 3;
-            plan.ticket_no = (ticket_no?ticket_no:(moment().format('YYYYMMDDHHmmss') + _plan_id));
+            plan.ticket_no = (ticket_no ? ticket_no : (moment().format('YYYYMMDDHHmmss') + _plan_id));
             plan.count = _count;
-            plan.p_time = (p_time?p_time:moment().format('YYYY-MM-DD HH:mm:ss'));
+            plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.p_weight = p_weight;
-            plan.m_time = (m_time?m_time:moment().format('YYYY-MM-DD HH:mm:ss'));
+            plan.m_time = (m_time ? m_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.m_weight = m_weight;
             await plan.save();
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);
@@ -875,7 +881,6 @@ module.exports = {
                 }
             }
         });
-        console.log(err_msg);
         return err_msg;
     },
 };

@@ -72,7 +72,7 @@ module.exports = {
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                         number: { type: String, mean: '合同号', example: "abc" },
                         customer_code: { type: String, mean: '客户合同号', example: "sss" },
-                        sale_company: {
+                        company: {
                             type: Object, mean: '销售公司', explain: {
                                 id: { type: Number, mean: '公司ID', example: 1 },
                                 name: { type: String, mean: '公司名称', example: '公司名称' },
@@ -129,6 +129,31 @@ module.exports = {
             func: async function (body, token) {
                 await plan_lib.confirm_single_plan(body.plan_id, token);
                 return { result: true };
+            },
+        },
+        order_batch_confirm: {
+            name: '批量确认',
+            description: '批量确认',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
+                stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
+                company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let ret = await plan_lib.batch_confirm(body, token);
+                if (ret) {
+                    throw { err_msg: '批量确认失败:' + ret };
+                }
+                else {
+                    return { result: true };
+                }
             },
         },
         close: {

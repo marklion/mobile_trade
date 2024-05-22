@@ -225,7 +225,6 @@ module.exports = {
         contract_get: {
             name: '获取合同',
             description: '获取合同',
-
             is_write: false,
             is_get_api: true,
             params: {
@@ -247,7 +246,7 @@ module.exports = {
                                 name: { type: String, mean: '货物名称', example: '货物名称' },
                             }
                         },
-                        buy_company: {
+                        company: {
                             type: Object, mean: '购买公司', explain: {
                                 id: { type: Number, mean: '公司ID', example: 1 },
                                 name: { type: String, mean: '公司名称', example: '公司名称' },

@@ -51,7 +51,7 @@
             <fui-list>
                 <list-show v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh">
                     <fui-list-cell arrow v-for="item in customer_data2show" :key="item.id" @click="choose_company(item)">
-                        {{item.buy_company.name}}
+                        {{item.company.name}}
                     </fui-list-cell>
                 </list-show>
             </fui-list>
@@ -69,16 +69,16 @@
                         </view>
                     </u-cell>
                     <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
-                    <u-cell v-if="focus_plan.trans_company_name"  title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
+                    <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
-                            <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm('/customer/order_buy_cancel', '取消')"></fui-button>
+                            <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
                             <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
-                                <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm('/sale_management/order_sale_confirm', '确认')"></fui-button>
-                                <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm('/sale_management/order_rollback', '回退')"></fui-button>
-                                <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm('/sale_management/close', '关闭')"></fui-button>
+                                <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
+                                <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm(cur_rollback_url, '回退')"></fui-button>
+                                <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
                             </module-filter>
                             <module-filter require_module="scale">
@@ -253,6 +253,11 @@ export default {
             cur_get_url: '',
             cur_is_motion: false,
             cur_is_buy: false,
+            cur_batch_confirm_url:'',
+            cur_confirm_url:'',
+            cur_rollback_url:'',
+            cur_cancel_url:'',
+            cur_close_url:'',
             sc_data2show: [],
             customer_data2show: [],
             stuff_data2show: [],
@@ -438,7 +443,7 @@ export default {
             });
         },
         batch_confirm: async function () {
-            await this.$send_req('/sale_management/order_batch_confirm', this.plan_filter);
+            await this.$send_req(this.cur_batch_confirm_url, this.plan_filter);
             this.refresh_plans();
         },
         close_pick_plan_date: function () {
@@ -665,6 +670,11 @@ export default {
             this.cur_get_url = e.url;
             this.cur_is_motion = e.motion;
             this.cur_is_buy = e.is_buy;
+            this.cur_batch_confirm_url = e.batch_url;
+            this.cur_confirm_url = e.confirm_url;
+            this.cur_rollback_url = e.rollback_url;
+            this.cur_close_url = e.close_url;
+            this.cur_cancel_url = e.cancel_url;
             this.init_tabs();
             this.refresh_plans();
         },
@@ -693,8 +703,8 @@ export default {
         },
         choose_company: function (item) {
             this.company_filter = {
-                name: item.buy_company.name,
-                id: item.buy_company.id,
+                name: item.company.name,
+                id: item.company.id,
             }
             this.show_company_filter = false;
             this.refresh_plans();
@@ -780,7 +790,7 @@ export default {
                     pageNo: pageNo
                 });
                 ret.contracts.forEach(item => {
-                    item.search_cond = item.buy_company.name + item.stuff.map(ele => ele.name).join('') + item.rbac_users.map(ele => ele.name + ele.phone).join('');
+                    item.search_cond = item.company.name;
                 });
                 return ret.contracts;
             } else {
@@ -793,6 +803,7 @@ export default {
                 this.seg.push({
                     name: '主动采购',
                     url: '/customer/order_buy_search',
+                    cancel_url:'/customer/order_buy_cancel',
                     motion: true,
                     is_buy: false,
                 });
@@ -801,6 +812,10 @@ export default {
                 this.seg.push({
                     name: '被动销售',
                     url: '/sale_management/order_search',
+                    batch_url:'/sale_management/order_batch_confirm',
+                    confirm_url:'/sale_management/order_sale_confirm',
+                    rollback_url:'/sale_management/order_rollback',
+                    close_url:'/sale_management/close',
                     motion: false,
                     is_buy: false,
                 });
@@ -809,6 +824,7 @@ export default {
                 this.seg.push({
                     name: '主动销售',
                     url: '/supplier/order_sale_search',
+                    cancel_url:'/supplier/order_sale_cancel',
                     motion: true,
                     is_buy: true,
                 });
@@ -817,6 +833,10 @@ export default {
                 this.seg.push({
                     name: '被动采购',
                     url: '/buy_management/order_search',
+                    batch_url:'/buy_management/order_batch_confirm',
+                    confirm_url:'/buy_management/order_buy_confirm',
+                    rollback_url:'/buy_management/order_rollback',
+                    close_url:'/buy_management/close',
                     motion: false,
                     is_buy: true,
                 });
@@ -825,6 +845,11 @@ export default {
                 this.cur_get_url = this.seg[0].url;
                 this.cur_is_motion = this.seg[0].motion;
                 this.cur_is_buy = this.seg[0].is_buy;
+                this.cur_batch_confirm_url = this.seg[0].batch_url;
+                this.cur_cancel_url = this.seg[0].cancel_url;
+                this.cur_confirm_url = this.seg[0].confirm_url;
+                this.cur_rollback_url = this.seg[0].rollback_url;
+                this.cur_close_url = this.seg[0].close_url;
                 this.init_tabs();
             }
         },
