@@ -858,7 +858,7 @@ export default {
         this.refresh_plans();
         uni.stopPullDownRefresh();
     },
-    onShow() {
+    onLoad() {
         this.init_top_seg();
         let tom = new Date();
         tom.setDate(tom.getDate() + 1);

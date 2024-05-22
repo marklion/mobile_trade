@@ -9,14 +9,21 @@
         <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
             <fui-input placeholder="请输入计划日期" disabled v-model="plan.plan_time"></fui-input>
         </fui-form-item>
-        <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
-            <fui-input placeholder="请输入用途" disabled v-model="plan.use_for"></fui-input>
-        </fui-form-item>
-        <pick-regions @getRegion="pick_address">
-            <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
-                <fui-input placeholder="请输入卸车地点" disabled v-model="plan.drop_address"></fui-input>
+        <view v-if="type_define.is_buy">
+            <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
+                <fui-input placeholder="请输入用途" disabled v-model="plan.use_for"></fui-input>
             </fui-form-item>
-        </pick-regions>
+            <pick-regions @getRegion="pick_address">
+                <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
+                    <fui-input placeholder="请输入卸车地点" disabled v-model="plan.drop_address"></fui-input>
+                </fui-form-item>
+            </pick-regions>
+        </view>
+        <view v-else>
+            <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
+                <fui-input placeholder="请输入单价" v-model="plan.price"></fui-input>
+            </fui-form-item>
+        </view>
         <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
             <fui-input placeholder="请输入承运公司" v-model="plan.trans_company_name"></fui-input>
         </fui-form-item>
@@ -71,6 +78,13 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            type_define: {
+                vh_fetch_url: '/customer/fetch_vehicle',
+                dr_fetch_url: '/customer/fetch_driver',
+                order_create_url: '/customer/order_buy_create',
+                pair_get_url: '/customer/get_vehicle_pair',
+                is_buy: true,
+            },
             data2show: [],
             show_pick_vehicles: false,
             new_vehicle: {
@@ -93,7 +107,8 @@ export default {
                 plan_time: "",
                 stuff_id: 0,
                 use_for: "",
-                trans_company_name:'',
+                trans_company_name: '',
+                price: 0,
             },
             stuff_name: '',
             saler_name: '',
@@ -142,13 +157,13 @@ export default {
             }
         },
         add_vehicle: async function () {
-            let mv = await this.$send_req('/customer/fetch_vehicle', {
+            let mv = await this.$send_req(this.type_define.vh_fetch_url, {
                 plate: this.new_vehicle.main_vehicle_plate,
             });
-            let bv = await this.$send_req('/customer/fetch_vehicle', {
+            let bv = await this.$send_req(this.type_define.vh_fetch_url, {
                 plate: this.new_vehicle.behind_vehicle_plate,
             });
-            let dr = await this.$send_req('/customer/fetch_driver', {
+            let dr = await this.$send_req(this.type_define.dr_fetch_url, {
                 phone: this.new_vehicle.driver_phone,
                 name: this.new_vehicle.driver_name,
             });
@@ -178,7 +193,7 @@ export default {
             this.show_add_vehicle = false;
         },
         get_vehicles: async function (pageNo) {
-            let res = await this.$send_req('/customer/get_vehicle_pair', {
+            let res = await this.$send_req(this.type_define.pair_get_url, {
                 pageNo: pageNo,
             });
             res.pairs.forEach(ele => {
@@ -210,15 +225,25 @@ export default {
                 name: 'plan_time',
                 rule: ['required'],
                 msg: ['请选择填写计划日期']
-            }, {
-                name: 'drop_address',
-                rule: ['required'],
-                msg: ['请选择填写卸车地点']
-            }, {
-                name: 'use_for',
-                rule: ['required'],
-                msg: ['请选择填写用途']
             }];
+            if (this.type_define.is_buy) {
+                rules.push({
+                    name: 'drop_address',
+                    rule: ['required'],
+                    msg: ['请选择填写卸车地点']
+                })
+                rules.push({
+                    name: 'use_for',
+                    rule: ['required'],
+                    msg: ['请选择填写用途']
+                });
+            } else {
+                rules.push({
+                    name: 'price',
+                    rule: ['isAmount'],
+                    msg: ['请填写正确的单价']
+                });
+            }
             let val_ret = await this.$refs.plan_form.validator(this.plan, rules);
             if (!val_ret.isPassed) {
                 return;
@@ -230,7 +255,9 @@ export default {
                 });
                 return;
             }
-            console.log(this.vehicles);
+            if (this.plan.price) {
+                this.plan.price = parseFloat(this.plan.price);
+            }
             for (let index = 0; index < this.vehicles.length; index++) {
                 let ele = this.vehicles[index];
                 let req = {
@@ -239,7 +266,7 @@ export default {
                     behind_vehicle_id: ele.behind_vehicle.id,
                     driver_id: ele.driver.id
                 };
-                await this.$send_req('/customer/order_buy_create', req);
+                await this.$send_req(this.type_define.order_create_url, req);
             }
             uni.switchTab({
                 url: '/pages/OrderList',
@@ -254,6 +281,15 @@ export default {
         let tmp_date = new Date();
         tmp_date.setDate(tmp_date.getDate() + 1);
         this.default_time = utils.dateFormatter(tmp_date, 'y-m-d', 4, false);
+        if (options.is_buy == 'false') {
+            this.type_define = {
+                vh_fetch_url: '/supplier/fetch_vehicle',
+                dr_fetch_url: '/supplier/fetch_driver',
+                order_create_url: '/supplier/order_sale_create',
+                pair_get_url: '/supplier/get_vehicle_pair',
+                is_buy: false,
+            }
+        }
     },
 }
 </script>

@@ -857,14 +857,14 @@ module.exports = {
         }
         return ret;
     },
-    batch_confirm: async function (body, token) {
+    batch_confirm: async function (body, token, is_buy = false) {
         let err_msg = '';
         await db_opt.get_sq().transaction(async (t) => {
             let company = await rbac_lib.get_company_by_token(token);
             let all_plans = [];
             let pageNo = 0;
             while (true) {
-                let tmp = await this.search_sold_plans(company, pageNo, body);
+                let tmp = await this.search_sold_plans(company, pageNo, body, is_buy);
                 all_plans = all_plans.concat(tmp.rows);
                 pageNo++;
                 if (tmp.rows.length <= 0) {

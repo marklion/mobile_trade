@@ -33,7 +33,7 @@
                 <view>
                     <u-cell v-for="(item, index) in stuff2sale" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment">
                         <view slot="right-icon">
-                            <fui-button v-if="item.price != -1" btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
+                            <fui-button v-if="item.price != -1" btnSize="mini" text="下单" @click="start_plan_creation(item, true)"></fui-button>
                         </view>
                     </u-cell>
                 </view>
@@ -170,9 +170,13 @@ export default {
                 }
             }
         },
-        start_plan_creation: function (item) {
+        start_plan_creation: function (item, is_sale) {
+            let is_buy = 'true';
+            if (is_sale) {
+                is_buy = 'false'
+            }
             uni.navigateTo({
-                url: '/pages/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name,
+                url: '/pages/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name + '&is_buy=' + is_buy,
             });
         },
         get_stuff2buy: async function (pageNo) {

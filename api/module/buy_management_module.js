@@ -147,7 +147,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let ret = await plan_lib.batch_confirm(body, token);
+                let ret = await plan_lib.batch_confirm(body, token, true);
                 if (ret) {
                     throw { err_msg: '批量确认失败:' + ret };
                 }
