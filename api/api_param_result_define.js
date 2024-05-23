@@ -27,6 +27,7 @@ function make_bc_detail(need_turn = false) {
                     type: Array, mean: '出价列表', explain: {
                         id: { type: Number, mean: '出价ID', example: 1 },
                         price: { type: Number, mean: '价格', example: 100 },
+                        time: { type: String, mean: '出价时间', example: '2020-01-01 00:00:00' },
                         accept: { type: Boolean, mean: '是否接受', example: true },
                         rbac_user: {
                             type: Object, mean: '出价人', explain: {
@@ -169,9 +170,11 @@ module.exports = {
                 id: { type: Number, mean: '出价ID', example: 1 },
                 price: { type: Number, mean: '价格', example: 100 },
                 accept: { type: Boolean, mean: '是否接受', example: true },
+                time: { type: String, mean: '出价时间', example: '2020-01-01 00:00:00' },
                 bidding_turn: {
                     type: Object, mean: '竞价轮次', explain: {
                         id: { type: Number, mean: 'ID', example: 1 },
+                        begin_time: { type: String, mean: '开始时间', example: '2020-01-01 00:00:00' },
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 00:00:00' },
                         turn: { type: Number, mean: '轮次', example: 1 },
                         finish: { type: Boolean, mean: '是否结束', example: true },

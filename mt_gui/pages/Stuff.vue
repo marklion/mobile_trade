@@ -6,6 +6,8 @@
                 <view style="display:flex;">
                     <fui-tag v-if="item.comment" :text="item.comment" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
                     <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" :scaleRatio="0.8" type="primary"></fui-tag>
+                    <fui-tag v-else text="用于销售" theme="plain" :scaleRatio="0.8" type="success"></fui-tag>
                 </view>
                 <view style="display:flex;">
                     <fui-button text="修改" btnSize="mini" radius="0" @click="prepare_update(item)"></fui-button>
@@ -22,6 +24,9 @@
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
             <fui-input label="备注" borderTop placeholder="请输入备注" v-model="stuff_ready_fetch.comment"></fui-input>
             <fui-input label="期望单车装载量" borderTop placeholder="请输入期望单车装载量" v-model="stuff_ready_fetch.expect_count"></fui-input>
+            <fui-form-item label="用于采购">
+                <u-switch v-model="stuff_ready_fetch.use_for_buy"></u-switch>
+            </fui-form-item>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :show="show_delete" :descr="'确定要删除' + item_for_delete.name + '吗？'" @click="delete_stuff">
@@ -65,6 +70,7 @@ export default {
                 name: '',
                 comment: undefined,
                 expect_count: undefined,
+                use_for_buy: false,
             },
             show_stuff_fetch: false,
             is_update: false,
@@ -154,6 +160,7 @@ export default {
                 name: item.name,
                 comment: item.comment,
                 expect_count: item.expect_count,
+                use_for_buy: item.use_for_buy,
             }
             this.show_stuff_fetch = true;
             this.is_update = true;
@@ -195,6 +202,7 @@ export default {
             name: '',
             comment: undefined,
             expect_count: undefined,
+            use_for_buy: false,
         }
         uni.stopPullDownRefresh();
     },

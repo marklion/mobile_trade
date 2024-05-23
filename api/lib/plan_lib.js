@@ -25,7 +25,7 @@ module.exports = {
         if (stuff_found.length == 1) {
             stuff_found[0].comment = _comment;
             stuff_found[0].expect_count = _expect_count;
-            if (use_for_buy) {
+            if (use_for_buy != undefined) {
                 stuff_found[0].use_for_buy = use_for_buy;
             }
             await stuff_found[0].save();

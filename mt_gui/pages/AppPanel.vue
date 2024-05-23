@@ -26,6 +26,12 @@ export default {
                     name: '竞价管理',
                     icon: 'bankcard',
                     require_module: 'bid',
+                    path: 'BiddingConfig'
+                }, {
+                    name: '竞价参与',
+                    icon: 'bankcard',
+                    require_module: 'customer',
+                    path: 'BiddingJoin'
                 }, {
                     name: '现场管理',
                     icon: 'transport',
