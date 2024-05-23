@@ -28,6 +28,10 @@
                 司机排号设置
             </fui-list-cell>
         </module-filter>
+
+        <module-filter require_module="rbac">
+            <u-cell title="开发选项" isLink url="/pages/DevPage"></u-cell>
+        </module-filter>
     </fui-list>
     <fui-button type="danger" text="退出登录" @click="unLogin"></fui-button>
     <fui-modal width="600" :show="show_change_pwd" @click="change_pwd">

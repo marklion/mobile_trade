@@ -184,4 +184,15 @@ module.exports = {
             }
         }
     },
+    dev_data:{
+        third_key: { type: String, have_to: false, mean: '货达key', example: 'third_key_example' },
+        third_url: { type: String, have_to: false, mean: '货达url', example: 'third_url_example' },
+        third_token: { type: String, have_to: false, mean: '货达token', example: 'third_token_example' },
+        zc_url: { type: String, have_to: false, mean: '卓创url', example: 'zc_url_example' },
+        zh_ssid: { type: String, have_to: false, mean: '卓创旧系统ssid', example: 'zh_ssid_example' },
+        event_types: { type: String, have_to: false, mean: '事件类型', example: 'event_types_example' },
+        remote_event_url: { type: String, have_to: false, mean: '远程事件url', example: 'remote_event_url_example' },
+        zczh_back_end: { type: String, have_to: false, mean: '卓创账户后端', example: 'zczh_back_end_example' },
+        zczh_back_token: { type: String, have_to: false, mean: '卓创账户后端token', example: 'zczh_back_token_example' },
+    },
 }

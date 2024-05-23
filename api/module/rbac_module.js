@@ -190,7 +190,6 @@ module.exports = {
         unbind_role2user:{
             name: '解绑角色与用户',
             description: '解绑角色与用户',
-
             is_write: true,
             is_get_api: false,
             params: {
@@ -214,6 +213,37 @@ module.exports = {
                     throw { err_msg: '公司不匹配' };
                 }
                 return ret;
+            },
+        },
+        get_dev_data:{
+            name:'获取开发数据',
+            description:'获取开发数据',
+            is_write: false,
+            is_get_api: false,
+            params: {
+            },
+            result: api_param_result_define.dev_data,
+            func: async (body, token) => {
+                let company = await rbac_lib.get_company_by_token(token);
+                return company;
+            },
+        },
+        set_dev_data: {
+            name: '设置开发数据',
+            description: '设置开发数据',
+            is_write: true,
+            is_get_api: false,
+            params: api_param_result_define.dev_data,
+            result: {
+                result: { type: Boolean, mean: '解绑结果', example: true },
+            },
+            func: async (body, token) => {
+                let company = await rbac_lib.get_company_by_token(token);
+                Object.keys(body).forEach(item => {
+                    company[item] = body[item];
+                });
+                await company.save();
+                return { result: true };
             },
         },
     }
