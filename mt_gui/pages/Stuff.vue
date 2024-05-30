@@ -19,7 +19,7 @@
         </u-cell>
     </list-show>
     <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
-    <fui-modal width="600" :show="show_stuff_fetch" @click="fetch_stuff">
+    <fui-modal width="600" :show="show_stuff_fetch" v-if="show_stuff_fetch" @click="fetch_stuff">
         <fui-form ref="form" top="100">
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
             <fui-input label="备注" borderTop placeholder="请输入备注" v-model="stuff_ready_fetch.comment"></fui-input>
@@ -29,9 +29,9 @@
             </fui-form-item>
         </fui-form>
     </fui-modal>
-    <fui-modal width="600" :show="show_delete" :descr="'确定要删除' + item_for_delete.name + '吗？'" @click="delete_stuff">
+    <fui-modal width="600" :show="show_delete" v-if="show_delete" :descr="'确定要删除' + item_for_delete.name + '吗？'" @click="delete_stuff">
     </fui-modal>
-    <fui-modal width="600" :show="show_change_price" @click="change_price">
+    <fui-modal width="600" :show="show_change_price" v-if="show_change_price" @click="change_price">
         <fui-form ref="change_price_form" top="100">
             <fui-input required label="新价格" borderTop placeholder="请输入新价格" v-model="stuff2change_price.price"></fui-input>
             <fui-input required label="备注" borderTop placeholder="请输入备注" v-model="stuff2change_price.comment"></fui-input>

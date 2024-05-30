@@ -7,7 +7,7 @@
             <fui-preview bdSize="26" :previewData="plan_show(item)" @click="handle_button"></fui-preview>
         </view>
     </list-show>
-    <fui-modal width="600" :show="show_bind_id_card" :buttons="[]">
+    <fui-modal width="600" :show="show_bind_id_card" v-if="show_bind_id_card" :buttons="[]">
         <fui-form ref="driver" top="100">
             <fui-input required label="姓名" borderTop placeholder="请输入姓名" v-model="bind_req.name"></fui-input>
             <fui-input required label="身份证号" borderTop placeholder="请输入身份证" v-model="bind_req.id_card"></fui-input>
@@ -17,7 +17,7 @@
     <fui-bottom-popup :show="show_sc" @close="show_sc= false">
         <u-cell title="安检结果">
             <view slot="value">
-                <fui-text v-if="(sc_data2show && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
+                <fui-text v-if="(sc_data2show.length > 0 && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
                 <fui-text v-else type="danger" text="未通过"></fui-text>
             </view>
         </u-cell>
@@ -63,7 +63,7 @@
     <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
     <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
 
-    <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
+    <fui-modal :zIndex="1003" width="600" v-if="show_delete_sc_content" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
 </view>
 </template>

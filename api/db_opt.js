@@ -14,6 +14,7 @@ function get_db_handle() {
             if (time > 200) {
                 console.log(time + '->' + sql);
             }
+            console.log(time + '->' + sql);
         },
         benchmark: true,
     });
@@ -33,8 +34,8 @@ let db_opt = {
             phone: { type: DataTypes.STRING, unique: true },
             photo_path: { type: DataTypes.STRING },
             password: { type: DataTypes.STRING },
-            email:{ type: DataTypes.STRING },
-            fixed:{type:DataTypes.BOOLEAN},
+            email: { type: DataTypes.STRING },
+            fixed: { type: DataTypes.BOOLEAN },
         },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -92,9 +93,11 @@ let db_opt = {
             manual_close: { type: DataTypes.BOOLEAN, defaultValue: false },
             call_time: { type: DataTypes.STRING },
             is_buy: { type: DataTypes.BOOLEAN, defaultValue: false },
-            ticket_no:{ type: DataTypes.STRING },
-            seal_no:{ type: DataTypes.STRING },
-            trans_company_name:{ type: DataTypes.STRING },
+            ticket_no: { type: DataTypes.STRING },
+            seal_no: { type: DataTypes.STRING },
+            trans_company_name: { type: DataTypes.STRING },
+            enter_count: { type: DataTypes.FLOAT, defaultValue: 0 },
+            enter_attachment: { type: DataTypes.STRING },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -194,7 +197,7 @@ let db_opt = {
             time: { type: DataTypes.STRING },
             accept: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
-        hd_base_info:{
+        hd_base_info: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             base_id: { type: DataTypes.STRING },
@@ -203,16 +206,16 @@ let db_opt = {
             code: { type: DataTypes.STRING },
             pid: { type: DataTypes.STRING },
         },
-        dc_status:{
+        dc_status: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             mac: { type: DataTypes.STRING },
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
         },
-        vehicle_team:{
+        vehicle_team: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
-            team_member:{ type: DataTypes.STRING },
+            team_member: { type: DataTypes.STRING },
         },
     },
     make_associate: function (_sq) {

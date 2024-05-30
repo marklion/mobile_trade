@@ -22,9 +22,9 @@
         </u-cell>
     </view>
 
-    <fui-modal width="600" :descr="'确定要停止吗？'" :show="show_stop_bid" @click="stop_bid">
+    <fui-modal width="600" :descr="'确定要停止吗？'" v-if="show_stop_bid" :show="show_stop_bid" @click="stop_bid">
     </fui-modal>
-    <fui-modal width="600" :show="show_start_bid" @click="start_bid">
+    <fui-modal width="600" :show="show_start_bid" v-if="show_start_bid" @click="start_bid">
         <fui-form ref="start_bid" top="100">
             <fui-form-item label="时间范围">
                 <fui-textarea placeholder="选择时间范围" height="35px" v-model="bt_time_range" disabled @click="show_bt_time = true"></fui-textarea>
@@ -34,7 +34,7 @@
             </fui-form-item>
         </fui-form>
     </fui-modal>
-    <fui-modal width="600" :show="show_next_bid" @click="next_bid">
+    <fui-modal width="600" v-if="show_next_bid" :show="show_next_bid" @click="next_bid">
         <fui-form ref="next_bid" top="100">
             <fui-form-item label="时间范围">
                 <fui-textarea placeholder="选择时间范围" height="35px" v-model="bt_time_range" disabled @click="show_bt_time = true"></fui-textarea>

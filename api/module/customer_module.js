@@ -5,6 +5,7 @@ const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 const common = require('./common');
 const cash_lib = require('../lib/cash_lib');
+const wx_api_util = require('../lib/wx_api_util');
 module.exports = {
     name: 'customer',
     description: '客户',
@@ -157,6 +158,7 @@ module.exports = {
                     new_plan.status = 0;
                     new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();
+                    wx_api_util.send_plan_status_msg(await plan_lib.get_single_plan_by_id(new_plan.id));
                 }
                 else {
                     throw { err_msg: '创建计划失败' };

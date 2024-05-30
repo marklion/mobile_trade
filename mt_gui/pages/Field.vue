@@ -31,7 +31,7 @@
             <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url" ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error" @complete="after_other_action"></fui-upload>
         </view>
     </view>
-    <fui-modal width="600" descr="确定要过号吗？" :show="show_pass_vehicle" @click="pass_vehicle">
+    <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
     </fui-modal>
 </view>
 </template>

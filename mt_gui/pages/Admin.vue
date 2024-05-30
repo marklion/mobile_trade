@@ -51,6 +51,8 @@ export default {
             show_module_config: false,
             focus_company: 0,
             valid_modules: [],
+            module_data2show: [],
+            data2show: [],
         }
     },
     methods: {
@@ -66,7 +68,7 @@ export default {
                     company_id: this.focus_company,
                     module_id: need_delete[i]
                 };
-                await this.$send_req('/global/company_add', req);
+                await this.$send_req('/global/company_del_module', req);
             }
             for (let i = 0; i < this.valid_modules.length; i++) {
                 let req = {

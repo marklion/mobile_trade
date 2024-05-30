@@ -213,6 +213,35 @@ module.exports = {
                 return { result: true };
             }
         },
+        driver_upload_enter_info:{
+            name:'司机上传进厂前信息',
+            description:'司机上传进厂前信息',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                enter_count: { type: Number, have_to: true, mean: '进厂前装载量', example: 1 },
+                enter_attachment: { type: String, have_to: true, mean: '进厂前装载单据', example: "https://abc" }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                if (driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
+                    plan.enter_count = body.enter_count;
+                    plan.enter_attachment = body.enter_attachment;
+                    await plan.save();
+                }
+                else {
+                    throw { err_msg: '无法上传' };
+                }
+            }
+        },
         driver_checkin: {
             name: '司机签到',
             description: '司机签到',
@@ -610,57 +639,56 @@ module.exports = {
                 return ret;
             }
         },
-        get_ticket:{
-            name:'获取磅单',
-            description:'获取磅单',
-            need_rbac:false,
-            is_write:false,
-            is_get_api:false,
-            params:{
-                id:{type:Number,have_to:true,mean:'订单ID',example:1}
+        get_ticket: {
+            name: '获取磅单',
+            description: '获取磅单',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '订单ID', example: 1 }
             },
-            result:{
-                company_name:{type:String,mean:'公司名',example:'company_example'},
-                order_company_name:{type:String,mean:'下单公司名',example:'order_company_example'},
-                plate:{type:String,mean:'车牌',example:'plate_example'},
-                behind_plate:{type:String,mean:'挂车牌',example:'behind_plate_example'},
-                ticket_no:{type:String,mean:'磅单号',example:'ticket_no_example'},
-                m_weight:{type:Number,mean:'毛重',example:1},
-                m_time:{type:String,mean:'毛重时间',example:'2020-01-01 12:00:00'},
-                p_weight:{type:Number,mean:'皮重',example:1},
-                p_time:{type:String,mean:'皮重时间',example:'2020-01-01 12:00:00'},
-                count:{type:Number,mean:'装车量',example:1},
-                seal_no:{type:String,mean:'封条号',example:'seal_no_example'},
-                stamp_path:{type:String,mean:'印章路径',example:'stamp_path_example'},
-                is_buy:{type:Boolean,mean:'是否购买',example:true},
-                qr_code:{type:String,mean:'二维码base64',example:'qr_code_example'},
-                trans_company_name:{type:String,mean:'运输公司名',example:''},
+            result: {
+                company_name: { type: String, mean: '公司名', example: 'company_example' },
+                order_company_name: { type: String, mean: '下单公司名', example: 'order_company_example' },
+                plate: { type: String, mean: '车牌', example: 'plate_example' },
+                behind_plate: { type: String, mean: '挂车牌', example: 'behind_plate_example' },
+                ticket_no: { type: String, mean: '磅单号', example: 'ticket_no_example' },
+                m_weight: { type: Number, mean: '毛重', example: 1 },
+                m_time: { type: String, mean: '毛重时间', example: '2020-01-01 12:00:00' },
+                p_weight: { type: Number, mean: '皮重', example: 1 },
+                p_time: { type: String, mean: '皮重时间', example: '2020-01-01 12:00:00' },
+                count: { type: Number, mean: '装车量', example: 1 },
+                seal_no: { type: String, mean: '封条号', example: 'seal_no_example' },
+                stamp_path: { type: String, mean: '印章路径', example: 'stamp_path_example' },
+                is_buy: { type: Boolean, mean: '是否购买', example: true },
+                qr_code: { type: String, mean: '二维码base64', example: 'qr_code_example' },
+                trans_company_name: { type: String, mean: '运输公司名', example: '' },
             },
-            func:async function(body,token){
+            func: async function (body, token) {
                 let orig_plan = await plan_lib.get_single_plan_by_id(body.id);
                 let plan = await plan_lib.replace_plan2archive(orig_plan)
-                if (!plan)
-                {
+                if (!plan) {
                     plan = orig_plan;
                 }
                 let qr_code = await wx_api_util.make_ticket_qr(plan);
                 let qr_code_base64 = Buffer.from(qr_code.buffer).toString('base64');
                 return {
-                    company_name:plan.company.name,
-                    order_company_name:plan.stuff.company.name,
-                    plate:plan.main_vehicle.plate,
-                    behind_plate:plan.behind_vehicle.plate,
-                    ticket_no:plan.ticket_no,
-                    m_weight:plan.m_weight,
-                    m_time:plan.m_time,
-                    p_weight:plan.p_weight,
-                    p_time:plan.p_time,
-                    count:plan.count,
-                    seal_no:plan.seal_no,
-                    stamp_path:plan.stuff.company.stamp_pic,
-                    is_buy:plan.is_buy,
-                    qr_code:qr_code_base64,
-                    trans_company_name:plan.trans_company_name,
+                    company_name: plan.company.name,
+                    order_company_name: plan.stuff.company.name,
+                    plate: plan.main_vehicle.plate,
+                    behind_plate: plan.behind_vehicle.plate,
+                    ticket_no: plan.ticket_no,
+                    m_weight: plan.m_weight,
+                    m_time: plan.m_time,
+                    p_weight: plan.p_weight,
+                    p_time: plan.p_time,
+                    count: plan.count,
+                    seal_no: plan.seal_no,
+                    stamp_path: plan.stuff.company.stamp_pic,
+                    is_buy: plan.is_buy,
+                    qr_code: qr_code_base64,
+                    trans_company_name: plan.trans_company_name,
                 }
             },
         },

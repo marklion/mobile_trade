@@ -1,7 +1,9 @@
 function make_plugin_map() {
     let normal = require('./normal')
+    let hnmhg= require('./hnmhg')
     return {
-        normal: normal
+        normal: normal,
+        hnmhg:hnmhg,
     }
 }
 module.exports = {

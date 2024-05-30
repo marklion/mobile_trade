@@ -73,6 +73,7 @@ async function init_super_user() {
 }
 init_super_user();
 const multer = require('multer');
+const wx_api_util = require('./lib/wx_api_util');
 const upload = multer({ dest: '/database/uploads/' });
 app.post('/api/v1/upload_file', upload.single('file'), (req, res) => {
     const path = require('path');
@@ -178,6 +179,17 @@ app.get('/api/help', (req, res) => {
 `;
     res.send(html);
 });
+const fs = require('fs');
+const legacy_api = require('./legacy_api');
+legacy_api.install(app);
 
+if (fs.existsSync('/database/map.json')) {
+    wx_api_util.openid_map.load_map()
+} else {
+    wx_api_util.openid_map.sync_map()
+}
+setInterval(() => {
+    wx_api_util.openid_map.sync_map()
+}, 1000 * 60 * 300)
 
 app.listen(8080, () => console.log('Server running on port 8080'));

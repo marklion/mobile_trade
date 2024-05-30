@@ -60,7 +60,7 @@
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_pick_vehicles" @close="show_pick_vehicles = false">
         <fui-list>
-            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh">
+            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh" :fetch_params="[type_define.pair_get_url]">
                 <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="choose_vehicles(item)">
                     {{item.main_vehicle_plate}}-{{item.behind_vehicle_plate}}-{{item.driver_name}}-{{item.driver_phone}}
                 </fui-list-cell>
@@ -192,8 +192,8 @@ export default {
             };
             this.show_add_vehicle = false;
         },
-        get_vehicles: async function (pageNo) {
-            let res = await this.$send_req(this.type_define.pair_get_url, {
+        get_vehicles: async function (pageNo, [pair_get_url]) {
+            let res = await this.$send_req(pair_get_url, {
                 pageNo: pageNo,
             });
             res.pairs.forEach(ele => {

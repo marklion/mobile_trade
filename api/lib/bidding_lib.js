@@ -1,6 +1,7 @@
 const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
+const wx_api_util = require('./wx_api_util');
 module.exports = {
     create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token) {
         let sq = db_opt.get_sq();
@@ -79,6 +80,7 @@ module.exports = {
                     const element = joiner_ids[index];
                     let joiner = await sq.models.rbac_user.findByPk(element.id);
                     await joiner.createBidding_item({ biddingTurnId: bt.id });
+                    wx_api_util.bidding_start_msg(bc.comment + '-' + bc.stuff.name, begin_time, joiner.open_id);
                 }
                 return bt;
             }
@@ -173,6 +175,7 @@ module.exports = {
             }
             item.price = price;
             item.time = moment().format('YYYY-MM-DD HH:mm:ss');
+            wx_api_util.bidding_price_msg(bc, user.name, price);
             await item.save();
             let not_price_yet_item_count = await item.bidding_turn.countBidding_items({
                 where: {

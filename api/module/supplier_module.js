@@ -4,6 +4,7 @@ const rbac_lib = require('../lib/rbac_lib');
 const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 const common = require('./common');
+const wx_api_util = require('../lib/wx_api_util');
 module.exports = {
     name: 'supplier',
     description: '供应商',
@@ -88,6 +89,7 @@ module.exports = {
                     new_plan.is_buy = true;
                     new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();
+                    wx_api_util.send_plan_status_msg(await plan_lib.get_single_plan_by_id(new_plan.id));
                 }
                 else {
                     throw { err_msg: '创建计划失败' };

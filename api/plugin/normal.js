@@ -7,5 +7,5 @@ module.exports = {
     },
     call_vehicle: async function (_plan) {
 
-    }
+    },
 }

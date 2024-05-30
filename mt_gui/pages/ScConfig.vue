@@ -18,7 +18,7 @@
         </view>
     </list-show>
     <fui-button type="success" text="新增" @click="prepare_fetch(null)"></fui-button>
-    <fui-modal width="600" :show="show_fetch" @click="fetch_req">
+    <fui-modal width="600" :show="show_fetch" v-if="show_fetch" @click="fetch_req">
         <fui-form ref="sc_fetch" labelWidth="240" top="100">
             <fui-input required label="名称" :disabled="!new_sc" borderTop placeholder="请输入名称" v-model="sc_fetch_req.name"></fui-input>
             <fui-input label="提示信息" borderTop placeholder="请输入提示信息" v-model="sc_fetch_req.prompt"></fui-input>
@@ -42,7 +42,7 @@
         <fui-list-cell arrow @click="choose_belong_type(2)">挂车</fui-list-cell>
     </fui-bottom-popup>
 
-    <fui-modal width="600" :show="show_delete" @click="delete_req" :descr="'确定要删除 ' + sc_fetch_req.name + ' 吗?'">
+    <fui-modal width="600" :show="show_delete" v-if="show_delete" @click="delete_req" :descr="'确定要删除 ' + sc_fetch_req.name + ' 吗?'">
     </fui-modal>
 </view>
 </template>

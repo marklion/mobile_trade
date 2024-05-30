@@ -42,7 +42,7 @@
         </u-cell>
     </list-show>
     <fui-button v-if="cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
-    <fui-modal width="600" :show="show_add_contract" @click="add_contract">
+    <fui-modal width="600" :show="show_add_contract" @click="add_contract" v-if="show_add_contract">
         <fui-form ref="add_contract" top="100">
             <fui-input label="客商" borderTop placeholder="点击选择客商" v-model="company_name" disabled @click="show_customers = true"></fui-input>
             <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="show_date_range = true"></fui-input>
@@ -70,19 +70,19 @@
             </list-show>
         </fui-list>
     </fui-bottom-popup>
-    <fui-modal width="600" :descr="'确定要取消' + focus_item.company.name + '关注' + focus_stuff.name + '吗？'" :show="show_del_stuff" @click="del_stuff">
+    <fui-modal width="600" :descr="'确定要取消' + focus_item.company.name + '关注' + focus_stuff.name + '吗？'" v-if="show_del_stuff" :show="show_del_stuff" @click="del_stuff">
     </fui-modal>
 
-    <fui-modal width="600" :show="show_add_auth" @click="add_auth">
+    <fui-modal width="600" :show="show_add_auth" v-if="show_add_auth" @click="add_auth">
         <fui-form ref="add_auth" top="100">
             <fui-input required label="用户手机号" borderTop placeholder="请输入手机号" v-model="phone"></fui-input>
         </fui-form>
     </fui-modal>
-    <fui-modal width="600" :descr="'确定要取消授权' + focus_user.phone + '吗？'" :show="show_unauth" @click="unauth_user">
+    <fui-modal width="600" :descr="'确定要取消授权' + focus_user.phone + '吗？'" :show="show_unauth" v-if="show_unauth" @click="unauth_user">
     </fui-modal>
-    <fui-modal width="600" :descr="'确定要删除' + focus_item.company.name + '吗？'" :show="show_del" @click="del_contract">
+    <fui-modal width="600" :descr="'确定要删除' + focus_item.company.name + '吗？'" :show="show_del" v-if="show_del" @click="del_contract">
     </fui-modal>
-    <fui-modal width="600" :show="show_charge" @click="charge">
+    <fui-modal width="600" :show="show_charge" @click="charge" v-if="show_charge">
         <fui-form ref="charge" top="100">
             <fui-input required label="充值金额" borderTop placeholder="负值为扣款" v-model="cash"></fui-input>
             <fui-input required label="充值原因" borderTop placeholder="请输入充值原因" v-model="comment"></fui-input>

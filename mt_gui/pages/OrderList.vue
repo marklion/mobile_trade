@@ -199,7 +199,7 @@
     <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
     <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？'" :show="show_xxx_confirm" @click="do_xxx">
     </fui-modal>
-    <fui-modal :zIndex="1002" width="600" :show="show_scale_input" @click="deliver">
+    <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver" >
         <fui-form ref="deliver" top="100">
             <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
             <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
@@ -210,12 +210,12 @@
             </fui-input>
         </fui-form>
     </fui-modal>
-    <fui-modal :zIndex="1004" width="600" :show="show_reject_sc" @click="reject_sc">
+    <fui-modal :zIndex="1004" width="600" v-if="show_reject_sc" :show="show_reject_sc" @click="reject_sc">
         <fui-input required label="附言" borderTop placeholder="请输入附言" v-model="reject_sc_comment"></fui-input>
     </fui-modal>
     <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
     <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
-    <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
+    <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" v-if="show_delete_sc_content" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
 </view>
 </template>
@@ -253,11 +253,11 @@ export default {
             cur_get_url: '',
             cur_is_motion: false,
             cur_is_buy: false,
-            cur_batch_confirm_url:'',
-            cur_confirm_url:'',
-            cur_rollback_url:'',
-            cur_cancel_url:'',
-            cur_close_url:'',
+            cur_batch_confirm_url: '',
+            cur_confirm_url: '',
+            cur_rollback_url: '',
+            cur_cancel_url: '',
+            cur_close_url: '',
             sc_data2show: [],
             customer_data2show: [],
             stuff_data2show: [],
@@ -803,7 +803,7 @@ export default {
                 this.seg.push({
                     name: '主动采购',
                     url: '/customer/order_buy_search',
-                    cancel_url:'/customer/order_buy_cancel',
+                    cancel_url: '/customer/order_buy_cancel',
                     motion: true,
                     is_buy: false,
                 });
@@ -812,10 +812,10 @@ export default {
                 this.seg.push({
                     name: '被动销售',
                     url: '/sale_management/order_search',
-                    batch_url:'/sale_management/order_batch_confirm',
-                    confirm_url:'/sale_management/order_sale_confirm',
-                    rollback_url:'/sale_management/order_rollback',
-                    close_url:'/sale_management/close',
+                    batch_url: '/sale_management/order_batch_confirm',
+                    confirm_url: '/sale_management/order_sale_confirm',
+                    rollback_url: '/sale_management/order_rollback',
+                    close_url: '/sale_management/close',
                     motion: false,
                     is_buy: false,
                 });
@@ -824,7 +824,7 @@ export default {
                 this.seg.push({
                     name: '主动销售',
                     url: '/supplier/order_sale_search',
-                    cancel_url:'/supplier/order_sale_cancel',
+                    cancel_url: '/supplier/order_sale_cancel',
                     motion: true,
                     is_buy: true,
                 });
@@ -833,10 +833,10 @@ export default {
                 this.seg.push({
                     name: '被动采购',
                     url: '/buy_management/order_search',
-                    batch_url:'/buy_management/order_batch_confirm',
-                    confirm_url:'/buy_management/order_buy_confirm',
-                    rollback_url:'/buy_management/order_rollback',
-                    close_url:'/buy_management/close',
+                    batch_url: '/buy_management/order_batch_confirm',
+                    confirm_url: '/buy_management/order_buy_confirm',
+                    rollback_url: '/buy_management/order_rollback',
+                    close_url: '/buy_management/close',
                     motion: false,
                     is_buy: true,
                 });

@@ -1,6 +1,8 @@
 const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
+const wx_api_util = require('./wx_api_util');
+const { hook_plan } = require('./hook_lib');
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -376,9 +378,14 @@ module.exports = {
             if (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy)) {
                 plan.status = 1;
                 await plan.save();
+                wx_api_util.send_plan_status_msg(plan);
                 await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 if (!plan.is_buy) {
                     await this.verify_plan_pay(plan);
+                }
+                else
+                {
+                    hook_plan('order_ready', plan);
                 }
             }
             else {
@@ -396,12 +403,14 @@ module.exports = {
         }
         plan.status = 3;
         plan.manual_close = true;
+        wx_api_util.send_plan_status_msg(plan);
         await plan.save();
         if (is_cancel) {
             await this.rp_history_cancel(plan, name);
         }
         else {
             await this.rp_history_close(plan, name);
+            hook_plan('order_close', plan);
         }
     },
     plan_enter: async function (_plan_id, _token) {
@@ -527,20 +536,24 @@ module.exports = {
             });
             let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
             if ((cur_balance - already_verified_cash) >= one_vehicle_cost) {
-                _plan.status = 2;
-                await _plan.save();
-                await this.rp_history_pay(_plan, '自动');
+                plan.status = 2;
+                wx_api_util.send_plan_status_msg(plan);
+                await plan.save();
+                await this.rp_history_pay(plan, '自动');
+                hook_plan('order_ready', plan);
             }
         }
     },
     manual_pay_plan: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 1, async (plan) => {
             plan.status = 2;
+            wx_api_util.send_plan_status_msg(plan);
             await plan.save();
             await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            hook_plan('order_ready', plan);
         });
     },
-    deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no) {
+    deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
         let tmp_plan = await this.get_single_plan_by_id(_plan_id);
         let status_req = 2;
         if (tmp_plan && tmp_plan.is_buy) {
@@ -554,6 +567,8 @@ module.exports = {
             plan.p_weight = p_weight;
             plan.m_time = (m_time ? m_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.m_weight = m_weight;
+            plan.seal_no = seal_no;
+            wx_api_util.plan_scale_msg(plan);
             await plan.save();
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);
             if (!plan.is_buy) {

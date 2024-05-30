@@ -61,8 +61,7 @@ module.exports = {
                 },
             },
             func: async (body, token) => {
-                let company = await rbac_lib.get_company_by_token(token);
-                let { count, rows } = await rbac_lib.get_all_modules(body.pageNo, company);
+                let { count, rows } = await rbac_lib.get_all_modules(body.pageNo, token);
                 return { all_module: rows, total: count };
             },
         },

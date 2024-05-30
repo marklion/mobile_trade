@@ -34,10 +34,10 @@
         </module-filter>
     </fui-list>
     <fui-button type="danger" text="退出登录" @click="unLogin"></fui-button>
-    <fui-modal width="600" :show="show_change_pwd" @click="change_pwd">
+    <fui-modal width="600" :show="show_change_pwd" v-if="show_change_pwd" @click="change_pwd">
         <fui-input label="新密码" borderTop placeholder="请输入新密码" v-model="new_pwd"></fui-input>
     </fui-modal>
-    <fui-modal width="600" :show="show_checkin_config" @click="config_checkin">
+    <fui-modal width="600" v-if="show_checkin_config" :show="show_checkin_config" @click="config_checkin">
         <fui-form ref="form" top="100">
             <fui-input label="工厂纬度" borderTop placeholder="请输入纬度" v-model="checkin_config.lat"></fui-input>
             <fui-input label="工厂经度" borderTop placeholder="请输入经度" v-model="checkin_config.lon"></fui-input>

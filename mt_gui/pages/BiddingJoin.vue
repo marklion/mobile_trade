@@ -29,7 +29,7 @@
             </fui-row>
         </view>
     </list-show>
-    <fui-modal width="600" :show="show_price" @click="price">
+    <fui-modal width="600" :show="show_price" @click="price" v-if="show_price">
         <fui-section :title="focus_bi.bidding_turn.bidding_config.stuff.name + ' 总量：' + focus_bi.bidding_turn.bidding_config.total" :descr="'出价范围：' + focus_bi.bidding_turn.bidding_config.min + '~' +  focus_bi.bidding_turn.bidding_config.max"></fui-section>
         <fui-form ref="price" top="100">
             <fui-input label="出价" borderTop placeholder="请输入价格" v-model="price_req.price"></fui-input>

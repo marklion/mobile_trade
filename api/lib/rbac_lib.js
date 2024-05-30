@@ -326,7 +326,7 @@ module.exports = {
         }
         return { count, rows }
     },
-    get_all_modules: async function (_pageNo, _company) {
+    get_all_modules: async function (_pageNo, token) {
         let sq = db_opt.get_sq();
         let condition = {
             order: [['id', 'ASC']],
@@ -335,7 +335,9 @@ module.exports = {
         };
         let ret = [];
         let count = 0;
-        if (_company) {
+        let user = await  this.get_user_by_token(token);
+        let _company = await this.get_company_by_token(token);
+        if (_company && user && user.phone != '18911992582') {
             ret = await _company.getRbac_modules(condition);
             count = await _company.countRbac_modules();
         }

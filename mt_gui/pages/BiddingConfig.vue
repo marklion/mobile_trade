@@ -17,7 +17,7 @@
             <fui-input label="竞价轮次" borderTop placeholder="请输入竞价轮次" v-model="new_bc.total_turn"></fui-input>
         </fui-form>
     </fui-modal>
-    <fui-bottom-popup :show="show_stuff_select" @close="show_stuff_select = false">
+    <fui-bottom-popup :show="show_stuff_select" v-if="show_stuff_select" @close="show_stuff_select = false">
         <fui-list>
             <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2bc(item)">

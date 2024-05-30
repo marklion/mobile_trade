@@ -1,6 +1,6 @@
 <template>
 <view>
-    <fui-modal :zIndex="1003" width="600" :show="show" @click="upload_sc">
+    <fui-modal :zIndex="1003" width="600" :show="show" v-if="show" @click="upload_sc">
         <fui-section :title="title"></fui-section>
         <fui-notice-bar v-if="prompt" :content="prompt" single></fui-notice-bar>
         <fui-form ref="upload">
