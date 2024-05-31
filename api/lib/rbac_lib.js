@@ -364,4 +364,24 @@ module.exports = {
         }
         return ret;
     },
+    user_bind_company: async function (user, company, open_id, name, email) {
+        await user.setCompany(company);
+        user.open_id = open_id;
+        user.name = name;
+        user.email = email;
+        let cust_role = await rbac_lib.add_role('一般用户', '一般用户', false, company);
+        await rbac_lib.connect_user2role(user.id, cust_role.id);
+        await rbac_lib.connect_role2module(cust_role.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'customer' } })).id);
+        await rbac_lib.connect_role2module(cust_role.id, (await db_opt.get_sq().models.rbac_module.findOne({ where: { name: 'supplier' } })).id);
+        let old_user = await sq.models.rbac_user.findOne({
+            where: {
+                [db_opt.Op.and]: [{ open_id: open_id }, { id: { [db_opt.Op.ne]: user.id } }]
+            }
+        });
+        if (old_user) {
+            old_user.open_id = '';
+            await old_user.save();
+        }
+        await user.save();
+    },
 };

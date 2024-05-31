@@ -1,3 +1,4 @@
+const { default: axios } = require("axios");
 const db_opt = require("./db_opt");
 const cash_lib = require("./lib/cash_lib");
 const plan_lib = require("./lib/plan_lib");
@@ -209,15 +210,114 @@ module.exports = {
             try {
                 let req_body = req.body;
                 let company = await rbac_lib.get_company_by_token(token);
-                let cust = await db_opt.get_sq().findOne({where:{name : req_body.customerName}})
-                if (company && cust)
-                {
-                    let contract = await company.getSale_contracts({where:{buyCompanyId:cust.id}});
-                    if (contract.length == 1)
-                    {
+                let cust = await db_opt.get_sq().findOne({ where: { name: req_body.customerName } })
+                if (company && cust) {
+                    let contract = await company.getSale_contracts({ where: { buyCompanyId: cust.id } });
+                    if (contract.length == 1) {
                         await cash_lib.charge(token, contract[0].id, (contract[0].balance - req_body.balance), req_body.reason)
                     }
                 }
+            } catch (error) {
+                ret = { err_msg: error.msg };
+            }
+            res.send(ret);
+        });
+        app.post('/pa_rest/call_vehicle', async (req, res) => {
+            var token = req.query.token;
+            var ret = { err_msg: '无权限' };
+            try {
+                let company = await rbac_lib.get_company_by_token(token);
+                let vehicle = await db_opt.get_sq().models.vehicle.findOne({ where: { plate: req.body.plateNo } });
+                if (company && vehicle) {
+                    let plans = await db_opt.get_sq().models.plan.findAll({
+                        where: {
+                            mainVehicleId: vehicle.id,
+                            [db_opt.Op.or]: [
+                                {
+                                    is_buy: false,
+                                    status: 2,
+                                },
+                                {
+                                    is_buy: true,
+                                    status: 1,
+                                }
+                            ],
+                        }
+                    });
+                    for (let index = 0; index < plans.length; index++) {
+                        const element = plans[index];
+                        let focus_plan = await plan_lib.get_single_plan_by_id(element.id);
+                        if (focus_plan && focus_plan.stuff.company.id == company.id && focus_plan.register_time) {
+                            await plan_lib.call_plan(focus_plan.id);
+                            ret.err_msg = "";
+                            break;
+                        }
+                    }
+                }
+            } catch (error) {
+                ret = { err_msg: error.msg };
+            }
+            res.send(ret);
+        });
+        app.post('/pa_rest/push_p', async (req, res) => {
+            var token = req.query.token;
+            var ret = { err_msg: '无权限' };
+            try {
+                let req_body = req.body;
+                let plan_id = parseInt(req_body.id.substr(1, req_body.id.length() - 1));
+                await plan_lib.plan_enter(plan_id, token);
+            } catch (error) {
+                ret = { err_msg: error.msg };
+            }
+
+            res.send(ret);
+        });
+        app.post('/pa_rest/create_plan', async (req, res)=>{
+            var token = req.query.token;
+            var ret = { err_msg: '无权限' };
+            try {
+                let req_body = req.body;
+                let bv = await plan_lib.fetch_vehicle(req_body.behindPlateNo);
+                let mv = await plan_lib.fetch_vehicle(req_body.plateNo);
+                let dr = await plan_lib.fetch_driver(req_body.driverName, req_body.driverPhone, req_body.driverID);
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await company.getStuff({where:{name:req_body.stuffName}});
+                let buy_company = await rbac_lib.add_company(req_body.customerName);
+                let user = await rbac_lib.add_user('28887888777');
+                if (company && user) {
+                    await rbac_lib.user_bind_company(user, buy_company, 'no_open_id', '第三方代提用户', '');
+                }
+                let user_token = await rbac_lib.user_login('28887888777');
+                let resp = await axios.post('http://localhost:8080/api/v1/customer/order_buy_create', {
+                    "behind_vehicle_id": bv.id,
+                    "comment": "第三方创建",
+                    "driver_id": dr.id,
+                    "drop_address": req_body.deliverAddress,
+                    "main_vehicle_id": mv.id,
+                    "plan_time": req_body.arriveDate,
+                    "stuff_id": stuff[0].id,
+                    "trans_company_name": req_body.trans_company_name,
+                    "use_for": req_body.userFor,
+                }, {headers:{token:user_token}});
+                if (resp.data.err_msg == "") {
+                    let plan_id = resp.data.result.id;
+                    await plan_lib.confirm_single_plan(plan_id, token);
+                    await plan_lib.manual_pay_plan(plan_id, token);
+                    ret = {err_msg: "", result:{orderNumber:plan_id.toString()}};
+                }
+            } catch (error) {
+                ret = { err_msg: error.msg };
+            }
+            res.send(ret);
+        });
+        app.post('/pa_rest/cancel_plan', async (req, res) => {
+            var token = req.query.token;
+            var ret = { err_msg: '无权限' };
+            try {
+                let req_body = req.body;
+                let plan = await plan_lib.get_single_plan_by_id(parseInt(req_body.orderNumber))
+                await plan_lib.plan_close(plan, '第三方');
+                ret.err_msg = "";
             } catch (error) {
                 ret = { err_msg: error.msg };
             }
