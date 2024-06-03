@@ -119,6 +119,9 @@ module.exports = {
                         else {
                             element.register_comment = '下一个就是你';
                         }
+                        if (!element.company) {
+                            element.company = { name: '(未指定)' }
+                        }
                     }
                     ret.total = await driver.countPlans({ where: { status: 2 } });
                     return ret;
@@ -213,9 +216,9 @@ module.exports = {
                 return { result: true };
             }
         },
-        driver_upload_enter_info:{
-            name:'司机上传进厂前信息',
-            description:'司机上传进厂前信息',
+        driver_upload_enter_info: {
+            name: '司机上传进厂前信息',
+            description: '司机上传进厂前信息',
             need_rbac: false,
             is_write: true,
             is_get_api: false,
@@ -242,6 +245,75 @@ module.exports = {
                 }
             }
         },
+        driver_get_company4select: {
+            name: '司机获取公司列表',
+            description: '司机获取公司列表',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+                company_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
+            },
+            result:{
+                companies: {type:Array,mean:'公司列表',explain:{
+                    id: { type: Number, mean: '公司ID', example: 1 },
+                    name: { type: String, mean: '公司名', example: 'company_example' },
+                }}
+            },
+            func:async function(body, token) {
+                let ret = {
+                    total: 0,
+                    companies: []
+                }
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let company = await sq.models.company.findByPk(body.company_id);
+                if (driver && company) {
+                    let resp = await plan_lib.get_all_buy_contracts(company, body.pageNo);
+                    for (let index = 0; index < resp.rows.length; index++) {
+                        const element = resp.rows[index];
+                        ret.companies.push({
+                            name:element.company.name,
+                            id:element.company.id,
+                        });
+                    }
+                    ret.total = resp.count;
+                }
+                else {
+                    throw { err_msg: '无法获取' };
+                }
+                return ret;
+            },
+        },
+        driver_select_company: {
+            name: '司机选择公司',
+            description: '司机选择公司',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+                company_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                let company = await sq.models.company.findByPk(body.company_id);
+                if (company && driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
+                    await plan.setCompany(company);
+                    await plan.save();
+                }
+                else {
+                    throw { err_msg: '无法上传' };
+                }
+            },
+        },
         driver_checkin: {
             name: '司机签到',
             description: '司机签到',
@@ -263,19 +335,29 @@ module.exports = {
                 let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
                 if (driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     if (await sc_lib.plan_passed_sc(body.plan_id)) {
-                        if (await plan_lib.check_if_never_checkin(driver)) {
-                            if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
-                                await require('../lib/field_lib').handle_driver_check_in(plan);
-                                return { result: true };
+                        if (!plan.stuff.need_enter_weight || (plan.enter_attachment && plan.enter_count > 0)) {
+                            if (plan.company) {
+                                if (await plan_lib.check_if_never_checkin(driver)) {
+                                    if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
+                                        await require('../lib/field_lib').handle_driver_check_in(plan);
+                                        return { result: true };
+                                    }
+                                    else {
+                                        throw { err_msg: '当前位置超出要求范围' };
+                                    }
+                                }
+                                else {
+                                    throw { err_msg: '已经签到其他计划' };
+                                }
                             }
-                            else {
-                                throw { err_msg: '当前位置超出要求范围' };
+                            else
+                            {
+                                throw { err_msg: '未指定公司' };
                             }
                         }
                         else {
-                            throw { err_msg: '已经签到其他计划' };
+                            throw { err_msg: '未上传进厂前信息' };
                         }
-
                     }
                     else {
                         throw { err_msg: '安检未通过，请先安检' };

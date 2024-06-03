@@ -105,6 +105,8 @@ module.exports = {
         seal_no: { type: String, mean: '封号', example: '封号' },
         ticket_no: { type: String, mean: '票号', example: '票号' },
         trans_company_name: { type: String, mean: '运输公司名称', example: '运输公司名称' },
+        need_sc: { type: Boolean, mean: '是否需要安检', example: true },
+        need_enter_weight:{ type: Boolean, mean: '是否需要进场称重', example: true },
         rbac_user: {
             type: Object, mean: '创建人', explain: {
                 id: { type: Number, mean: '用户ID', example: 1 },
@@ -112,6 +114,8 @@ module.exports = {
                 phone: { type: String, mean: '用户电话', example: '用户电话' },
             }
         },
+        enter_count: { type: Number, mean: '进场重量', example: 1 },
+        enter_attachment: { type: String, mean: '进场附件', example: '进场附件' },
         stuff: {
             type: Object, mean: '货物', explain: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -122,6 +126,8 @@ module.exports = {
                         name: { type: String, mean: '公司名称', example: '公司名称' },
                     }
                 },
+                need_sc: { type: Boolean, mean: '是否需要安检', example: true },
+                need_enter_weight:{ type: Boolean, mean: '是否需要进场称重', example: true },
             }
         },
         company: {

@@ -224,7 +224,7 @@ module.exports = {
 
         return ret;
     },
-    search_bought_plans: async function (_company, _pageNo, _condition, is_buy = false) {
+    search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         let search_condition = {
@@ -234,7 +234,7 @@ module.exports = {
             where: where_condition,
             include: this.plan_detail_include(),
         };
-        let bought_plans = await _company.getPlans(search_condition);
+        let bought_plans = await user.getPlans(search_condition);
         let result = [];
         for (let index = 0; index < bought_plans.length; index++) {
             const element = bought_plans[index];
@@ -243,10 +243,13 @@ module.exports = {
                 result.push(arc_p);
             }
             else {
+                if (!element.company) {
+                    element.company = { name: '(司机选择)' };
+                }
                 result.push(element);
             }
         }
-        let count = await _company.countPlans({ where: where_condition });
+        let count = await user.countPlans({ where: where_condition });
         return { rows: result, count: count };
     },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
@@ -279,6 +282,9 @@ module.exports = {
                 result.push(arc_p);
             }
             else {
+                if (!element.company) {
+                    element.company = { name: '(司机选择)' };
+                }
                 result.push(element);
             }
         }
@@ -373,7 +379,11 @@ module.exports = {
     },
     confirm_single_plan: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
-            let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+            let company_id = 0;
+            if (plan.company) {
+                company_id = plan.company.id;
+            }
+            let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
             let creator = await plan.getRbac_user();
             if (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy)) {
                 plan.status = 1;
@@ -383,8 +393,7 @@ module.exports = {
                 if (!plan.is_buy) {
                     await this.verify_plan_pay(plan);
                 }
-                else
-                {
+                else {
                     hook_plan('order_ready', plan);
                 }
             }
@@ -639,7 +648,10 @@ module.exports = {
         }
         let content = plan.toJSON();
         content.sc_info = (await this.get_sc_status_by_plan(plan)).reqs;
-        plan.createArchive_plan({ content: JSON.stringify(content) });
+        if (!content.company) {
+            content.company = { name: '(司机选择)' };
+        }
+        await plan.createArchive_plan({ content: JSON.stringify(content) });
     },
     rp_history_cancel: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '取消');
@@ -648,7 +660,11 @@ module.exports = {
         if (last_archive) {
             await last_archive.destroy();
         }
-        plan.createArchive_plan({ content: JSON.stringify(plan.toJSON()) });
+        let content = plan.toJSON();
+        if (!content.company) {
+            content.company = { name: '(司机选择)' };
+        }
+        await plan.createArchive_plan({ content: JSON.stringify(content) });
     },
     rp_history_price_change: async function (_plan, _operator, _new_price) {
         await this.record_plan_history(_plan, _operator, '价格变为:' + _new_price);
@@ -760,7 +776,6 @@ module.exports = {
             offset: 20 * pageNo,
             limit: 20,
         });
-        let count = await company.countPlans({ group: 'mainVehicleId' });
         for (let index = 0; index < result.length; index++) {
             const element = result[index];
             let tmp = {};
@@ -775,7 +790,7 @@ module.exports = {
                 rows.push(tmp);
             }
         }
-        return { rows: rows, count: count };
+        return { rows: rows, count: rows.length };
     },
     verify_plan_location: async function (plan, lat, lon) {
         let pos_lat = plan.stuff.company.pos_lat;
@@ -898,4 +913,45 @@ module.exports = {
         });
         return err_msg;
     },
+    batch_copy: async function (body, token, is_buy, new_plan_req) {
+        let err_msg = '';
+        await db_opt.get_sq().transaction(async (t) => {
+            let user = await rbac_lib.get_user_by_token(token);
+            let all_plans = [];
+            let pageNo = 0;
+            while (true) {
+                let tmp = await this.search_bought_plans(user, pageNo, body, is_buy);
+                all_plans = all_plans.concat(tmp.rows);
+                pageNo++;
+                if (tmp.rows.length <= 0) {
+                    break;
+                }
+            }
+            for (let index = 0; index < all_plans.length; index++) {
+                const element = all_plans[index];
+                try {
+                    let new_plan = await db_opt.get_sq().models.plan.create(new_plan_req);
+                    await new_plan.setCompany(await db_opt.get_sq().models.company.findByPk(element.company.id));
+                    await new_plan.setStuff(await db_opt.get_sq().models.stuff.findByPk(element.stuff.id));
+                    await new_plan.setDriver(await db_opt.get_sq().models.driver.findByPk(element.driver.id));
+                    await new_plan.setMain_vehicle(await db_opt.get_sq().models.vehicle.findByPk(element.main_vehicle.id));
+                    await new_plan.setBehind_vehicle(await db_opt.get_sq().models.vehicle.findByPk(element.behind_vehicle.id));
+                    await new_plan.setRbac_user(user);
+                    await this.rp_history_create(new_plan, user.name);
+                    new_plan.status = 0;
+                    if (!is_buy) {
+                        new_plan.unit_price = element.unit_price;
+                    }
+                    new_plan.is_buy = is_buy;
+                    new_plan.trans_company_name = element.trans_company_name;
+                    await new_plan.save();
+                    await wx_api_util.send_plan_status_msg(await this.get_single_plan_by_id(new_plan.id));
+                } catch (error) {
+                    err_msg += error.err_msg + '\n';
+                    throw error;
+                }
+            }
+        });
+        return err_msg;
+    }
 };

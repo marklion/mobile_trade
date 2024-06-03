@@ -226,8 +226,8 @@ module.exports = {
                 plans: { type: Array, mean: '订单', explain: api_param_result_define.plan_detail_define }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let search_ret = await plan_lib.search_bought_plans(company, body.pageNo, body);
+                let user = await rbac_lib.get_user_by_token(token);
+                let search_ret = await plan_lib.search_bought_plans(user, body.pageNo, body);
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
@@ -277,6 +277,39 @@ module.exports = {
                 await bidding_lib.bid_price(token, body.item_id, body.price);
                 return { result: true };
             },
-        }
+        },
+        batch_copy:{
+            name: '批量复制',
+            description: '批量复制',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_time: { type: String, have_to: true, mean: '计划时间', example: '2020-01-01 12:00:00' },
+                comment: { type: String, have_to: false, mean: '备注', example: '备注' },
+                use_for: { type: String, have_to: true, mean: '用途', example: '用途' },
+                drop_address: { type: String, have_to: true, mean: '卸货地址', example: '卸货地址' },
+                trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.batch_copy({
+                    start_time: body.start_time,
+                    end_time: body.end_time,
+                    status: body.status,
+                }, token, false, {
+                    plan_time: body.plan_time,
+                    comment: body.comment,
+                    use_for: body.use_for,
+                    drop_address: body.drop_address,
+                    trans_company_name:body.trans_company_name,
+                });
+                return { result: true };
+            },
+        },
     }
 }
