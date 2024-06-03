@@ -171,9 +171,9 @@ export default {
             }
         },
         start_plan_creation: function (item, is_sale) {
-            let is_buy = 'true';
+            let is_buy = 'false';
             if (is_sale) {
-                is_buy = 'false'
+                is_buy = 'true'
             }
             uni.navigateTo({
                 url: '/pages/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name + '&is_buy=' + is_buy,

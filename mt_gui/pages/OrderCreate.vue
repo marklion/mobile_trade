@@ -3,13 +3,13 @@
     <fui-white-space size="large"></fui-white-space>
     <fui-section :title="stuff_name" size="50" isLine></fui-section>
     <u-cell title="买方" :value="buyer_name"></u-cell>
-    <u-cell title="卖方" :value="saler_name"></u-cell>
+    <u-cell title="卖方" :value="saler_name?saler_name:'(未指定)'"></u-cell>
     <fui-divider></fui-divider>
     <fui-form ref="plan_form" :model="plan">
         <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
             <fui-input placeholder="请输入计划日期" disabled v-model="plan.plan_time"></fui-input>
         </fui-form-item>
-        <view v-if="type_define.is_buy">
+        <view v-if="type_define.is_sale">
             <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
                 <fui-input placeholder="请输入用途" disabled v-model="plan.use_for"></fui-input>
             </fui-form-item>
@@ -29,6 +29,7 @@
         </fui-form-item>
         <view style="display:flex; justify-content: center;">
             <fui-button text="新增车辆" btnSize="small" type="success" @click="show_add_vehicle = true"></fui-button>
+            <fui-button v-if="!type_define.is_sale" text="我要代提" btnSize="small" type="primary" @click="prepare_proxy_buy"></fui-button>
         </view>
         <fui-grid :columns="2" :square="false">
             <fui-grid-item v-for="(single_v, index) in vehicles" :key="index">
@@ -78,12 +79,13 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            is_proxy: false,
             type_define: {
                 vh_fetch_url: '/customer/fetch_vehicle',
                 dr_fetch_url: '/customer/fetch_driver',
                 order_create_url: '/customer/order_buy_create',
                 pair_get_url: '/customer/get_vehicle_pair',
-                is_buy: true,
+                is_sale: true,
             },
             data2show: [],
             show_pick_vehicles: false,
@@ -122,6 +124,11 @@ export default {
         "pick-regions": pickRegions,
     },
     methods: {
+        prepare_proxy_buy: function () {
+            this.is_proxy = true;
+            this.plan.trans_company_name = this.saler_name;
+            this.saler_name = '';
+        },
         remove_vehicle: function (_index) {
             this.vehicles.splice(_index, 1);
         },
@@ -226,7 +233,7 @@ export default {
                 rule: ['required'],
                 msg: ['请选择填写计划日期']
             }];
-            if (this.type_define.is_buy) {
+            if (this.type_define.is_sale) {
                 rules.push({
                     name: 'drop_address',
                     rule: ['required'],
@@ -264,8 +271,12 @@ export default {
                     ...this.plan,
                     main_vehicle_id: ele.main_vehicle.id,
                     behind_vehicle_id: ele.behind_vehicle.id,
-                    driver_id: ele.driver.id
+                    driver_id: ele.driver.id,
+                    is_proxy: this.is_proxy,
                 };
+                if (req.is_proxy) {
+                    req.proxy_company_name = this.saler_name;
+                }
                 await this.$send_req(this.type_define.order_create_url, req);
             }
             uni.switchTab({
@@ -281,14 +292,16 @@ export default {
         let tmp_date = new Date();
         tmp_date.setDate(tmp_date.getDate() + 1);
         this.default_time = utils.dateFormatter(tmp_date, 'y-m-d', 4, false);
-        if (options.is_buy == 'false') {
+        if (options.is_buy == 'true') {
             this.type_define = {
                 vh_fetch_url: '/supplier/fetch_vehicle',
                 dr_fetch_url: '/supplier/fetch_driver',
                 order_create_url: '/supplier/order_sale_create',
                 pair_get_url: '/supplier/get_vehicle_pair',
-                is_buy: false,
+                is_sale: false,
             }
+            this.saler_name = this.buyer_name;
+            this.buyer_name = options.company_name;
         }
     },
 }

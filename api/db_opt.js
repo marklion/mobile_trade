@@ -121,6 +121,7 @@ let db_opt = {
             expect_count: { type: DataTypes.FLOAT, defaultValue: 0 },
             need_sc: { type: DataTypes.BOOLEAN, defaultValue: false },
             use_for_buy: { type: DataTypes.BOOLEAN, defaultValue: false },
+            need_enter_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

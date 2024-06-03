@@ -190,5 +190,25 @@ module.exports = {
                 return { result: true };
             }
         },
+        assign_supplier:{
+            name: '指定采购公司',
+            description: '指定采购公司',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                supplier_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    let buy_company = await db_opt.get_sq().models.company.findByPk(body.supplier_id);
+                    await plan.setCompany(buy_company);
+                });
+                return { result: true };
+            }
+        },
     }
 }

@@ -60,12 +60,22 @@ module.exports = {
                 driver_id: { type: Number, have_to: true, mean: '司机ID', example: 1 },
                 price:{type:Number, have_to:false, mean:'单价', example:102},
                 trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
+                proxy_company_name: { type: String, have_to: false, mean: '代理公司名称', example: 1 },
+                is_proxy: { type: Boolean, have_to: false, mean: '是否代理', example: true },
             },
             result: api_param_result_define.plan_detail_define,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                let buy_company = await rbac_lib.get_company_by_token(token);
+                let buy_company = undefined;
+                if (body.is_proxy) {
+                    if (body.proxy_company_name) {
+                        buy_company = await rbac_lib.add_company(body.proxy_company_name);
+                    }
+                }
+                else {
+                    buy_company = await rbac_lib.get_company_by_token(token);
+                }
                 let driver = await sq.models.driver.findByPk(body.driver_id);
                 let main_vehicle = await sq.models.vehicle.findByPk(body.main_vehicle_id);
                 let behind_vehicle = await sq.models.vehicle.findByPk(body.behind_vehicle_id);
@@ -76,9 +86,11 @@ module.exports = {
                 };
                 let user = await rbac_lib.get_user_by_token(token);
                 let new_plan = await sq.models.plan.create(new_plan_req);
-                if (new_plan && stuff && buy_company && driver && main_vehicle && behind_vehicle && user) {
-                    await new_plan.setStuff(stuff);
+                if (new_plan && buy_company) {
                     await new_plan.setCompany(buy_company);
+                }
+                if (new_plan && stuff && driver && main_vehicle && behind_vehicle && user) {
+                    await new_plan.setStuff(stuff);
                     await new_plan.setDriver(driver);
                     await new_plan.setMain_vehicle(main_vehicle);
                     await new_plan.setBehind_vehicle(behind_vehicle);
@@ -107,8 +119,8 @@ module.exports = {
                 plans: { type: Array, mean: '订单', explain: api_param_result_define.plan_detail_define }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let search_ret = await plan_lib.search_bought_plans(company, body.pageNo, body, true);
+                let user= await rbac_lib.get_user_by_token(token);
+                let search_ret = await plan_lib.search_bought_plans(user, body.pageNo, body, true);
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
@@ -124,10 +136,9 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true },
             },
             func: async function (body, token) {
-                let opt_company = await rbac_lib.get_company_by_token(token);
                 let user = await rbac_lib.get_user_by_token(token);
                 let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
-                if (user && plan && opt_company && await opt_company.hasPlan(plan) && plan.status == 0) {
+                if (user && plan && await user.hasPlan(plan)  && plan.status == 0) {
                     await plan_lib.plan_close(plan, user.name, true);
                 }
                 else {
@@ -169,6 +180,37 @@ module.exports = {
                 }
                 return { stuff: ret.rows, total: ret.count };
             },
-        }
+        },
+        batch_copy: {
+            name: '批量复制',
+            description: '批量复制',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_time: { type: String, have_to: true, mean: '计划时间', example: '2020-01-01 12:00:00' },
+                comment: { type: String, have_to: false, mean: '备注', example: '备注' },
+                price:{type:Number, have_to:false, mean:'单价', example:102},
+                trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.batch_copy({
+                    start_time: body.start_time,
+                    end_time: body.end_time,
+                    status: body.status,
+                }, token, true, {
+                    plan_time: body.plan_time,
+                    comment: body.comment,
+                    trans_company_name: body.trans_company_name,
+                    unit_price: body.price,
+                });
+                return { result: true };
+            },
+        },
     }
 }

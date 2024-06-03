@@ -18,7 +18,14 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    let expect_status = 2;
+                    if (plan.is_buy) {
+                        expect_status = 1;
+                    }
+                    if (expect_status != plan.status) {
+                        throw { err_msg: '计划状态错误' };
+                    }
                     if (plan.enter_time && plan.enter_time.length > 0) {
                         throw { err_msg: '已经进厂' };
                     }
@@ -48,7 +55,6 @@ module.exports = {
         call_vehicle: {
             name: '呼叫车辆',
             description: '呼叫车辆',
-
             is_write: true,
             is_get_api: false,
             params: {
@@ -58,7 +64,14 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    let expect_status = 2;
+                    if (plan.is_buy) {
+                        expect_status = 1;
+                    }
+                    if (expect_status != plan.status) {
+                        throw { err_msg: '计划状态错误' };
+                    }
                     if (plan.register_time && plan.register_time.length > 0) {
                         if (plan.enter_time && plan.enter_time.length > 0) {
                             throw { err_msg: '已经进厂' };
@@ -109,38 +122,38 @@ module.exports = {
                 return { result: true };
             },
         },
-        get_stamp_pic:{
-            name:'获取磅单印章',
-            description:'获取磅单印章',
-            is_write:false,
-            is_get_api:false,
-            params:{},
-            result:{
-                stamp_pic:{type:String,mean:'印章图片',example:'印章图片'}
+        get_stamp_pic: {
+            name: '获取磅单印章',
+            description: '获取磅单印章',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                stamp_pic: { type: String, mean: '印章图片', example: '印章图片' }
             },
-            func:async function(body,token){
+            func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 return {
-                    stamp_pic:company.stamp_pic
+                    stamp_pic: company.stamp_pic
                 }
             }
         },
-        set_stamp_pic:{
-            name:'设置磅单印章',
-            description:'设置磅单印章',
-            is_write:true,
-            is_get_api:false,
-            params:{
-                stamp_pic:{type:String,have_to:true,mean:'印章图片',example:'印章图片'}
+        set_stamp_pic: {
+            name: '设置磅单印章',
+            description: '设置磅单印章',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stamp_pic: { type: String, have_to: true, mean: '印章图片', example: '印章图片' }
             },
-            result:{
-                result:{type:Boolean,mean:'结果',example:true}
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
             },
-            func:async function(body,token){
+            func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 company.stamp_pic = body.stamp_pic;
                 await company.save();
-                return {result:true};
+                return { result: true };
             }
         },
     }

@@ -50,7 +50,9 @@ module.exports = {
                         next_price: { type: Number, mean: '下次单价', example: 1 },
                         change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
                         expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
-                        use_for_buy: { type: Boolean, mean: '用于采购', example: false }
+                        use_for_buy: { type: Boolean, mean: '用于采购', example: false },
+                        need_sc: { type: Boolean, mean: '是否需要安检', example: false },
+                        need_enter_weight: { type: Boolean, mean: '是否需要入场前重量', example: false },
                     }
                 },
             },
@@ -89,10 +91,35 @@ module.exports = {
                 return { result: true };
             }
         },
+        enter_weight:{
+            name:'配置货物需要入场前重量',
+            description:'配置货物需要入场前重量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                need_enter_weight: { type: Boolean, have_to: true, mean: '是否需要', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (stuff && company && await company.hasStuff(stuff)) {
+                    stuff.need_enter_weight = body.need_enter_weight;
+                    await stuff.save();
+                }
+                else {
+                    throw { err_msg: '货物不存在' };
+                }
+                return { result: true };
+            },
+        },
         sc_config: {
             name: '配置货物是否需要安检',
             description: '配置货物是否需要安检',
-
             is_write: true,
             is_get_api: false,
             params: {
@@ -168,20 +195,20 @@ module.exports = {
             params: {
             },
             result: {
-                notice:{type:String, mean:'通知', example:'通知'},
-                driver_notice:{type:String, mean:'司机通知', example:'司机通知'}
+                notice: { type: String, mean: '通知', example: '通知' },
+                driver_notice: { type: String, mean: '司机通知', example: '司机通知' }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                if (company){
+                if (company) {
                     return {
-                        notice:company.notice,
-                        driver_notice:company.driver_notice
+                        notice: company.notice,
+                        driver_notice: company.driver_notice
                     }
                 }
                 return {
-                    notice:'',
-                    driver_notice:''
+                    notice: '',
+                    driver_notice: ''
                 }
             }
         },
@@ -191,15 +218,15 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
-                notice: { type: String, have_to:false, mean: '通知', example: '通知' },
-                driver_notice: { type: String, have_to:false, mean: '司机通知', example: '司机通知' }
+                notice: { type: String, have_to: false, mean: '通知', example: '通知' },
+                driver_notice: { type: String, have_to: false, mean: '司机通知', example: '司机通知' }
             },
             result: {
-                result:{type:Boolean, mean:'结果', example:true}
+                result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                let ret = {result:true};
+                let ret = { result: true };
                 if (company) {
                     company.notice = body.notice;
                     company.driver_notice = body.driver_notice;

@@ -62,7 +62,21 @@
     </fui-bottom-popup>
     <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
     <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
-
+    <fui-bottom-popup :show="show_company_select" @close="show_company_select= false">
+        <list-show ref="cp" v-model="company_list" :fetch_function="get_company4select" :fetch_params="[focus_plan, driver_self.open_id]" height="45vh" search_key="cond">
+            <view v-for="item in company_list" :key="item.id">
+                <u-cell :title="item.name" @click="select_company(item)" is-link></u-cell>
+            </view>
+        </list-show>
+    </fui-bottom-popup>
+    <fui-modal :zIndex="1003" width="600" v-if="show_upload_enter" :show="show_upload_enter" @click="upload_enter_weight">
+        <fui-form ref="uew" top="100">
+            <fui-input label="重量" borderTop placeholder="请输入内容" v-model="enter_weight.weight"></fui-input>
+            <fui-form-item label="磅单">
+                <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url" ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error" @complete="after_other_action"></fui-upload>
+            </fui-form-item>
+        </fui-form>
+    </fui-modal>
     <fui-modal :zIndex="1003" width="600" v-if="show_delete_sc_content" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
 </view>
@@ -101,6 +115,15 @@ export default {
     },
     data: function () {
         return {
+            company_list: [],
+            upload_url: this.$remote_url() + '/api/v1/upload_file',
+            fileList: [],
+            enter_weight: {
+                plan_id: 0,
+                weight: 0,
+                attach: '',
+            },
+            show_upload_enter: false,
             show_delete_sc_content: false,
             show_one_att: false,
             one_att: [''],
@@ -126,6 +149,7 @@ export default {
                 "open_id_code": "",
                 "phone_code": ""
             },
+            show_company_select: false,
             upload_sc: {
                 plan_id: 0,
                 open_id: '',
@@ -161,11 +185,20 @@ export default {
                         labelColor: (is_today ? 'green' : 'red'),
                         valueColor: (is_today ? 'green' : 'red')
                     }, ],
-                    buttons: [{
+                    buttons: [],
+                };
+                if (item.stuff.need_sc) {
+                    ret.buttons.push({
                         text: '安检',
                         color: 'green',
                         item: item,
-                    }, ],
+                    });
+                }
+                if (item.enter_count > 0) {
+                    ret.list.push({
+                        label: '进厂前装载量(已上传磅单)',
+                        value: item.enter_count,
+                    });
                 };
                 if (item.register_time) {
                     ret.list.push({
@@ -188,6 +221,20 @@ export default {
                         item: item,
                     });
                 }
+                if (item.stuff.need_enter_weight) {
+                    ret.buttons.push({
+                        text: '传磅单',
+                        color: 'purple',
+                        item: item,
+                    });
+                }
+                if (item.company.id == undefined) {
+                    ret.buttons.push({
+                        text: '选择公司',
+                        color: 'brown',
+                        item: item,
+                    });
+                }
                 if (item.call_time) {
                     for (let index = 0; index < ret.list.length; index++) {
                         const reg_com = ret.list[index];
@@ -207,6 +254,41 @@ export default {
         };
     },
     methods: {
+        get_company4select: async function (pageNo, [focus_plan, open_id]) {
+            if (focus_plan.id <= 0) {
+                return [];
+            }
+            let res = await this.$send_req('/global/driver_get_company4select', {
+                pageNo: pageNo,
+                company_id: focus_plan.stuff.company.id,
+                open_id: open_id
+            });
+            res.companies.forEach(ele => {
+                ele.cond = ele.name;
+            });
+            return res.companies;
+        },
+        select_company: async function (item) {
+            await this.$send_req('/global/driver_select_company', {
+                plan_id: this.focus_plan.id,
+                company_id: item.id,
+                open_id: this.driver_self.open_id
+            });
+            this.show_company_select = false;
+            uni.startPullDownRefresh();
+        },
+        after_other_action: function (e) {
+            if (e.action == 'delete') {
+                this.enter_weight.attach = '';
+            }
+        },
+        after_attach_uploaded: function (e) {
+            this.enter_weight.attach = e.res.data
+        },
+        meet_upload_error: async function (e) {
+            console.log('meet_upload_error');
+            console.log(e);
+        },
         prepare_sc_confirm: function () {
             this.show_sc = true;
             this.$nextTick(() => {
@@ -273,14 +355,14 @@ export default {
         },
         handle_button: async function (e) {
             let vue_this = this;
-            if (e.index == 0) {
+            console.log(e);
+            if (e.text == '安检') {
                 this.focus_plan = e.item;
                 this.show_sc = true;
                 this.$nextTick(() => {
                     this.$refs.sc_confirm.refresh();
                 });
-            } else if (e.index == 1) {
-
+            } else if (e.text == '排号') {
                 uni.authorize({
                     scope: 'scope.userLocation',
                     success() {
@@ -310,7 +392,41 @@ export default {
                         })
                     }
                 })
+            } else if (e.text == "传磅单") {
+                vue_this.show_upload_enter = true;
+                vue_this.focus_plan = e.item;
+            } else if (e.text = "选择公司") {
+                vue_this.focus_plan = e.item;
+                vue_this.show_company_select = true;
+                vue_this.$nextTick(() => {
+                    vue_this.$refs.cp.refresh();
+                });
             }
+        },
+        upload_enter_weight: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                    name: 'weight',
+                    rule: ['required'],
+                    msg: ['请输入重量']
+                }, {
+                    name: 'attach',
+                    rule: ['required'],
+                    msg: ['请上传磅单图片']
+                }];
+                let val_ret = await this.$refs.uew.validator(this.enter_weight, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                await this.$send_req('/global/driver_upload_enter_info', {
+                    plan_id: this.focus_plan.id,
+                    open_id: this.driver_self.open_id,
+                    enter_count: parseFloat(this.enter_weight.weight),
+                    enter_attachment: this.enter_weight.attach
+                });
+                uni.startPullDownRefresh();
+            }
+            this.show_upload_enter = false;
         },
         rebind_info: function () {
             this.bind_req = {

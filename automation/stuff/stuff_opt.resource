@@ -107,7 +107,7 @@ Add A Stuff To Contract
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${token}  contracts
     @{stuffs_found}  Req Get to Server  /stuff/get_all  ${token}  stuff
     FOR  ${itr}  IN  @{found_contracts}
-        ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
+        ${buyer_name}  Get From Dictionary  ${itr}[company]  name
         IF  $buyer_name == $customer_name
             ${target_contract}  Set Variable  ${itr}
             Exit For Loop
@@ -130,7 +130,7 @@ Del A Stuff From Contract
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     @{stuffs_found}  Req Get to Server  /stuff/get_all  ${sc_admin_token}  stuff
     FOR  ${itr}  IN  @{found_contracts}
-        ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
+        ${buyer_name}  Get From Dictionary  ${itr}[company]  name
         IF  $buyer_name == $customer_name
             ${target_contract}  Set Variable  ${itr}
             Exit For Loop
@@ -151,7 +151,7 @@ Charge To A Company
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     ${contract_id}  Set Variable
     FOR  ${itr}  IN  @{found_contracts}
-        ${target_company_id}  Get From Dictionary  ${itr}[buy_company]  id
+        ${target_company_id}  Get From Dictionary  ${itr}[company]  id
         IF  $target_company_id == $company_id
             ${contract_id}  Set Variable  ${itr}[id]
             Exit For Loop
@@ -166,7 +166,7 @@ Get Cash Of A Company
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     ${ret}  Set Variable  ${0}
     FOR  ${itr}  IN  @{found_contracts}
-        ${cust_name}  Get From Dictionary  ${itr}[buy_company]  name
+        ${cust_name}  Get From Dictionary  ${itr}[company]  name
         IF  $cust_name == $company_name
             ${ret}  Set Variable  ${itr}[balance]
             Exit For Loop
@@ -194,7 +194,7 @@ Authorize User to Contract
     [Arguments]  ${company_name}  ${user_phone}  ${token}=${sc_admin_token}
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${token}  contracts
     FOR  ${itr}  IN  @{found_contracts}
-        ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
+        ${buyer_name}  Get From Dictionary  ${itr}[company]  name
         IF  $buyer_name == $company_name
             ${req}  Create Dictionary  contract_id=${itr}[id]  phone=${user_phone}
             Req to Server  /sale_management/authorize_user  ${token}  ${req}
@@ -206,7 +206,7 @@ Unauthorize User to Contract
     [Arguments]  ${company_name}  ${user_phone}
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     FOR  ${itr}  IN  @{found_contracts}
-        ${buyer_name}  Get From Dictionary  ${itr}[buy_company]  name
+        ${buyer_name}  Get From Dictionary  ${itr}[company]  name
         IF  $buyer_name == $company_name
             ${req}  Create Dictionary  contract_id=${itr}[id]  phone=${user_phone}
             Req to Server  /sale_management/unauthorize_user  ${sc_admin_token}  ${req}
@@ -342,7 +342,9 @@ Search Plans Based on User
     RETURN  ${resp}
 Get Plan By Id
     [Arguments]  ${plan_id}
-    ${resp}  Search Plans Based on User  ${bc1_user_token}  ${False}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}
+    ${more_resp}  Search Orders Based on User  ${sc_admin_token}
+    ${resp}  Combine Lists  ${resp}  ${more_resp}
     ${plan}  Create Dictionary
     FOR  ${itr}  IN  @{resp}
         ${plan_found_id}  Get From Dictionary  ${itr}  id

@@ -85,7 +85,7 @@ Contract Charge And Check
     Should Be Equal As Numbers  ${found_contracts[0]}[balance]  ${1200}
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     FOR  ${itr}  IN  @{found_contracts}
-        ${cust_name}  Get From Dictionary  ${itr}[buy_company]  name
+        ${cust_name}  Get From Dictionary  ${itr}[company]  name
         IF  $cust_name == 'bc1'
             Should Be Equal As Numbers  ${itr}[balance]  1200
             Exit For Loop
