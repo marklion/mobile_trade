@@ -177,7 +177,7 @@ module.exports = {
             var ret = { err_msg: '无权限' };
             try {
                 var add_flag = true;
-                if (req.body.state == 1) {
+                if (req.body.state == "1") {
                     add_flag = false;
                 }
                 let req_body = req.body;
@@ -186,7 +186,7 @@ module.exports = {
                         where: {
                             name: req_body.name
                         }, default: {
-                            id: req_body.id,
+                            base_id: req_body.id,
                             name: req_body.name,
                             unit: req_body.unit,
                             type: req_body.type,
@@ -194,6 +194,14 @@ module.exports = {
                             code: req_body.code
                         }
                     })
+                    let exist_rec = await db_opt.get_sq().models.hd_base_info.findOne({ where: { name: req_body.name} });
+                    exist_rec.base_id = req_body.id;
+                    exist_rec.name = req_body.name;
+                    exist_rec.unit = req_body.unit;
+                    exist_rec.type = req_body.type;
+                    exist_rec.pid = req_body.pid;
+                    exist_rec.code = req_body.code;
+                    await exist_rec.save();
                 }
                 else {
                     let found_one = await db_opt.get_sq().models.hd_base_info.findOne({ where: { name: req_body.name, id: req_body.id } });
@@ -201,8 +209,9 @@ module.exports = {
                         await found_one.destroy()
                     }
                 }
-
+                ret = {err_msg:''};
             } catch (error) {
+                console.log(error);
                 ret = { err_msg: error.msg };
             }
 
