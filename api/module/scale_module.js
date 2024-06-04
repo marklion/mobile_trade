@@ -64,24 +64,8 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
-                    let expect_status = 2;
-                    if (plan.is_buy) {
-                        expect_status = 1;
-                    }
-                    if (expect_status != plan.status) {
-                        throw { err_msg: '计划状态错误' };
-                    }
-                    if (plan.register_time && plan.register_time.length > 0) {
-                        if (plan.enter_time && plan.enter_time.length > 0) {
-                            throw { err_msg: '已经进厂' };
-                        }
-                        await field_lib.handle_call_vehicle(plan);
-                    }
-                    else {
-                        throw { err_msg: '未签到' };
-                    }
-                });
+                await plan_lib.plan_call_vehicle(body.plan_id, token);
+                return { result: true };
             },
         },
         vehicle_enter: {

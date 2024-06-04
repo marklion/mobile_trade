@@ -263,13 +263,14 @@ module.exports = {
                         const element = plans[index];
                         let focus_plan = await plan_lib.get_single_plan_by_id(element.id);
                         if (focus_plan && focus_plan.stuff.company.id == company.id && focus_plan.register_time) {
-                            await plan_lib.call_plan(focus_plan.id);
+                            await plan_lib.plan_call_vehicle(focus_plan.id, token);
                             ret.err_msg = "";
                             break;
                         }
                     }
                 }
             } catch (error) {
+                console.log(error);
                 ret = { err_msg: error.msg };
             }
             res.send(ret);

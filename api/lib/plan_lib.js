@@ -3,6 +3,7 @@ const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const wx_api_util = require('./wx_api_util');
 const { hook_plan } = require('./hook_lib');
+const field_lib = require('./field_lib');
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -953,5 +954,25 @@ module.exports = {
             }
         });
         return err_msg;
-    }
+    },
+    plan_call_vehicle: async function (plan_id, token) {
+        await this.action_in_plan(plan_id, token, -1, async (plan) => {
+            let expect_status = 2;
+            if (plan.is_buy) {
+                expect_status = 1;
+            }
+            if (expect_status != plan.status) {
+                throw { err_msg: '计划状态错误' };
+            }
+            if (plan.register_time && plan.register_time.length > 0) {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    throw { err_msg: '已经进厂' };
+                }
+                await field_lib.handle_call_vehicle(plan);
+            }
+            else {
+                throw { err_msg: '未签到' };
+            }
+        });
+    },
 };
