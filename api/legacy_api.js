@@ -223,14 +223,16 @@ module.exports = {
             try {
                 let req_body = req.body;
                 let company = await rbac_lib.get_company_by_token(token);
-                let cust = await db_opt.get_sq().findOne({ where: { name: req_body.customerName } })
+                let cust = await db_opt.get_sq().models.company.findOne({ where: { name: req_body.customerName } })
                 if (company && cust) {
                     let contract = await company.getSale_contracts({ where: { buyCompanyId: cust.id } });
                     if (contract.length == 1) {
-                        await cash_lib.charge(token, contract[0].id, (contract[0].balance - req_body.balance), req_body.reason)
+                        await cash_lib.charge(token, contract[0].id, (req_body.balance - contract[0].balance), req_body.reason)
+                        ret = { err_msg: '' };
                     }
                 }
             } catch (error) {
+                console.log(error);
                 ret = { err_msg: error.msg };
             }
             res.send(ret);
