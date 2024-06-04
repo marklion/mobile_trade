@@ -13,28 +13,36 @@ async function get_base_id_by_name(name) {
 }
 async function make_plan_resp(plan) {
     let full_plan = await plan_lib.get_single_plan_by_id(plan.id);
+    let back_plate = '';
+    let company_name = '';
+    if (full_plan.behind_vehicle) {
+        back_plate = full_plan.behind_vehicle.plate;
+    }
+    if (full_plan.company) {
+        company_name = full_plan.company.name;
+    }
     return {
         id: 'n' + full_plan.id,
         plateNo: full_plan.main_vehicle.plate,
-        backPlateNo: full_plan.behind_vehicle.plate,
+        backPlateNo: back_plate,
         stuffName: full_plan.stuff.name,
         stuffId: await get_base_id_by_name(full_plan.stuff.name),
         enterWeight: full_plan.enter_count,
-        companyName: full_plan.company.name,
+        companyName: company_name,
         driverName: full_plan.driver.name,
         isSale: !full_plan.is_buy,
         price: full_plan.unit_price,
-        customerId: await get_base_id_by_name(full_plan.company.name),
+        customerId: await get_base_id_by_name(company_name),
         orderNo: 'mt' + full_plan.id,
         multiStuff: [],
         isMulti: false,
         createTime: full_plan.plan_time,
         driverPhone: full_plan.driver.phone,
         driverId: full_plan.driver.id_card,
-        supplierName: full_plan.company.name,
-        supplierId: await get_base_id_by_name(full_plan.company.name),
-        vehicleTeamName: full_plan.company.name,
-        vehicleTeamId: await get_base_id_by_name(full_plan.company.name),
+        supplierName: company_name,
+        supplierId: await get_base_id_by_name(company_name),
+        vehicleTeamName: company_name,
+        vehicleTeamId: await get_base_id_by_name(company_name),
         tmd_no: '',
         attachUrl: full_plan.enter_attachment,
         sale_address: full_plan.drop_address,
@@ -42,6 +50,32 @@ async function make_plan_resp(plan) {
         transCompanyName: full_plan.trans_company_name,
     };
 }
+function mkplan_filter(cond = undefined) {
+    let = real_cond = { id: { [db_opt.Op.ne]: 0 } };
+    let status_filter = {
+        [db_opt.Op.in]:[1,2]
+    };
+    if (cond) {
+        real_cond = cond;
+        status_filter = 2;
+    }
+    return {
+        ...real_cond,
+        [db_opt.Op.or]: [
+            {
+                is_buy: true,
+                status: 1,
+                companyId: {
+                    [db_opt.Op.ne]: 0
+                },
+            }, {
+                is_buy: false,
+                status: status_filter,
+            }
+        ],
+    }
+}
+
 module.exports = {
     install(app) {
         app.post('/pa_rest/vehicle_info', async (req, res) => {
@@ -74,32 +108,14 @@ module.exports = {
                 }
 
                 let plan = await db_opt.get_sq().models.plan.findOne({
-                    where: {
-                        [db_opt.Op.or]: [
-                            {
-                                [db_opt.Op.and]: [
-                                    {
-                                        is_buy: true,
-                                    }, {
-                                        status: 1,
-                                    }, plan_content_cond,
-                                ],
-                            }, {
-                                [db_opt.Op.and]: [
-                                    {
-                                        is_buy: false,
-                                    }, {
-                                        status: 2,
-                                    }, plan_content_cond,
-                                ],
-                            }
-                        ],
-                    }
+                    where: mkplan_filter(plan_content_cond),
                 });
                 if (plan) {
                     let full_plan = await plan_lib.get_single_plan_by_id(plan.id);
-                    ret.err_msg = '';
-                    ret.result = await make_plan_resp(full_plan);
+                    if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment.length > 0)) {
+                        ret.err_msg = '';
+                        ret.result = await make_plan_resp(full_plan);
+                    }
                 }
             } catch (error) {
                 console.log(error);
@@ -118,27 +134,7 @@ module.exports = {
                     for (let index = 0; index < stuff.length; index++) {
                         const element = stuff[index];
                         let plans = await element.getPlans({
-                            where: {
-                                [db_opt.Op.or]: [
-                                    {
-                                        [db_opt.Op.and]: [
-                                            {
-                                                is_buy: true,
-                                            }, {
-                                                status: 1,
-                                            }
-                                        ],
-                                    }, {
-                                        [db_opt.Op.and]: [
-                                            {
-                                                is_buy: false,
-                                            }, {
-                                                status: 2,
-                                            }
-                                        ],
-                                    }
-                                ],
-                            }
+                            where: mkplan_filter(),
                         })
                         plans.forEach(item => { all_plans.push(item) });
                     }
@@ -146,7 +142,10 @@ module.exports = {
                 let resp = [];
                 for (let index = 0; index < all_plans.length; index++) {
                     const element = all_plans[index];
-                    resp.push(await make_plan_resp(element));
+                    let full_plan = await plan_lib.get_single_plan_by_id(element.id);
+                    if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment.length > 0)) {
+                        resp.push(await make_plan_resp(element));
+                    }
                 }
                 ret.err_msg = "";
                 ret.result = resp;
@@ -272,7 +271,7 @@ module.exports = {
 
             res.send(ret);
         });
-        app.post('/pa_rest/create_plan', async (req, res)=>{
+        app.post('/pa_rest/create_plan', async (req, res) => {
             var token = req.query.token;
             var ret = { err_msg: '无权限' };
             try {
@@ -281,7 +280,7 @@ module.exports = {
                 let mv = await plan_lib.fetch_vehicle(req_body.plateNo);
                 let dr = await plan_lib.fetch_driver(req_body.driverName, req_body.driverPhone, req_body.driverID);
                 let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await company.getStuff({where:{name:req_body.stuffName}});
+                let stuff = await company.getStuff({ where: { name: req_body.stuffName } });
                 let buy_company = await rbac_lib.add_company(req_body.customerName);
                 let user = await rbac_lib.add_user('28887888777');
                 if (company && user) {
@@ -298,12 +297,12 @@ module.exports = {
                     "stuff_id": stuff[0].id,
                     "trans_company_name": req_body.trans_company_name,
                     "use_for": req_body.userFor,
-                }, {headers:{token:user_token}});
+                }, { headers: { token: user_token } });
                 if (resp.data.err_msg == "") {
                     let plan_id = resp.data.result.id;
                     await plan_lib.confirm_single_plan(plan_id, token);
                     await plan_lib.manual_pay_plan(plan_id, token);
-                    ret = {err_msg: "", result:{orderNumber:plan_id.toString()}};
+                    ret = { err_msg: "", result: { orderNumber: plan_id.toString() } };
                 }
             } catch (error) {
                 ret = { err_msg: error.msg };
