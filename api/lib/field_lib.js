@@ -34,4 +34,9 @@ module.exports = {
         wx_api_util.call_vehicle_msg(_plan);
         await _plan.save();
     },
+    handle_confirm_vehicle:async function (_plan, is_confirm) {
+        _plan.confirmed = is_confirm;
+        hook_plan('confirm_vehicle', _plan);
+        await _plan.save();
+    }
 };

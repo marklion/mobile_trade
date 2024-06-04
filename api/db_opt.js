@@ -98,6 +98,7 @@ let db_opt = {
             trans_company_name: { type: DataTypes.STRING },
             enter_count: { type: DataTypes.FLOAT, defaultValue: 0 },
             enter_attachment: { type: DataTypes.STRING },
+            confirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

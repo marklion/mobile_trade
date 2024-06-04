@@ -107,6 +107,7 @@ module.exports = {
         trans_company_name: { type: String, mean: '运输公司名称', example: '运输公司名称' },
         need_sc: { type: Boolean, mean: '是否需要安检', example: true },
         need_enter_weight:{ type: Boolean, mean: '是否需要进场称重', example: true },
+        confirmed: { type: Boolean, mean: '是否确认装卸货', example: true },
         rbac_user: {
             type: Object, mean: '创建人', explain: {
                 id: { type: Number, mean: '用户ID', example: 1 },

@@ -122,7 +122,7 @@ module.exports = {
                 }
             } catch (error) {
                 console.log(error);
-                ret.err_msg = error
+                ret.err_msg = error.err_msg
             };
             res.send(ret);
         });
@@ -154,7 +154,7 @@ module.exports = {
                 ret.result = resp;
             } catch (error) {
                 console.log(error);
-                ret.err_msg = error
+                ret.err_msg = error.err_msg
             };
             res.send(ret);
         });
@@ -168,7 +168,7 @@ module.exports = {
                 ret = { err_msg: '' };
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.msg };
+                ret = { err_msg: error.err_msg};
             }
             res.send(ret);
         });
@@ -212,7 +212,7 @@ module.exports = {
                 ret = {err_msg:''};
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.msg };
+                ret = { err_msg: error.err_msg};
             }
 
             res.send(ret);
@@ -233,7 +233,7 @@ module.exports = {
                 }
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.msg };
+                ret = { err_msg: error.err_msg};
             }
             res.send(ret);
         });
@@ -271,7 +271,7 @@ module.exports = {
                 }
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.msg };
+                ret = { err_msg: error.err_msg};
             }
             res.send(ret);
         });
@@ -282,8 +282,10 @@ module.exports = {
                 let req_body = req.body;
                 let plan_id = parseInt(req_body.id.substr(1, req_body.id.length - 1));
                 await plan_lib.plan_enter(plan_id, token);
+                ret = { err_msg: '' };
             } catch (error) {
-                ret = { err_msg: error.msg };
+                console.log(error);
+                ret = { err_msg: error.err_msg};
             }
 
             res.send(ret);
@@ -322,7 +324,8 @@ module.exports = {
                     ret = { err_msg: "", result: { orderNumber: plan_id.toString() } };
                 }
             } catch (error) {
-                ret = { err_msg: error.msg };
+                console.log(error);
+                ret = { err_msg: error.err_msg};
             }
             res.send(ret);
         });
@@ -335,7 +338,8 @@ module.exports = {
                 await plan_lib.plan_close(plan, '第三方');
                 ret.err_msg = "";
             } catch (error) {
-                ret = { err_msg: error.msg };
+                console.log(error);
+                ret = { err_msg: error.err_msg};
             }
             res.send(ret);
         });
