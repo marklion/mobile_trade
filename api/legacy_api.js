@@ -56,7 +56,8 @@ function mkplan_filter(cond = undefined) {
         [db_opt.Op.in]:[1,2]
     };
     if (cond) {
-        real_cond = cond;
+        real_cond = {...cond,
+        };
         status_filter = 2;
     }
     return {
@@ -112,9 +113,11 @@ module.exports = {
                 });
                 if (plan) {
                     let full_plan = await plan_lib.get_single_plan_by_id(plan.id);
-                    if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment.length > 0)) {
-                        ret.err_msg = '';
-                        ret.result = await make_plan_resp(full_plan);
+                    if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment)) {
+                        if (full_plan.stuff.no_need_register || full_plan.register_time) {
+                            ret.err_msg = '';
+                            ret.result = await make_plan_resp(full_plan);
+                        }
                     }
                 }
             } catch (error) {

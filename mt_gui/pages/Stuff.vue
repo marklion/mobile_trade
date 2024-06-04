@@ -15,14 +15,18 @@
                     <fui-button text="调价" type="warning" radius="0" btnSize="mini" @click="prepare_change_price(item)"></fui-button>
                     <fui-button text="调价历史" type="purple" radius="0" btnSize="mini" @click="prepare_history(item)"></fui-button>
                 </view>
-                <view>
+                <view style="display:flex; font-size:13px;">
                     <view style="display:flex;">
                         需要安检
-                        <u-switch v-model="item.need_sc" @change="change_need_sc(item)"></u-switch>
+                        <u-switch size="18" v-model="item.need_sc" @change="change_need_sc(item)"></u-switch>
                     </view>
                     <view style="display:flex;">
                         需要进厂前重量
-                        <u-switch v-model="item.need_enter_weight" @change="change_need_enter_weight(item)"></u-switch>
+                        <u-switch size="18" v-model="item.need_enter_weight" @change="change_need_enter_weight(item)"></u-switch>
+                    </view>
+                    <view style="display:flex;">
+                        不用排号
+                        <u-switch size="18" v-model="item.no_need_register" @change="change_no_need_register(item)"></u-switch>
                     </view>
                 </view>
             </view>
@@ -104,6 +108,13 @@ export default {
         }
     },
     methods: {
+        change_no_need_register: async function (item) {
+            await this.$send_req('/stuff/no_need_register', {
+                stuff_id: item.id,
+                no_need_register: item.no_need_register,
+            });
+            uni.startPullDownRefresh();
+        },
         change_need_enter_weight: async function (item) {
             await this.$send_req('/stuff/enter_weight', {
                 stuff_id: item.id,

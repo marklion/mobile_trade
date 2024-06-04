@@ -371,6 +371,7 @@ def stuff_move():
                 'companyId':nc['id'],
                 'use_for_buy':1,
                 'need_enter_weight':need_enter_weight,
+                'no_need_register':1,
             }
             st_id = insert_new2cur_table('stuff', ns)
         except:
