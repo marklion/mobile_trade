@@ -53,6 +53,7 @@ module.exports = {
                         use_for_buy: { type: Boolean, mean: '用于采购', example: false },
                         need_sc: { type: Boolean, mean: '是否需要安检', example: false },
                         need_enter_weight: { type: Boolean, mean: '是否需要入场前重量', example: false },
+                        no_need_register: { type: Boolean, mean: '是否不需要登记', example: false },
                     }
                 },
             },
@@ -91,9 +92,35 @@ module.exports = {
                 return { result: true };
             }
         },
-        enter_weight:{
-            name:'配置货物需要入场前重量',
-            description:'配置货物需要入场前重量',
+        no_need_register:{
+            name:'配置货物是否不需要登记',
+            description:'配置货物是否不需要登记',
+            is_write: true,
+            is_get_api: false,
+            params:{
+                stuff_id:{type:Number, have_to:true, mean:'货物ID', example:1},
+                no_need_register:{type:Boolean, have_to:true, mean:'是否不需要登记', example:true}
+            },
+            result:{
+                result:{type:Boolean, mean:'结果', example:true}
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (stuff && company && await company.hasStuff(stuff)) {
+                    stuff.no_need_register = body.no_need_register;
+                    await stuff.save();
+                }
+                else {
+                    throw { err_msg: '货物不存在' };
+                }
+                return { result: true };
+            },
+        },
+        enter_weight: {
+            name: '配置货物需要入场前重量',
+            description: '配置货物需要入场前重量',
             is_write: true,
             is_get_api: false,
             params: {

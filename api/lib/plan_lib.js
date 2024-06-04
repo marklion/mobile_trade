@@ -3,6 +3,7 @@ const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const wx_api_util = require('./wx_api_util');
 const { hook_plan } = require('./hook_lib');
+const field_lib = require('./field_lib');
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -377,7 +378,7 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
-    confirm_single_plan: async function (_plan_id, _token) {
+    confirm_single_plan: async function (_plan_id, _token, force = false) {
         await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
             let company_id = 0;
             if (plan.company) {
@@ -385,7 +386,7 @@ module.exports = {
             }
             let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
             let creator = await plan.getRbac_user();
-            if (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy)) {
+            if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
                 plan.status = 1;
                 await plan.save();
                 wx_api_util.send_plan_status_msg(plan);
@@ -953,5 +954,25 @@ module.exports = {
             }
         });
         return err_msg;
-    }
+    },
+    plan_call_vehicle: async function (plan_id, token) {
+        await this.action_in_plan(plan_id, token, -1, async (plan) => {
+            let expect_status = 2;
+            if (plan.is_buy) {
+                expect_status = 1;
+            }
+            if (expect_status != plan.status) {
+                throw { err_msg: '计划状态错误' };
+            }
+            if (plan.register_time && plan.register_time.length > 0) {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    throw { err_msg: '已经进厂' };
+                }
+                await field_lib.handle_call_vehicle(plan);
+            }
+            else {
+                throw { err_msg: '未签到' };
+            }
+        });
+    },
 };

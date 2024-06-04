@@ -200,27 +200,30 @@ export default {
                         value: item.enter_count,
                     });
                 };
-                if (item.register_time) {
-                    ret.list.push({
-                        label: '排号时间',
-                        value: item.register_time,
-                    });
-                    ret.list.push({
-                        label: '序号',
-                        value: item.register_number,
-                    });
-                    ret.list.push({
-                        label: '排号信息',
-                        value: item.register_comment,
-                        valueColor: 'red'
-                    });
-                } else {
-                    ret.buttons.push({
-                        text: '排号',
-                        color: 'blue',
-                        item: item,
-                    });
+                if (!item.stuff.no_need_register) {
+                    if (item.register_time) {
+                        ret.list.push({
+                            label: '排号时间',
+                            value: item.register_time,
+                        });
+                        ret.list.push({
+                            label: '序号',
+                            value: item.register_number,
+                        });
+                        ret.list.push({
+                            label: '排号信息',
+                            value: item.register_comment,
+                            valueColor: 'red'
+                        });
+                    } else {
+                        ret.buttons.push({
+                            text: '排号',
+                            color: 'blue',
+                            item: item,
+                        });
+                    }
                 }
+
                 if (item.stuff.need_enter_weight) {
                     ret.buttons.push({
                         text: '传磅单',

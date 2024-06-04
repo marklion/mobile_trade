@@ -64,24 +64,8 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
-                    let expect_status = 2;
-                    if (plan.is_buy) {
-                        expect_status = 1;
-                    }
-                    if (expect_status != plan.status) {
-                        throw { err_msg: '计划状态错误' };
-                    }
-                    if (plan.register_time && plan.register_time.length > 0) {
-                        if (plan.enter_time && plan.enter_time.length > 0) {
-                            throw { err_msg: '已经进厂' };
-                        }
-                        await field_lib.handle_call_vehicle(plan);
-                    }
-                    else {
-                        throw { err_msg: '未签到' };
-                    }
-                });
+                await plan_lib.plan_call_vehicle(body.plan_id, token);
+                return { result: true };
             },
         },
         vehicle_enter: {
@@ -153,6 +137,28 @@ module.exports = {
                 let company = await rbac_lib.get_company_by_token(token);
                 company.stamp_pic = body.stamp_pic;
                 await company.save();
+                return { result: true };
+            }
+        },
+        confirm_vehicle: {
+            name: '确认车辆装卸货',
+            description: '确认车辆装卸货',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                is_confirm: { type: Boolean, have_to: true, mean: '是否确认', example: true },
+                seal_no: { type: String, have_to: false, mean: '封号', example: '123456' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    await field_lib.handle_confirm_vehicle(plan, body.is_confirm);
+                    plan.seal_no = body.seal_no;
+                    await plan.save();
+                });
                 return { result: true };
             }
         },

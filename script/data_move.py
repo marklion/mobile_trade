@@ -172,11 +172,23 @@ def company_move():
         }
         company_id = insert_new2cur_table('company', new_data)
         company_module_role(item['PRI_ID'], company_id, item['is_sale'] == 1)
-    obcs = get_data_from_orig_table('vichele_stay_alone_table', 'is_drop != 1 group by company_name')
+    obcs = get_data_from_orig_table('vichele_stay_alone_table', 'is_drop != 1 AND company_name != "" group by company_name')
     for item in obcs:
         try:
             new_data = {
                 'name':item['company_name'],
+                'script':'normal',
+            }
+            company_id = insert_new2cur_table('company', new_data)
+            company_module_role(item['PRI_ID'], company_id, False)
+        except:
+            traceback.print_exc()
+            continue
+    obcs = get_data_from_orig_table('vichele_stay_alone_table', 'is_drop != 1 AND transfor_company != "" group by transfor_company')
+    for item in obcs:
+        try:
+            new_data = {
+                'name':item['transfor_company'],
                 'script':'normal',
             }
             company_id = insert_new2cur_table('company', new_data)
@@ -266,12 +278,28 @@ def vehicle_driver_move():
         except:
             traceback.print_exc()
             continue
+    vsat = get_data_from_orig_table('vichele_stay_alone_table', 'is_drop != 1 AND driver_phone != "" group by driver_phone;')
+    for sv in vsat:
+        try:
+            new_d = {
+            'name':sv['driver_name'],
+            'phone':sv['driver_phone'],
+            'id_card':sv['driver_id'],
+            }
+            insert_new2cur_table('driver', new_d)
+        except:
+            traceback.print_exc()
+            continue
+    insert_new2cur_table('vehicle', {'plate':'', 'is_behind':1})
 def user_move():
     obusers = get_data_from_orig_table('vichele_stay_alone_table', 'is_drop != 1 group by created_by_ext_key')
     for item in obusers:
         try:
             ou = get_data_from_orig_table('silent_user_table', 'PRI_ID == %d' % item['created_by_ext_key'])[0]
-            nc = get_data_from_cur_table('company', 'name == "%s"' % item['company_name'])[0]
+            ocn = item['company_name']
+            if item['transfor_company'] != "":
+                ocn = item['transfor_company']
+            nc = get_data_from_cur_table('company', 'name == "%s"' % ocn)[0]
             nu = {
                 'name':ou['name'],
                 'phone':ou['phone'],
@@ -288,7 +316,7 @@ def user_move():
             traceback.print_exc()
             continue
     clean_user()
-    orig_users = get_data_from_orig_table('userinfo_table', 'phone != "" AND phone != "18911992582" group by phone')
+    orig_users = get_data_from_orig_table('userinfo_table', 'phone != "" AND phone != "18911992582" order by PRI_ID DESC')
     for item in orig_users:
         try:
             oc = get_data_from_orig_table('company_table', 'PRI_ID == %d' % item['belong_company_ext_key'])[0]
@@ -332,12 +360,18 @@ def stuff_move():
     bs = get_data_from_orig_table('vichele_stay_alone_table', 'is_drop != 1 group by stuff_name')
     for item in bs:
         try:
+            exp_exist = get_data_from_orig_table('except_stuff_table', 'name == "%s"' % item['stuff_name'])
+            need_enter_weight = 1
+            if len(exp_exist) > 0:
+                need_enter_weight = 0
             orig_company = get_data_from_orig_table('company_table', 'PRI_ID == %d' % item['destination_ext_key'])[0]
             nc = get_data_from_cur_table('company', 'name == "%s"' % orig_company['name'])[0]
             ns = {
                 'name':item['stuff_name'],
                 'companyId':nc['id'],
-                'use_for_buy':1
+                'use_for_buy':1,
+                'need_enter_weight':need_enter_weight,
+                'no_need_register':1,
             }
             st_id = insert_new2cur_table('stuff', ns)
         except:
@@ -462,6 +496,8 @@ def contract_move():
                 'buyCompanyId':get_data_from_cur_table('company', 'name == "%s"' % orig_bc['name'])[0]['id'],
                 'saleCompanyId':get_data_from_cur_table('company', 'name == "%s"' % item['company_name'])[0]['id'],
             }
+            insert_new2cur_table('contract', nc)
+            nc['saleCompanyId'] = get_data_from_cur_table('company', 'name == "%s"' % item['transfor_company'])[0]['id']
             insert_new2cur_table('contract', nc)
         except:
             traceback.print_exc()
@@ -629,12 +665,21 @@ def order_move():
             status = item['status']
             if status == 2:
                 status = 3
+            companyId = 0;
+            behindVehicleId = 0;
+            ocpn = get_data_from_cur_table('company', 'name == "%s"' % item['company_name'])
+            obv = get_data_from_cur_table('vehicle', 'plate == "%s"'% item['behind_vichele_number'])
+            if len(ocpn) > 0:
+                companyId = ocpn[0]['id']
+            if len(obv) > 0:
+                behindVehicleId = obv[0]['id']
             no = {
                 'plan_time':item['date'],
                 'unit_price':item['price'],
                 'status': status,
                 'comment': item['comment'],
-                'count': item['count'],
+                'enter_count': item['count'],
+                'enter_attachment':item['attach_path'],
                 'p_weight':item['p_weight'],
                 'm_weight':item['m_weight'],
                 'p_time':item['p_time'],
@@ -642,9 +687,9 @@ def order_move():
                 'is_buy':1,
                 'ticket_no':item['ticket_no'],
                 'trans_company_name':item['transfor_company'],
-                'companyId':get_data_from_cur_table('company', 'name == "%s"' % item['company_name'])[0]['id'],
+                'companyId':companyId,
                 'mainVehicleId':get_data_from_cur_table('vehicle', 'plate == "%s"'% item['main_vichele_number'])[0]['id'],
-                'behindVehicleId':get_data_from_cur_table('vehicle', 'plate == "%s"'% item['behind_vichele_number'])[0]['id'],
+                'behindVehicleId':behindVehicleId,
                 'driverId':get_data_from_cur_table('driver', 'phone == "%s"'% item['driver_phone'])[0]['id'],
                 'stuffId':get_data_from_cur_table('stuff', 'name == "%s"'% item['stuff_name'])[0]['id'],
                 'rbacUserId': get_data_from_cur_table('rbac_user', 'phone == "%s"' % ou['phone'])[0]['id'],
