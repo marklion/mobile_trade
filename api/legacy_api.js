@@ -163,9 +163,11 @@ module.exports = {
             var ret = { err_msg: '无权限' };
             try {
                 let req_body = req.body;
-                let plan_id = parseInt(req_body.id.substr(1, req_body.id.length() - 1));
+                let plan_id = parseInt(req_body.id.substr(1, req_body.id.length - 1));
                 await plan_lib.deliver_plan(plan_id, token, req_body.jWeight, req_body.pWeight, req_body.mWeight, req_body.pTime, req_body.mTime, req_body.ticketNo, req_body.sealNo);
+                ret = { err_msg: '' };
             } catch (error) {
+                console.log(error);
                 ret = { err_msg: error.msg };
             }
             res.send(ret);
@@ -266,7 +268,7 @@ module.exports = {
             var ret = { err_msg: '无权限' };
             try {
                 let req_body = req.body;
-                let plan_id = parseInt(req_body.id.substr(1, req_body.id.length() - 1));
+                let plan_id = parseInt(req_body.id.substr(1, req_body.id.length - 1));
                 await plan_lib.plan_enter(plan_id, token);
             } catch (error) {
                 ret = { err_msg: error.msg };
