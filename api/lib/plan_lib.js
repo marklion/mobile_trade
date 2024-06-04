@@ -378,7 +378,7 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
-    confirm_single_plan: async function (_plan_id, _token) {
+    confirm_single_plan: async function (_plan_id, _token, force = false) {
         await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
             let company_id = 0;
             if (plan.company) {
@@ -386,7 +386,7 @@ module.exports = {
             }
             let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
             let creator = await plan.getRbac_user();
-            if (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy)) {
+            if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
                 plan.status = 1;
                 await plan.save();
                 wx_api_util.send_plan_status_msg(plan);

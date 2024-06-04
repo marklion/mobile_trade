@@ -319,7 +319,7 @@ module.exports = {
                 }, { headers: { token: user_token } });
                 if (resp.data.err_msg == "") {
                     let plan_id = resp.data.result.id;
-                    await plan_lib.confirm_single_plan(plan_id, token);
+                    await plan_lib.confirm_single_plan(plan_id, token, true);
                     await plan_lib.manual_pay_plan(plan_id, token);
                     ret = { err_msg: "", result: { orderNumber: plan_id.toString() } };
                 }
