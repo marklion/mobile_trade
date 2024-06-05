@@ -4,6 +4,7 @@ const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const sc_lib = require('../lib/sc_lib');
 const wx_api_util = require('../lib/wx_api_util');
+const hook_lib = require('../lib/hook_lib');
 module.exports = {
     name: 'global',
     description: '全局',
@@ -307,7 +308,17 @@ module.exports = {
                 let company = await sq.models.company.findByPk(body.company_id);
                 if (company && driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     await plan.setCompany(company);
+                    let contracts = await plan.stuff.company.getBuy_contracts({ where: { saleCompanyId: company.id } });
+                    if (contracts.length == 1)
+                    {
+                        let stuff = await contracts[0].getStuff();
+                        if (stuff.length > 0)
+                        {
+                            await plan.setStuff(stuff[0]);
+                        }
+                    }
                     await plan.save();
+                    hook_lib.hook_plan('order_update', plan);
                 }
                 else {
                     throw { err_msg: '无法上传' };
@@ -350,8 +361,7 @@ module.exports = {
                                     throw { err_msg: '已经签到其他计划' };
                                 }
                             }
-                            else
-                            {
+                            else {
                                 throw { err_msg: '未指定公司' };
                             }
                         }

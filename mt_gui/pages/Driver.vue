@@ -231,7 +231,7 @@ export default {
                         item: item,
                     });
                 }
-                if (item.company.id == undefined) {
+                if (item.is_proxy) {
                     ret.buttons.push({
                         text: '选择公司',
                         color: 'brown',

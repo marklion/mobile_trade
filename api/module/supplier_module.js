@@ -62,16 +62,19 @@ module.exports = {
                 trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
                 proxy_company_name: { type: String, have_to: false, mean: '代理公司名称', example: 1 },
                 is_proxy: { type: Boolean, have_to: false, mean: '是否代理', example: true },
+                is_repeat: { type: Boolean, have_to: false, mean: '是否多次进厂', example: true },
             },
             result: api_param_result_define.plan_detail_define,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
                 let buy_company = undefined;
+                let is_proxy = false;
                 if (body.is_proxy) {
                     if (body.proxy_company_name) {
                         buy_company = await rbac_lib.add_company(body.proxy_company_name);
                     }
+                    is_proxy = true;
                 }
                 else {
                     buy_company = await rbac_lib.get_company_by_token(token);
@@ -98,10 +101,16 @@ module.exports = {
                     await plan_lib.rp_history_create(new_plan, user.name);
                     new_plan.unit_price = body.price
                     new_plan.status = 0;
+                    new_plan.is_repeat = body.is_repeat;
+                    new_plan.is_proxy = true;
                     new_plan.is_buy = true;
                     new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();
                     wx_api_util.send_plan_status_msg(await plan_lib.get_single_plan_by_id(new_plan.id));
+                    if (!stuff.need_enter_weight && stuff.no_need_register && !stuff.need_sc)
+                    {
+                        await plan_lib.confirm_single_plan(new_plan.id, token, true)
+                    }
                 }
                 else {
                     throw { err_msg: '创建计划失败' };
@@ -210,6 +219,45 @@ module.exports = {
                     unit_price: body.price,
                 });
                 return { result: true };
+            },
+        },
+        get_company4proxy:{
+            name: '获取可代理的公司列表',
+            description: '获取可代理的公司列表',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                company_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
+            },
+            result:{
+                companies: {type:Array,mean:'公司列表',explain:{
+                    id: { type: Number, mean: '公司ID', example: 1 },
+                    name: { type: String, mean: '公司名', example: 'company_example' },
+                }}
+            },
+            func:async function(body, token) {
+                let ret = {
+                    total: 0,
+                    companies: []
+                }
+                let sq = db_opt.get_sq();
+                let user = await rbac_lib.get_user_by_token(token);
+                let company = await sq.models.company.findByPk(body.company_id);
+                if (user && company) {
+                    let resp = await plan_lib.get_all_buy_contracts(company, body.pageNo);
+                    for (let index = 0; index < resp.rows.length; index++) {
+                        const element = resp.rows[index];
+                        ret.companies.push({
+                            name:element.company.name,
+                            id:element.company.id,
+                        });
+                    }
+                    ret.total = resp.count;
+                }
+                else {
+                    throw { err_msg: '无法获取' };
+                }
+                return ret;
             },
         },
     }

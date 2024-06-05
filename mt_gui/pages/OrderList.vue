@@ -35,6 +35,7 @@
             <u-cell :icon="get_status_icon(item)" :title="item.company_show + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
                 <view slot="value" style="display:flex; flex-direction: column;">
                     <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
                     <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
                     <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
                 </view>
@@ -231,7 +232,7 @@
         </fui-form>
     </fui-modal>
 
-    <fui-modal :zIndex="1004" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
+    <fui-modal :zIndex="80" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
         <fui-form ref="plan_form" :model="dup_plan">
             <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
                 <fui-input placeholder="请输入计划日期" disabled v-model="dup_plan.plan_time"></fui-input>
@@ -240,7 +241,7 @@
                 <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
                     <fui-input placeholder="请输入用途" disabled v-model="dup_plan.use_for"></fui-input>
                 </fui-form-item>
-                <pick-regions @getRegion="pick_address">
+                <pick-regions @getRegion="pick_address" >
                     <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
                         <fui-input placeholder="请输入卸车地点" disabled v-model="dup_plan.drop_address"></fui-input>
                     </fui-form-item>

@@ -180,7 +180,7 @@ def company_move():
                 'script':'normal',
             }
             company_id = insert_new2cur_table('company', new_data)
-            company_module_role(item['PRI_ID'], company_id, False)
+            company_module_role(0, company_id, False)
         except:
             traceback.print_exc()
             continue
@@ -192,7 +192,20 @@ def company_move():
                 'script':'normal',
             }
             company_id = insert_new2cur_table('company', new_data)
-            company_module_role(item['PRI_ID'], company_id, False)
+            company_module_role(0, company_id, False)
+        except:
+            traceback.print_exc()
+            continue
+
+    orig_sups = get_data_from_orig_table('supplier_basic_info_table', "belong_company_ext_key == 2")
+    for item in orig_sups:
+        try:
+            new_data = {
+                'name':item['name'],
+                'script':'normal',
+            }
+            company_id = insert_new2cur_table('company', new_data)
+            company_module_role(0, company_id, False)
         except:
             traceback.print_exc()
             continue
@@ -378,6 +391,22 @@ def stuff_move():
             traceback.print_exc()
             continue
 
+    orig_sups = get_data_from_orig_table('supplier_basic_info_table', "belong_company_ext_key == 2 group by bound_stuff")
+    for item in orig_sups:
+        try:
+            ns = {
+                'name':item['bound_stuff'],
+                'companyId':1,
+                'use_for_buy':1,
+                'need_enter_weight':need_enter_weight,
+                'no_need_register':1,
+            }
+            st_id = insert_new2cur_table('stuff', ns)
+        except:
+            traceback.print_exc()
+            continue
+
+
 def sc_req_move():
     orig_lrs = get_data_from_orig_table('license_require_table')
     for item in orig_lrs:
@@ -447,6 +476,21 @@ def contract_stuff_move():
         except:
             traceback.print_exc()
             continue
+    orig_sups = get_data_from_orig_table('supplier_basic_info_table', "belong_company_ext_key == 2")
+    for item in orig_sups:
+        try:
+            ns = get_data_from_cur_table('stuff', 'name == "%s"' % item['bound_stuff'])[0]
+            nsc = get_data_from_cur_table('company', 'name == "%s"' % item['name'])[0]
+            ncon = get_data_from_cur_table('contract', 'buyCompanyId == 1 AND saleCompanyId == %d' % nsc['id'])[0]
+            new_cs = {
+                'contractId':ncon['id'],
+                'stuffId':ns['id'],
+            }
+            insert_new2cur_table('contract_stuff', new_cs)
+        except:
+            traceback.print_exc()
+            continue
+
 def contract_user_move(ocid, ncid):
     ocus = get_data_from_orig_table('contract_user_table', 'belong_contract_ext_key == %d' % ocid)
     for item in ocus:
@@ -498,6 +542,27 @@ def contract_move():
             }
             insert_new2cur_table('contract', nc)
             nc['saleCompanyId'] = get_data_from_cur_table('company', 'name == "%s"' % item['transfor_company'])[0]['id']
+            insert_new2cur_table('contract', nc)
+        except:
+            traceback.print_exc()
+            continue
+
+    orig_sups = get_data_from_orig_table('supplier_basic_info_table', "belong_company_ext_key == 2")
+    for item in orig_sups:
+        try:
+            nc = {
+                'sign_time':cur_time_str,
+                'balance':0,
+                'begin_time':cur_time_str,
+                'end_time':'2999-12-31',
+                'number':'',
+                'customer_code':'',
+                'buyCompanyId':1,
+                'saleCompanyId':get_data_from_cur_table('company', 'name == "%s"' % item['name'])[0]['id'],
+            }
+            exrec = get_data_from_cur_table('contract', 'buyCompanyId == 1 AND saleCompanyId == %d' % nc['saleCompanyId'])
+            if len(exrec) > 0:
+                continue
             insert_new2cur_table('contract', nc)
         except:
             traceback.print_exc()
@@ -685,6 +750,7 @@ def order_move():
                 'p_time':item['p_time'],
                 'm_time':item['m_time'],
                 'is_buy':1,
+                'is_repeat':item['is_repeated'],
                 'ticket_no':item['ticket_no'],
                 'trans_company_name':item['transfor_company'],
                 'companyId':companyId,

@@ -99,6 +99,8 @@ let db_opt = {
             enter_count: { type: DataTypes.FLOAT, defaultValue: 0 },
             enter_attachment: { type: DataTypes.STRING },
             confirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
+            is_proxy: { type: DataTypes.BOOLEAN, defaultValue: false },
+            is_repeat: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

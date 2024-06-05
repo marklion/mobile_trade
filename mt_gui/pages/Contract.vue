@@ -5,17 +5,19 @@
         <u-cell v-for="item in data2show" :key="item.id" size="large" :title="item.company.name" :value="'￥' + item.balance">
             <view slot="label">
                 <module-filter require_module="sale_management">
-                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su">
+                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su || cur_urls.buy_setting">
                         <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" :scaleRatio="0.8" type="purple">
                             {{single_stuff.name}}
                             <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
                         </fui-tag>
                         <fui-tag text="新增物料" :scaleRatio="0.8" type="purple" @click="prepare_add_stuff(item)"></fui-tag>
-                        <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" :scaleRatio="0.8" type="success">
-                            {{single_user.name + '|' + single_user.phone}}
-                            <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
-                        </fui-tag>
-                        <fui-tag :scaleRatio="0.8" type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
+                        <view v-if="cur_urls.need_su">
+                            <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" :scaleRatio="0.8" type="success">
+                                {{single_user.name + '|' + single_user.phone}}
+                                <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
+                            </fui-tag>
+                            <fui-tag :scaleRatio="0.8" type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
+                        </view>
                     </view>
                 </module-filter>
                 <view>
@@ -149,6 +151,7 @@ export default {
                 del_url: '',
                 need_su: false,
                 motive: false,
+                buy_setting: false,
             },
 
         };
@@ -164,9 +167,11 @@ export default {
             this.cur_urls.del_url = e.del_url;
             this.cur_urls.need_su = e.need_su;
             this.cur_urls.motive = e.motive;
+            this.cur_urls.buy_setting = e.buy_setting;
             this.$nextTick(() => {
                 this.$refs.contracts.refresh();
             });
+            console.log(this.cur_urls.buy_setting);
         },
         init_top_seg: function () {
             this.seg = []
@@ -204,6 +209,7 @@ export default {
                     del_url: '/buy_management/contract_destroy',
                     need_su: false,
                     motive: true,
+                    buy_setting: true,
                 });
             }
             if (this.seg.length > 0) {
@@ -212,6 +218,7 @@ export default {
                 this.cur_urls.del_url = this.seg[0].del_url;
                 this.cur_urls.motive = this.seg[0].motive;
                 this.cur_urls.need_su = this.seg[0].need_su;
+                this.cur_urls.buy_setting = this.seg[0].buy_setting;
             }
         },
         get_history: async function (_pageNo, [id]) {
@@ -304,7 +311,11 @@ export default {
         },
         del_stuff: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/sale_management/contract_del_stuff', {
+                let url = '/sale_management/contract_del_stuff';
+                if (this.cur_urls.buy_setting) {
+                    url = "/buy_management/contract_del_stuff"
+                }
+                await this.$send_req(url, {
                     contract_id: this.focus_item.id,
                     stuff_id: this.focus_stuff.id
                 });
@@ -317,7 +328,11 @@ export default {
                 contract_id: this.focus_item.id,
                 stuff_id: item.id
             };
-            await this.$send_req('/sale_management/contract_add_stuff', req);
+            let url = '/sale_management/contract_add_stuff';
+            if (this.cur_urls.buy_setting) {
+                url = "/buy_management/contract_add_stuff"
+            }
+            await this.$send_req(url, req);
             uni.startPullDownRefresh();
             this.show_add_stuff = false;
         },

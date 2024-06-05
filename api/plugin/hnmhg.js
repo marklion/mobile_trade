@@ -1,5 +1,6 @@
 const axios = require('axios');
 const db_opt = require('../db_opt');
+const plan_lib = require('../lib/plan_lib');
 async function post_to_hd(url, data) {
     let company = await db_opt.get_sq().models.company.findOne({ where: { name: '内蒙古汇能煤化工有限公司' } })
     let url_prefix = '';
@@ -33,7 +34,8 @@ async function get_base_id_by_name(name) {
     }
     return ret;
 }
-async function make_plan_basic_req(plan, is_change = false) {
+async function make_plan_basic_req(plan_id, is_change = false) {
+    let plan = await plan_lib.get_single_plan_by_id(plan_id);
     let req = {
         id: 'n' + plan.id,
         plateNo: plan.main_vehicle.plate,
@@ -41,7 +43,7 @@ async function make_plan_basic_req(plan, is_change = false) {
         stuffName: plan.stuff.name,
         stuffId: await get_base_id_by_name(plan.stuff.name),
         enterWeight: plan.enter_count,
-        driverNamee: plan.driver.name,
+        driverName: plan.driver.name,
         driverId: plan.driver.id_card,
         driverPhone: plan.driver.phone,
         price: plan.unit_price,
@@ -54,20 +56,24 @@ async function make_plan_basic_req(plan, is_change = false) {
         useFor: plan.use_for,
     };
     if (plan.is_buy) {
-        req.supplierName = plan.company.name;
+        let company_name = "";
+        if (plan.company) {
+            company_name = plan.company.name;
+        }
+        req.supplierName = company_name;
         req.supplierId = await get_base_id_by_name(req.supplierName);
         req.vehicleTeamName = plan.trans_company_name;
         req.vehicleTeamId = await get_base_id_by_name(req.vehicleTeamName);
-        req.customerName = '';
+        req.companyName= '';
         req.customerId = '';
         req.isSale = false;
     }
     else {
         req.supplierName = '';
         req.supplierId = '';
-        req.customerName = plan.company.name;
-        req.customerId = await get_base_id_by_name(req.customerName);
-        req.vehicleTeamName = req.customerName;
+        req.companyName = plan.company.name;
+        req.customerId = await get_base_id_by_name(req.companyName);
+        req.vehicleTeamName = req.companyName;
         req.vehicleTeamId = req.customerId;
         req.isSale = true;
     }
@@ -78,12 +84,9 @@ async function make_plan_basic_req(plan, is_change = false) {
 }
 module.exports = {
     check_in: async function (plan) {
-        let req = await make_plan_basic_req(plan)
-        await post_to_hd('/thirdParty/zyzl/saveRegister', {
-            data: [req],
-        });
+
         if (!plan.is_buy) {
-            let req = await make_plan_basic_req(plan)
+            let req = await make_plan_basic_req(plan.id)
             let res = await post_to_hd('/thirdParty/zyzl/checkIn', {
                 data: req
             });
@@ -94,7 +97,7 @@ module.exports = {
         }
     },
     cancel_check_in: async function (plan) {
-        let req = await make_plan_basic_req(plan, true);
+        let req = await make_plan_basic_req(plan.id, true);
         await post_to_hd('/thirdParty/zyzl/changeRegister', {
             data: req
         });
@@ -103,13 +106,21 @@ module.exports = {
 
     },
     order_ready: async function (plan) {
-
+        let req = await make_plan_basic_req(plan.id)
+        await post_to_hd('/thirdParty/zyzl/saveRegister', {
+            data: [req],
+        });
     },
     order_close: async function (plan) {
-        let req = await make_plan_basic_req(plan, true);
+        let req = await make_plan_basic_req(plan.id, true);
         await post_to_hd('/thirdParty/zyzl/changeRegister', {
             data: req
         });
     },
-
+    order_update: async function (plan) {
+        let req = await make_plan_basic_req(plan.id)
+        await post_to_hd('/thirdParty/zyzl/saveRegister', {
+            data: [req],
+        });
+    },
 }

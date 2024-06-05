@@ -5,20 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "node",
-            "request": "launch",
-            "name": "build",
-            "skipFiles": [
-                "<node_internals>/**"
-            ],
-            "stopOnEntry": true,
-            "program": "${workspaceFolder}/api/index.js",
-            "runtimeExecutable": "npm",
-            "runtimeArgs": [
-                "run",
-                "debug"
-            ],
-            "cwd":"${workspaceFolder}/api"
+            "type": "node", // node 调试
+            "request": "attach", // launch / attach。luanch 为本地调试，attach 为远程/跨进程调试
+            "name": "Remote server", // 启动配置的名称，在面板中可以选择
+            "address": "192.168.0.112", // 服务器地址
+            "port": 39229, // 服务器端口，默认为 9229
+            "localRoot": "${workspaceFolder}/api/build/api", // 本地程序所在的目录
+            "remoteRoot": "/api/", // 服务器对应程序所在的目录
+            "sourceMaps": true
         }
     ]
 }
