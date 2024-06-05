@@ -78,6 +78,12 @@ module.exports = {
                                 name: { type: String, mean: '公司名称', example: '公司名称' },
                             }
                         },
+                        stuff: {
+                            type: Array, mean: '货物', explain: {
+                                id: { type: Number, mean: '货物ID', example: 1 },
+                                name: { type: String, mean: '货物名称', example: '货物名称' },
+                            }
+                        },
                     }
                 }
             },
@@ -190,7 +196,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        assign_supplier:{
+        assign_supplier: {
             name: '指定采购公司',
             description: '指定采购公司',
             is_write: true,
@@ -206,9 +212,64 @@ module.exports = {
                 await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
                     let buy_company = await db_opt.get_sq().models.company.findByPk(body.supplier_id);
                     await plan.setCompany(buy_company);
+                    if (buy_company) {
+                        plan.is_proxy = false;
+                    }
+                    else {
+                        plan.is_proxy = true;
+                    }
+                    await plan.save()
                 });
                 return { result: true };
             }
+        },
+        contract_add_stuff: {
+            name: '合同添加货物',
+            description: '合同添加货物',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let ret = { result: false };
+                let company = await rbac_lib.get_company_by_token(token);
+                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
+                let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
+                if (contract && stuff && company && await company.hasBuy_contract(contract)) {
+                    await plan_lib.add_stuff_to_contract(stuff, contract);
+                    ret.result = true;
+                }
+                return ret;
+            },
+        },
+        contract_del_stuff: {
+            name: '合同删除货物',
+            description: '合同删除货物',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let ret = { result: false };
+                let company = await rbac_lib.get_company_by_token(token);
+                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
+                let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
+                if (contract && stuff && company && await company.hasBuy_contract(contract)) {
+                    await plan_lib.del_stuff_from_contract(stuff, contract);
+                    ret.result = true;
+                }
+                return ret;
+            },
         },
     }
 }

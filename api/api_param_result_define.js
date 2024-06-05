@@ -108,6 +108,8 @@ module.exports = {
         need_sc: { type: Boolean, mean: '是否需要安检', example: true },
         need_enter_weight:{ type: Boolean, mean: '是否需要进场称重', example: true },
         confirmed: { type: Boolean, mean: '是否确认装卸货', example: true },
+        is_proxy: { type: Boolean, mean: '是否代理', example: true },
+        is_repeat: { type: Boolean, mean: '是否多次进厂', example: true },
         rbac_user: {
             type: Object, mean: '创建人', explain: {
                 id: { type: Number, mean: '用户ID', example: 1 },
@@ -128,7 +130,8 @@ module.exports = {
                     }
                 },
                 need_sc: { type: Boolean, mean: '是否需要安检', example: true },
-                need_enter_weight:{ type: Boolean, mean: '是否需要进场称重', example: true },
+                need_enter_weight: { type: Boolean, mean: '是否需要进场称重', example: true },
+                no_need_register: { type: Boolean, mean: '不需要登记', example: true },
             }
         },
         company: {
@@ -191,7 +194,7 @@ module.exports = {
             }
         }
     },
-    dev_data:{
+    dev_data: {
         third_key: { type: String, have_to: false, mean: '货达key', example: 'third_key_example' },
         third_url: { type: String, have_to: false, mean: '货达url', example: 'third_url_example' },
         third_token: { type: String, have_to: false, mean: '货达token', example: 'third_token_example' },

@@ -401,8 +401,7 @@ module.exports = {
             else {
                 throw { err_msg: plan.company.name + '的报计划人未授权' };
             }
-
-        });
+        }, force);
     },
     plan_close: async function (plan, name, is_cancel = false) {
         if (plan.status == 3) {
@@ -563,6 +562,30 @@ module.exports = {
             hook_plan('order_ready', plan);
         });
     },
+    dup_plan: async function (plan, token) {
+        let sq = db_opt.get_sq();
+        let new_plan_req = {
+            plan_time: plan.plan_time,
+            comment: plan.comment,
+            use_for: plan.use_for,
+        };
+        let new_plan = await sq.models.plan.create(new_plan_req);
+        await new_plan.setCompany(plan.company);
+        await new_plan.setStuff(plan.stuff);
+        await new_plan.setDriver(plan.driver);
+        await new_plan.setMain_vehicle(plan.main_vehicle);
+        await new_plan.setBehind_vehicle(plan.behind_vehicle);
+        await new_plan.setRbac_user(plan.rbac_user);
+        await this.rp_history_create(new_plan, "自动");
+        new_plan.unit_price = plan.unit_price
+        new_plan.status = 0;
+        new_plan.is_repeat = plan.is_repeat;
+        new_plan.is_proxy = plan.is_proxy;
+        new_plan.is_buy = plan.is_buy
+        new_plan.trans_company_name = plan.trans_company_name;
+        await new_plan.save();
+        await this.confirm_single_plan(new_plan.id, token, true);
+    },
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
         let tmp_plan = await this.get_single_plan_by_id(_plan_id);
         let status_req = 2;
@@ -584,34 +607,44 @@ module.exports = {
             if (!plan.is_buy) {
                 await this.plan_cost(plan);
             }
+            if (plan.is_repeat)
+            {
+                await this.dup_plan(plan, _token);
+            }
         });
     },
-    action_in_plan: async function (_plan_id, _token, _expect_status, _action) {
-        let opt_company = await rbac_lib.get_company_by_token(_token);
+    action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
         let plan = await this.get_single_plan_by_id(_plan_id);
-        if (plan) {
-            let stuff = plan.stuff;
-            if (stuff) {
-                let company = stuff.company;
-                if (company && opt_company && opt_company.id == company.id) {
-                    if (-1 == _expect_status || plan.status == _expect_status) {
-                        await _action(plan);
+        if (force) {
+            await _action(plan);
+        }
+        else {
+            let opt_company = await rbac_lib.get_company_by_token(_token);
+            if (plan) {
+                let stuff = plan.stuff;
+                if (stuff) {
+                    let company = stuff.company;
+                    if (company && opt_company && opt_company.id == company.id) {
+                        if (-1 == _expect_status || plan.status == _expect_status) {
+                            await _action(plan);
+                        }
+                        else {
+                            throw { err_msg: '计划状态错误' };
+                        }
                     }
                     else {
-                        throw { err_msg: '计划状态错误' };
+                        throw { err_msg: '无权限' };
                     }
                 }
                 else {
-                    throw { err_msg: '无权限' };
+                    throw { err_msg: '未找到货物' };
                 }
             }
             else {
-                throw { err_msg: '未找到货物' };
+                throw { err_msg: '未找到计划' };
             }
         }
-        else {
-            throw { err_msg: '未找到计划' };
-        }
+
     },
     record_plan_history: async function (_plan, _operator, _action_type) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type });

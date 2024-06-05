@@ -275,7 +275,6 @@ module.exports = {
         contract_add_stuff: {
             name: '合同添加货物',
             description: '合同添加货物',
-
             is_write: true,
             is_get_api: false,
             params: {

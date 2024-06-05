@@ -3,7 +3,7 @@
     <fui-white-space size="large"></fui-white-space>
     <fui-section :title="stuff_name" size="50" isLine></fui-section>
     <u-cell title="买方" :value="buyer_name"></u-cell>
-    <u-cell title="卖方" :value="saler_name?saler_name:'(未指定)'"></u-cell>
+    <u-cell title="卖方" :is_link="saler_name == '(未指定)'" :value="saler_name?saler_name:'(未指定)'" @click="show_select_company= true"></u-cell>
     <fui-divider></fui-divider>
     <fui-form ref="plan_form" :model="plan">
         <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
@@ -22,6 +22,9 @@
         <view v-else>
             <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
                 <fui-input placeholder="请输入单价" v-model="plan.price"></fui-input>
+            </fui-form-item>
+            <fui-form-item label="连续派车" :padding="[0,'18px']" prop="is_repeat">
+                <u-switch v-model="plan.is_repeat" ></u-switch>
             </fui-form-item>
         </view>
         <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
@@ -59,6 +62,15 @@
         <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
         <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
     </fui-bottom-popup>
+    <fui-bottom-popup :show="show_select_company" @close="show_select_company= false">
+        <fui-list>
+            <list-show v-model="copmany4select" :fetch_function="get_company4select" search_key="cond" height="40vh" :fetch_params="[company_id]">
+                <fui-list-cell v-for="item in copmany4select" :key="item.id" arrow @click="saler_name = item.name;show_select_company = false;">
+                    {{item.name}}
+                </fui-list-cell>
+            </list-show>
+        </fui-list>
+    </fui-bottom-popup>
     <fui-bottom-popup :show="show_pick_vehicles" @close="show_pick_vehicles = false">
         <fui-list>
             <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh" :fetch_params="[type_define.pair_get_url]">
@@ -79,6 +91,7 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            show_select_company: false,
             is_proxy: false,
             type_define: {
                 vh_fetch_url: '/customer/fetch_vehicle',
@@ -111,12 +124,15 @@ export default {
                 use_for: "",
                 trans_company_name: '',
                 price: 0,
+                is_repeat: false,
             },
             stuff_name: '',
+            company_id: 0,
             saler_name: '',
             buyer_name: '',
             default_time: '',
             vehicles: [],
+            copmany4select: [],
         }
     },
     components: {
@@ -227,6 +243,19 @@ export default {
             this.plan.plan_time = e.result;
             this.show_plan_time = false;
         },
+        get_company4select: async function (pageNo, [company_id]) {
+            if (company_id == 0) {
+                return [];
+            }
+            let res = await this.$send_req('/supplier/get_company4proxy', {
+                pageNo: pageNo,
+                company_id: company_id,
+            });
+            res.companies.forEach(ele => {
+                ele.cond = ele.name;
+            });
+            return res.companies;
+        },
         submit: async function () {
             let rules = [{
                 name: 'plan_time',
@@ -288,6 +317,7 @@ export default {
         this.plan.stuff_id = parseInt(options.stuff_id);
         this.stuff_name = options.stuff_name;
         this.saler_name = options.company_name;
+        this.company_id = parseInt(options.company_id);
         this.buyer_name = uni.getStorageSync('self_info').company;
         let tmp_date = new Date();
         tmp_date.setDate(tmp_date.getDate() + 1);
