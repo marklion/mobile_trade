@@ -44,8 +44,8 @@ start_all_server() {
     echo 'export LANG=zh_CN.UTF-8' >> ~/.bashrc
     echo 'export LC_ALL=zh_CN.UTF-8' >> ~/.bashrc
     pushd /api
-    # pm2 --node-args="--inspect=0.0.0.0:9229" start index.js
-    pm2 start index.js
+    pm2 --node-args="--inspect=0.0.0.0:9229" start index.js
+    # pm2 start index.js
     popd
     while true
     do

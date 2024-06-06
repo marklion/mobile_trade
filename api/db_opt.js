@@ -71,6 +71,7 @@ let db_opt = {
             pos_lat: { type: DataTypes.FLOAT, defaultValue: 0 },
             pos_lon: { type: DataTypes.FLOAT, defaultValue: 0 },
             distance_limit: { type: DataTypes.FLOAT, defaultValue: 0 },
+            zc_phone: { type: DataTypes.STRING },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

@@ -162,5 +162,113 @@ module.exports = {
                 return { result: true };
             }
         },
+        get_device_status: {
+            name: '获取设备状态',
+            description: '获取设备状态',
+            is_write: false,
+            is_get_api: false,
+            params: {
+            },
+            result: {
+                devices: { type: Array, mean: '设备状态', explain: api_param_result_define.device_status_define }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let resp = await field_lib.dev_opt.get_device_status(company)
+                return {
+                    devices: resp
+                }
+            }
+        },
+        gate_ctrl: {
+            name: '门控',
+            description: '门控',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '设备名称', example: '设备名称' },
+                is_enter: { type: Boolean, have_to: true, mean: '是否入厂', example: true },
+                is_open: { type: Boolean, have_to: true, mean: '是否打开', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await field_lib.dev_opt.gate_ctrl(company, body.name, body.is_enter, body.is_open);
+                return { result: true };
+            }
+        },
+        confirm_scale: {
+            name: '确认计量',
+            description: '确认计量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '设备名称', example: '设备名称' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await field_lib.dev_opt.confirm_scale(company, body.name);
+                return { result: true };
+            }
+        },
+        reset_scale: {
+            name: '复位计量',
+            description: '复位计量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '设备名称', example: '设备名称' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await field_lib.dev_opt.reset_scale(company, body.name);
+                return { result: true };
+            }
+        },
+        trigger_cap: {
+            name: '触发抓拍',
+            description: '触发抓拍',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '设备名称', example: '设备名称' },
+                is_enter: { type: Boolean, have_to: true, mean: '是否入厂', example: true },
+                vehicle_number: { type: String, have_to: true, mean: '车牌号', example: '车牌号' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await field_lib.dev_opt.trigger_cap(company, body.name, body.is_enter, body.vehicle_number);
+                return { result: true };
+            }
+        },
+        take_pic: {
+            name: '拍照',
+            description: '拍照',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '设备名称', example: '设备名称' },
+                is_enter: { type: Boolean, have_to: true, mean: '是否入厂', example: true }
+            },
+            result: {
+                pic: { type: String, mean: '图片', example: '图片' }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let resp = await field_lib.dev_opt.take_pic(company, body.name, body.is_enter);
+                return { pic: resp };
+            }
+        },
     }
 }
