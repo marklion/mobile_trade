@@ -29,6 +29,9 @@
         </list-show>
     </view>
     <view v-else-if="cur_page == 1">
+        <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :cur_weight="single_dev.cur_weight" :enter_gate="single_dev.enter_gate" :exit_gate="single_dev.exit_gate" :name="single_dev.name" :scale_status="single_dev.scale_status" @refresh="dev_refresh" ></dev-opt>
+    </view>
+    <view v-else-if="cur_page == 2">
         <view v-if="stamp_pic">
             <fui-avatar width="100%" mode="widthFix" block shape="square" v-if="stamp_pic" :src="$convert_attach_url(stamp_pic)"></fui-avatar>
             <fui-button text="删除" @click="delete_stamp_pic" type="danger"></fui-button>
@@ -50,16 +53,18 @@
 <script>
 import ListShow from '../components/ListShow.vue';
 import $fui from '@/components/firstui/fui-clipboard';
+import DevOpt from '../components/DevOpt.vue';
 export default {
     name: 'Field',
     components: {
-        "list-show": ListShow
+        "list-show": ListShow,
+        "dev-opt": DevOpt
     },
     data: function () {
         return {
             upload_url: this.$remote_url() + '/api/v1/upload_file',
             fileList: [],
-            sub_pages: ['排队车辆', '磅单印章'],
+            sub_pages: ['排队车辆','设备管理', '磅单印章'],
             cur_page: 0,
             show_pass_vehicle: false,
             show_enter_vehicle: false,
@@ -68,9 +73,20 @@ export default {
             plans: [],
             tmp_seal_no: '',
             stamp_pic: '',
+            all_dev:[],
         };
     },
     methods: {
+        init_dev:async function() {
+            this.all_dev = [];
+            let resp = await this.$send_req('/scale/get_device_status', {});
+            resp.devices.forEach((ele, index)=>{
+                this.$set(this.all_dev, index, ele);
+            });
+        },
+        dev_refresh:async function() {
+            await this.init_dev();
+        },
         delete_stamp_pic: async function () {
             await this.$send_req('/scale/set_stamp_pic', {
                 stamp_pic: ''
@@ -188,6 +204,7 @@ export default {
     },
     onShow: function () {
         this.init_stamp_pic();
+        this.init_dev();
     },
 }
 </script>

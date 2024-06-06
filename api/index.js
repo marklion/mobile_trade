@@ -192,4 +192,8 @@ setInterval(() => {
     wx_api_util.openid_map.sync_map()
 }, 1000 * 60 * 300)
 
+process.on('uncaughtException', (err) => {
+    console.error('An uncaught error occurred!');
+    console.error(err.stack);
+});
 app.listen(8080, () => console.log('Server running on port 8080'));

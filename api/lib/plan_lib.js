@@ -412,14 +412,14 @@ module.exports = {
         }
         plan.status = 3;
         plan.manual_close = true;
-        wx_api_util.send_plan_status_msg(plan);
         await plan.save();
+        await hook_plan('order_close', plan);
+        wx_api_util.send_plan_status_msg(plan);
         if (is_cancel) {
             await this.rp_history_cancel(plan, name);
         }
         else {
             await this.rp_history_close(plan, name);
-            hook_plan('order_close', plan);
         }
     },
     plan_enter: async function (_plan_id, _token) {

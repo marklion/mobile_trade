@@ -1,9 +1,11 @@
+const normal = require('./normal')
+const hnmhg = require('./hnmhg')
+const old_zczh = require('./old_zczh')
 function make_plugin_map() {
-    let normal = require('./normal')
-    let hnmhg= require('./hnmhg')
     return {
         normal: normal,
-        hnmhg:hnmhg,
+        hnmhg: hnmhg,
+        old_zczh: old_zczh,
     }
 }
 module.exports = {

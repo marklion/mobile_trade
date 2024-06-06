@@ -71,7 +71,14 @@ const sc_req_detail = {
     },
 };
 module.exports = {
-    bc_detail:make_bc_detail,
+    device_status_define: {
+        name: { type: String, mean: '设备名称', example: '设备名称' },
+        enter_gate: { type: Boolean, mean: '进门状态', example: true },
+        exit_gate: { type: Boolean, mean: '出门状态', example: true },
+        scale_status: { type: String, mean: '称重状态', example: 'abc'},
+        cur_weight: { type:String, mean: '当前重量', example: '23.12' },
+    },
+    bc_detail: make_bc_detail,
     order_search_cond: {
         start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
         end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
@@ -106,7 +113,7 @@ module.exports = {
         ticket_no: { type: String, mean: '票号', example: '票号' },
         trans_company_name: { type: String, mean: '运输公司名称', example: '运输公司名称' },
         need_sc: { type: Boolean, mean: '是否需要安检', example: true },
-        need_enter_weight:{ type: Boolean, mean: '是否需要进场称重', example: true },
+        need_enter_weight: { type: Boolean, mean: '是否需要进场称重', example: true },
         confirmed: { type: Boolean, mean: '是否确认装卸货', example: true },
         is_proxy: { type: Boolean, mean: '是否代理', example: true },
         is_repeat: { type: Boolean, mean: '是否多次进厂', example: true },
@@ -199,10 +206,12 @@ module.exports = {
         third_url: { type: String, have_to: false, mean: '货达url', example: 'third_url_example' },
         third_token: { type: String, have_to: false, mean: '货达token', example: 'third_token_example' },
         zc_url: { type: String, have_to: false, mean: '卓创url', example: 'zc_url_example' },
+        zc_rpc_url: { type: String, have_to: false, mean: '卓创rpc_url', example: 'zc_rpc_url_example' },
         zh_ssid: { type: String, have_to: false, mean: '卓创旧系统ssid', example: 'zh_ssid_example' },
         event_types: { type: String, have_to: false, mean: '事件类型', example: 'event_types_example' },
         remote_event_url: { type: String, have_to: false, mean: '远程事件url', example: 'remote_event_url_example' },
         zczh_back_end: { type: String, have_to: false, mean: '卓创账户后端', example: 'zczh_back_end_example' },
         zczh_back_token: { type: String, have_to: false, mean: '卓创账户后端token', example: 'zczh_back_token_example' },
+        zc_phone: { type: String, have_to: false, mean: '卓创电话', example: 'zc_phone_example' },
     },
 }
