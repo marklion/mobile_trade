@@ -81,7 +81,7 @@ async function post_to_wx(url, data) {
 }
 async function get_mp_token() {
     let ret = '';
-    if (proxy_is_open) {
+    if (proxy_is_open()) {
         ret = "whatever";
     }
     else {
