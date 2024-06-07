@@ -1,12 +1,27 @@
 <template>
 <view>
     <fui-preview v-if="driver_self.id" :previewData="previewData" @click="rebind_info"></fui-preview>
-    <fui-divider text="拉运信息"></fui-divider>
-    <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="65vh" :fetch_params="[is_online, driver_self.open_id]">
-        <view v-for="item in data2show" :key="item.id">
-            <fui-preview bdSize="26" :previewData="plan_show(item)" @click="handle_button"></fui-preview>
-        </view>
-    </list-show>
+
+    <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
+    <view v-if="cur_page == 0">
+        <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="65vh" :fetch_params="[is_online, driver_self.open_id]">
+            <view v-for="item in data2show" :key="item.id">
+                <fui-preview bdSize="26" :previewData="plan_show(item)" @click="handle_button"></fui-preview>
+            </view>
+        </list-show>
+    </view>
+    <view v-if="cur_page == 1">
+        <u-cell title="时间段" :value="begin_date+ '~' + end_date">
+            <fui-button slot="right-icon" text="选择日期" @click="show_plan_date = true" btnSize="mini" type="warning"></fui-button>
+        </u-cell>
+        <fui-date-picker range :show="show_plan_date" type="3" :value="begin_date" :valueEnd="end_date" @change="choose_date" @cancel="show_plan_date = false"></fui-date-picker>
+        <list-show ref="ticket" v-model="all_ticket" :fetch_function="get_all_ticket" height="60vh" :fetch_params="[driver_self.open_id, begin_date, end_date]">
+            <view v-for="item in all_ticket" :key="item.id">
+                <u-cell :title="item.order_company_name" :label="item.p_time + '-->' + item.stuff_name" :value="item.count" isLink :url="'/pages/Ticket?id='+item.id"></u-cell>
+            </view>
+        </list-show>
+    </view>
+
     <fui-modal width="600" :show="show_bind_id_card" v-if="show_bind_id_card" :buttons="[]">
         <fui-form ref="driver" top="100">
             <fui-input required label="姓名" borderTop placeholder="请输入姓名" v-model="bind_req.name"></fui-input>
@@ -115,6 +130,12 @@ export default {
     },
     data: function () {
         return {
+            show_plan_date: false,
+            begin_date: '',
+            end_date: '',
+            all_ticket: [],
+            sub_pages: ['当前承运', '历史磅单'],
+            cur_page: 0,
             company_list: [],
             upload_url: this.$remote_url() + '/api/v1/upload_file',
             fileList: [],
@@ -257,6 +278,29 @@ export default {
         };
     },
     methods: {
+        choose_date: function (e) {
+            this.show_plan_date = false;
+            this.begin_date = e.startDate.result;
+            this.end_date = e.endDate.result;
+            this.$nextTick(() => {
+                this.$refs.ticket.refresh();
+            });
+        },
+        get_all_ticket: async function (pageNo, [open_id, begin_date, end_date]) {
+            if (!open_id) {
+                return [];
+            }
+            let res = await this.$send_req('/global/driver_search_tickets', {
+                pageNo: pageNo,
+                open_id: open_id,
+                begin_date: begin_date,
+                end_date: end_date,
+            });
+            return res.tickets;
+        },
+        sectionChange(index) {
+            this.cur_page = index;
+        },
         get_company4select: async function (pageNo, [focus_plan, open_id]) {
             if (focus_plan.id <= 0) {
                 return [];
@@ -491,9 +535,14 @@ export default {
     },
     onShow: function () {
         this.driver_login();
+        let today = new Date();
+        let five_days_before = new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000);
+        this.begin_date = utils.dateFormatter(five_days_before, 'y-m-d', 4, false);
+        this.end_date = utils.dateFormatter(today, 'y-m-d', 4, false);
     },
     onPullDownRefresh: function () {
         this.driver_login();
+        this.$refs.ticket.refresh();
         uni.stopPullDownRefresh();
     },
 }

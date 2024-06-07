@@ -5,6 +5,34 @@ const db_opt = require('../db_opt');
 const sc_lib = require('../lib/sc_lib');
 const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
+async function get_ticket_func(body, token) {
+    let orig_plan = await plan_lib.get_single_plan_by_id(body.id);
+    let plan = await plan_lib.replace_plan2archive(orig_plan)
+    if (!plan) {
+        plan = orig_plan;
+    }
+    let qr_code = await wx_api_util.make_ticket_qr(plan);
+    let qr_code_base64 = Buffer.from(qr_code.buffer).toString('base64');
+    return {
+        id:plan.id,
+        company_name: plan.company.name,
+        order_company_name: plan.stuff.company.name,
+        plate: plan.main_vehicle.plate,
+        behind_plate: plan.behind_vehicle.plate,
+        ticket_no: plan.ticket_no,
+        m_weight: plan.m_weight,
+        m_time: plan.m_time,
+        p_weight: plan.p_weight,
+        p_time: plan.p_time,
+        count: plan.count,
+        seal_no: plan.seal_no,
+        stamp_path: plan.stuff.company.stamp_pic,
+        is_buy: plan.is_buy,
+        qr_code: qr_code_base64,
+        trans_company_name: plan.trans_company_name,
+        stuff_name: plan.stuff.name,
+    }
+}
 module.exports = {
     name: 'global',
     description: '全局',
@@ -102,7 +130,7 @@ module.exports = {
                     [db_opt.Op.or]: [{
                         status: 1,
                         is_buy: true,
-                    },{
+                    }, {
                         status: 2,
                         is_buy: false,
                     }],
@@ -256,13 +284,15 @@ module.exports = {
                 open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
                 company_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
             },
-            result:{
-                companies: {type:Array,mean:'公司列表',explain:{
-                    id: { type: Number, mean: '公司ID', example: 1 },
-                    name: { type: String, mean: '公司名', example: 'company_example' },
-                }}
+            result: {
+                companies: {
+                    type: Array, mean: '公司列表', explain: {
+                        id: { type: Number, mean: '公司ID', example: 1 },
+                        name: { type: String, mean: '公司名', example: 'company_example' },
+                    }
+                }
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 let ret = {
                     total: 0,
                     companies: []
@@ -275,8 +305,8 @@ module.exports = {
                     for (let index = 0; index < resp.rows.length; index++) {
                         const element = resp.rows[index];
                         ret.companies.push({
-                            name:element.company.name,
-                            id:element.company.id,
+                            name: element.company.name,
+                            id: element.company.id,
                         });
                     }
                     ret.total = resp.count;
@@ -309,11 +339,9 @@ module.exports = {
                 if (company && driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     await plan.setCompany(company);
                     let contracts = await plan.stuff.company.getBuy_contracts({ where: { saleCompanyId: company.id } });
-                    if (contracts.length == 1)
-                    {
+                    if (contracts.length == 1) {
                         let stuff = await contracts[0].getStuff();
-                        if (stuff.length > 0)
-                        {
+                        if (stuff.length > 0) {
                             await plan.setStuff(stuff[0]);
                         }
                     }
@@ -714,6 +742,56 @@ module.exports = {
                 return ret;
             }
         },
+        driver_search_tickets: {
+            name: '司机搜索磅单',
+            description: '司机搜索磅单',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {
+                open_id: { type: String, have_to: true, mean: '司机open_id', example: 'oq5s-4k1d-4k1d-4k1d' },
+                begin_date: { type: String, have_to: true, mean: '开始日期', example: '2020-01-01' },
+                end_date: { type: String, have_to: true, mean: '结束日期', example: '2020-01-01' },
+            },
+            result: {
+                tickets: {
+                    type: Array, mean: '磅单', explain: api_param_result_define.ticket_content
+                },
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let cond = {
+                    [db_opt.Op.and]: [
+                        sq.where(sq.fn('datetime', sq.col('plan_time')), {
+                            [db_opt.Op.gte]: sq.fn('datetime', body.begin_date)
+                        }),
+                        sq.where(sq.fn('datetime', sq.col('plan_time')), {
+                            [db_opt.Op.lte]: sq.fn('datetime', body.end_date)
+                        }),
+                    ]
+                }
+                if (driver) {
+                    let ret = { tickets: [], total: 0 };
+                    let plans = await driver.getPlans({
+                        order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
+                        where: cond,
+                        limit: 20,
+                        offset: body.pageNo * 20,
+                    });
+                    for (let index = 0; index < plans.length; index++) {
+                        const element = plans[index];
+                        let tmp = await get_ticket_func({ id: element.id }, token);
+                        ret.tickets.push(tmp);
+                    }
+                    ret.total = await driver.countPlans({ where: cond });
+                    return ret;
+                }
+                else {
+                    throw { err_msg: '司机不存在' };
+                }
+            }
+        },
         get_ticket: {
             name: '获取磅单',
             description: '获取磅单',
@@ -723,49 +801,8 @@ module.exports = {
             params: {
                 id: { type: Number, have_to: true, mean: '订单ID', example: 1 }
             },
-            result: {
-                company_name: { type: String, mean: '公司名', example: 'company_example' },
-                order_company_name: { type: String, mean: '下单公司名', example: 'order_company_example' },
-                plate: { type: String, mean: '车牌', example: 'plate_example' },
-                behind_plate: { type: String, mean: '挂车牌', example: 'behind_plate_example' },
-                ticket_no: { type: String, mean: '磅单号', example: 'ticket_no_example' },
-                m_weight: { type: Number, mean: '毛重', example: 1 },
-                m_time: { type: String, mean: '毛重时间', example: '2020-01-01 12:00:00' },
-                p_weight: { type: Number, mean: '皮重', example: 1 },
-                p_time: { type: String, mean: '皮重时间', example: '2020-01-01 12:00:00' },
-                count: { type: Number, mean: '装车量', example: 1 },
-                seal_no: { type: String, mean: '封条号', example: 'seal_no_example' },
-                stamp_path: { type: String, mean: '印章路径', example: 'stamp_path_example' },
-                is_buy: { type: Boolean, mean: '是否购买', example: true },
-                qr_code: { type: String, mean: '二维码base64', example: 'qr_code_example' },
-                trans_company_name: { type: String, mean: '运输公司名', example: '' },
-            },
-            func: async function (body, token) {
-                let orig_plan = await plan_lib.get_single_plan_by_id(body.id);
-                let plan = await plan_lib.replace_plan2archive(orig_plan)
-                if (!plan) {
-                    plan = orig_plan;
-                }
-                let qr_code = await wx_api_util.make_ticket_qr(plan);
-                let qr_code_base64 = Buffer.from(qr_code.buffer).toString('base64');
-                return {
-                    company_name: plan.company.name,
-                    order_company_name: plan.stuff.company.name,
-                    plate: plan.main_vehicle.plate,
-                    behind_plate: plan.behind_vehicle.plate,
-                    ticket_no: plan.ticket_no,
-                    m_weight: plan.m_weight,
-                    m_time: plan.m_time,
-                    p_weight: plan.p_weight,
-                    p_time: plan.p_time,
-                    count: plan.count,
-                    seal_no: plan.seal_no,
-                    stamp_path: plan.stuff.company.stamp_pic,
-                    is_buy: plan.is_buy,
-                    qr_code: qr_code_base64,
-                    trans_company_name: plan.trans_company_name,
-                }
-            },
+            result: api_param_result_define.ticket_content,
+            func: get_ticket_func,
         },
         get_user_role: {
             name: '获取用户角色',
