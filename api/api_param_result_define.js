@@ -71,12 +71,31 @@ const sc_req_detail = {
     },
 };
 module.exports = {
+    ticket_content: {
+        id: { type: Number, mean: 'ID', example: 1 },
+        company_name: { type: String, mean: '公司名', example: 'company_example' },
+        order_company_name: { type: String, mean: '下单公司名', example: 'order_company_example' },
+        plate: { type: String, mean: '车牌', example: 'plate_example' },
+        behind_plate: { type: String, mean: '挂车牌', example: 'behind_plate_example' },
+        ticket_no: { type: String, mean: '磅单号', example: 'ticket_no_example' },
+        m_weight: { type: Number, mean: '毛重', example: 1 },
+        m_time: { type: String, mean: '毛重时间', example: '2020-01-01 12:00:00' },
+        p_weight: { type: Number, mean: '皮重', example: 1 },
+        p_time: { type: String, mean: '皮重时间', example: '2020-01-01 12:00:00' },
+        count: { type: Number, mean: '装车量', example: 1 },
+        seal_no: { type: String, mean: '封条号', example: 'seal_no_example' },
+        stamp_path: { type: String, mean: '印章路径', example: 'stamp_path_example' },
+        is_buy: { type: Boolean, mean: '是否购买', example: true },
+        qr_code: { type: String, mean: '二维码base64', example: 'qr_code_example' },
+        trans_company_name: { type: String, mean: '运输公司名', example: '' },
+        stuff_name: { type: String, mean: '货物名', example: 'stuff_name_example' },
+    },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },
         enter_gate: { type: Boolean, mean: '进门状态', example: true },
         exit_gate: { type: Boolean, mean: '出门状态', example: true },
-        scale_status: { type: String, mean: '称重状态', example: 'abc'},
-        cur_weight: { type:String, mean: '当前重量', example: '23.12' },
+        scale_status: { type: String, mean: '称重状态', example: 'abc' },
+        cur_weight: { type: String, mean: '当前重量', example: '23.12' },
     },
     bc_detail: make_bc_detail,
     order_search_cond: {
