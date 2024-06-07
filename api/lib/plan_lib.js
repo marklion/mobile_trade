@@ -413,6 +413,9 @@ module.exports = {
         plan.status = 3;
         plan.manual_close = true;
         await plan.save();
+        if (plan.register_time) {
+            await field_lib.handle_cancel_check_in(plan);
+        }
         await hook_plan('order_close', plan);
         wx_api_util.send_plan_status_msg(plan);
         if (is_cancel) {
@@ -422,19 +425,31 @@ module.exports = {
             await this.rp_history_close(plan, name);
         }
     },
-    plan_enter: async function (_plan_id, _token) {
+    plan_enter: async function (_plan_id, _token, is_exit = false) {
         let tmp_plan = await this.get_single_plan_by_id(_plan_id);
         let status_req = 2;
         if (tmp_plan && tmp_plan.is_buy) {
             status_req = 1;
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
-            if (plan.enter_time && plan.enter_time.length > 0) {
-                throw { err_msg: '已进厂' };
+            if (is_exit) {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    plan.enter_time = '';
+                    await plan.save();
+                    await this.rp_history_exit(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                }
+                else {
+                    throw { err_msg: '未进厂' };
+                }
             }
-            plan.enter_time = moment().format('YYYY-MM-DD HH:mm:ss');
-            await plan.save();
-            await this.rp_history_enter(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            else {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    throw { err_msg: '已进厂' };
+                }
+                plan.enter_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                await plan.save();
+                await this.rp_history_enter(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            }
         });
     },
     plan_rollback: async function (_plan_id, _token) {
@@ -607,8 +622,7 @@ module.exports = {
             if (!plan.is_buy) {
                 await this.plan_cost(plan);
             }
-            if (plan.is_repeat)
-            {
+            if (plan.is_repeat) {
                 await this.dup_plan(plan, _token);
             }
         });
@@ -660,6 +674,9 @@ module.exports = {
     },
     rp_history_enter: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '进厂');
+    },
+    rp_history_exit: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '撤销进厂');
     },
     rp_history_deliver: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '发车');

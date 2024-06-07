@@ -22,14 +22,17 @@
                             <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
                             <fui-button btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
                         </view>
-                        <fui-button btnSize="mini" v-else text="确认装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
+                        <view v-else>
+                            <fui-button btnSize="mini" text="确认装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
+                            <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
+                        </view>
                     </view>
                 </u-cell>
             </view>
         </list-show>
     </view>
     <view v-else-if="cur_page == 1">
-        <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :cur_weight="single_dev.cur_weight" :enter_gate="single_dev.enter_gate" :exit_gate="single_dev.exit_gate" :name="single_dev.name" :scale_status="single_dev.scale_status" @refresh="dev_refresh" ></dev-opt>
+        <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :cur_weight="single_dev.cur_weight" :enter_gate="single_dev.enter_gate" :exit_gate="single_dev.exit_gate" :name="single_dev.name" :scale_status="single_dev.scale_status" @refresh="dev_refresh"></dev-opt>
     </view>
     <view v-else-if="cur_page == 2">
         <view v-if="stamp_pic">
@@ -42,7 +45,7 @@
     </view>
     <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
     </fui-modal>
-    <fui-modal width="600" descr="确定车辆进厂吗？" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
+    <fui-modal width="600" :descr="'确定' + (is_exit_confirm?'撤销':'') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
         <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no"></fui-input>
@@ -64,7 +67,7 @@ export default {
         return {
             upload_url: this.$remote_url() + '/api/v1/upload_file',
             fileList: [],
-            sub_pages: ['排队车辆','设备管理', '磅单印章'],
+            sub_pages: ['排队车辆', '设备管理', '磅单印章'],
             cur_page: 0,
             show_pass_vehicle: false,
             show_enter_vehicle: false,
@@ -73,18 +76,19 @@ export default {
             plans: [],
             tmp_seal_no: '',
             stamp_pic: '',
-            all_dev:[],
+            all_dev: [],
+            is_exit_confirm: false,
         };
     },
     methods: {
-        init_dev:async function() {
+        init_dev: async function () {
             this.all_dev = [];
             let resp = await this.$send_req('/scale/get_device_status', {});
-            resp.devices.forEach((ele, index)=>{
+            resp.devices.forEach((ele, index) => {
                 this.$set(this.all_dev, index, ele);
             });
         },
-        dev_refresh:async function() {
+        dev_refresh: async function () {
             await this.init_dev();
         },
         delete_stamp_pic: async function () {
@@ -132,14 +136,16 @@ export default {
             this.focus_plan_id = item.id;
             this.show_pass_vehicle = true;
         },
-        prepare_enter_vehicle: async function (item) {
+        prepare_enter_vehicle: async function (item, is_exit = false) {
             this.focus_plan_id = item.id;
             this.show_enter_vehicle = true;
+            this.is_exit_confirm = is_exit;
         },
         enter_vehicle: async function (e) {
             if (e.index == 1) {
                 await this.$send_req('/scale/vehicle_enter', {
-                    plan_id: this.focus_plan_id
+                    plan_id: this.focus_plan_id,
+                    is_exit: this.is_exit_confirm
                 });
                 uni.startPullDownRefresh();
             }
@@ -200,6 +206,7 @@ export default {
             this.$refs.plans.refresh();
         }
         this.init_stamp_pic();
+        this.init_dev();
         uni.stopPullDownRefresh();
     },
     onShow: function () {

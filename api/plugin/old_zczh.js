@@ -38,10 +38,6 @@ module.exports = {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
         await push_req2zc([zc_vo.basic_info], make_url('/vehicle_order/del', plan));
     },
-    order_close: async function (plan) {
-        let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
-        await push_req2zc([zc_vo.basic_info], make_url('/vehicle_order/del', plan));
-    },
     confirm_vehicle: async function (plan) {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
         await lag_rpc.requeset_rpc(plan.stuff.company, 'field_queue_confirm', [
