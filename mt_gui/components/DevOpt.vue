@@ -53,7 +53,7 @@
                         <u-button type="primary" size="mini" text="出口识别" @click="prepare_cap(false)"></u-button>
                     </u-grid-item>
                     <u-grid-item>
-                        <u-button type="error" size="mini" text="重置" @click="show_scale_reset"></u-button>
+                        <u-button type="error" size="mini" text="重置" @click="show_scale_reset = true"></u-button>
                     </u-grid-item>
                 </u-grid>
             </view>

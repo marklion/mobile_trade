@@ -84,7 +84,6 @@ async function make_plan_basic_req(plan_id, is_change = false) {
 }
 module.exports = {
     check_in: async function (plan) {
-
         if (!plan.is_buy) {
             let req = await make_plan_basic_req(plan.id)
             let res = await post_to_hd('/thirdParty/zyzl/checkIn', {

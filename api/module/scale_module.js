@@ -75,12 +75,13 @@ module.exports = {
             is_get_api: false,
             params: {
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                is_exit: { type: Boolean, have_to: true, mean: '是否撤销进厂', example: true },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.plan_enter(body.plan_id, token);
+                await plan_lib.plan_enter(body.plan_id, token, body.is_exit);
                 return { result: true };
             },
         },

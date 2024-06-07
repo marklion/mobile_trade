@@ -273,7 +273,7 @@ Manual Pay A Plan
     Req to Server  /sale_management/order_sale_pay  ${token}  ${req}
 Plan Enter
     [Arguments]  ${plan}
-    ${req}  Create Dictionary  plan_id=${plan}[id]
+    ${req}  Create Dictionary  plan_id=${plan}[id]  is_exit=${False}
     Req to Server  /scale/vehicle_enter  ${sc_admin_token}  ${req}
 Driver Online
     [Arguments]  ${phone}  ${open_id}  ${id_card}
