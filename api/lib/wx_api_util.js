@@ -18,6 +18,39 @@ const pub_token_store = {
 };
 const appid = 'wxfbf41c757510dc4c';
 const pub_appid = 'wxa390f8b6f68e9c6d';
+
+async function call_wx_api(url, req, method) {
+    let ret = '';
+    let err_msg = '';
+    try {
+        let resp = await axios.post(
+            'https://express-en1b-110417-4-1327111924.sh.run.tcloudbase.com/api/run_api', {
+            url: url,
+            method: method,
+            data: req,
+        }, {
+            headers: { 'share-key': process.env.SHARE_KEY }
+        });
+        if (!resp.data.err_msg) {
+            ret = resp.data.data;
+        }
+        err_msg = resp.data.err_msg;
+    } catch (error) {
+        console.log(error);
+    }
+    console.log(url, req, method, ret, err_msg);
+
+    return ret;
+}
+
+function proxy_is_open() {
+    let sk = process.env.SHARE_KEY;
+    let ret = false;
+    if (sk && sk.length > 0)
+        ret = true;
+    return ret;
+}
+
 async function get_to_wx(url) {
     let ret = '';
     try {
@@ -48,37 +81,45 @@ async function post_to_wx(url, data) {
 }
 async function get_mp_token() {
     let ret = '';
-    let sec = process.env.MP_SECRET;
-    let url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appid}&secret=${sec}`;
-    try {
-        if (token_store.expire_time < Date.now()) {
-            let resp = await get_to_wx(url);
-            token_store.token = resp.access_token;
-            token_store.expire_time = Date.now() + resp.expires_in * 1000;
-        }
-    } catch (error) {
-        console.log(error);
+    if (proxy_is_open) {
+        ret = "whatever";
     }
-
-    ret = token_store.token;
+    else {
+        let sec = process.env.MP_SECRET;
+        let url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${appid}&secret=${sec}`;
+        try {
+            if (token_store.expire_time < Date.now()) {
+                let resp = await get_to_wx(url);
+                token_store.token = resp.access_token;
+                token_store.expire_time = Date.now() + resp.expires_in * 1000;
+            }
+        } catch (error) {
+            console.log(error);
+        }
+        ret = token_store.token;
+    }
 
     return ret;
 }
 async function get_pub_token() {
     let ret = '';
-    let sec = process.env.WECHAT_SECRET;
-    let url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${pub_appid}&secret=${sec}`;
-    try {
-        if (pub_token_store.expire_time < Date.now()) {
-            let resp = await get_to_wx(url);
-            pub_token_store.token = resp.access_token;
-            pub_token_store.expire_time = Date.now() + resp.expires_in * 1000;
-        }
-    } catch (error) {
-        console.log(error);
+    if (proxy_is_open()) {
+        ret = "whatever";
     }
-
-    ret = pub_token_store.token;
+    else {
+        let sec = process.env.WECHAT_SECRET;
+        let url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${pub_appid}&secret=${sec}`;
+        try {
+            if (pub_token_store.expire_time < Date.now()) {
+                let resp = await get_to_wx(url);
+                pub_token_store.token = resp.access_token;
+                pub_token_store.expire_time = Date.now() + resp.expires_in * 1000;
+            }
+        } catch (error) {
+            console.log(error);
+        }
+        ret = pub_token_store.token;
+    }
 
     return ret;
 }
@@ -89,7 +130,13 @@ async function get_all_pub_user_openid() {
     if (token) {
         let last_open_id = '';
         while (!finish) {
-            let resp = await get_to_wx(`https://api.weixin.qq.com/cgi-bin/user/get?access_token=${token}&next_openid=${last_open_id}`)
+            let resp = {};
+            if (proxy_is_open()) {
+                resp = await call_wx_api(`https://api.weixin.qq.com/cgi-bin/user/get?next_openid=${last_open_id}`, {}, 'GET')
+            }
+            else {
+                resp = await get_to_wx(`https://api.weixin.qq.com/cgi-bin/user/get?access_token=${token}&next_openid=${last_open_id}`)
+            }
             if (resp.data && resp.data.openid && resp.data.openid.length > 0) {
                 last_open_id = resp.next_openid
                 resp.data.openid.forEach(item => {
@@ -117,7 +164,12 @@ function make_plan_status_msg(plan) {
 async function send_wx_msg(req) {
     let token = await get_pub_token()
     if (token) {
-        await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
+        if (proxy_is_open()) {
+            await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
+        }
+        else {
+            await call_wx_api('https://api.weixin.qq.com/cgi-bin/message/template/send', req, 'POST');
+        }
     }
 }
 
@@ -154,9 +206,17 @@ module.exports = {
                             lang: 'zh_CN'
                         })
                     });
-                    let resp = await post_to_wx(`https://api.weixin.qq.com/cgi-bin/user/info/batchget?access_token=${token}`, {
-                        user_list: rl_array
-                    })
+                    let resp = {};
+                    if (proxy_is_open()) {
+                        resp = await call_wx_api('https://api.weixin.qq.com/cgi-bin/user/info/batchget', {
+                            user_list: rl_array
+                        }, 'POST');
+                    }
+                    else {
+                        resp = await post_to_wx(`https://api.weixin.qq.com/cgi-bin/user/info/batchget?access_token=${token}`, {
+                            user_list: rl_array
+                        })
+                    }
                     resp.user_info_list.forEach(item => {
                         this.map[item.unionid] = item.openid;
                     });
@@ -172,7 +232,12 @@ module.exports = {
         let token = await get_mp_token();
         if (token) {
             let url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${process.env.MP_SECRET}&js_code=${_code}&grant_type=authorization_code`;
-            let resp = await get_to_wx(url);
+            let resp = {};
+            if (proxy_is_open()) {
+                resp = await call_wx_api(url + '&from_appid=' + appid, {}, 'GET');
+            } else {
+                resp = await get_to_wx(url);
+            }
             _code = resp.unionid;
         }
         else {
@@ -188,9 +253,17 @@ module.exports = {
         let token = await get_mp_token();
         if (token) {
             let url = `https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${token}`;
-            let resp = await post_to_wx(url, {
-                code: _code
-            })
+            let resp = {};
+            if (proxy_is_open()) {
+                resp = await call_wx_api('https://api.weixin.qq.com/wxa/business/getuserphonenumber?from_appid=' + appid, {
+                    code: _code
+                }, 'POST')
+            }
+            else {
+                resp = await post_to_wx(url, {
+                    code: _code
+                })
+            }
             _code = resp.phone_info.purePhoneNumber;
         }
         else {
@@ -209,11 +282,20 @@ module.exports = {
         }
         if (token) {
             let url = `https://api.weixin.qq.com/wxa/getwxacodeunlimit?access_token=${token}`;
-            resp = await post_to_wx(url, {
-                scene: plan.id + '',
-                page: 'pages/Ticket',
-                width: 430
-            })
+            if (proxy_is_open()) {
+                resp = await call_wx_api('https://api.weixin.qq.com/wxa/getwxacodeunlimit?from_appid=' + appid, {
+                    scene: plan.id + '',
+                    page: 'pages/Ticket',
+                    width: 430
+                }, 'POST');
+            }
+            else {
+                resp = await post_to_wx(url, {
+                    scene: plan.id + '',
+                    page: 'pages/Ticket',
+                    width: 430
+                })
+            }
         }
 
         return resp;
