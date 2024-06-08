@@ -2,7 +2,7 @@
 
 # [Choice] Ubuntu version: bionic, focal
 ARG VARIANT="focal"
-FROM ubuntu
+FROM ubuntu:${VARIANT}
 
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
@@ -32,7 +32,6 @@ RUN npm install -g pm2
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y vim valgrind
 COPY frpc* /bin/
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y rsync python3-pip
-RUN pip install alibabacloud_dysmsapi20170525==2.0.8
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cups
 RUN npm install -g yarn && yarn global add wetty
