@@ -14,7 +14,6 @@ function get_db_handle() {
             if (time > 200) {
                 console.log(time + '->' + sql);
             }
-            console.log(time + '->' + sql);
         },
         benchmark: true,
     });
@@ -223,6 +222,12 @@ let db_opt = {
             name: { type: DataTypes.STRING },
             team_member: { type: DataTypes.STRING },
         },
+        export_record:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            create_time: { type: DataTypes.STRING },
+            url: { type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -235,6 +240,9 @@ let db_opt = {
         _sq.models.company.hasMany(_sq.models.rbac_role);
         _sq.models.rbac_module.belongsToMany(_sq.models.company, { through: 'company_module' });
         _sq.models.company.belongsToMany(_sq.models.rbac_module, { through: 'company_module' });
+
+        _sq.models.export_record.belongsTo(_sq.models.rbac_user);
+        _sq.models.rbac_user.hasMany(_sq.models.export_record);
 
         _sq.models.stuff.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.stuff);

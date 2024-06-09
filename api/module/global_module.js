@@ -840,5 +840,33 @@ module.exports = {
                 return ret;
             }
         },
+        get_export_record:{
+            name:'获取导出记录',
+            description:'获取导出记录',
+            need_rbac:false,
+            is_write:false,
+            is_get_api:true,
+            params:{
+            },
+            result:{
+                records:{
+                    type:Array,mean:'导出记录',explain:{
+                        id:{type:Number,mean:'记录ID',example:1},
+                        name:{type:String,mean:'记录名',example:'record_example'},
+                        create_time:{type:String,mean:'创建时间',example:'2020-01-01 00:00:00'},
+                        url:{type:String,mean:'下载地址',example:'https://www.baidu.com'},
+                    }
+                }
+            },
+            func:async function(body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                let records = await user.getExport_records({order:[['id','DESC']], limit:20, offset:body.pageNo*20});
+                let count = await user.countExport_records();
+                return {
+                    records:records,
+                    total:count,
+                }
+            },
+        },
     }
 }
