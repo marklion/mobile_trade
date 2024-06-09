@@ -7,6 +7,12 @@
 			}
 		},
 		{
+			"path":"pages/Export",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/Login"
 		},
 		{
@@ -126,9 +132,15 @@
 			},
 			{
 				"pagePath": "pages/AppPanel",
-				"text": "应用",
+				"text": "工作台",
 				"iconPath": "static/tabbar/assembly_default_3x.png",
 				"selectedIconPath": "static/tabbar/assembly_selected_3x.png"
+			},
+			{
+				"pagePath": "pages/Export",
+				"text": "导出",
+				"iconPath": "static/tabbar/export.png",
+				"selectedIconPath": "static/tabbar/export_select.png"
 			},
 			{
 				"pagePath": "pages/Myself",

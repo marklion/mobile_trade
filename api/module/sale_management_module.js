@@ -2,6 +2,8 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const common = require('./common');
+const moment = require('moment');
 module.exports = {
     name: 'sale_management',
     description: '销售管理',
@@ -355,6 +357,28 @@ module.exports = {
             func: async function (body, token) {
                 await plan_lib.unauthorize_user2contract(body.phone, body.contract_id, token);
                 return { result: true };
+            }
+        },
+        export_plans: common.export_plans(async function (body, token) {
+            let plans = await plan_lib.filter_plan4manager(body, token);
+            return await plan_lib.make_file_by_plans(plans);
+        }),
+        export_exe_rate: {
+            name: '导出执行率',
+            description: '导出执行率',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await common.do_export_later(token, '执行率导出', async ()=>{
+                    return await plan_lib.make_exe_rate_file(body, token);
+                })
             }
         },
     },

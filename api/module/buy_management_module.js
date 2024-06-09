@@ -3,6 +3,7 @@ const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
+const common = require('./common')
 module.exports = {
     name: 'buy_management',
     description: '采购管理',
@@ -271,5 +272,9 @@ module.exports = {
                 return ret;
             },
         },
+        export_plans: common.export_plans(async function (body, token) {
+            let plans = await plan_lib.filter_plan4manager(body, token, true);
+            return await plan_lib.make_file_by_plans(plans);
+        }),
     }
 }

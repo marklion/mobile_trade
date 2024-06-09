@@ -1,4 +1,5 @@
 const cash_lib = require('../lib/cash_lib');
+const common = require('./common');
 module.exports = {
     name: 'cash',
     description: '余额管理',
@@ -47,6 +48,25 @@ module.exports = {
                     histories: get_ret.rows,
                     total: get_ret.count,
                 }
+            },
+        },
+        export_history:{
+            name: '导出充值记录',
+            description: '导出充值记录',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await common.do_export_later(token, '余额明细', async ()=>{
+                    return await cash_lib.export_cash_history(token, body.contract_id, body.begin_time, body.end_time);
+                });
             },
         },
     }

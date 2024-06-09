@@ -4,6 +4,8 @@ const rbac_lib = require('./rbac_lib');
 const wx_api_util = require('./wx_api_util');
 const { hook_plan } = require('./hook_lib');
 const field_lib = require('./field_lib');
+const ExcelJS = require('exceljs');
+const uuid = require('uuid');
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -1024,5 +1026,211 @@ module.exports = {
                 throw { err_msg: '未签到' };
             }
         });
+    },
+    filter_plan4user: async function (body, token, is_buy = false) {
+        let sq = db_opt.get_sq();
+        let cond = {
+            [db_opt.Op.and]: [
+                sq.where(sq.fn('datetime', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('datetime', body.start_time)
+                }),
+                sq.where(sq.fn('datetime', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('datetime', body.end_time)
+                }),
+            ]
+        }
+        if (is_buy) {
+            cond.is_buy = true;
+        }
+        else {
+            cond.is_buy = false;
+        }
+        let user = await rbac_lib.get_user_by_token(token);
+
+        return await user.getPlans({ where: cond, include: this.plan_detail_include() });
+    },
+    filter_plan4manager: async function (body, token, is_buy = false) {
+        let sq = db_opt.get_sq();
+        let cond = {
+            [db_opt.Op.and]: [
+                sq.where(sq.fn('datetime', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('datetime', body.start_time)
+                }),
+                sq.where(sq.fn('datetime', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('datetime', body.end_time)
+                }),
+            ]
+        }
+        if (body.stuff_id) {
+            cond.stuffId = body.stuff_id
+        }
+        else {
+            let company = await rbac_lib.get_company_by_token(token);
+            let stuff = await company.getStuff();
+            let stuff_array = [];
+            for (let index = 0; index < stuff.length; index++) {
+                const element = stuff[index];
+                stuff_array.push(element.id);
+            }
+            cond.stuffId = {
+                [db_opt.Op.or]: stuff_array
+            }
+        }
+        if (body.company_id) {
+            cond.companyId = body.company_id
+        }
+        if (is_buy) {
+            cond.is_buy = true;
+        }
+        else {
+            cond.is_buy = false;
+        }
+
+        return await sq.models.plan.findAll({ where: cond, include: this.plan_detail_include() });
+    },
+    place_hold: function (input, holder) {
+        if (input == undefined) {
+            return holder
+        }
+        else {
+            return input
+        }
+    },
+    make_file_by_plans: async function (plans) {
+        let json = [];
+        for (let index = 0; index < plans.length; index++) {
+            const element = plans[index];
+            json.push({
+                id: element.id,
+                create_company: this.place_hold(element.company, { name: '(司机选择)' }).name,
+                accept_company: element.stuff.company.name,
+                stuff_name: element.stuff.name,
+                plan_time: element.plan_time,
+                p_time: element.p_time,
+                m_time: element.m_time,
+                mv: element.main_vehicle.plate,
+                bv: element.behind_vehicle.plate,
+                driver_name: element.driver.name,
+                driver_phone: element.driver.phone,
+                p_weight: this.place_hold(element.p_weight, 0).toFixed(2),
+                m_weight: this.place_hold(element.m_weight, 0).toFixed(2),
+                count: this.place_hold(element.count).toFixed(2),
+                unit_price: element.unit_price.toFixed(2),
+                total_price: (this.place_hold(element.unit_price, 0) * this.place_hold(element.count, 0)).toFixed(2),
+                seal_no: element.seal_no,
+                ticket_no: element.ticket_no,
+            });
+        }
+        let workbook = new ExcelJS.Workbook();
+        let worksheet = workbook.addWorksheet('Plans');
+        worksheet.columns = Object.keys(json[0]).map(key => ({ header: key, key: key }));
+        worksheet.addRows(json);
+        let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
+        await workbook.xlsx.writeFile('/database' + file_name);
+        return file_name;
+    },
+    make_exe_rate_file: async function (body, token) {
+        let plans = await this.filter_plan4manager(body, token, false);
+        let workbook = new ExcelJS.Workbook();
+        let worksheet = workbook.addWorksheet('执行率');
+        let er = [];
+        let plan_is_confirmd = (plan)=>{
+            let ret = false;
+            for (let index = 0; index < plan.plan_histories.length; index++) {
+                const element = plan.plan_histories[index];
+                if (element.action_type == '确认') {
+                    ret = true;
+                    break;
+                }
+            }
+            return ret;
+        };
+        let plan_is_finish = (plan)=>{
+            return plan.count > 0;
+        }
+        let find_er_node = (date) => {
+            let ret = undefined;
+            for (let index = 0; index < er.length; index++) {
+                const element = er[index];
+                if (element.plan_time == date) {
+                    ret = element;
+                    break;
+                }
+            }
+            return ret;
+        };
+        let total_company = [];
+        let company_exist = (company_name) => {
+            let ret = false;
+            for (let index = 0; index < total_company.length; index++) {
+                const element = total_company[index];
+                if (element == company_name) {
+                    ret = true;
+                    break;
+                }
+            }
+            return ret;
+        };
+        plans.forEach(ele => {
+            let target_node = find_er_node(ele.plan_time);
+            if (!target_node)
+            {
+                target_node = { plan_time: ele.plan_time};
+                er.push(target_node);
+            }
+            if (company_exist(ele.company.name) == false)
+            {
+                total_company.push(ele.company.name);
+            }
+            if (target_node[ele.company.name + 'confirm'] == undefined)
+            {
+                target_node[ele.company.name + 'confirm'] = 0;
+                target_node[ele.company.name + 'finish'] = 0;
+                target_node[ele.company.name + 'rate'] = 0;
+            }
+            if (plan_is_confirmd(ele))
+            {
+                target_node[ele.company.name + 'confirm']++;
+            }
+            if (plan_is_finish(ele))
+            {
+                target_node[ele.company.name + 'finish']++;
+            }
+            if (target_node[ele.company.name + 'confirm'] > 0)
+            {
+                target_node[ele.company.name + 'rate'] = ((target_node[ele.company.name + 'finish'] / target_node[ele.company.name + 'confirm']) * 100).toFixed(2) + '%';
+            }
+        });
+        let top_er = { plan_time: ''};
+        let columns = [{
+            header: '日期',
+            key: 'plan_time',
+        }];
+        total_company.forEach(ele=>{
+            columns.push({
+                header:ele,
+                key: ele + 'confirm',
+            });
+            top_er[ele + 'confirm'] = '计划数';
+            columns.push({
+                header:ele,
+                key: ele + 'finish',
+            });
+            top_er[ele + 'finish'] = '完成数';
+            columns.push({
+                header:ele,
+                key: ele + 'rate',
+            });
+            top_er[ele + 'rate'] = '执行率';
+        });
+        worksheet.columns = columns;
+        er.unshift(top_er);
+        worksheet.addRows(er);
+        for (let index = 0; index < total_company.length; index++) {
+            worksheet.mergeCells(1, index * 3 + 2, 1, index * 3 + 4);
+        }
+        let file_name = '/uploads/rates' + uuid.v4() + '.xlsx';
+        await workbook.xlsx.writeFile('/database' + file_name);
+        return file_name;
     },
 };
