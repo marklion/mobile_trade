@@ -49,12 +49,6 @@ export default {
                     require_module: 'sc',
                     path: 'ScConfig'
                 },
-                {
-                    name: '司机',
-                    icon: 'keyboard',
-                    require_module: 'sc',
-                    path: 'Driver'
-                },
             ]
         }
     },

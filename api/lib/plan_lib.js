@@ -18,7 +18,7 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time) {
         let sq = db_opt.get_sq();
         let stuff_found = await _company.getStuff({ where: { name: _name } });
         if (stuff_found.length != 1) {
@@ -33,6 +33,7 @@ module.exports = {
             if (use_for_buy != undefined) {
                 stuff_found[0].use_for_buy = use_for_buy;
             }
+            stuff_found[0].close_time = close_time;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
@@ -582,7 +583,7 @@ module.exports = {
     dup_plan: async function (plan, token) {
         let sq = db_opt.get_sq();
         let new_plan_req = {
-            plan_time: plan.plan_time,
+            plan_time: moment().format('YYYY-MM-DD'),
             comment: plan.comment,
             use_for: plan.use_for,
         };
@@ -1232,5 +1233,36 @@ module.exports = {
         let file_name = '/uploads/rates' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
         return file_name;
+    },
+    auto_close_plan: async function () {
+        let sq = db_opt.get_sq();
+        let stuff  = await sq.models.stuff.findAll({where:{close_time:{[db_opt.Op.ne]:null}}});
+        for (let index = 0; index < stuff.length; index++) {
+            const element = stuff[index];
+            let close_time = element.close_time;
+            if (close_time.length > 0) {
+                let yestarday = moment().subtract(1, 'days').format('YYYY-MM-DD');
+                if (moment().isAfter(moment(close_time, 'HH:mm'))) {
+                    let plans = await element.getPlans({
+                        where: {
+                            [db_opt.Op.and]: [
+                                { status: { [db_opt.Op.ne]: 3 } },
+                                sq.where(sq.fn('datetime', sq.col('plan_time')), {
+                                    [db_opt.Op.lte]: sq.fn('datetime', yestarday)
+                                }),
+                            ]
+                        }
+                    })
+                    for (let index = 0; index < plans.length; index++) {
+                        try {
+                            let plan = await this.get_single_plan_by_id(plans[index].id);
+                            await this.plan_close(plan, '过期自动删除');
+                        } catch (error) {
+                            console.log(error);
+                        }
+                    }
+                }
+            }
+        }
     },
 };

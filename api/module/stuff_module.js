@@ -16,7 +16,8 @@ module.exports = {
                 name: { type: String, have_to: true, mean: '货物名称', example: '货物名称' },
                 comment: { type: String, have_to: false, mean: '备注', example: '备注' },
                 expect_count: { type: Number, have_to: false, mean: '预期数量', example: 1 },
-                use_for_buy:{type:Boolean, have_to:false, mean:'用于采购', example:false}
+                use_for_buy:{type:Boolean, have_to:false, mean:'用于采购', example:false},
+                close_time: { type: String, have_to: false, mean: '关闭时间', example: '12:00:00' },
             },
             result: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -26,11 +27,12 @@ module.exports = {
                 next_price: { type: Number, mean: '下次单价', example: 1 },
                 change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
                 expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
-                use_for_buy:{type:Boolean, mean:'用于采购', example:false}
+                use_for_buy:{type:Boolean, mean:'用于采购', example:false},
+                close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy);
+                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time);
             }
         },
         get_all: {
@@ -54,6 +56,7 @@ module.exports = {
                         need_sc: { type: Boolean, mean: '是否需要安检', example: false },
                         need_enter_weight: { type: Boolean, mean: '是否需要入场前重量', example: false },
                         no_need_register: { type: Boolean, mean: '是否不需要登记', example: false },
+                        close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
                     }
                 },
             },
@@ -92,17 +95,17 @@ module.exports = {
                 return { result: true };
             }
         },
-        no_need_register:{
-            name:'配置货物是否不需要登记',
-            description:'配置货物是否不需要登记',
+        no_need_register: {
+            name: '配置货物是否不需要登记',
+            description: '配置货物是否不需要登记',
             is_write: true,
             is_get_api: false,
-            params:{
-                stuff_id:{type:Number, have_to:true, mean:'货物ID', example:1},
-                no_need_register:{type:Boolean, have_to:true, mean:'是否不需要登记', example:true}
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                no_need_register: { type: Boolean, have_to: true, mean: '是否不需要登记', example: true }
             },
-            result:{
-                result:{type:Boolean, mean:'结果', example:true}
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();

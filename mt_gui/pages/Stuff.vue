@@ -3,9 +3,10 @@
     <list-show ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
         <u-cell v-for="(item, index) in data2show2" :key="index" size="large" :title="item.name" :value="item.price">
             <view slot="label">
-                <view style="display:flex;">
+                <view >
                     <fui-tag v-if="item.comment" :text="item.comment" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
                     <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" :scaleRatio="0.8" type="warning"></fui-tag>
                     <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" :scaleRatio="0.8" type="primary"></fui-tag>
                     <fui-tag v-else text="用于销售" theme="plain" :scaleRatio="0.8" type="success"></fui-tag>
                 </view>
@@ -38,6 +39,10 @@
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
             <fui-input label="备注" borderTop placeholder="请输入备注" v-model="stuff_ready_fetch.comment"></fui-input>
             <fui-input label="期望单车装载量" borderTop placeholder="请输入期望单车装载量" v-model="stuff_ready_fetch.expect_count"></fui-input>
+            <fui-input label="自动关闭时间点" borderTop placeholder="选择时间，不填就是不关闭" v-model="stuff_ready_fetch.close_time" disabled @click="show_close_time = true">
+                <fui-button v-if="stuff_ready_fetch.close_time" text="取消自动关闭" @click="stuff_ready_fetch.close_time = ''" btnSize="mini" type="warning"></fui-button>
+            </fui-input>
+            <fui-date-picker :show="show_close_time" type="6" @change="choose_time" @cancel="show_close_time = false"></fui-date-picker>
             <fui-form-item label="用于采购">
                 <u-switch v-model="stuff_ready_fetch.use_for_buy"></u-switch>
             </fui-form-item>
@@ -85,6 +90,7 @@ export default {
                 comment: undefined,
                 expect_count: undefined,
                 use_for_buy: false,
+                close_time:'',
             },
             show_stuff_fetch: false,
             is_update: false,
@@ -104,10 +110,15 @@ export default {
                 id: 0,
             },
             data2show: [],
-            data2show2: []
+            data2show2: [],
+            show_close_time: false,
         }
     },
     methods: {
+        choose_time: function (e) {
+            this.stuff_ready_fetch.close_time = e.result;
+            this.show_close_time = false;
+        },
         change_no_need_register: async function (item) {
             await this.$send_req('/stuff/no_need_register', {
                 stuff_id: item.id,
@@ -196,6 +207,7 @@ export default {
                 comment: item.comment,
                 expect_count: item.expect_count,
                 use_for_buy: item.use_for_buy,
+                close_time: item.close_time,
             }
             this.show_stuff_fetch = true;
             this.is_update = true;
@@ -238,6 +250,7 @@ export default {
             comment: undefined,
             expect_count: undefined,
             use_for_buy: false,
+            close_time:'',
         }
         uni.stopPullDownRefresh();
     },
