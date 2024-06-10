@@ -181,6 +181,7 @@ app.get('/api/help', (req, res) => {
 });
 const fs = require('fs');
 const legacy_api = require('./legacy_api');
+const plan_lib = require('./lib/plan_lib');
 legacy_api.install(app);
 
 if (fs.existsSync('/database/map.json')) {
@@ -188,9 +189,23 @@ if (fs.existsSync('/database/map.json')) {
 } else {
     wx_api_util.openid_map.sync_map()
 }
-setInterval(() => {
-    wx_api_util.openid_map.sync_map()
-}, 1000 * 60 * 300)
+
+function add_min_timer(min_count, func) {
+    setInterval(async function() {
+        try {
+            await func();
+        } catch (error) {
+            console.error(error);
+        }
+    }, min_count * 60 * 1000);
+}
+
+add_min_timer(107, async ()=>{
+    await wx_api_util.openid_map.sync_map();
+});
+add_min_timer(10, async ()=>{
+    await plan_lib.auto_close_plan();
+});
 
 process.on('uncaughtException', (err) => {
     console.error('An uncaught error occurred!');

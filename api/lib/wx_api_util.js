@@ -188,8 +188,13 @@ module.exports = {
         },
         load_map: function () {
             fs.readFile('/database/map.json', 'utf8', (err, data) => {
+                console.log(data);
                 if (err) throw err;
                 this.map = JSON.parse(data);
+                console.log(this.map);
+                if (this.map == null) {
+                    this.map = {};
+                }
             });
         },
         sync_map: async function () {

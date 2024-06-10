@@ -57,6 +57,14 @@
 		{
 			"path": "pages/Driver",
 			"style": {
+				"navigationStyle":"custom",
+				"app-plus":{
+					"popGesture": "none",
+					"titleNView" :{
+						"titleSize":"18px",
+						"autoBackButton":false
+					}
+				},
 				"disableSwipeBack": true,
 				"enablePullDownRefresh": true
 			}

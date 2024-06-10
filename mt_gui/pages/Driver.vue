@@ -1,5 +1,9 @@
 <template>
 <view>
+    <view class="status_bar">
+    </view>
+    <view class="status_bar">
+    </view>
     <fui-preview v-if="driver_self.id" :previewData="previewData" @click="rebind_info"></fui-preview>
 
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
@@ -567,9 +571,15 @@ export default {
         }
         uni.stopPullDownRefresh();
     },
+    onBackPress:function() {
+        return true;
+    },
 }
 </script>
 
-<style>
-
+<style scoped>
+.status_bar {
+    height: var(--status-bar-height);
+    width: 100%;
+}
 </style>

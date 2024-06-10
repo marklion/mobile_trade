@@ -366,6 +366,7 @@ def stuff_move():
             'comment':item['last'],
             'expect_count':22,
             'need_sc':item['need_seck_check'],
+            'close_time':'01:10',
             'companyId':nc['id']
         }
         st_id = insert_new2cur_table('stuff', ns)

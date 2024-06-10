@@ -126,6 +126,7 @@ let db_opt = {
             use_for_buy: { type: DataTypes.BOOLEAN, defaultValue: false },
             need_enter_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
             no_need_register: { type: DataTypes.BOOLEAN, defaultValue: false },
+            close_time: { type: DataTypes.STRING },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
