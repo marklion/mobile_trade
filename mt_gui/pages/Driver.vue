@@ -6,7 +6,7 @@
     <view v-if="cur_page == 0">
         <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="65vh" :fetch_params="[is_online, driver_self.open_id]">
             <view v-for="item in data2show" :key="item.id">
-                <fui-preview bdSize="26" :previewData="plan_show(item)" @click="handle_button"></fui-preview>
+                <fui-preview bdSize="26" :previewData="plan_show(item)" @click="view_notice_first"></fui-preview>
             </view>
         </list-show>
     </view>
@@ -94,6 +94,8 @@
     </fui-modal>
     <fui-modal :zIndex="1003" width="600" v-if="show_delete_sc_content" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
+
+    <fui-modal :show="driver_notice_show" title="通知" :descr="driver_notice" @click="close_notice" :buttons="[{text:'再想想', plain:true},{text:'明白'}]"></fui-modal>
 </view>
 </template>
 
@@ -130,6 +132,9 @@ export default {
     },
     data: function () {
         return {
+            driver_notice: '',
+            driver_notice_show: false,
+            button_event: {},
             show_plan_date: false,
             begin_date: '',
             end_date: '',
@@ -400,6 +405,21 @@ export default {
             }
             return res.reqs;
         },
+        view_notice_first: function (e) {
+            this.driver_notice = e.item.stuff.company.driver_notice;
+            if (this.driver_notice) {
+                this.driver_notice_show = true;
+                this.button_event = e;
+            } else {
+                this.handle_button(e);
+            }
+        },
+        close_notice: function (e) {
+            if (e.index == 1) {
+                this.handle_button(this.button_event)
+            }
+            this.driver_notice_show = false;
+        },
         handle_button: async function (e) {
             let vue_this = this;
             console.log(e);
@@ -542,7 +562,9 @@ export default {
     },
     onPullDownRefresh: function () {
         this.driver_login();
-        this.$refs.ticket.refresh();
+        if (this.$refs.ticket) {
+            this.$refs.ticket.refresh();
+        }
         uni.stopPullDownRefresh();
     },
 }

@@ -80,6 +80,7 @@
             </list-show>
         </fui-list>
     </fui-bottom-popup>
+    <fui-modal :show="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
 </view>
 </template>
 
@@ -91,6 +92,7 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            notice_show: false,
             notice: '',
             show_select_company: false,
             is_proxy: false,
@@ -334,8 +336,13 @@ export default {
             this.saler_name = this.buyer_name;
             this.buyer_name = options.company_name;
         }
-        let resp = await this.$send_req('/global/get_notice', {});
+        let resp = await this.$send_req('/global/get_notice', {
+            company_id: this.company_id
+        });
         this.notice = resp.notice;
+        if (this.notice) {
+            this.notice_show = true;
+        }
     },
 }
 </script>

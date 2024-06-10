@@ -413,11 +413,9 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
-
                 login_code: { type: String, have_to: true, mean: '登录授权码', example: '12345678901' },
             },
             result: {
-
                 token: { type: String, mean: '登录token', example: 'ABCD' },
             },
             func: async function (body, token) {

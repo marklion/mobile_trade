@@ -153,6 +153,7 @@ module.exports = {
                     type: Object, mean: '购买公司', explain: {
                         id: { type: Number, mean: '公司ID', example: 1 },
                         name: { type: String, mean: '公司名称', example: '公司名称' },
+                        driver_notice: { type: String, mean: '司机通知', example: '司机通知' },
                     }
                 },
                 need_sc: { type: Boolean, mean: '是否需要安检', example: true },
@@ -164,6 +165,7 @@ module.exports = {
             type: Object, mean: '购买公司', explain: {
                 id: { type: Number, mean: '公司ID', example: 1 },
                 name: { type: String, mean: '公司名称', example: '公司名称' },
+                driver_notice: { type: String, mean: '司机通知', example: '司机通知' },
             }
         },
         driver: {
