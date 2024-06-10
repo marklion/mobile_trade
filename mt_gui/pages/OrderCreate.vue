@@ -80,7 +80,7 @@
             </list-show>
         </fui-list>
     </fui-bottom-popup>
-    <fui-modal :show="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
+    <fui-modal :show="notice_show" v-if="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
 </view>
 </template>
 

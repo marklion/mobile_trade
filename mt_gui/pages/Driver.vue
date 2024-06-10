@@ -99,7 +99,7 @@
     <fui-modal :zIndex="1003" width="600" v-if="show_delete_sc_content" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
 
-    <fui-modal :show="driver_notice_show" title="通知" :descr="driver_notice" @click="close_notice" :buttons="[{text:'再想想', plain:true},{text:'明白'}]"></fui-modal>
+    <fui-modal :show="driver_notice_show" v-if="driver_notice_show" title="通知" :descr="driver_notice" @click="close_notice" :buttons="[{text:'再想想', plain:true},{text:'明白'}]"></fui-modal>
 </view>
 </template>
 

@@ -218,7 +218,7 @@
         </list-show>
     </fui-bottom-popup>
     <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
-    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？'" :show="show_xxx_confirm" @click="do_xxx">
+    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？'" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
     </fui-modal>
     <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
         <fui-form ref="deliver" top="100">

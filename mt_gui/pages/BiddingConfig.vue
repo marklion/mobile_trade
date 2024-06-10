@@ -6,7 +6,7 @@
         </view>
     </list-show>
     <fui-button type="success" text="新增" @click="show_create_diag = true"></fui-button>
-    <fui-modal width="600" :show="show_create_diag" @click="add_bc">
+    <fui-modal width="600" :show="show_create_diag" v-if="show_create_diag" @click="add_bc">
         <fui-form ref="add_bc" top="100">
             <fui-input label="备注" borderTop placeholder="请输入备注" v-model="new_bc.comment"></fui-input>
             <fui-input label="最低出价" borderTop placeholder="请输入最低出价" v-model="new_bc.min"></fui-input>

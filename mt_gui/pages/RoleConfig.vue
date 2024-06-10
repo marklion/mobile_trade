@@ -41,7 +41,7 @@
     <fui-divider></fui-divider>
     <fui-button type="success" text="新增" @click="show_add_role = true"></fui-button>
 
-    <fui-dialog :show="show_add_role" title="新增角色" :buttons="[{text:'确定', color:'red'}]" maskClosable @click="add_role" @close="show_add_role= false">
+    <fui-dialog :show="show_add_role" v-if="show_add_role" title="新增角色" :buttons="[{text:'确定', color:'red'}]" maskClosable @click="add_role" @close="show_add_role= false">
         <fui-form-item label="角色名称" asterisk>
             <fui-input placeholder="请输入角色名称" v-model="new_role.name"></fui-input>
         </fui-form-item>
