@@ -55,7 +55,6 @@ module.exports = {
             await run_plugin_based_on_company(company, 'get_device_status', async (func) => {
                 ret = await func(company);
             });
-
             return ret;
         },
         gate_ctrl: async function (company, name, is_enter, is_open) {

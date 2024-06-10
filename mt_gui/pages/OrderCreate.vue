@@ -24,7 +24,7 @@
                 <fui-input placeholder="请输入单价" v-model="plan.price"></fui-input>
             </fui-form-item>
             <fui-form-item label="连续派车" :padding="[0,'18px']" prop="is_repeat">
-                <u-switch v-model="plan.is_repeat" ></u-switch>
+                <u-switch v-model="plan.is_repeat"></u-switch>
             </fui-form-item>
         </view>
         <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
@@ -80,6 +80,7 @@
             </list-show>
         </fui-list>
     </fui-bottom-popup>
+    <fui-modal :show="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
 </view>
 </template>
 
@@ -91,6 +92,8 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            notice_show: false,
+            notice: '',
             show_select_company: false,
             is_proxy: false,
             type_define: {
@@ -313,7 +316,7 @@ export default {
             });
         },
     },
-    onLoad: function (options) {
+    onLoad: async function (options) {
         this.plan.stuff_id = parseInt(options.stuff_id);
         this.stuff_name = options.stuff_name;
         this.saler_name = options.company_name;
@@ -332,6 +335,13 @@ export default {
             }
             this.saler_name = this.buyer_name;
             this.buyer_name = options.company_name;
+        }
+        let resp = await this.$send_req('/global/get_notice', {
+            company_id: this.company_id
+        });
+        this.notice = resp.notice;
+        if (this.notice) {
+            this.notice_show = true;
         }
     },
 }

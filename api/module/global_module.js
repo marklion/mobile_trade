@@ -413,11 +413,9 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
-
                 login_code: { type: String, have_to: true, mean: '登录授权码', example: '12345678901' },
             },
             result: {
-
                 token: { type: String, mean: '登录token', example: 'ABCD' },
             },
             func: async function (body, token) {
@@ -868,5 +866,31 @@ module.exports = {
                 }
             },
         },
-    }
+        get_notice:{
+            name: '获取通知',
+            description: '获取通知',
+            need_rbac: false,
+            is_write: false,
+            params: {
+                company_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
+            },
+            result: {
+                notice:{type:String,mean:'通知',example:'notice_example'},
+                driver_notice:{type:String,mean:'司机通知',example:'driver_notice_example'},
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let company = await sq.models.company.findByPk(body.company_id);
+                if (company) {
+                    return {
+                        notice:company.notice,
+                        driver_notice:company.driver_notice,
+                    }
+                }
+                else {
+                    throw { err_msg: '公司不存在' };
+                }
+            },
+        },
+    },
 }

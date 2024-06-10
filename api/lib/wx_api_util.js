@@ -152,12 +152,15 @@ async function get_all_pub_user_openid() {
 }
 
 function make_plan_status_msg(plan) {
+    let status_array = [
+        '待确认', '待验款', '待发车', '已关闭'
+    ];
     return {
         thing3: { value: plan.company.name },
         thing5: { value: plan.stuff.name },
         car_number14: { value: plan.main_vehicle.plate },
         thing9: { value: plan.stuff.company.name },
-        const24: { value: plan.status },
+        const24: { value: status_array[plan.status] },
     }
 }
 
@@ -165,10 +168,10 @@ async function send_wx_msg(req) {
     let token = await get_pub_token()
     if (token) {
         if (proxy_is_open()) {
-            await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
+            await call_wx_api('https://api.weixin.qq.com/cgi-bin/message/template/send', req, 'POST');
         }
         else {
-            await call_wx_api('https://api.weixin.qq.com/cgi-bin/message/template/send', req, 'POST');
+            await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
         }
     }
 }
