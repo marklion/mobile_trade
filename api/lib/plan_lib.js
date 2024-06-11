@@ -407,6 +407,11 @@ module.exports = {
         }, force);
     },
     plan_close: async function (plan, name, is_cancel = false) {
+        let need_verify_balance = false;
+        if (plan.status == 2 && !plan.is_buy)
+        {
+            need_verify_balance = true;
+        }
         if (plan.status == 3) {
             throw { err_msg: '已关闭,无法再次关闭' };
         }
@@ -418,6 +423,14 @@ module.exports = {
         await plan.save();
         if (plan.register_time) {
             await field_lib.handle_cancel_check_in(plan);
+        }
+        let buy_company = plan.company;
+        if (buy_company && need_verify_balance) {
+            let plans = await buy_company.getPlans({ where: { status: 1 } });
+            for (let index = 0; index < plans.length; index++) {
+                const element = plans[index];
+                await this.verify_plan_pay(element)
+            }
         }
         await hook_plan('order_close', plan);
         wx_api_util.send_plan_status_msg(plan);
@@ -1136,7 +1149,7 @@ module.exports = {
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('执行率');
         let er = [];
-        let plan_is_confirmd = (plan)=>{
+        let plan_is_confirmd = (plan) => {
             let ret = false;
             for (let index = 0; index < plan.plan_histories.length; index++) {
                 const element = plan.plan_histories[index];
@@ -1147,7 +1160,7 @@ module.exports = {
             }
             return ret;
         };
-        let plan_is_finish = (plan)=>{
+        let plan_is_finish = (plan) => {
             return plan.count > 0;
         }
         let find_er_node = (date) => {
@@ -1175,52 +1188,46 @@ module.exports = {
         };
         plans.forEach(ele => {
             let target_node = find_er_node(ele.plan_time);
-            if (!target_node)
-            {
-                target_node = { plan_time: ele.plan_time};
+            if (!target_node) {
+                target_node = { plan_time: ele.plan_time };
                 er.push(target_node);
             }
-            if (company_exist(ele.company.name) == false)
-            {
+            if (company_exist(ele.company.name) == false) {
                 total_company.push(ele.company.name);
             }
-            if (target_node[ele.company.name + 'confirm'] == undefined)
-            {
+            if (target_node[ele.company.name + 'confirm'] == undefined) {
                 target_node[ele.company.name + 'confirm'] = 0;
                 target_node[ele.company.name + 'finish'] = 0;
                 target_node[ele.company.name + 'rate'] = 0;
             }
-            if (plan_is_confirmd(ele))
-            {
+            if (plan_is_confirmd(ele)) {
                 target_node[ele.company.name + 'confirm']++;
             }
-            if (plan_is_finish(ele))
-            {
+            if (plan_is_finish(ele)) {
                 target_node[ele.company.name + 'finish']++;
             }
-            if (target_node[ele.company.name + 'confirm'] > 0)
-            {
+            if (target_node[ele.company.name + 'confirm'] > 0) {
                 target_node[ele.company.name + 'rate'] = ((target_node[ele.company.name + 'finish'] / target_node[ele.company.name + 'confirm']) * 100).toFixed(2) + '%';
             }
         });
-        let top_er = { plan_time: ''};
+        let top_er = { plan_time: '' };
         let columns = [{
             header: '日期',
             key: 'plan_time',
         }];
-        total_company.forEach(ele=>{
+        total_company.forEach(ele => {
             columns.push({
-                header:ele,
+                header: ele,
                 key: ele + 'confirm',
             });
             top_er[ele + 'confirm'] = '计划数';
             columns.push({
-                header:ele,
+                header: ele,
                 key: ele + 'finish',
             });
             top_er[ele + 'finish'] = '完成数';
             columns.push({
-                header:ele,
+                header: ele,
                 key: ele + 'rate',
             });
             top_er[ele + 'rate'] = '执行率';
@@ -1237,7 +1244,7 @@ module.exports = {
     },
     auto_close_plan: async function () {
         let sq = db_opt.get_sq();
-        let stuff  = await sq.models.stuff.findAll({where:{close_time:{[db_opt.Op.ne]:null}}});
+        let stuff = await sq.models.stuff.findAll({ where: { close_time: { [db_opt.Op.ne]: null } } });
         for (let index = 0; index < stuff.length; index++) {
             const element = stuff[index];
             let close_time = element.close_time;
