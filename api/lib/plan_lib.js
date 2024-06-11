@@ -455,7 +455,7 @@ module.exports = {
             }
         });
     },
-    plan_rollback: async function (_plan_id, _token) {
+    plan_rollback: async function (_plan_id, _token, msg) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan) => {
             let rollback_content = '';
             if (plan.manual_close) {
@@ -499,6 +499,7 @@ module.exports = {
             else {
                 throw { err_msg: '无法回退' };
             }
+            rollback_content += ':' + msg;
             await plan.save();
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
         });

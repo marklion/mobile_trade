@@ -327,12 +327,12 @@ Confirm Failed
 
 Order Rollback Failed
     [Arguments]  ${plan}
-    ${req}  Create Dictionary  plan_id=${plan}[id]
+    ${req}  Create Dictionary  plan_id=${plan}[id]  msg=reason
     Req to Server  /buy_management/order_rollback  ${sc_admin_token}  ${req}  ${True}
 
 Rollback Failed
     [Arguments]  ${plan}
-    ${req}  Create Dictionary  plan_id=${plan}[id]
+    ${req}  Create Dictionary  plan_id=${plan}[id]  msg=reason
     Req to Server  /sale_management/order_rollback  ${sc_admin_token}  ${req}  ${True}
 
 Pay Failed

@@ -88,7 +88,7 @@
                             <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
                             <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
                                 <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
-                                <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="prepare_xxx_confirm(cur_rollback_url, '回退')"></fui-button>
+                                <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
                                 <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
                             </module-filter>
@@ -220,6 +220,11 @@
     <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
     <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？'" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
     </fui-modal>
+    <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
+        <fui-form ref="rollback_form" top="100">
+            <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
+        </fui-form>
+    </fui-modal>
     <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
         <fui-form ref="deliver" top="100">
             <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
@@ -241,7 +246,7 @@
                 <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
                     <fui-input placeholder="请输入用途" disabled v-model="dup_plan.use_for"></fui-input>
                 </fui-form-item>
-                <pick-regions @getRegion="pick_address" >
+                <pick-regions @getRegion="pick_address">
                     <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
                         <fui-input placeholder="请输入卸车地点" disabled v-model="dup_plan.drop_address"></fui-input>
                     </fui-form-item>
@@ -294,6 +299,7 @@ export default {
     },
     data: function () {
         return {
+            rollback_msg: '',
             use_for_array: [
                 '气化', '气站', '其他'
             ],
@@ -370,6 +376,7 @@ export default {
             xxx_url: '',
             confirm_info: '',
             show_xxx_confirm: false,
+            show_rollback_confirm: false,
             show_sc: false,
             focus_plan: {
                 "behind_vehicle": {
@@ -800,6 +807,27 @@ export default {
                 uni.startPullDownRefresh();
             }
             this.show_xxx_confirm = false;
+        },
+        do_rollback: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                    name: 'rollback_msg',
+                    rule: ['required'],
+                    msg: ['请输入原因']
+                }];
+                let val_ret = await this.$refs.rollback_form.validator({
+                    rollback_msg: this.rollback_msg
+                }, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                await this.$send_req(this.cur_rollback_url, {
+                    plan_id: this.focus_plan.id,
+                    msg: this.rollback_msg
+                });
+                uni.startPullDownRefresh();
+            }
+            this.show_rollback_confirm = false;
         },
         prepare_xxx_confirm: function (url, info) {
             this.show_xxx_confirm = true;

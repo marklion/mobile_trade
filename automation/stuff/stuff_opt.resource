@@ -295,11 +295,11 @@ Deliver A Plan
     Req to Server  /scale/deliver  ${sc_admin_token}  ${req}
 Rollback Order
     [Arguments]  ${plan}
-    ${req}  Create Dictionary  plan_id=${plan}[id]
+    ${req}  Create Dictionary  plan_id=${plan}[id]  msg=reason
     Req to Server  /buy_management/order_rollback  ${sc_admin_token}  ${req}
 Rollback Plan
     [Arguments]  ${plan}
-    ${req}  Create Dictionary  plan_id=${plan}[id]
+    ${req}  Create Dictionary  plan_id=${plan}[id]  msg=reason
     Req to Server  /sale_management/order_rollback  ${sc_admin_token}  ${req}
 Cancel Check In Plan
     [Arguments]  ${plan}
