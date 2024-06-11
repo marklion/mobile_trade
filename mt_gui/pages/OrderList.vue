@@ -218,7 +218,7 @@
         </list-show>
     </fui-bottom-popup>
     <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
-    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？'" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
+    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
     </fui-modal>
     <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
         <fui-form ref="rollback_form" top="100">
@@ -825,6 +825,7 @@ export default {
                     plan_id: this.focus_plan.id,
                     msg: this.rollback_msg
                 });
+                this.show_plan_detail = false;
                 uni.startPullDownRefresh();
             }
             this.show_rollback_confirm = false;
