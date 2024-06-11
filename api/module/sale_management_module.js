@@ -97,17 +97,17 @@ module.exports = {
         order_rollback: {
             name: '销售订单回滚',
             description: '销售订单回滚',
-
             is_write: true,
             is_get_api: false,
             params: {
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                msg: { type: String, have_to: true, mean: '回滚原因', example: '回滚原因' },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.plan_rollback(body.plan_id, token);
+                await plan_lib.plan_rollback(body.plan_id, token, body.msg);
                 return { result: true };
             }
         },
