@@ -91,6 +91,7 @@ export default {
                     console.log(filePath);
                     uni.openDocument({
                         filePath: filePath,
+                        showMenu: true,
                     })
                 },
                 fail: (res) => {
