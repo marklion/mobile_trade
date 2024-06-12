@@ -14,7 +14,7 @@
     <module-filter require_module="customer">
         <view class="brief_section">
             <fui-section title="采购提单"></fui-section>
-            <list-show :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
+            <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
                 <view v-for="item in stuff2buy" :key="item.id">
                     <u-cell  :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
                         <view slot="right-icon">
@@ -29,7 +29,7 @@
     <module-filter require_module="supplier">
         <view class="brief_section">
             <fui-section title="销售提单"></fui-section>
-            <list-show :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
+            <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
                 <view>
                     <u-cell v-for="(item, index) in stuff2sale" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment">
                         <view slot="right-icon">
@@ -286,6 +286,8 @@ export default {
             this.self_info = uni.getStorageSync('self_info');
             await this.init_data_brief();
             await this.init_notice();
+            this.$refs.sb_list.refresh();
+            this.$refs.ss_list.refresh();
         },
     },
     onPullDownRefresh: async function () {
