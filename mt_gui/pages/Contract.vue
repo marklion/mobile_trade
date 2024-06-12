@@ -62,7 +62,7 @@
             </list-show>
         </fui-list>
     </fui-bottom-popup>
-    <fui-date-picker range :show="show_date_range" type="3" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
+    <fui-date-picker range :show="show_date_range" type="3" :value="new_contract.begin_time" :valueEnd="new_contract.end_time" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
             <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
@@ -107,6 +107,7 @@
 <script>
 import ListShow from '../components/ListShow.vue';
 import ModuleFilter from '../components/ModuleFilter.vue';
+import utils from '@/components/firstui/fui-utils';
 export default {
     name: 'Contract',
     data: function () {
@@ -406,6 +407,10 @@ export default {
     },
     onShow: function () {
         this.init_top_seg();
+        this.new_contract.begin_time = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
+        let end_date = new Date();
+        end_date.setMonth(end_date.getMonth() + 12);
+        this.new_contract.end_time = utils.dateFormatter(end_date, 'y-m-d', 4, false);
     },
     onPullDownRefresh: function () {
         this.$refs.contracts.refresh();
