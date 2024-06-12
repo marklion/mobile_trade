@@ -29,7 +29,7 @@ get_docker_image() {
 
 start_all_server() {
     line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 124`
+    line=`expr $line - 125`
     mkdir /tmp/sys_mt
     tail -n $line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
@@ -43,6 +43,7 @@ start_all_server() {
     ulimit -q 819200000
     echo 'export LANG=zh_CN.UTF-8' >> ~/.bashrc
     echo 'export LC_ALL=zh_CN.UTF-8' >> ~/.bashrc
+    cp /conf/*.xlsx /database/uploads/
     pushd /api
     pm2 --node-args="--inspect=0.0.0.0:9229" start index.js
     # pm2 start index.js

@@ -32,6 +32,7 @@
         </fui-form-item>
         <view style="display:flex; justify-content: center;">
             <fui-button text="新增车辆" btnSize="small" type="success" @click="show_add_vehicle = true"></fui-button>
+            <fui-button text="选择车队" btnSize="small" type="warning" @click="show_add_vt = true"></fui-button>
             <fui-button v-if="!type_define.is_sale" text="我要代提" btnSize="small" type="primary" @click="prepare_proxy_buy"></fui-button>
         </view>
         <fui-grid :columns="2" :square="false">
@@ -61,6 +62,13 @@
         <fui-input label="司机电话" v-model="new_vehicle.driver_phone"></fui-input>
         <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
         <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
+    </fui-bottom-popup>
+    <fui-bottom-popup :show="show_add_vt" @close="show_add_vt= false">
+        <list-show :fetch_function="get_vt_list" height="70vh" search_key="name" v-model="all_vt_list">
+            <view v-for="item in all_vt_list" :key="item.id">
+                <u-cell :title="item.name" :value="'共' + (item.vehicle_sets?item.vehicle_sets.length:0) + '车'" isLink @click="choose_vt(item)"></u-cell>
+            </view>
+        </list-show>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_select_company" @close="show_select_company= false">
         <fui-list>
@@ -92,6 +100,8 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            all_vt_list: [],
+            show_add_vt: false,
             notice_show: false,
             notice: '',
             show_select_company: false,
@@ -143,6 +153,24 @@ export default {
         "pick-regions": pickRegions,
     },
     methods: {
+        choose_vt: async function (vt) {
+            let vs = vt.vehicle_sets;
+            vs.forEach(ele => {
+                this.vehicles.unshift({
+                    main_vehicle: ele.main_vehicle,
+                    behind_vehicle: ele.behind_vehicle,
+                    driver: ele.driver,
+                    comment: '',
+                });
+            });
+            this.show_add_vt = false;
+        },
+        get_vt_list: async function (pageNo) {
+            let res = await this.$send_req('/global/get_vehicle_team', {
+                pageNo: pageNo
+            });
+            return res.vehicle_teams;
+        },
         prepare_proxy_buy: function () {
             this.is_proxy = true;
             this.plan.trans_company_name = this.saler_name;

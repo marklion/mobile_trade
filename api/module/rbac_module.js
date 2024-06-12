@@ -1,6 +1,5 @@
 const api_param_result_define = require('../api_param_result_define');
 const rbac_lib = require('../lib/rbac_lib');
-const db_opt = require('../db_opt');
 module.exports = {
     name: 'rbac',
     description: '权限管理',

@@ -1273,4 +1273,85 @@ module.exports = {
             }
         }
     },
+    add_vehicle_team:async function(name, token){
+        let user = await rbac_lib.get_user_by_token(token);
+        let er = await user.getVehicle_teams({where:{name:name}});
+        if (er.length == 1)
+        {
+            throw {err_msg:'已存在'};
+        }
+        else
+        {
+            await user.createVehicle_team({name:name});
+        }
+    },
+    del_vehicle_team:async function(id, token){
+        let user = await rbac_lib.get_user_by_token(token);
+        let er = await user.getVehicle_teams({where:{id:id}});
+        if (er.length == 1)
+        {
+            await er[0].destroy();
+        }
+        else
+        {
+            throw {err_msg:'未找到'};
+        }
+    },
+    add_set2team:async function(mv_plate, bv_plate, dr_name, dr_phone, dr_idcard, vt_id, token){
+        let user = await rbac_lib.get_user_by_token(token);
+        let vts = await user.getVehicle_teams({where:{id:vt_id}});
+        if (vts.length != 1)
+        {
+            throw {err_msg:'未找到车队'};
+        }
+        let vt = vts[0]
+        let mv = await this.fetch_vehicle(mv_plate)
+        let bv = await this.fetch_vehicle(bv_plate, true)
+        let dr = await this.fetch_driver(dr_name, dr_phone, dr_idcard);
+        let er = await vt.getVehicle_sets({where:{mainVehicleId:mv.id}});
+        if (er.length > 0)
+        {
+            throw {err_msg:'主车已存在'};
+        }
+        await vt.createVehicle_set({
+            mainVehicleId:mv.id,
+            behindVehicleId:bv.id,
+            driverId:dr.id
+        });
+    },
+    del_set_from_team:async function(set_id, vt_id, token) {
+        let user = await rbac_lib.get_user_by_token(token);
+        let vts = await user.getVehicle_teams({where:{id:vt_id}});
+        if (vts.length != 1)
+        {
+            throw {err_msg:'未找到车队'};
+        }
+        let vt = vts[0]
+        let sets = await vt.getVehicle_sets({where:{id:set_id}});
+        if (sets.length != 1)
+        {
+            throw {err_msg:'未找到车辆'};
+        }
+        await sets[0].destroy();
+    },
+    get_all_vehicle_team: async function (token, pageNo) {
+        let user = await rbac_lib.get_user_by_token(token);
+        let resp = await user.getVehicle_teams({
+            offset: pageNo * 20, limit: 20,
+            include: [{
+                model: db_opt.get_sq().models.vehicle_set,
+                include: [
+                    { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
+                    { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
+                    { model: db_opt.get_sq().models.driver, paranoid: false}
+                ]
+            }]
+        });
+        let total = await user.countVehicle_teams();
+
+        return {
+            rows: resp,
+            count: total
+        }
+    },
 };

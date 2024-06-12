@@ -221,7 +221,9 @@ let db_opt = {
         vehicle_team: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
-            team_member: { type: DataTypes.STRING },
+        },
+        vehicle_set:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
         },
         export_record:{
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -301,8 +303,17 @@ let db_opt = {
         _sq.models.dc_status.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.dc_status);
 
+        _sq.models.vehicle_set.belongsTo(_sq.models.vehicle, { as: 'main_vehicle' });
+        _sq.models.vehicle_set.belongsTo(_sq.models.vehicle, { as: 'behind_vehicle' });
+        _sq.models.vehicle.hasMany(_sq.models.vehicle_set, { foreignKey: 'mainVehicleId' });
+        _sq.models.vehicle.hasMany(_sq.models.vehicle_set, { foreignKey: 'behindVehicleId' });
+        _sq.models.vehicle_set.belongsTo(_sq.models.driver);
+        _sq.models.driver.hasMany(_sq.models.vehicle_set);
+
         _sq.models.vehicle_team.belongsTo(_sq.models.rbac_user);
         _sq.models.rbac_user.hasMany(_sq.models.vehicle_team);
+        _sq.models.vehicle_set.belongsTo(_sq.models.vehicle_team);
+        _sq.models.vehicle_team.hasMany(_sq.models.vehicle_set);
     },
     install: async function () {
         console.log('run install');
