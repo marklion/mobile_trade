@@ -70,12 +70,6 @@
 			}
 		},
 		{
-			"path": "pages/VehicleTeam",
-			"style": {
-				"enablePullDownRefresh": true
-			}
-		},
-		{
 			"path": "pages/ScConfig",
 			"style": {
 				"enablePullDownRefresh": true
@@ -110,6 +104,19 @@
 			"style": {
 				"enablePullDownRefresh": true
 			}
+		}
+	],
+	"subPackages": [
+		{
+			"root": "subPage1",
+			"pages": [
+				{
+					"path": "VehicleTeam",
+					"style": {
+						"enablePullDownRefresh": true
+					}
+				}
+			]
 		}
 	],
 	"globalStyle": {

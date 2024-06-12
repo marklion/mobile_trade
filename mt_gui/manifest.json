@@ -52,7 +52,10 @@
     "mp-weixin" : {
         "appid" : "wxfbf41c757510dc4c",
         "setting" : {
-            "urlCheck" : false
+            "urlCheck" : false,
+            "es6" : true,
+            "postcss" : true,
+            "minified" : true
         },
         "usingComponents" : true,
         "scopedSlotsCompiler" : "legacy",
@@ -60,6 +63,9 @@
             "scope.userLocation" : {
                 "desc" : "您的位置信息将用于判断是否到达装卸货区域" // 高速公路行驶持续后台定位
             }
+        },
+        "optimization" : {
+            "subPackages" : true
         },
         "requiredPrivateInfos" : [ "getLocation" ]
     },
