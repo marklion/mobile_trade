@@ -70,6 +70,12 @@
 			}
 		},
 		{
+			"path": "pages/VehicleTeam",
+			"style": {
+				"enablePullDownRefresh": true
+			}
+		},
+		{
 			"path": "pages/ScConfig",
 			"style": {
 				"enablePullDownRefresh": true

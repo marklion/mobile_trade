@@ -5,6 +5,7 @@ import sys
 import time
 import traceback
 from datetime import datetime, timedelta
+import json
 
 admin_token = ""
 orig_db_path = ""
@@ -775,6 +776,30 @@ def checkin_move():
             traceback.print_exc()
             continue
 
+def fetch_vehicle_set(set):
+    dn = set['driver_name']
+    dp = set['driver_phone']
+    di = set['driver_id']
+    mv = set['main_vichele_number']
+    bv = set['behind_vichele_number']
+    ret = {}
+    try:
+        insert_new2cur_table('driver', {'name':dn, 'phone':dp, 'id_card':di})
+    except:
+        traceback.print_exc()
+    ret['driverId'] = get_data_from_cur_table('driver', 'phone == "%s"' % dp)[0]['id']
+    try:
+        insert_new2cur_table('vehicle', {'plate':mv})
+    except:
+        traceback.print_exc()
+    ret['mainVehicleId'] = get_data_from_cur_table('vehicle', 'plate == "%s"' % mv)[0]['id']
+    try:
+        insert_new2cur_table('vehicle', {'plate':bv, 'is_behind':1})
+    except:
+        traceback.print_exc()
+    ret['behindVehicleId'] = get_data_from_cur_table('vehicle', 'plate == "%s"' % bv)[0]['id']
+    return ret
+
 def vehicle_team_move():
     orig_vts = get_data_from_orig_table('vichele_team_table')
     for item in orig_vts:
@@ -783,10 +808,14 @@ def vehicle_team_move():
             nu = get_data_from_cur_table('rbac_user', 'phone == "%s"' % ou['phone'])[0]
             new_vt = {
                 'name':item['name'],
-                'team_member':item['team_member'],
                 'rbacUserId': nu['id']
             }
-            insert_new2cur_table('vehicle_team', new_vt)
+            vt_id = insert_new2cur_table('vehicle_team', new_vt)
+            lt_set = json.loads(item['team_member'])
+            for set in lt_set:
+                vs = fetch_vehicle_set(set)
+                vs['vehicleTeamId'] = vt_id
+                insert_new2cur_table('vehicle_set', vs)
         except:
             traceback.print_exc()
             continue

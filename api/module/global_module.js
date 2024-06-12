@@ -5,6 +5,7 @@ const db_opt = require('../db_opt');
 const sc_lib = require('../lib/sc_lib');
 const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
+const { name } = require('./buy_management_module');
 async function get_ticket_func(body, token) {
     let orig_plan = await plan_lib.get_single_plan_by_id(body.id);
     let plan = await plan_lib.replace_plan2archive(orig_plan)
@@ -890,6 +891,129 @@ module.exports = {
                 else {
                     throw { err_msg: '公司不存在' };
                 }
+            },
+        },
+        get_vehicle_team:{
+            name: '获取车队',
+            description: '获取车队',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {},
+            result: {
+                vehicle_teams: {
+                    type: Array, mean: '车队', explain: {
+                        id: { type: Number, mean: '车队ID', example: 1 },
+                        name: { type: String, mean: '车队名', example: 'vehicle_team_example' },
+                        vehicle_sets: {
+                            type: Array, mean: '车辆列表', explain: {
+                                id: { type: Number, mean: '组ID', example: 1 },
+                                driver: {
+                                    type: Object, mean: '司机', explain: {
+                                        id: { type: Number, mean: '司机ID', example: 1 },
+                                        name: { type: String, mean: '司机名称', example: '司机名称' },
+                                        phone: { type: String, mean: '司机电话', example: '司机电话' },
+                                        id_card: { type: String, mean: '司机身份证', example: '司机身份证' },
+                                        open_id: { type: String, mean: '司机open_id', example: '司机open_id' },
+                                    }
+                                },
+                                main_vehicle: {
+                                    type: Object, mean: '主车', explain: {
+                                        id: { type: Number, mean: '车辆ID', example: 1 },
+                                        plate: { type: String, mean: '车牌', example: '车牌' },
+                                    }
+                                },
+                                behind_vehicle: {
+                                    type: Object, mean: '挂车', explain: {
+                                        id: { type: Number, mean: '车辆ID', example: 1 },
+                                        plate: { type: String, mean: '车牌', example: '车牌' },
+                                    }
+                                },
+                            }
+                        },
+                    }
+                }
+            },
+            func:async function(body, token) {
+                let ret = await plan_lib.get_all_vehicle_team(token, body.pageNo);
+                return {
+                    vehicle_teams:ret.rows,
+                    total:ret.count,
+                }
+            }
+        },
+        add_vehicle_team:{
+            name: '添加车队',
+            description: '添加车队',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '车队名', example: 'vehicle_team_example' },
+            },
+            result: {
+                result: { type: Boolean, mean: '添加结果', example: true },
+            },
+            func:async function(body, token) {
+                await plan_lib.add_vehicle_team(body.name, token);
+                return {result:true};
+            }
+        },
+        del_vehicle_team:{
+            name: '删除车队',
+            description: '删除车队',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '车队ID', example: 1 },
+            },
+            result:{
+                result: { type: Boolean, mean: '删除结果', example: true },
+            },
+            func:async function(body, token) {
+                await plan_lib.del_vehicle_team(body.id, token);
+                return {result:true};
+            }
+        },
+        add_vehicle2team:{
+            name: '添加车辆到车队',
+            description: '添加车辆到车队',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params:{
+                vt_id:{type:Number,have_to:true,mean:'车队ID',example:1},
+                main_vehicle:{type:String, have_to:true, mean:'主车车牌', example:'车牌'},
+                behind_vehicle:{type:String, have_to:false, mean:'挂车车牌', example:'车牌'},
+                driver_name:{type:String, have_to:true, mean:'司机姓名', example:'司机姓名'},
+                driver_phone:{type:String, have_to:true, mean:'司机电话', example:'司机电话'},
+                driver_id_card:{type:String, have_to:true, mean:'司机身份证', example:'司机身份证'},
+            },
+            result:{
+                result: { type: Boolean, mean: '添加结果', example: true },
+            },
+            func:async function(body, token) {
+                await plan_lib.add_set2team(body.main_vehicle, body.behind_vehicle, body.driver_name, body.driver_phone, body.driver_id_card, body.vt_id, token);
+                return {result:true};
+            },
+        },
+        del_vehicle_from_team:{
+            name: '从车队删除车辆',
+            description: '从车队删除车辆',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params:{
+                vt_id:{type:Number,have_to:true,mean:'车队ID',example:1},
+                set_id:{type:Number,have_to:true,mean:'组ID',example:1},
+            },
+            result:{
+                result: { type: Boolean, mean: '删除结果', example: true },
+            },
+            func:async function(body, token) {
+                await plan_lib.del_set_from_team(body.set_id, body.vt_id, token);
+                return {result:true};
             },
         },
     },

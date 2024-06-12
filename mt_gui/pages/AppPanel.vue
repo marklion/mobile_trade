@@ -49,6 +49,12 @@ export default {
                     require_module: 'sc',
                     path: 'ScConfig'
                 },
+                {
+                    name: '车队配置',
+                    icon: 'menu',
+                    require_module: undefined,
+                    path: 'VehicleTeam'
+                },
             ]
         }
     },

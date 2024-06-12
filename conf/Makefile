@@ -8,6 +8,7 @@ $(DELIVER_PATH):
 	cp $(SRC_DIR)/*.txt $(DELIVER_PATH)/
 	cp $(SRC_DIR)/*.conf $(DELIVER_PATH)/
 	cp $(SRC_DIR)/*.so $(DELIVER_PATH)/
+	cp $(SRC_DIR)/*.xlsx $(DELIVER_PATH)/
 clean:
 	rm -rf $(DELIVER_PATH)
 
