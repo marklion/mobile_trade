@@ -3,7 +3,7 @@
     <fui-grid>
         <fui-grid-item v-for="(item,index) in show_apps" :key="index">
             <view style="display:flex;flex-direction: column; align-items: center; justify-content: center;">
-                <fui-icon size="190" :name="item.icon" @click="go_to_page(item.path)"></fui-icon>
+                <fui-icon size="190" :name="item.icon" @click="go_to_page(item.path, item.sub_page_name)"></fui-icon>
                 <text>{{item.name}}</text>
             </view>
         </fui-grid-item>
@@ -53,7 +53,8 @@ export default {
                     name: '车队配置',
                     icon: 'menu',
                     require_module: undefined,
-                    path: 'VehicleTeam'
+                    path: 'VehicleTeam',
+                    sub_page_name: 'subPage1'
                 },
             ]
         }
@@ -67,9 +68,13 @@ export default {
                 }
             });
         },
-        go_to_page: function (_path) {
+        go_to_page: function (_path, sub_page_name) {
+            let url = '/pages/' + _path;
+            if (sub_page_name) {
+                url = '/' + sub_page_name + '/' + _path;
+            }
             uni.navigateTo({
-                url: '/pages/' + _path
+                url: url,
             });
         },
     },
