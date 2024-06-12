@@ -246,8 +246,8 @@ export default {
             if (detail.index == 1) {
                 let rules = [{
                     name: 'cash',
-                    rule: ['required', 'isAmount'],
-                    msg: ['请输入金额', "金额需要填写数字"]
+                    rule: ['required'],
+                    msg: ['请输入金额']
                 }, {
                     name: 'comment',
                     rule: ['required'],

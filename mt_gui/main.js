@@ -38,11 +38,12 @@ Vue.prototype.$send_req = function (_url, _data) {
         else {
           resolve(data.result)
         }
-        uni.hideLoading();
       },
       fail: (res) => {
         reject(res)
-        uni.hideLoading();
+      },
+      complete:() =>{
+        uni.hideLoading({noConflict: true});
       }
     })
   })
