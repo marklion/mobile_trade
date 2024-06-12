@@ -22,7 +22,7 @@
             </fui-card>
         </view>
     </list-show>
-    <fui-dialog :show="show_user_add" :buttons="[{text:'添加', color:'red'}]" maskClosable @click="bind_role_user" @close="show_user_add = false">
+    <fui-dialog :show="show_user_add" v-if="show_user_add" :buttons="[{text:'添加', color:'red'}]" maskClosable @click="bind_role_user" @close="show_user_add = false">
         <fui-input label="电话" placeholder="请输入电话" v-model="user_phone"></fui-input>
     </fui-dialog>
     <fui-dialog :show="show_confirm_user_unbind" content="确定要删除吗?" :buttons="[{text:'删除', color:'red'}]" maskClosable @click="unbind_role_user" @close="show_confirm_user_unbind= false">
