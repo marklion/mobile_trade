@@ -108,6 +108,7 @@ export default {
                     var filePath = res.tempFilePath;
                     uni.openDocument({
                         filePath: filePath,
+                        showMenu: true,
                     });
                 }
             });
