@@ -86,7 +86,6 @@ module.exports = {
         seal_no: { type: String, mean: '封条号', example: 'seal_no_example' },
         stamp_path: { type: String, mean: '印章路径', example: 'stamp_path_example' },
         is_buy: { type: Boolean, mean: '是否购买', example: true },
-        qr_code: { type: String, mean: '二维码base64', example: 'qr_code_example' },
         trans_company_name: { type: String, mean: '运输公司名', example: '' },
         stuff_name: { type: String, mean: '货物名', example: 'stuff_name_example' },
     },

@@ -58,7 +58,7 @@ Vue.prototype.$init_self = async function () {
     });
   }
 };
-Vue.prototype.$has_module = function(mod_name) {
+Vue.prototype.$has_module = function (mod_name) {
   let ret = false;
   let mods = uni.getStorageSync('self_info').modules.map(ele => {
     return ele.name

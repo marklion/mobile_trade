@@ -5,17 +5,30 @@ const db_opt = require('../db_opt');
 const sc_lib = require('../lib/sc_lib');
 const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
-const { name } = require('./buy_management_module');
+const captureWebsite = require('capture-website');
+
+async function do_web_cap(url, file_name) {
+    await captureWebsite.default.file(url, file_name, {
+        emulateDevice: 'iPhone X',
+        fullPage:true,
+        waitForElement:'body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view',
+        launchOptions: {
+            headless: 'new',
+            executablePath: '/root/.cache/puppeteer/chrome/linux-126.0.6478.55/chrome-linux64/chrome',
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        },
+    })
+
+}
+
 async function get_ticket_func(body, token) {
     let orig_plan = await plan_lib.get_single_plan_by_id(body.id);
     let plan = await plan_lib.replace_plan2archive(orig_plan)
     if (!plan) {
         plan = orig_plan;
     }
-    let qr_code = await wx_api_util.make_ticket_qr(plan);
-    let qr_code_base64 = Buffer.from(qr_code.buffer).toString('base64');
     return {
-        id:plan.id,
+        id: plan.id,
         company_name: plan.company.name,
         order_company_name: plan.stuff.company.name,
         plate: plan.main_vehicle.plate,
@@ -29,7 +42,6 @@ async function get_ticket_func(body, token) {
         seal_no: plan.seal_no,
         stamp_path: plan.stuff.company.stamp_pic,
         is_buy: plan.is_buy,
-        qr_code: qr_code_base64,
         trans_company_name: plan.trans_company_name,
         stuff_name: plan.stuff.name,
     }
@@ -839,35 +851,35 @@ module.exports = {
                 return ret;
             }
         },
-        get_export_record:{
-            name:'获取导出记录',
-            description:'获取导出记录',
-            need_rbac:false,
-            is_write:false,
-            is_get_api:true,
-            params:{
+        get_export_record: {
+            name: '获取导出记录',
+            description: '获取导出记录',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {
             },
-            result:{
-                records:{
-                    type:Array,mean:'导出记录',explain:{
-                        id:{type:Number,mean:'记录ID',example:1},
-                        name:{type:String,mean:'记录名',example:'record_example'},
-                        create_time:{type:String,mean:'创建时间',example:'2020-01-01 00:00:00'},
-                        url:{type:String,mean:'下载地址',example:'https://www.baidu.com'},
+            result: {
+                records: {
+                    type: Array, mean: '导出记录', explain: {
+                        id: { type: Number, mean: '记录ID', example: 1 },
+                        name: { type: String, mean: '记录名', example: 'record_example' },
+                        create_time: { type: String, mean: '创建时间', example: '2020-01-01 00:00:00' },
+                        url: { type: String, mean: '下载地址', example: 'https://www.baidu.com' },
                     }
                 }
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 let user = await rbac_lib.get_user_by_token(token);
-                let records = await user.getExport_records({order:[['id','DESC']], limit:20, offset:body.pageNo*20});
+                let records = await user.getExport_records({ order: [['id', 'DESC']], limit: 20, offset: body.pageNo * 20 });
                 let count = await user.countExport_records();
                 return {
-                    records:records,
-                    total:count,
+                    records: records,
+                    total: count,
                 }
             },
         },
-        get_notice:{
+        get_notice: {
             name: '获取通知',
             description: '获取通知',
             need_rbac: false,
@@ -876,16 +888,16 @@ module.exports = {
                 company_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
             },
             result: {
-                notice:{type:String,mean:'通知',example:'notice_example'},
-                driver_notice:{type:String,mean:'司机通知',example:'driver_notice_example'},
+                notice: { type: String, mean: '通知', example: 'notice_example' },
+                driver_notice: { type: String, mean: '司机通知', example: 'driver_notice_example' },
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let company = await sq.models.company.findByPk(body.company_id);
                 if (company) {
                     return {
-                        notice:company.notice,
-                        driver_notice:company.driver_notice,
+                        notice: company.notice,
+                        driver_notice: company.driver_notice,
                     }
                 }
                 else {
@@ -893,7 +905,7 @@ module.exports = {
                 }
             },
         },
-        get_vehicle_team:{
+        get_vehicle_team: {
             name: '获取车队',
             description: '获取车队',
             need_rbac: false,
@@ -934,15 +946,15 @@ module.exports = {
                     }
                 }
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 let ret = await plan_lib.get_all_vehicle_team(token, body.pageNo);
                 return {
-                    vehicle_teams:ret.rows,
-                    total:ret.count,
+                    vehicle_teams: ret.rows,
+                    total: ret.count,
                 }
             }
         },
-        add_vehicle_team:{
+        add_vehicle_team: {
             name: '添加车队',
             description: '添加车队',
             need_rbac: false,
@@ -954,12 +966,12 @@ module.exports = {
             result: {
                 result: { type: Boolean, mean: '添加结果', example: true },
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 await plan_lib.add_vehicle_team(body.name, token);
-                return {result:true};
+                return { result: true };
             }
         },
-        del_vehicle_team:{
+        del_vehicle_team: {
             name: '删除车队',
             description: '删除车队',
             need_rbac: false,
@@ -968,52 +980,73 @@ module.exports = {
             params: {
                 id: { type: Number, have_to: true, mean: '车队ID', example: 1 },
             },
-            result:{
+            result: {
                 result: { type: Boolean, mean: '删除结果', example: true },
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 await plan_lib.del_vehicle_team(body.id, token);
-                return {result:true};
+                return { result: true };
             }
         },
-        add_vehicle2team:{
+        add_vehicle2team: {
             name: '添加车辆到车队',
             description: '添加车辆到车队',
             need_rbac: false,
             is_write: true,
             is_get_api: false,
-            params:{
-                vt_id:{type:Number,have_to:true,mean:'车队ID',example:1},
-                main_vehicle:{type:String, have_to:true, mean:'主车车牌', example:'车牌'},
-                behind_vehicle:{type:String, have_to:false, mean:'挂车车牌', example:'车牌'},
-                driver_name:{type:String, have_to:true, mean:'司机姓名', example:'司机姓名'},
-                driver_phone:{type:String, have_to:true, mean:'司机电话', example:'司机电话'},
-                driver_id_card:{type:String, have_to:true, mean:'司机身份证', example:'司机身份证'},
+            params: {
+                vt_id: { type: Number, have_to: true, mean: '车队ID', example: 1 },
+                main_vehicle: { type: String, have_to: true, mean: '主车车牌', example: '车牌' },
+                behind_vehicle: { type: String, have_to: false, mean: '挂车车牌', example: '车牌' },
+                driver_name: { type: String, have_to: true, mean: '司机姓名', example: '司机姓名' },
+                driver_phone: { type: String, have_to: true, mean: '司机电话', example: '司机电话' },
+                driver_id_card: { type: String, have_to: true, mean: '司机身份证', example: '司机身份证' },
             },
-            result:{
+            result: {
                 result: { type: Boolean, mean: '添加结果', example: true },
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 await plan_lib.add_set2team(body.main_vehicle, body.behind_vehicle, body.driver_name, body.driver_phone, body.driver_id_card, body.vt_id, token);
-                return {result:true};
+                return { result: true };
             },
         },
-        del_vehicle_from_team:{
+        del_vehicle_from_team: {
             name: '从车队删除车辆',
             description: '从车队删除车辆',
             need_rbac: false,
             is_write: true,
             is_get_api: false,
-            params:{
-                vt_id:{type:Number,have_to:true,mean:'车队ID',example:1},
-                set_id:{type:Number,have_to:true,mean:'组ID',example:1},
+            params: {
+                vt_id: { type: Number, have_to: true, mean: '车队ID', example: 1 },
+                set_id: { type: Number, have_to: true, mean: '组ID', example: 1 },
             },
-            result:{
+            result: {
                 result: { type: Boolean, mean: '删除结果', example: true },
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 await plan_lib.del_set_from_team(body.set_id, body.vt_id, token);
-                return {result:true};
+                return { result: true };
+            },
+        },
+        download_ticket: {
+            name: '下载磅单',
+            description: '下载磅单',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '磅单ID', example: 1 },
+            },
+            result: {
+                url: { type: String, mean: '下载结果', example: 'https://abc' },
+            },
+            func: async function (body, token) {
+                let id = body.id;
+                const uuid = require('uuid');
+                real_file_name = uuid.v4();
+                const filePath = '/uploads/ticket_' + real_file_name + '.png';
+                await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + id, '/database' + filePath);
+                return { url: filePath };
             },
         },
     },

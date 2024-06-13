@@ -2,14 +2,11 @@
 <view>
     <fui-section :title="title" size="50" class="centered-title"></fui-section>
     <fui-preview :previewData="ticket_content"></fui-preview>
-    <fui-avatar mode="widthFix" shape="square" :width="300" :src="'data:image/png;base64,' + qr_code"></fui-avatar>
-    <fui-avatar mode="widthFix" shape="square" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
-    <fui-row>
-        <fui-col :span="10">
-        </fui-col>
-        <fui-col :span="14">
-        </fui-col>
-    </fui-row>
+    <view style="display:flex; justify-content: center;">
+        <fui-qrcode width="240" height="240" :value="'http://mt.d8sis.cn/#/pages/Ticket?id=' + id"></fui-qrcode>
+        <fui-avatar mode="widthFix" shape="square" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
+    </view>
+    <fui-button text="下载磅单图片" @click="download_pic" type="primary"></fui-button>
 </view>
 </template>
 
@@ -23,7 +20,32 @@ export default {
             ticket_content: {},
             qr_code: '',
             stamp_path: '',
+            id: 0,
         }
+    },
+    methods: {
+        download_pic: async function () {
+            let resp = await this.$send_req('/global/download_ticket', {
+                id: this.id
+            })
+            uni.downloadFile({
+                url: this.$convert_attach_url(resp.url),
+                success: (res) => {
+                    if (res.statusCode === 200) {
+                        uni.saveImageToPhotosAlbum({
+                            filePath: res.tempFilePath,
+                            success: () => {
+                                this.$toast('保存成功');
+                            },
+                            fail: () => {
+                                this.$toast('保存失败');
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
     },
     onLoad: async function (options) {
         let plan_id = 0
@@ -32,6 +54,7 @@ export default {
         } else if (options.scene) {
             plan_id = parseInt(decodeURIComponent(query.scene))
         }
+        this.id = plan_id;
         let ticket = await this.$send_req('/global/get_ticket', {
             id: plan_id
         });
