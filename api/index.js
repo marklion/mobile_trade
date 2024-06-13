@@ -94,6 +94,11 @@ app.post('/api/v1/upload_file', upload.single('file'), (req, res) => {
         res.send(filePath);
     });
 });
+app.get('/api/v1/download_ticket', async (req, res) => {
+    let id = req.query.id;
+    let resp = await global_module.methods.download_ticket.func({ id: id });
+    res.download('/database' + resp.url);
+})
 app.get('/api/help', (req, res) => {
     let out_json = app.help_info;
     const MarkdownIt = require('markdown-it');
@@ -182,6 +187,7 @@ app.get('/api/help', (req, res) => {
 const fs = require('fs');
 const legacy_api = require('./legacy_api');
 const plan_lib = require('./lib/plan_lib');
+const global_module = require('./module/global_module');
 legacy_api.install(app);
 
 if (fs.existsSync('/database/map.json')) {

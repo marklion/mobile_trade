@@ -44,3 +44,5 @@ RUN export LANGUAGE="zh_CN:zh:en_US:en"
 RUN export LANG="zh_CN.UTF-8"
 RUN npm install -g wetty@2.3.0 --force
 RUN npm install --global sqlite3
+RUN npm install --global puppeteer
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libatk1.0-0 libatk-bridge2.0-0 libgbm-dev libxdamage1

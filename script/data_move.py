@@ -751,6 +751,7 @@ def order_move():
                 'm_weight':item['m_weight'],
                 'p_time':item['p_time'],
                 'm_time':item['m_time'],
+                'count':item['j_weight'],
                 'is_buy':1,
                 'is_repeat':item['is_repeated'],
                 'ticket_no':item['ticket_no'],

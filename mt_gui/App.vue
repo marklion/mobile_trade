@@ -3,8 +3,13 @@ export default {
     onLaunch: function () {
         console.log('App Launch')
     },
-    onShow: async function () {
-        await this.$init_self();
+    onShow: async function (options) {
+        let path = options.path;
+        if (path == 'pages/Driver' || path == 'pages/Ticket') {
+            console.log('Driver or Ticket');
+        } else {
+            await this.$init_self();
+        }
     },
     onHide: function () {
         console.log('App Hide')
@@ -13,6 +18,6 @@ export default {
 </script>
 
 <style lang="scss">
-	/* 注意要写在第一行，同时给style标签加入lang="scss"属性 */
-	@import "@/uni_modules/uview-ui/index.scss";
+/* 注意要写在第一行，同时给style标签加入lang="scss"属性 */
+@import "@/uni_modules/uview-ui/index.scss";
 </style>
