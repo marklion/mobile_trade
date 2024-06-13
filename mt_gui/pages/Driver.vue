@@ -4,8 +4,12 @@
     </view>
     <view class="status_bar">
     </view>
+    <view class="status_bar">
+    </view>
     <fui-preview v-if="driver_self.id" :previewData="previewData" @click="rebind_info"></fui-preview>
-
+    <!--  #ifdef  H5 -->
+    <fui-button type="primary" text="司机手机登录" @click="phone_login_show = true"></fui-button>
+    <!--  #endif -->
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
         <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="65vh" :fetch_params="[is_online, driver_self.open_id]">
@@ -25,6 +29,13 @@
             </view>
         </list-show>
     </view>
+
+    <fui-modal width="600" :show="phone_login_show" v-if="phone_login_show" @click="do_phone_login">
+        <fui-form ref="phone_login" top="100">
+            <fui-input required label="手机号" borderTop placeholder="请输入手机号" v-model="phone_login_req.phone"></fui-input>
+            <fui-input required password label="密码" borderTop placeholder="请输入密码" v-model="phone_login_req.password"></fui-input>
+        </fui-form>
+    </fui-modal>
 
     <fui-modal width="600" :show="show_bind_id_card" v-if="show_bind_id_card" :buttons="[]">
         <fui-form ref="driver" top="100">
@@ -136,6 +147,11 @@ export default {
     },
     data: function () {
         return {
+            phone_login_req: {
+                phone: '',
+                password: '',
+            },
+            phone_login_show: false,
             driver_notice: '',
             driver_notice_show: false,
             button_event: {},
@@ -287,6 +303,12 @@ export default {
         };
     },
     methods: {
+        do_phone_login: async function (e) {
+            if (e.index == 1) {
+                this.driver_self = await this.$send_req("/global/driver_phone_online", this.phone_login_req);
+            }
+            this.phone_login_show = false;
+        },
         choose_date: function (e) {
             this.show_plan_date = false;
             this.begin_date = e.startDate.result;
@@ -571,7 +593,7 @@ export default {
         }
         uni.stopPullDownRefresh();
     },
-    onBackPress:function() {
+    onBackPress: function () {
         return true;
     },
 }

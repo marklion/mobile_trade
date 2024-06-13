@@ -10,8 +10,8 @@ const captureWebsite = require('capture-website');
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
         emulateDevice: 'iPhone X',
-        fullPage:true,
-        waitForElement:'body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view',
+        fullPage: true,
+        waitForElement: 'body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view',
         launchOptions: {
             headless: 'new',
             executablePath: '/root/.cache/puppeteer/chrome/linux-126.0.6478.55/chrome-linux64/chrome',
@@ -50,6 +50,34 @@ module.exports = {
     name: 'global',
     description: '全局',
     methods: {
+        driver_phone_online: {
+            name: '司机手机号上线',
+            description: '司机手机号上线',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                phone: { type: String, have_to: true, mean: '司机电话', example: '18911992582' },
+                password: { type: String, have_to: true, mean: '密码', example: '123456' }
+            },
+            result: {
+                id: { type: Number, mean: '司机ID', example: 1 },
+                name: { type: String, mean: '司机姓名', example: '张三' },
+                phone: { type: String, mean: '司机电话', example: '18911992582' },
+                id_card: { type: String, mean: '司机身份证', example: '1234567890' },
+                open_id: { type: String, mean: '微信open_id', example: 'open_id' },
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { phone: body.phone } });
+                if (driver && body.password == process.env.DEFAULT_PWD) {
+                    return driver;
+                }
+                else {
+                    throw { err_msg: '司机不存在' };
+                }
+            }
+        },
         driver_online: {
             name: '司机上线',
             description: '司机上线',
@@ -471,7 +499,7 @@ module.exports = {
                         ],
                     }
                 });
-                if (user || body.password == 'Mobile_P@ssw0rd_Trade') {
+                if (user || body.password == process.env.DEFAULT_PWD) {
                     ret.token = await rbac_lib.user_login(body.phone);
                 }
                 if (ret.token === '') {

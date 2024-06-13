@@ -24,7 +24,7 @@ module.exports = {
         return user;
     },
     change_password: async function (token, _new_password) {
-        if (_new_password == 'Mobile_P@ssw0rd_Trade') {
+        if (_new_password == process.env.DEFAULT_PWD) {
             throw { err_msg: '密码不合法' };
         }
         let user = await this.get_user_by_token(token);

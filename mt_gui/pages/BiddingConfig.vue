@@ -95,8 +95,11 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                if (this.new_bc.max <= this.new_bc.min) {
-                    this.$toast('最高出价必须大于最低出价');
+                if (parseFloat(this.new_bc.max) <= parseFloat(this.new_bc.min)) {
+                    uni.showToast({
+                        title: '最高出价必须大于最低出价',
+                        icon: 'none'
+                    });
                     return;
                 }
                 this.new_bc.max = parseFloat(this.new_bc.max);
