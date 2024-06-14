@@ -60,13 +60,7 @@ module.exports = {
                 phone: { type: String, have_to: true, mean: '司机电话', example: '18911992582' },
                 password: { type: String, have_to: true, mean: '密码', example: '123456' }
             },
-            result: {
-                id: { type: Number, mean: '司机ID', example: 1 },
-                name: { type: String, mean: '司机姓名', example: '张三' },
-                phone: { type: String, mean: '司机电话', example: '18911992582' },
-                id_card: { type: String, mean: '司机身份证', example: '1234567890' },
-                open_id: { type: String, mean: '微信open_id', example: 'open_id' },
-            },
+            result: api_param_result_define.driver_info,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { phone: body.phone } });
@@ -87,13 +81,7 @@ module.exports = {
             params: {
                 open_id_code: { type: String, have_to: true, mean: '微信open_id授权凭证', example: 'open_id' }
             },
-            result: {
-                id: { type: Number, mean: '司机ID', example: 1 },
-                name: { type: String, mean: '司机姓名', example: '张三' },
-                phone: { type: String, mean: '司机电话', example: '18911992582' },
-                id_card: { type: String, mean: '司机身份证', example: '1234567890' },
-                open_id: { type: String, mean: '微信open_id', example: 'open_id' },
-            },
+            result: api_param_result_define.driver_info,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let open_id = await wx_api_util.get_open_id_by_code(body.open_id_code)
@@ -118,13 +106,7 @@ module.exports = {
                 phone_code: { type: String, have_to: true, mean: '司机电话_授权码', example: '18911992582' },
                 id_card: { type: String, have_to: true, mean: '司机身份证', example: '1234567890' },
             },
-            result: {
-                id: { type: Number, mean: '司机ID', example: 1 },
-                name: { type: String, mean: '司机姓名', example: '张三' },
-                phone: { type: String, mean: '司机电话', example: '18911992582' },
-                id_card: { type: String, mean: '司机身份证', example: '1234567890' },
-                open_id: { type: String, mean: '微信open_id', example: 'open_id' },
-            },
+            result: api_param_result_define.driver_info,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let open_id = await wx_api_util.get_open_id_by_code(body.open_id_code)

@@ -71,6 +71,13 @@ const sc_req_detail = {
     },
 };
 module.exports = {
+    driver_info: {
+        id: { type: Number, mean: '司机ID', example: 1 },
+        name: { type: String, mean: '司机姓名', example: '张三' },
+        phone: { type: String, mean: '司机电话', example: '18911992582' },
+        id_card: { type: String, mean: '司机身份证', example: '1234567890' },
+        open_id: { type: String, mean: '微信open_id', example: 'open_id' },
+    },
     ticket_content: {
         id: { type: Number, mean: 'ID', example: 1 },
         company_name: { type: String, mean: '公司名', example: 'company_example' },
