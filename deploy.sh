@@ -10,6 +10,7 @@ ALI_KEY_SEC_INPUT="none"
 OLD_DATA_PATH="/tmp"
 SHARE_KEY_INPUT=""
 DOCKER_IMG_NAME="mt_deploy:v1.0"
+DEFAULT_PWD_INPUT="_P@ssw0rd_"
 SRC_DIR=`dirname $(realpath $0)`/../
 is_in_container() {
     ls /.dockerenv >/dev/null 2>&1
@@ -29,7 +30,7 @@ get_docker_image() {
 
 start_all_server() {
     line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 125`
+    line=`expr $line - 129`
     mkdir /tmp/sys_mt
     tail -n $line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
@@ -72,13 +73,13 @@ start_docker_con() {
     then
         SSH_PORT_ARG=""
     fi
-    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -p 39229:9229 -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e SHARE_KEY="${SHARE_KEY_INPUT}" -e MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -v ${OLD_DATA_PATH}:/database/logo_res -e MAIL_PWD="${MAIL_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
+    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -p 39229:9229 -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e SHARE_KEY="${SHARE_KEY_INPUT}" -e MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -v ${OLD_DATA_PATH}:/database/logo_res -e MAIL_PWD="${MAIL_PWD_INPUT}" -e DEFAULT_PWD="${DEFAULT_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
     docker cp $0 ${CON_ID}:/root/ > /dev/null 2>&1
     docker start ${CON_ID} > /dev/null 2>&1
     echo ${CON_ID}
 }
 
-while getopts "sD:p:w:d:i:m:a:k:M:g:b:o:O:u:h:" arg
+while getopts "sD:p:w:d:i:m:a:k:M:g:b:o:O:u:h:P:" arg
 do
     case $arg in
         p)
@@ -107,6 +108,9 @@ do
             ;;
         h)
             SHARE_KEY_INPUT=${OPTARG}
+            ;;
+        P)
+            DEFAULT_PWD_INPUT=${OPTARG}
             ;;
         *)
             echo "invalid args"

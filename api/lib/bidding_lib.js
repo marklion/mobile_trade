@@ -243,6 +243,10 @@ module.exports = {
             if (cur_bts.length == 1) {
                 await this.try_finish_bidding(cur_bts[0], 2);
             }
+            else if (cur_bts.length == 0) {
+                bc.status = 2;
+                await bc.save();
+            }
         }
     },
 };

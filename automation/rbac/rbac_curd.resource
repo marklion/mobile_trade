@@ -27,7 +27,7 @@ Reg Company Admin
 
 User Login With Phone
     [Arguments]  ${phone}
-    ${req}  Create Dictionary  phone=${phone}  password=Mobile_P@ssw0rd_Trade
+    ${req}  Create Dictionary  phone=${phone}  password=_P@ssw0rd_
     ${resp}  Req to Server  /global/pwd_login  AAAAAAAA  ${req}
     RETURN  ${resp}[token]
 

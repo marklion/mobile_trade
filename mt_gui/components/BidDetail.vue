@@ -177,6 +177,14 @@ export default {
                         id: item
                     });
                 });
+                if (this.selected_companies.length <= 1)
+                {
+                    uni.showToast({
+                        title: '至少选择两家客户',
+                        icon: 'none'
+                    });
+                    return;
+                }
                 await this.$send_req('/bid/add_turn', this.start_bid_req);
                 uni.startPullDownRefresh();
             }
