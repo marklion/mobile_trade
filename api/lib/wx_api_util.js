@@ -331,9 +331,9 @@ module.exports = {
                 tar_array.push(item.open_id);
             }
         });
-        tar_array.forEach(item => {
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req);
+            await send_wx_msg(req);
         });
     },
     call_vehicle_msg: async function (plan) {
@@ -356,7 +356,7 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(plan.driver.open_id)
         }
-        send_wx_msg(req);
+        await send_wx_msg(req);
     },
     plan_scale_msg: async function (plan) {
         let req = {
@@ -386,9 +386,9 @@ module.exports = {
                 tar_array.push(item.open_id);
             }
         });
-        tar_array.forEach(item => {
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req)
+            await send_wx_msg(req)
         });
     },
     bidding_start_msg: async function (bidding_name, begin_time, user_open_id) {
@@ -407,7 +407,7 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(user_open_id)
         }
-        send_wx_msg(req)
+        await send_wx_msg(req)
     },
     bidding_price_msg: async function (bc, price_user, price) {
         let stuff = await bc.getStuff()
@@ -434,9 +434,9 @@ module.exports = {
                 tar_array.push(item.open_id);
             }
         });
-        tar_array.forEach(item => {
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req)
+            await send_wx_msg(req)
         });
     },
     bidding_finish_msg: async function (bc) {
@@ -476,9 +476,9 @@ module.exports = {
             }
         }
 
-        tar_array.forEach(item => {
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req)
+            await send_wx_msg(req)
         });
     },
 }

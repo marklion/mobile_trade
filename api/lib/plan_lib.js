@@ -1116,7 +1116,6 @@ module.exports = {
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
             json.push({
-                id: element.id,
                 create_company: this.place_hold(element.company, { name: '(司机选择)' }).name,
                 accept_company: element.stuff.company.name,
                 stuff_name: element.stuff.name,
@@ -1136,9 +1135,61 @@ module.exports = {
                 ticket_no: element.ticket_no,
             });
         }
+        let columns = [{
+            header: '下单公司',
+            key: 'create_company',
+        }, {
+            header: '接单公司',
+            key: 'accept_company',
+        }, {
+            header: '计划时间',
+            key: 'plan_time',
+        }, {
+            header: '过皮时间',
+            key: 'p_time',
+        }, {
+            header: '过毛时间',
+            key: 'm_time',
+        }, {
+            header: '主车号',
+            key: 'mv',
+        }, {
+            header: '挂车号',
+            key: 'bv',
+        }, {
+            header: '司机姓名',
+            key: 'driver_name',
+        }, {
+            header: '司机电话',
+            key: 'driver_phone',
+        }, {
+            header: '皮重',
+            key: 'p_weight',
+        }, {
+            header: '毛重',
+            key: 'm_weight',
+        }, {
+            header: '装车量',
+            key: 'count',
+        }, {
+            header: '单价',
+            key: 'unit_price',
+        }, {
+            header: '总价',
+            key: 'total_price',
+        }, {
+            header: '铅封号',
+            key: 'seal_no',
+        }, {
+            header: '磅单号',
+            key: 'ticket_no',
+        }, {
+            header: '物料名',
+            key: 'stuff_name',
+        }, ];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
-        worksheet.columns = Object.keys(json[0]).map(key => ({ header: key, key: key }));
+        worksheet.columns = columns;
         worksheet.addRows(json);
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);

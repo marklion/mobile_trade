@@ -162,6 +162,9 @@ export default {
             this.cur_page = 1;
         },
         get_sale_contract: async function (pageNo) {
+            if (this.$has_module('sale_management')) {
+                return [];
+            }
             let ret = await this.$send_req('/sale_management/contract_get', {
                 pageNo: pageNo
             });
