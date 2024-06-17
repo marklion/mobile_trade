@@ -132,6 +132,7 @@ let db_opt = {
             delay_days: { type: DataTypes.INTEGER, defaultValue: 0 },
             next_comment: { type: DataTypes.STRING },
             next_operator: { type: DataTypes.STRING },
+            need_exam: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -227,14 +228,37 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
         },
-        vehicle_set:{
+        vehicle_set: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
         },
-        export_record:{
+        export_record: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             create_time: { type: DataTypes.STRING },
             url: { type: DataTypes.STRING },
+        },
+        question: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+        },
+        option_answer: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            is_correct: { type: DataTypes.BOOLEAN, defaultValue: false },
+        },
+        exam_paper: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            pass_score: { type: DataTypes.INTEGER, defaultValue: 80 },
+        },
+        exam: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            score: { type: DataTypes.INTEGER, defaultValue: 0 },
+            sign_pic: { type: DataTypes.STRING },
+        },
+        exam_answer:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
         },
     },
     make_associate: function (_sq) {
@@ -319,6 +343,25 @@ let db_opt = {
         _sq.models.rbac_user.hasMany(_sq.models.vehicle_team);
         _sq.models.vehicle_set.belongsTo(_sq.models.vehicle_team);
         _sq.models.vehicle_team.hasMany(_sq.models.vehicle_set);
+
+        _sq.models.option_answer.belongsTo(_sq.models.question);
+        _sq.models.question.hasMany(_sq.models.option_answer);
+        _sq.models.question.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.question);
+        _sq.models.question.belongsToMany(_sq.models.exam_paper, {through: 'paper_question'});
+        _sq.models.exam_paper.belongsToMany(_sq.models.question, {through: 'paper_question'});
+        _sq.models.exam.belongsTo(_sq.models.exam_paper);
+        _sq.models.exam_paper.hasMany(_sq.models.exam);
+        _sq.models.exam.belongsTo(_sq.models.plan);
+        _sq.models.plan.hasMany(_sq.models.exam);
+        _sq.models.exam.belongsTo(_sq.models.driver);
+        _sq.models.driver.hasMany(_sq.models.exam);
+        _sq.models.exam_paper.belongsToMany(_sq.models.stuff, { through: 'paper_stuff' });
+        _sq.models.stuff.belongsToMany(_sq.models.exam_paper, { through: 'paper_stuff' });
+        _sq.models.exam_answer.belongsTo(_sq.models.option_answer);
+        _sq.models.option_answer.hasMany(_sq.models.exam_answer);
+        _sq.models.exam_answer.belongsTo(_sq.models.exam);
+        _sq.models.exam.hasMany(_sq.models.exam_answer);
     },
     install: async function () {
         console.log('run install');
