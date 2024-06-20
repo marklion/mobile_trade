@@ -140,7 +140,7 @@ export default {
                     }
                 ],
                 buttons: [{
-                    text: '重新绑定'
+                    text: '修改身份信息'
                 }]
             }
         },
@@ -279,7 +279,7 @@ export default {
                 }
                 if (item.is_proxy) {
                     ret.buttons.push({
-                        text: '选择公司',
+                        text: '选择货源',
                         color: 'brown',
                         item: item,
                     });
@@ -306,6 +306,10 @@ export default {
         do_phone_login: async function (e) {
             if (e.index == 1) {
                 this.driver_self = await this.$send_req("/global/driver_phone_online", this.phone_login_req);
+                this.is_online = true;
+                this.$nextTick(() => {
+                    this.$refs.plan.refresh();
+                });
             }
             this.phone_login_show = false;
         },

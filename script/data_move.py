@@ -805,7 +805,7 @@ def vehicle_team_move():
     orig_vts = get_data_from_orig_table('vichele_team_table')
     for item in orig_vts:
         try:
-            ou = get_data_from_orig_table('userinfo_table', 'PRI_ID == %d' % item['created_by_ext_key'])[0]
+            ou = get_data_from_orig_table('silent_user_table', 'PRI_ID == %d' % item['created_by_ext_key'])[0]
             nu = get_data_from_cur_table('rbac_user', 'phone == "%s"' % ou['phone'])[0]
             new_vt = {
                 'name':item['name'],
@@ -820,6 +820,12 @@ def vehicle_team_move():
         except:
             traceback.print_exc()
             continue
+def jr_move():
+    ops = get_data_from_orig_table('plan_table', 'created_by_ext_key == 12208')
+    for item in ops:
+        ojr_vs = get_data_from_orig_table('single_vichele_table', 'belong_plan_ext_key == %d' % item['PRI_ID'])
+        deliver_time = item['deliver_timestamp']
+        update_sql = 'update plan set companyId = %d where companyId == %d and m_time == "%s"' % (, deliver_time)
 
 def main():
     global orig_db_path

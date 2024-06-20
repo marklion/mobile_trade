@@ -6,6 +6,7 @@ const sc_lib = require('../lib/sc_lib');
 const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
 const captureWebsite = require('capture-website');
+const moment = require('moment');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -166,10 +167,10 @@ module.exports = {
                         const element = ret.plans[index];
                         let wc = await plan_lib.get_wait_count(element);
                         if (wc > 0) {
-                            element.register_comment = '还需要等待' + wc + '辆车';
+                            element.register_comment += ' 还需要等待' + wc + '辆车';
                         }
                         else {
-                            element.register_comment = '下一个就是你';
+                            element.register_comment += ' 下一个就是你';
                         }
                         if (!element.company) {
                             element.company = { name: '(未指定)' }
@@ -400,13 +401,19 @@ module.exports = {
                         if (!plan.stuff.need_enter_weight || (plan.enter_attachment && plan.enter_count > 0)) {
                             if (plan.company) {
                                 if (await plan_lib.check_if_never_checkin(driver)) {
-                                    if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
-                                        await require('../lib/field_lib').handle_driver_check_in(plan);
-                                        return { result: true };
+                                    if (moment(plan.plan_time).isBefore(moment())) {
+                                        if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
+                                            await require('../lib/field_lib').handle_driver_check_in(plan);
+                                            return { result: true };
+                                        }
+                                        else {
+                                            throw { err_msg: '当前位置超出要求范围' };
+                                        }
                                     }
                                     else {
-                                        throw { err_msg: '当前位置超出要求范围' };
+                                        throw { err_msg: '未到计划时间，不能签到' };
                                     }
+
                                 }
                                 else {
                                     throw { err_msg: '已经签到其他计划' };
@@ -750,13 +757,19 @@ module.exports = {
             },
             func: async function (body, token) {
                 let ret = { token: '' };
-                let sq = db_opt.get_sq();
 
                 let phone = await wx_api_util.get_phone_by_code(body.phone_code);
                 let open_id = await wx_api_util.get_open_id_by_code(body.open_id_code);
                 let company = await rbac_lib.add_company(body.company_name);
                 let user = await rbac_lib.add_user(phone);
-                if (company && user) {
+                let orig_company = await user.getCompany();
+                if (orig_company) {
+                    if (orig_company.id != company.id) {
+                        await rbac_lib.clear_user_bind_info(user);
+                        await rbac_lib.user_bind_company(user, company, open_id, body.name, body.email);
+                    }
+                }
+                else {
                     await rbac_lib.user_bind_company(user, company, open_id, body.name, body.email);
                 }
                 ret.token = await rbac_lib.user_login(phone);
@@ -790,6 +803,9 @@ module.exports = {
                         sq.where(sq.fn('datetime', sq.col('plan_time')), {
                             [db_opt.Op.lte]: sq.fn('datetime', body.end_date)
                         }),
+                        {
+                            status: 3
+                        }
                     ]
                 }
                 if (driver) {

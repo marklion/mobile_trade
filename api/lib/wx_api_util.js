@@ -155,12 +155,17 @@ function make_plan_status_msg(plan) {
     let status_array = [
         '待确认', '待验款', '待发车', '已关闭'
     ];
+    let status = plan.status;
+    if (plan.is_buy && status == 1)
+    {
+        status = 2;
+    }
     return {
         thing3: { value: plan.company.name },
         thing5: { value: plan.stuff.name },
         car_number14: { value: plan.main_vehicle.plate },
         thing9: { value: plan.stuff.company.name },
-        const24: { value: status_array[plan.status] },
+        const24: { value: status_array[status] },
     }
 }
 
@@ -333,7 +338,7 @@ module.exports = {
         });
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            await send_wx_msg(req);
+            send_wx_msg({...req});
         });
     },
     call_vehicle_msg: async function (plan) {
@@ -388,7 +393,7 @@ module.exports = {
         });
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            await send_wx_msg(req)
+            send_wx_msg({...req});
         });
     },
     bidding_start_msg: async function (bidding_name, begin_time, user_open_id) {
@@ -436,7 +441,7 @@ module.exports = {
         });
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            await send_wx_msg(req)
+            send_wx_msg({...req});
         });
     },
     bidding_finish_msg: async function (bc) {
@@ -478,7 +483,7 @@ module.exports = {
 
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            await send_wx_msg(req)
+            send_wx_msg({...req});
         });
     },
 }

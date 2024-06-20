@@ -14,7 +14,7 @@
                 </fui-tag>
                 <template #footer>
                     <view style="display: flex;">
-                        <fui-button btn-size="mini" text="新增用户" style="margin-right: 10px;" @click="show_user_add = true" type="warning"></fui-button>
+                        <fui-button btn-size="mini" text="新增用户" style="margin-right: 10px;" @click="focus_role = item.id;show_user_add = true" type="warning"></fui-button>
                         <fui-button btn-size="mini" text="新增模块" style="margin-right: 10px;" @click="focus_role = item.id;show_module_add = true"></fui-button>
                         <fui-button btn-size="mini" text="删除角色" style="margin-right: 10px;" @click="focus_role = item.id;show_delete_role = true" type="danger"></fui-button>
                     </view>

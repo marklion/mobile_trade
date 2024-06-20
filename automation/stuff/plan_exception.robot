@@ -106,6 +106,19 @@ Close While Confirmed
     Confirm A Order  ${plan}
     Close A Order  ${plan}
     Check New Status And History  ${plan}  3  关闭
+Cancel While Confirmed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Cancel A Plan  ${plan}
+    Check New Status And History  ${plan}  3  取消
+    ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Order  ${plan}
+    Cancel A Order  ${plan}
+    Check New Status And History  ${plan}  3  取消
 
 Disabled Action While Confirmed
     [Teardown]  Plan Reset
@@ -119,12 +132,10 @@ Disabled Action While Confirmed
     Check In Failed  ${plan}  ${dv}[phone]
     Enter Failed  ${plan}
     Deliver Failed  ${plan}
-    Cancel Failed  ${plan}
     Cancel Check In Failed  ${plan}
     ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Order  ${plan}
     Order Confirm Failed  ${plan}
-    Order Cancel Failed  ${plan}
 
 Rollback While Payed
     [Teardown]  Plan Reset
@@ -150,6 +161,16 @@ Close While Payed
     Close A Plan  ${plan}
     Check New Status And History  ${plan}  3  关闭
 
+Cancel While Payed
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Cancel A Plan    ${plan}
+    Check New Status And History  ${plan}  3  关闭
 Cancel Check In While Payed
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -176,7 +197,6 @@ Disabled Action While Payed
     Update Failed  ${plan}
     Confirm Failed  ${plan}
     Pay Failed  ${plan}
-    Cancel Failed  ${plan}
 
 Rollback While Entered
     [Teardown]  Plan Reset

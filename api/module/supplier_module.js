@@ -147,7 +147,7 @@ module.exports = {
             func: async function (body, token) {
                 let user = await rbac_lib.get_user_by_token(token);
                 let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
-                if (user && plan && await user.hasPlan(plan)  && plan.status == 0) {
+                if (user && plan && await user.hasPlan(plan) ) {
                     await plan_lib.plan_close(plan, user.name, true);
                 }
                 else {

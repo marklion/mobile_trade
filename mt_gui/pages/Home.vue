@@ -10,13 +10,20 @@
                 <qiun-data-charts type="ring" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
             </view>
         </view>
+        <module-filter require_module="sale_management">
+            <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
+                <u-radio  label="今天" :name="0"></u-radio>
+                <u-radio  label="明天" :name="1"></u-radio>
+            </u-radio-group>
+            <fui-table fixed :height="700" stripe :itemList="tableData" :header="headerData"></fui-table>
+        </module-filter>
     </view>
     <module-filter require_module="customer">
         <view class="brief_section">
             <fui-section title="采购提单"></fui-section>
             <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
                 <view v-for="item in stuff2buy" :key="item.id">
-                    <u-cell  :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
+                    <u-cell :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
                         <view slot="right-icon">
                             <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
                         </view>
@@ -74,9 +81,41 @@ export default {
                 notice: '',
                 driver_notice: '',
             },
+            tableData: [],
+            headerData: [{
+                prop: 'company_name',
+                label: '客户',
+                width: '400'
+            }, {
+                prop: 'confirm_count',
+                label: '总车数',
+                width: '160'
+            }, {
+                prop: 'finish_count',
+                label: '完成数',
+                width: '160'
+            }],
+            day_offset:0,
         }
     },
     methods: {
+        init_statistic: async function () {
+            if (this.$has_module('sale_management') == false) {
+                return
+            }
+            let resp = await this.$send_req('/sale_management/get_count_by_customer', {
+                day_offset: this.day_offset,
+            });
+            this.tableData = [];
+            for (let index = 0; index < resp.statistic.length; index++) {
+                const element = resp.statistic[index];
+                this.tableData.push({
+                    company_name: element.company.name,
+                    confirm_count: element.confirm_count,
+                    finish_count: element.finish_count,
+                })
+            }
+        },
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);
             uni.startPullDownRefresh();
@@ -185,9 +224,8 @@ export default {
                     pageNo: pageNo,
                 });
                 let ret = []
-                res.stuff.forEach(item=>{
-                    if (item.price != -1)
-                    {
+                res.stuff.forEach(item => {
+                    if (item.price != -1) {
                         ret.push(item)
                     }
                 });
@@ -286,16 +324,20 @@ export default {
             this.self_info = uni.getStorageSync('self_info');
             await this.init_data_brief();
             await this.init_notice();
-            this.$refs.sb_list.refresh();
-            this.$refs.ss_list.refresh();
+            if (this.$refs.sb_list)
+                this.$refs.sb_list.refresh();
+            if (this.$refs.ss_list)
+                this.$refs.ss_list.refresh();
         },
     },
     onPullDownRefresh: async function () {
         await this.init_brief_info();
+        await this.init_statistic();
         uni.stopPullDownRefresh();
     },
     onLoad: async function () {
         await this.init_brief_info()
+        await this.init_statistic()
     },
 }
 </script>
