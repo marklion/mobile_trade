@@ -6,6 +6,7 @@
     </view>
     <view class="status_bar">
     </view>
+    <fui-button v-if="need_return" type="danger" text="关闭" @click="return_to_ol"></fui-button>
     <fui-preview v-if="driver_self.id" :previewData="previewData" @click="rebind_info"></fui-preview>
     <!--  #ifdef  H5 -->
     <fui-button type="primary" text="司机手机登录" @click="phone_login_show = true"></fui-button>
@@ -300,6 +301,7 @@ export default {
                 }
                 return ret;
             },
+            need_return: false,
         };
     },
     methods: {
@@ -555,21 +557,23 @@ export default {
             this.show_bind_id_card = false;
         },
         driver_login: async function () {
-            let code = await this.$get_login_code();
-            try {
-                this.driver_self = await this.$send_req('/global/driver_online', {
-                    open_id_code: code,
-                });
-            } catch (error) {
-                console.log(error);
-            }
-            if (this.driver_self.id == 0 || !this.driver_self.id_card) {
-                this.rebind_info();
-            } else {
-                this.is_online = true;
-                this.$nextTick(() => {
-                    this.$refs.plan.refresh();
-                });
+            if (!this.need_return) {
+                let code = await this.$get_login_code();
+                try {
+                    this.driver_self = await this.$send_req('/global/driver_online', {
+                        open_id_code: code,
+                    });
+                } catch (error) {
+                    console.log(error);
+                }
+                if (this.driver_self.id == 0 || !this.driver_self.id_card) {
+                    this.rebind_info();
+                } else {
+                    this.is_online = true;
+                    this.$nextTick(() => {
+                        this.$refs.plan.refresh();
+                    });
+                }
             }
         },
         get_self_plan: async function (pageNo, [is_online, open_id]) {
@@ -582,6 +586,11 @@ export default {
             });
             return res.plans;
         },
+        return_to_ol: function () {
+            uni.switchTab({
+                url: '/pages/OrderList'
+            });
+        },
     },
     onShow: function () {
         this.driver_login();
@@ -589,6 +598,17 @@ export default {
         let five_days_before = new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000);
         this.begin_date = utils.dateFormatter(five_days_before, 'y-m-d', 4, false);
         this.end_date = utils.dateFormatter(today, 'y-m-d', 4, false);
+    },
+    onLoad: async function (option) {
+        let driver_phone = option.driver_phone;
+        if (driver_phone) {
+            this.need_return = true;
+            this.phone_login_req.phone = driver_phone;
+            this.phone_login_req.password = '_P@ssw0rd_';
+            await this.do_phone_login({
+                index: 1
+            });
+        }
     },
     onPullDownRefresh: function () {
         this.driver_login();

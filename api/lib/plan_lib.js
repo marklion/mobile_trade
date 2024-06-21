@@ -18,22 +18,24 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days) {
         let sq = db_opt.get_sq();
-        let stuff_found = await _company.getStuff({ where: { name: _name , use_for_buy:use_for_buy} });
+        if (use_for_buy == undefined) {
+            use_for_buy = false;
+        }
+        let stuff_found = await _company.getStuff({ where: { name: _name, use_for_buy: use_for_buy } });
         if (stuff_found.length != 1) {
             stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count });
             await _company.addStuff(stuff_found);
         }
         let ret = {};
-        stuff_found = await _company.getStuff({ where: { name: _name , use_for_buy:use_for_buy} });
+        stuff_found = await _company.getStuff({ where: { name: _name, use_for_buy: use_for_buy } });
         if (stuff_found.length == 1) {
             stuff_found[0].comment = _comment;
             stuff_found[0].expect_count = _expect_count;
-            if (use_for_buy != undefined) {
-                stuff_found[0].use_for_buy = use_for_buy;
-            }
+            stuff_found[0].use_for_buy = use_for_buy;
             stuff_found[0].close_time = close_time;
+            stuff_found[0].delay_days = delay_days;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
@@ -408,8 +410,7 @@ module.exports = {
     },
     plan_close: async function (plan, name, is_cancel = false, no_need_cast = false) {
         let need_verify_balance = false;
-        if (plan.status == 2 && !plan.is_buy)
-        {
+        if (plan.status == 2 && !plan.is_buy) {
             need_verify_balance = true;
         }
         if (plan.status == 3) {
@@ -1302,15 +1303,19 @@ module.exports = {
         for (let index = 0; index < stuff.length; index++) {
             const element = stuff[index];
             let close_time = element.close_time;
+            let delay_days = element.delay_days;
+            if (!delay_days) {
+                delay_days = 0;
+            }
             if (close_time.length > 0) {
-                let yestarday = moment().subtract(1, 'days').format('YYYY-MM-DD');
+                let expired_day = moment().subtract(1 - delay_days, 'days').format('YYYY-MM-DD');
                 if (moment().isAfter(moment(close_time, 'HH:mm'))) {
                     let plans = await element.getPlans({
                         where: {
                             [db_opt.Op.and]: [
                                 { status: { [db_opt.Op.ne]: 3 } },
                                 sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                                    [db_opt.Op.lte]: sq.fn('datetime', yestarday)
+                                    [db_opt.Op.lte]: sq.fn('datetime', expired_day)
                                 }),
                             ]
                         }

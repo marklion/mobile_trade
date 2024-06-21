@@ -11,6 +11,7 @@ pack:all
 	cat $(SRC_DIR)/deploy.sh mt_deliver.tar.gz > $(DELIVER_PATH)/install.sh
 	chmod +x $(DELIVER_PATH)/install.sh
 	rm mt_deliver.tar.gz
+	rm -rf $(SRC_DIR)/automation/build
 
 all:$(DELIVER_PATH)
 api:lag_rpc
