@@ -1,7 +1,8 @@
 *** Settings ***
 Resource  ../rbac/rbac_curd.resource
 Resource  ../database.resource
-Library    ../.venv/lib/python3.9/site-packages/robot/libraries/DateTime.py
+Library  DateTime
+
 
 *** Variables ***
 &{sale_company}
