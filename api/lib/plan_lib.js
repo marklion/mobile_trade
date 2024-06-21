@@ -25,7 +25,7 @@ module.exports = {
         }
         let stuff_found = await _company.getStuff({ where: { name: _name, use_for_buy: use_for_buy } });
         if (stuff_found.length != 1) {
-            stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count });
+            stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count, use_for_buy: use_for_buy});
             await _company.addStuff(stuff_found);
         }
         let ret = {};
