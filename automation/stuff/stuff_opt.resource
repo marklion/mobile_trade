@@ -236,7 +236,7 @@ Clean Up Sale and Buy
 Create A Order
     [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${order_stuff}[id]
     ${cur_date}  Set Variable  ${plan_time}
-    IF  $plan_time == today
+    IF  $plan_time == 'today'
         ${cur_date}  Get Current Date  result_format=%Y-%m-%d
     END
     ${req}  Create Dictionary
@@ -254,7 +254,7 @@ Create A Order
 Create A Plan
     [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${test_stuff}[id]
     ${cur_date}  Set Variable  ${plan_time}
-    IF  $plan_time == today
+    IF  $plan_time == 'today'
         ${cur_date}  Get Current Date  result_format=%Y-%m-%d
     END
     ${req}  Create Dictionary
