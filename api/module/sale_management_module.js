@@ -381,5 +381,75 @@ module.exports = {
                 })
             }
         },
+        get_count_by_customer:{
+            name: '获取客户订单数量',
+            description: '获取客户订单数量',
+            is_write: false,
+            is_get_api: false,
+            params:{
+                day_offset:{type:Number,have_to:false,mean:'偏移天数',example:1},
+            },
+            result: {
+                statistic: {
+                    type: Array, mean: '统计', explain: {
+                        company: {
+                            type: Object, mean: '公司', explain: {
+                                name: { type: String, mean: '公司名称', example: '公司名称' },
+                            }
+                        },
+                        confirm_count: { type: Number, mean: '确认订单数量', example: 1 },
+                        finish_count: { type: Number, mean: '完成订单数量', example: 1 },
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let ret = [];
+                let company = await rbac_lib.get_company_by_token(token);
+                let day_offset = 0;
+                if (body.day_offset)
+                {
+                    day_offset = body.day_offset;
+                }
+                let condition = {
+                    plan_time: moment().add(day_offset, 'days').format('YYYY-MM-DD'), stuffId: {
+                        [db_opt.Op.in]: [],
+                    },
+                    manual_close: false,
+                };
+                let stuff = await company.getStuff({ where: { use_for_buy: false } });
+                for (let index = 0; index < stuff.length; index++) {
+                    const element = stuff[index];
+                    condition.stuffId[db_opt.Op.in].push(element.id);
+                }
+                let plans = await db_opt.get_sq().models.plan.findAll({
+                    where: condition,
+                    group: 'companyId'
+                });
+                for (let index = 0; index < plans.length; index++) {
+                    const element = plans[index];
+                    let customer = await db_opt.get_sq().models.company.findByPk(element.companyId);
+                    let confirm_count = await customer.countPlans({
+                        where: {
+                            ...condition,
+                            status: {
+                                [db_opt.Op.ne]: 0
+                            },
+                        }
+                    });
+                    let finish_count = await customer.countPlans({
+                        where: {
+                            ...condition,
+                            status: 3
+                        }
+                    });
+                    ret.push({
+                        company: customer,
+                        confirm_count: confirm_count,
+                        finish_count: finish_count
+                    })
+                }
+                return { statistic: ret };
+            },
+        },
     },
 }

@@ -85,7 +85,7 @@
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
-                            <fui-button v-if="focus_plan.status == 0 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
+                            <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
                             <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
                                 <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
                                 <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
@@ -113,7 +113,11 @@
             <view class="group_sep">
                 <u-cell-group title="出入信息">
                     <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
-                    <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time"></u-cell>
+                    <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time">
+                    </u-cell>
+                    <module-filter require_module="scale">
+                        <u-cell title="代替司机操作" isLink :url="'/pages/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
+                    </module-filter>
                 </u-cell-group>
             </view>
             <view class="group_sep">

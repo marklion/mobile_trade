@@ -3,10 +3,11 @@
     <list-show ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
         <u-cell v-for="(item, index) in data2show2" :key="index" size="large" :title="item.name" :value="item.price">
             <view slot="label">
-                <view >
+                <view>
                     <fui-tag v-if="item.comment" :text="item.comment" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
                     <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
                     <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" :scaleRatio="0.8" type="warning"></fui-tag>
+                    <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
                     <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" :scaleRatio="0.8" type="primary"></fui-tag>
                     <fui-tag v-else text="用于销售" theme="plain" :scaleRatio="0.8" type="success"></fui-tag>
                 </view>
@@ -39,6 +40,7 @@
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
             <fui-input label="备注" borderTop placeholder="请输入备注" v-model="stuff_ready_fetch.comment"></fui-input>
             <fui-input label="期望单车装载量" borderTop placeholder="请输入期望单车装载量" v-model="stuff_ready_fetch.expect_count"></fui-input>
+            <fui-input label="允许迟到天数" borderTop placeholder="请输入允许迟到天数" v-model="stuff_ready_fetch.delay_days"></fui-input>
             <fui-input label="自动关闭时间点" borderTop placeholder="选择时间，不填就是不关闭" v-model="stuff_ready_fetch.close_time" disabled @click="show_close_time = true">
                 <fui-button v-if="stuff_ready_fetch.close_time" text="取消自动关闭" @click="stuff_ready_fetch.close_time = ''" btnSize="mini" type="warning"></fui-button>
             </fui-input>
@@ -90,7 +92,8 @@ export default {
                 comment: undefined,
                 expect_count: undefined,
                 use_for_buy: false,
-                close_time:'',
+                close_time: '',
+                delay_days: 0,
             },
             show_stuff_fetch: false,
             is_update: false,
@@ -202,12 +205,16 @@ export default {
             this.show_delete = true;
         },
         prepare_update: function (item) {
+            if (item.delay_days == null) {
+                item.delay_days = 0;
+            }
             this.stuff_ready_fetch = {
                 name: item.name,
                 comment: item.comment,
                 expect_count: item.expect_count,
                 use_for_buy: item.use_for_buy,
                 close_time: item.close_time,
+                delay_days: item.delay_days,
             }
             this.show_stuff_fetch = true;
             this.is_update = true;
@@ -222,6 +229,10 @@ export default {
                     name: 'expect_count',
                     rule: ['isAmount'],
                     msg: ['预计装货量请填写数字']
+                }, {
+                    name: 'delay_days',
+                    rule: ['isNumber'],
+                    msg: ['允许迟到天数请填写数字']
                 }];
                 let val_ret = await this.$refs.form.validator(this.stuff_ready_fetch, rules);
                 if (!val_ret.isPassed) {
@@ -229,6 +240,9 @@ export default {
                 }
                 if (this.stuff_ready_fetch.expect_count) {
                     this.stuff_ready_fetch.expect_count = parseFloat(this.stuff_ready_fetch.expect_count);
+                }
+                if (this.stuff_ready_fetch.delay_days) {
+                    this.stuff_ready_fetch.delay_days = parseInt(this.stuff_ready_fetch.delay_days)
                 }
                 await this.$send_req('/stuff/fetch', this.stuff_ready_fetch);
                 uni.startPullDownRefresh();
@@ -250,7 +264,8 @@ export default {
             comment: undefined,
             expect_count: undefined,
             use_for_buy: false,
-            close_time:'',
+            close_time: '',
+            delay_days: 0,
         }
         uni.stopPullDownRefresh();
     },

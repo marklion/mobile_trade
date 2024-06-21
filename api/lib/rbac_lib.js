@@ -384,4 +384,11 @@ module.exports = {
         }
         await user.save();
     },
+    clear_user_bind_info:async function(user) {
+        let urs = await user.getRbac_roles();
+        for (let index = 0; index < urs.length; index++) {
+            const element = urs[index];
+            await this.disconnect_user2role(user.id, element.id);
+        }
+    },
 };

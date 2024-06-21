@@ -23,7 +23,7 @@ Diff Vehicle Plan
                 ${bv}  Search behind Vehicle by Index  ${index}${sub_itr}[id]_${pc}  ${itr}
                 ${dv}  Search Driver by Index  ${index}${sub_itr}[id]_${pc}  ${itr}
                 Append To List  ${all_driver}  ${dv}[phone]
-                Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  ${itr}  2024-09-09  tm  tda  tuf  ${sub_itr}[id]
+                Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  ${itr}  today  tm  tda  tuf  ${sub_itr}[id]
             END
         END
         ${index}  Set Variable  ${index+1}

@@ -18,22 +18,24 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days) {
         let sq = db_opt.get_sq();
-        let stuff_found = await _company.getStuff({ where: { name: _name } });
+        if (use_for_buy == undefined) {
+            use_for_buy = false;
+        }
+        let stuff_found = await _company.getStuff({ where: { name: _name, use_for_buy: use_for_buy } });
         if (stuff_found.length != 1) {
-            stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count });
+            stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count, use_for_buy: use_for_buy});
             await _company.addStuff(stuff_found);
         }
         let ret = {};
-        stuff_found = await _company.getStuff({ where: { name: _name } });
+        stuff_found = await _company.getStuff({ where: { name: _name, use_for_buy: use_for_buy } });
         if (stuff_found.length == 1) {
             stuff_found[0].comment = _comment;
             stuff_found[0].expect_count = _expect_count;
-            if (use_for_buy != undefined) {
-                stuff_found[0].use_for_buy = use_for_buy;
-            }
+            stuff_found[0].use_for_buy = use_for_buy;
             stuff_found[0].close_time = close_time;
+            stuff_found[0].delay_days = delay_days;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
@@ -406,10 +408,9 @@ module.exports = {
             }
         }, force);
     },
-    plan_close: async function (plan, name, is_cancel = false) {
+    plan_close: async function (plan, name, is_cancel = false, no_need_cast = false) {
         let need_verify_balance = false;
-        if (plan.status == 2 && !plan.is_buy)
-        {
+        if (plan.status == 2 && !plan.is_buy) {
             need_verify_balance = true;
         }
         if (plan.status == 3) {
@@ -433,7 +434,9 @@ module.exports = {
             }
         }
         await hook_plan('order_close', plan);
-        wx_api_util.send_plan_status_msg(plan);
+        if (!no_need_cast) {
+            wx_api_util.send_plan_status_msg(plan);
+        }
         if (is_cancel) {
             await this.rp_history_cancel(plan, name);
         }
@@ -514,6 +517,7 @@ module.exports = {
             }
             rollback_content += ':' + msg;
             await plan.save();
+            wx_api_util.send_plan_status_msg(plan)
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
         });
     },
@@ -1116,7 +1120,6 @@ module.exports = {
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
             json.push({
-                id: element.id,
                 create_company: this.place_hold(element.company, { name: '(司机选择)' }).name,
                 accept_company: element.stuff.company.name,
                 stuff_name: element.stuff.name,
@@ -1136,9 +1139,61 @@ module.exports = {
                 ticket_no: element.ticket_no,
             });
         }
+        let columns = [{
+            header: '下单公司',
+            key: 'create_company',
+        }, {
+            header: '接单公司',
+            key: 'accept_company',
+        }, {
+            header: '计划时间',
+            key: 'plan_time',
+        }, {
+            header: '过皮时间',
+            key: 'p_time',
+        }, {
+            header: '过毛时间',
+            key: 'm_time',
+        }, {
+            header: '主车号',
+            key: 'mv',
+        }, {
+            header: '挂车号',
+            key: 'bv',
+        }, {
+            header: '司机姓名',
+            key: 'driver_name',
+        }, {
+            header: '司机电话',
+            key: 'driver_phone',
+        }, {
+            header: '皮重',
+            key: 'p_weight',
+        }, {
+            header: '毛重',
+            key: 'm_weight',
+        }, {
+            header: '装车量',
+            key: 'count',
+        }, {
+            header: '单价',
+            key: 'unit_price',
+        }, {
+            header: '总价',
+            key: 'total_price',
+        }, {
+            header: '铅封号',
+            key: 'seal_no',
+        }, {
+            header: '磅单号',
+            key: 'ticket_no',
+        }, {
+            header: '物料名',
+            key: 'stuff_name',
+        },];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
-        worksheet.columns = Object.keys(json[0]).map(key => ({ header: key, key: key }));
+        worksheet.columns = columns;
         worksheet.addRows(json);
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
@@ -1248,15 +1303,19 @@ module.exports = {
         for (let index = 0; index < stuff.length; index++) {
             const element = stuff[index];
             let close_time = element.close_time;
+            let delay_days = element.delay_days;
+            if (!delay_days) {
+                delay_days = 0;
+            }
             if (close_time.length > 0) {
-                let yestarday = moment().subtract(1, 'days').format('YYYY-MM-DD');
+                let expired_day = moment().subtract(1 - delay_days, 'days').format('YYYY-MM-DD');
                 if (moment().isAfter(moment(close_time, 'HH:mm'))) {
                     let plans = await element.getPlans({
                         where: {
                             [db_opt.Op.and]: [
                                 { status: { [db_opt.Op.ne]: 3 } },
                                 sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                                    [db_opt.Op.lte]: sq.fn('datetime', yestarday)
+                                    [db_opt.Op.lte]: sq.fn('datetime', expired_day)
                                 }),
                             ]
                         }
@@ -1264,7 +1323,7 @@ module.exports = {
                     for (let index = 0; index < plans.length; index++) {
                         try {
                             let plan = await this.get_single_plan_by_id(plans[index].id);
-                            await this.plan_close(plan, '过期自动删除');
+                            await this.plan_close(plan, '过期自动删除', false, true);
                         } catch (error) {
                             console.log(error);
                         }
@@ -1273,64 +1332,56 @@ module.exports = {
             }
         }
     },
-    add_vehicle_team:async function(name, token){
+    add_vehicle_team: async function (name, token) {
         let user = await rbac_lib.get_user_by_token(token);
-        let er = await user.getVehicle_teams({where:{name:name}});
-        if (er.length == 1)
-        {
-            throw {err_msg:'已存在'};
+        let er = await user.getVehicle_teams({ where: { name: name } });
+        if (er.length == 1) {
+            throw { err_msg: '已存在' };
         }
-        else
-        {
-            await user.createVehicle_team({name:name});
+        else {
+            await user.createVehicle_team({ name: name });
         }
     },
-    del_vehicle_team:async function(id, token){
+    del_vehicle_team: async function (id, token) {
         let user = await rbac_lib.get_user_by_token(token);
-        let er = await user.getVehicle_teams({where:{id:id}});
-        if (er.length == 1)
-        {
+        let er = await user.getVehicle_teams({ where: { id: id } });
+        if (er.length == 1) {
             await er[0].destroy();
         }
-        else
-        {
-            throw {err_msg:'未找到'};
+        else {
+            throw { err_msg: '未找到' };
         }
     },
-    add_set2team:async function(mv_plate, bv_plate, dr_name, dr_phone, dr_idcard, vt_id, token){
+    add_set2team: async function (mv_plate, bv_plate, dr_name, dr_phone, dr_idcard, vt_id, token) {
         let user = await rbac_lib.get_user_by_token(token);
-        let vts = await user.getVehicle_teams({where:{id:vt_id}});
-        if (vts.length != 1)
-        {
-            throw {err_msg:'未找到车队'};
+        let vts = await user.getVehicle_teams({ where: { id: vt_id } });
+        if (vts.length != 1) {
+            throw { err_msg: '未找到车队' };
         }
         let vt = vts[0]
         let mv = await this.fetch_vehicle(mv_plate)
         let bv = await this.fetch_vehicle(bv_plate, true)
         let dr = await this.fetch_driver(dr_name, dr_phone, dr_idcard);
-        let er = await vt.getVehicle_sets({where:{mainVehicleId:mv.id}});
-        if (er.length > 0)
-        {
-            throw {err_msg:'主车已存在'};
+        let er = await vt.getVehicle_sets({ where: { mainVehicleId: mv.id } });
+        if (er.length > 0) {
+            throw { err_msg: '主车已存在' };
         }
         await vt.createVehicle_set({
-            mainVehicleId:mv.id,
-            behindVehicleId:bv.id,
-            driverId:dr.id
+            mainVehicleId: mv.id,
+            behindVehicleId: bv.id,
+            driverId: dr.id
         });
     },
-    del_set_from_team:async function(set_id, vt_id, token) {
+    del_set_from_team: async function (set_id, vt_id, token) {
         let user = await rbac_lib.get_user_by_token(token);
-        let vts = await user.getVehicle_teams({where:{id:vt_id}});
-        if (vts.length != 1)
-        {
-            throw {err_msg:'未找到车队'};
+        let vts = await user.getVehicle_teams({ where: { id: vt_id } });
+        if (vts.length != 1) {
+            throw { err_msg: '未找到车队' };
         }
         let vt = vts[0]
-        let sets = await vt.getVehicle_sets({where:{id:set_id}});
-        if (sets.length != 1)
-        {
-            throw {err_msg:'未找到车辆'};
+        let sets = await vt.getVehicle_sets({ where: { id: set_id } });
+        if (sets.length != 1) {
+            throw { err_msg: '未找到车辆' };
         }
         await sets[0].destroy();
     },
@@ -1343,7 +1394,7 @@ module.exports = {
                 include: [
                     { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
                     { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
-                    { model: db_opt.get_sq().models.driver, paranoid: false}
+                    { model: db_opt.get_sq().models.driver, paranoid: false }
                 ]
             }]
         });

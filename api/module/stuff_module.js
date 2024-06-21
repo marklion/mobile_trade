@@ -18,6 +18,7 @@ module.exports = {
                 expect_count: { type: Number, have_to: false, mean: '预期数量', example: 1 },
                 use_for_buy:{type:Boolean, have_to:false, mean:'用于采购', example:false},
                 close_time: { type: String, have_to: false, mean: '关闭时间', example: '12:00:00' },
+                delay_days: { type: Number, have_to: false, mean: '延迟天数', example: 1 },
             },
             result: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -29,10 +30,11 @@ module.exports = {
                 expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
                 use_for_buy:{type:Boolean, mean:'用于采购', example:false},
                 close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
+                delay_days: { type: Number, mean: '延迟天数', example: 1 },
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time);
+                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days);
             }
         },
         get_all: {

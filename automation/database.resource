@@ -3,7 +3,7 @@ Library  DatabaseLibrary
 Resource  var.resource
 
 *** Variables ***
-${DB_PATH}  build/mt.db
+${DB_PATH}  ../build/mt.db
 
 *** Keywords ***
 Get DB Path

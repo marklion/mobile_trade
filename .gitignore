@@ -10,3 +10,6 @@ node_modules/
 results/
 */.hbuilderx/
 */unpackage/
+/automation/log.html
+/automation/report.html
+/automation/output.xml

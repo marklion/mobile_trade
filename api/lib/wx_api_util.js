@@ -1,5 +1,32 @@
 const axios = require('axios');
-const fs = require('fs')
+const fs = require('fs');
+const rbac_lib = require('./rbac_lib');
+const db_opt = require('../db_opt');
+
+async function filter_related_users(module_name, users) {
+    let ret = [];
+    let target_module = await db_opt.get_sq().models.rbac_module.findOne({ where: { name: module_name } })
+    for (let index = 0; index < users.length; index++) {
+        const element = users[index];
+        if (element.open_id) {
+            let roles = await element.getRbac_roles();
+            let found = false
+            for (let index = 0; index < roles.length; index++) {
+                let role = roles[index];
+                if (await target_module.hasRbac_role(role)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                ret.push(element.open_id)
+            }
+        }
+    }
+
+    return ret;
+}
+
 const sleep = (timeout) => {
     return new Promise((resolve) => {
         setTimeout(() => {
@@ -155,12 +182,16 @@ function make_plan_status_msg(plan) {
     let status_array = [
         '待确认', '待验款', '待发车', '已关闭'
     ];
+    let status = plan.status;
+    if (plan.is_buy && status == 1) {
+        status = 2;
+    }
     return {
         thing3: { value: plan.company.name },
         thing5: { value: plan.stuff.name },
         car_number14: { value: plan.main_vehicle.plate },
         thing9: { value: plan.stuff.company.name },
-        const24: { value: status_array[plan.status] },
+        const24: { value: status_array[status] },
     }
 }
 
@@ -326,14 +357,14 @@ module.exports = {
         }
         let tar_array = [plan.rbac_user.open_id];
         let users = await plan.stuff.company.getRbac_users();
-        users.forEach(item => {
-            if (item.open_id) {
-                tar_array.push(item.open_id);
-            }
-        });
-        tar_array.forEach(item => {
+        let module_name = 'sale_management';
+        if (plan.is_buy) {
+            module_name = 'buy_management';
+        }
+        tar_array = tar_array.concat(await filter_related_users(module_name, users));
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req);
+            send_wx_msg({ ...req });
         });
     },
     call_vehicle_msg: async function (plan) {
@@ -356,7 +387,7 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(plan.driver.open_id)
         }
-        send_wx_msg(req);
+        await send_wx_msg(req);
     },
     plan_scale_msg: async function (plan) {
         let req = {
@@ -381,14 +412,14 @@ module.exports = {
         }
         let tar_array = [plan.rbac_user.open_id, plan.driver.open_id];
         let users = await plan.stuff.company.getRbac_users();
-        users.forEach(item => {
-            if (item.open_id) {
-                tar_array.push(item.open_id);
-            }
-        });
-        tar_array.forEach(item => {
+        let module_name = 'sale_management';
+        if (plan.is_buy) {
+            module_name = 'buy_management';
+        }
+        tar_array = tar_array.concat(await filter_related_users(module_name, users));
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req)
+            send_wx_msg({ ...req });
         });
     },
     bidding_start_msg: async function (bidding_name, begin_time, user_open_id) {
@@ -407,7 +438,7 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(user_open_id)
         }
-        send_wx_msg(req)
+        await send_wx_msg(req)
     },
     bidding_price_msg: async function (bc, price_user, price) {
         let stuff = await bc.getStuff()
@@ -429,14 +460,10 @@ module.exports = {
         let tar_array = [];
         let company = await stuff.getCompany()
         let users = await company.getRbac_users();
-        users.forEach(item => {
-            if (item.open_id) {
-                tar_array.push(item.open_id);
-            }
-        });
-        tar_array.forEach(item => {
+        tar_array = tar_array.concat(await filter_related_users('bid', users));
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req)
+            send_wx_msg({ ...req });
         });
     },
     bidding_finish_msg: async function (bc) {
@@ -459,11 +486,7 @@ module.exports = {
         let tar_array = [];
         let company = await stuff.getCompany()
         let users = await company.getRbac_users();
-        users.forEach(item => {
-            if (item.open_id) {
-                tar_array.push(item.open_id);
-            }
-        });
+        tar_array = tar_array.concat(await filter_related_users('bid', users));
         let bt = await bc.getBidding_turns();
         for (let index = 0; index < bt.length; index++) {
             const element = bt[index];
@@ -476,9 +499,9 @@ module.exports = {
             }
         }
 
-        tar_array.forEach(item => {
+        tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg(req)
+            send_wx_msg({ ...req });
         });
     },
 }

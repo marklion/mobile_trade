@@ -1,6 +1,5 @@
 const axios = require('axios');
 const db_opt = require('../db_opt');
-const plan_lib = require('../lib/plan_lib');
 async function post_to_hd(url, data) {
     let company = await db_opt.get_sq().models.company.findOne({ where: { name: '内蒙古汇能煤化工有限公司' } })
     let url_prefix = '';
@@ -34,8 +33,26 @@ async function get_base_id_by_name(name) {
     }
     return ret;
 }
+function plan_detail_include() {
+    return [
+        { model: db_opt.get_sq().models.company, paranoid: false },
+        { model: db_opt.get_sq().models.rbac_user, paranoid: false },
+        { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
+        { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
+        { model: db_opt.get_sq().models.driver, paranoid: false },
+        { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company], paranoid: false },
+        { model: db_opt.get_sq().models.plan_history, order: [[db_opt.get_sq().fn('datetime', db_opt.get_sq().col('time')), 'ASC']], paranoid: false }
+    ];
+}
+async function pri_get_single_plan_by_id(_plan_id) {
+    let ret = {};
+    let sq = db_opt.get_sq();
+    ret = await sq.models.plan.findByPk(_plan_id, { include: plan_detail_include() });
+
+    return ret;
+}
 async function make_plan_basic_req(plan_id, is_change = false) {
-    let plan = await plan_lib.get_single_plan_by_id(plan_id);
+    let plan = await pri_get_single_plan_by_id(plan_id);
     let req = {
         id: 'n' + plan.id,
         plateNo: plan.main_vehicle.plate,
@@ -64,7 +81,7 @@ async function make_plan_basic_req(plan_id, is_change = false) {
         req.supplierId = await get_base_id_by_name(req.supplierName);
         req.vehicleTeamName = plan.trans_company_name;
         req.vehicleTeamId = await get_base_id_by_name(req.vehicleTeamName);
-        req.companyName= '';
+        req.companyName = '';
         req.customerId = '';
         req.isSale = false;
     }

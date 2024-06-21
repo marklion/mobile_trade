@@ -1,6 +1,8 @@
 *** Settings ***
 Resource  ../rbac/rbac_curd.resource
 Resource  ../database.resource
+Library  DateTime
+
 
 *** Variables ***
 &{sale_company}
@@ -233,28 +235,36 @@ Clean Up Sale and Buy
     Clean Up Companies And Users
 
 Create A Order
-    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${order_stuff}[id]
+    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${order_stuff}[id]
+    ${cur_date}  Set Variable  ${plan_time}
+    IF  $plan_time == 'today'
+        ${cur_date}  Get Current Date  result_format=%Y-%m-%d
+    END
     ${req}  Create Dictionary
     ...    behind_vehicle_id=${bv_id}
     ...    main_vehicle_id=${mv_id}
     ...    driver_id=${dv_id}
     ...    comment=${comment}
     ...    drop_address=${drop_address}
-    ...    plan_time=${plan_time}
+    ...    plan_time=${cur_date}
     ...    stuff_id=${stuff_id}
     ...    price=${23}
     ${resp}  Req to Server  /supplier/order_sale_create  ${token}  ${req}
     RETURN  ${resp}
 
 Create A Plan
-    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=2024-09-01 13:00:00  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${test_stuff}[id]
+    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${test_stuff}[id]
+    ${cur_date}  Set Variable  ${plan_time}
+    IF  $plan_time == 'today'
+        ${cur_date}  Get Current Date  result_format=%Y-%m-%d
+    END
     ${req}  Create Dictionary
     ...    behind_vehicle_id=${bv_id}
     ...    main_vehicle_id=${mv_id}
     ...    driver_id=${dv_id}
     ...    comment=${comment}
     ...    drop_address=${drop_address}
-    ...    plan_time=${plan_time}
+    ...    plan_time=${cur_date}
     ...    stuff_id=${stuff_id}
     ...    use_for=${use_for}
     ${resp}  Req to Server  /customer/order_buy_create  ${token}  ${req}

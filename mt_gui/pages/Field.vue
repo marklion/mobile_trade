@@ -23,7 +23,7 @@
                             <fui-button btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
                         </view>
                         <view v-else>
-                            <fui-button btnSize="mini" text="确认装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
+                            <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
                             <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
                         </view>
                     </view>

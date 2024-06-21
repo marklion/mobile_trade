@@ -21,6 +21,11 @@ async function make_plan_resp(plan) {
     if (full_plan.company) {
         company_name = full_plan.company.name;
     }
+    let trans_company_name = full_plan.trans_company_name;
+    if (!trans_company_name)
+    {
+        trans_company_name = company_name;
+    }
     return {
         id: 'n' + full_plan.id,
         plateNo: full_plan.main_vehicle.plate,
@@ -41,8 +46,8 @@ async function make_plan_resp(plan) {
         driverId: full_plan.driver.id_card,
         supplierName: company_name,
         supplierId: await get_base_id_by_name(company_name),
-        vehicleTeamName: company_name,
-        vehicleTeamId: await get_base_id_by_name(company_name),
+        vehicleTeamName: trans_company_name,
+        vehicleTeamId: await get_base_id_by_name(trans_company_name),
         tmd_no: '',
         attachUrl: full_plan.enter_attachment,
         sale_address: full_plan.drop_address,
@@ -158,18 +163,42 @@ module.exports = {
             };
             res.send(ret);
         });
+        app.get('/pa_rest/get_all_balance', async (req, res) => {
+            var token = req.query.token;
+            var ret = { err_msg: '无权限' };
+            try {
+                let company = await rbac_lib.get_company_by_token(token);
+                let all_contracts = await company.getSale_contracts();
+                let result = [];
+                for (let index = 0; index < all_contracts.length; index++) {
+                    const element = all_contracts[index];
+                    let cust = await element.getBuy_company();
+                    result.push({
+                        customerName: cust.name,
+                        balance: element.balance,
+                    });
+                }
+                ret.result = result;
+            } catch (error) {
+                ret = { err_msg: error.msg };
+            }
+
+            res.send(ret);
+        });
         app.post('/pa_rest/push_weight', async (req, res) => {
+            console.log(`Received request for /pa_rest/push_weight: ${JSON.stringify(req.body)}`); // 打印请求
             var token = req.query.token;
             var ret = { err_msg: '无权限' };
             try {
                 let req_body = req.body;
                 let plan_id = parseInt(req_body.id.substr(1, req_body.id.length - 1));
-                await plan_lib.deliver_plan(plan_id, token, req_body.jWeight, req_body.pWeight, req_body.mWeight, req_body.pTime, req_body.mTime, req_body.ticketNo, req_body.sealNo);
+                await plan_lib.deliver_plan(plan_id, token, parseFloat(req_body.jWeight), parseFloat(req_body.pWeight), parseFloat(req_body.mWeight), req_body.pTime, req_body.mTime, req_body.ticketNo, req_body.sealNo);
                 ret = { err_msg: '' };
             } catch (error) {
                 console.log(error);
                 ret = { err_msg: error.err_msg};
             }
+            console.log(`Response sent for /pa_rest/push_weight: ${JSON.stringify(ret)}`); // 打印响应
             res.send(ret);
         });
         app.post('/pa_rest/push_base', async (req, res) => {
@@ -330,6 +359,7 @@ module.exports = {
             res.send(ret);
         });
         app.post('/pa_rest/cancel_plan', async (req, res) => {
+            console.log(`Received request for /pa_rest/cancel_plan: ${JSON.stringify(req.body)}`); // 打印请求
             var token = req.query.token;
             var ret = { err_msg: '无权限' };
             try {
@@ -342,6 +372,7 @@ module.exports = {
                 ret = { err_msg: error.err_msg};
             }
             res.send(ret);
+            console.log(`Response sent for /pa_rest/cancel_plan: ${JSON.stringify(ret)}`); // 打印响应
         });
     }
 }
