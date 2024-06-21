@@ -762,6 +762,8 @@ module.exports = {
                 let open_id = await wx_api_util.get_open_id_by_code(body.open_id_code);
                 let company = await rbac_lib.add_company(body.company_name);
                 let user = await rbac_lib.add_user(phone);
+                user.open_id = open_id;
+                await user.save();
                 let orig_company = await user.getCompany();
                 if (orig_company) {
                     if (orig_company.id != company.id) {
