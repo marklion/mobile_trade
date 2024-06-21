@@ -170,7 +170,7 @@ Cancel While Payed
     Confirm A Plan  ${plan}
     Manual Pay A Plan  ${plan}
     Cancel A Plan    ${plan}
-    Check New Status And History  ${plan}  3  关闭
+    Check New Status And History  ${plan}  3  取消
 Cancel Check In While Payed
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
