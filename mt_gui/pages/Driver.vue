@@ -247,6 +247,26 @@ export default {
                         value: item.enter_count,
                     });
                 };
+                let enter_permit = false;
+                if (item.stuff.no_need_register) {
+                    enter_permit = true;
+                    if (item.stuff.need_enter_weight && item.enter_count <= 0) {
+                        enter_permit = false;
+                    }
+                    if (item.company.id == 0) {
+                        enter_permit = false;
+                    }
+                } else {
+                    if (item.call_time) {
+                        enter_permit = true;
+                    }
+                }
+                ret.list.push({
+                    label: '是否可进',
+                    value: enter_permit ? '可以进厂' : '不可进厂',
+                    labelColor: enter_permit ? 'green' : 'red',
+                    valueColor: enter_permit ? 'green' : 'red'
+                });
                 if (!item.stuff.no_need_register) {
                     if (item.register_time) {
                         ret.list.push({

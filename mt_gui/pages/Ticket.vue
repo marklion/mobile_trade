@@ -7,6 +7,7 @@
         <fui-avatar mode="widthFix" shape="square" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
     </view>
     <fui-button text="下载磅单图片" @click="download_pic" type="primary"></fui-button>
+    <fui-button text="转发给好友" type="success" open-type="share"></fui-button>
 </view>
 </template>
 
@@ -21,6 +22,7 @@ export default {
             qr_code: '',
             stamp_path: '',
             id: 0,
+            main_vehicle_plate: '',
         }
     },
     methods: {
@@ -58,6 +60,7 @@ export default {
         let ticket = await this.$send_req('/global/get_ticket', {
             id: plan_id
         });
+        this.main_vehicle_plate = ticket.plate;
         let dec_title = '出厂';
         if (ticket.is_buy) {
             dec_title = '入厂';
@@ -105,6 +108,12 @@ export default {
                 label: '运输公司',
                 value: ticket.trans_company_name,
             })
+        }
+    },
+    onShareAppMessage: function () {
+        return {
+            title: this.main_vehicle_plate + '的磅单',
+            path: '/pages/Ticket?id=' + this.id,
         }
     },
 }

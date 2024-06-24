@@ -14,11 +14,9 @@
                 <fui-icon v-if="!company_filter.id" name="arrowright" size="32" @click="show_company_filter= true"></fui-icon>
                 <fui-icon v-else name="close" size="32" @click="reset_company_filter"></fui-icon>
             </fui-tag>
-            <fui-tag v-if="focus_status == 0" type="primary" text="批量确认" @click="batch_confirm">
-            </fui-tag>
         </module-filter>
         <module-filter :rm_array="['customer', 'supplier']">
-            <fui-tag type="primary" text="批量复制" @click="show_batch_copy = true">
+            <fui-tag type="primary" text="全部复制" @click="show_batch_copy = true">
             </fui-tag>
         </module-filter>
 
@@ -34,7 +32,7 @@
                 </fui-tag>
                 <fui-tag type="danger" text="反选" @click="select_other">
                 </fui-tag>
-                <fui-tag type="primary" v-if="plan_selected.length > 0" text="操作" @click="action_show = true">
+                <fui-tag type="primary" v-if="plan_selected.length > 0" :text="plan_selected.length + '项批量操作'" @click="action_show = true">
                 </fui-tag>
             </view>
         </view>

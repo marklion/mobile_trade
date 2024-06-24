@@ -166,6 +166,9 @@ module.exports = {
                     for (let index = 0; index < ret.plans.length; index++) {
                         const element = ret.plans[index];
                         let wc = await plan_lib.get_wait_count(element);
+                        if (!element.register_comment) {
+                            element.register_comment = '';
+                        }
                         if (wc > 0) {
                             element.register_comment += ' 还需要等待' + wc + '辆车';
                         }

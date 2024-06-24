@@ -65,7 +65,7 @@
     <fui-date-picker range :show="show_date_range" type="3" :value="new_contract.begin_time" :valueEnd="new_contract.end_time" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
-            <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
+            <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls.buy_setting]" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2contract(item)">
                     {{item.name}}
                 </fui-list-cell>
@@ -171,8 +171,8 @@ export default {
             this.cur_urls.buy_setting = e.buy_setting;
             this.$nextTick(() => {
                 this.$refs.contracts.refresh();
+                this.$refs.stuff_got.refresh();
             });
-            console.log(this.cur_urls.buy_setting);
         },
         init_top_seg: function () {
             this.seg = []
@@ -182,6 +182,7 @@ export default {
                     get_url: '/customer/contract_get',
                     need_su: false,
                     motive: false,
+                    buy_setting: false,
                 });
             }
             if (this.$has_module('sale_management')) {
@@ -192,6 +193,7 @@ export default {
                     del_url: '/sale_management/contract_destroy',
                     need_su: true,
                     motive: true,
+                    buy_setting: false,
                 });
             }
             if (this.$has_module('supplier')) {
@@ -200,6 +202,7 @@ export default {
                     get_url: '/supplier/contract_get',
                     need_su: false,
                     motive: false,
+                    buy_setting: false,
                 });
             }
             if (this.$has_module('buy_management')) {
@@ -246,8 +249,8 @@ export default {
             if (detail.index == 1) {
                 let rules = [{
                     name: 'cash',
-                    rule: ['required'],
-                    msg: ['请输入金额']
+                    rule: ['required', 'isAmount'],
+                    msg: ['请输入金额', '金额必须为数字']
                 }, {
                     name: 'comment',
                     rule: ['required'],
@@ -337,14 +340,21 @@ export default {
             uni.startPullDownRefresh();
             this.show_add_stuff = false;
         },
-        get_stuff: async function (pageNo) {
+        get_stuff: async function (pageNo, [buy_setting]) {
             if (this.$has_module('stuff') == false) {
                 return [];
             }
-            let ret = await this.$send_req('/stuff/get_all', {
+            let resp = await this.$send_req('/stuff/get_all', {
                 pageNo: pageNo
             });
-            return ret.stuff;
+            let ret = []
+            console.log(buy_setting);
+            resp.stuff.forEach(ele => {
+                if (ele.use_for_buy == buy_setting) {
+                    ret.push(ele)
+                }
+            });
+            return ret
         },
         prepare_add_stuff: function (item) {
             this.focus_item = item;

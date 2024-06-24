@@ -12,6 +12,7 @@
         </view>
         <module-filter require_module="sale_management">
             <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
+                <u-radio  label="昨天" :name="-1"></u-radio>
                 <u-radio  label="今天" :name="0"></u-radio>
                 <u-radio  label="明天" :name="1"></u-radio>
             </u-radio-group>
