@@ -100,6 +100,13 @@
                     </u-cell>
                     <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
+                    <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
+                        <u-cell title="余额" :value="cur_contract.balance" :label="user_authorize">
+                            <view slot="right-icon">
+                                <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
+                            </view>
+                        </u-cell>
+                    </module-filter>
                     <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
@@ -334,6 +341,10 @@ export default {
     },
     data: function () {
         return {
+            cur_contract: {
+                balance: 0,
+                rbac_users: [],
+            },
             action_show: false,
             action_list: () => {
                 return [{
@@ -530,6 +541,16 @@ export default {
         }
     },
     computed: {
+        user_authorize: function () {
+            let ret = '未授权';
+            this.cur_contract.rbac_users.forEach(ele => {
+                if (ele.id == this.focus_plan.rbac_user.id) {
+                    ret = '已授权';
+                }
+            });
+
+            return ret;
+        },
         plan_status: function () {
             let ret = '';
             if (this.focus_plan.status == 0) {
@@ -966,7 +987,21 @@ export default {
             this.confirm_info = info;
             this.xxx_url = url;
         },
-        prepare_plan_detail: function (item) {
+        authorize_user:async function() {
+            await this.$send_req('/sale_management/authorize_user', {
+                contract_id:this.cur_contract.id,
+                phone:this.focus_plan.rbac_user.phone,
+            })
+            this.show_plan_detail = false;
+            this.refresh_plans();
+        },
+        prepare_plan_detail: async function (item) {
+            if (!item.is_buy && this.$has_module('sale_management')) {
+                let resp = await this.$send_req('/sale_management/get_contract_by_customer', {
+                    customer_id: item.company.id,
+                })
+                this.cur_contract = resp;
+            }
             this.focus_plan = item;
             this.show_plan_detail = true;
         },

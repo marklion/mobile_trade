@@ -591,11 +591,13 @@ module.exports = {
     },
     manual_pay_plan: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 1, async (plan) => {
-            plan.status = 2;
-            wx_api_util.send_plan_status_msg(plan);
-            await plan.save();
-            await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
-            hook_plan('order_ready', plan);
+            if (!plan.is_buy) {
+                plan.status = 2;
+                wx_api_util.send_plan_status_msg(plan);
+                await plan.save();
+                await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                hook_plan('order_ready', plan);
+            }
         });
     },
     dup_plan: async function (plan, token) {
@@ -1137,7 +1139,7 @@ module.exports = {
                 total_price: this.place_hold(element.unit_price, 0) * this.place_hold(element.count, 0),
                 seal_no: element.seal_no,
                 ticket_no: element.ticket_no,
-                drop_address:element.drop_address,
+                drop_address: element.drop_address,
             });
         }
         let columns = [{
@@ -1191,7 +1193,7 @@ module.exports = {
         }, {
             header: '物料名',
             key: 'stuff_name',
-        },{
+        }, {
             header: '卸货地址',
             key: 'drop_address',
         }];
