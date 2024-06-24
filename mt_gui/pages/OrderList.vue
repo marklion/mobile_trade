@@ -21,27 +21,48 @@
             <fui-tag type="primary" text="批量复制" @click="show_batch_copy = true">
             </fui-tag>
         </module-filter>
+
         <view style="display:flex; align-items: center;">
             显示取消计划
             <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
+            <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
+            </fui-tag>
+            <view v-else style="display:flex; align-items: center;">
+                <fui-tag type="warning" text="关闭多选" @click="select_active = false">
+                </fui-tag>
+                <fui-tag type="success" text="全选" @click="select_all">
+                </fui-tag>
+                <fui-tag type="danger" text="反选" @click="select_other">
+                </fui-tag>
+                <fui-tag type="primary" v-if="plan_selected.length > 0" text="操作" @click="action_show = true">
+                </fui-tag>
+            </view>
         </view>
     </view>
+    <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
         <fui-button slot="right-icon" text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
     </u-cell>
     <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
-    <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
-        <view v-for="item in sp_data2show" :key="item.id">
-            <u-cell :icon="get_status_icon(item)" :title="item.company_show + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
-                <view slot="value" style="display:flex; flex-direction: column;">
-                    <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
-                    <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
-                    <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
-                </view>
-            </u-cell>
-        </view>
-    </list-show>
+    <u-checkbox-group v-model="plan_selected" placement="column">
+        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
+            <view v-for="item in sp_data2show" :key="item.id">
+                <u-cell :title="item.company_show + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
+                    <view slot="icon" style="display:flex;">
+                        <u-checkbox :name="item.id" shape="circle" v-if="select_active">
+                        </u-checkbox>
+                        <u-icon :name="get_status_icon(item)"></u-icon>
+                    </view>
+                    <view slot="value" style="display:flex; flex-direction: column;">
+                        <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
+                        <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
+                        <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
+                        <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
+                    </view>
+                </u-cell>
+            </view>
+        </list-show>
+    </u-checkbox-group>
     <module-filter require_module="stuff">
         <fui-bottom-popup :show="show_stuff_list" @close="show_stuff_list = false">
             <fui-list>
@@ -315,6 +336,21 @@ export default {
     },
     data: function () {
         return {
+            action_show: false,
+            action_list: () => {
+                return [{
+                    text: "批量确认",
+                    url: this.cur_confirm_url,
+                }, {
+                    text: '批量验款',
+                    url: '/sale_management/order_sale_pay'
+                }, {
+                    text: '批量取消',
+                    url: this.cur_close_url ? this.cur_close_url : this.cur_cancel_url,
+                }]
+            },
+            select_active: false,
+            plan_selected: [],
             show_update: false,
             update_req: {
                 main_vehicle_plate: '',
@@ -544,6 +580,33 @@ export default {
         },
     },
     methods: {
+        do_action: async function (e) {
+            for (let index = 0; index < this.plan_selected.length; index++) {
+                const element = this.plan_selected[index];
+                try {
+                    await this.$send_req(e.url, {
+                        plan_id: element
+                    });
+                } catch (error) {
+                    console.log(error);
+                }
+            }
+            this.action_show = false;
+            this.refresh_plans();
+        },
+        select_all: function () {
+            this.plan_selected = this.sp_data2show.map(item => item.id);
+        },
+        select_other: function () {
+            let orig_selected = this.plan_selected;
+            this.sp_data2show.forEach(item => {
+                if (orig_selected.indexOf(item.id) == -1) {
+                    this.plan_selected.push(item.id);
+                } else {
+                    this.plan_selected = this.plan_selected.filter(ele => ele != item.id);
+                }
+            });
+        },
         update_plan: async function (e) {
             if (e.index == 1) {
                 let rules = [{
