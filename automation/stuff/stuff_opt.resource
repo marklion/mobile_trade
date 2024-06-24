@@ -370,10 +370,25 @@ Get Latest History Node
     Reverse List  ${history}
     RETURN  ${history}[0]
 
-Update A Plan
+Update Plan by Creator
     [Arguments]  ${plan_id}  &{update_info}
     Set To Dictionary  ${update_info}  plan_id=${plan_id}
     Req to Server  /customer/order_buy_update  ${bc1_user_token}  ${update_info}
+
+Update Plan by Owner
+    [Arguments]  ${plan_id}  &{update_info}
+    Set To Dictionary  ${update_info}  plan_id=${plan_id}
+    Req to Server  /sale_management/order_update  ${sc_admin_token}  ${update_info}
+
+Update Order by Creator
+    [Arguments]  ${plan_id}  &{update_info}
+    Set To Dictionary  ${update_info}  plan_id=${plan_id}
+    Req to Server  /supplier/order_sale_update  ${bc1_user_token}  ${update_info}
+
+Update Order by Owner
+    [Arguments]  ${plan_id}  &{update_info}
+    Set To Dictionary  ${update_info}  plan_id=${plan_id}
+    Req to Server  /buy_management/order_update  ${sc_admin_token}  ${update_info}
 
 Cancel A Order
     [Arguments]  ${plan}

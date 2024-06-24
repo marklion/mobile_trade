@@ -103,12 +103,16 @@
                 </u-cell-group>
             </view>
             <view class="group_sep">
-                <u-cell-group title="车辆信息">
-                    <u-cell title="主车" :value="focus_plan.main_vehicle.plate"></u-cell>
-                    <u-cell title="挂车" :value="focus_plan.behind_vehicle.plate"></u-cell>
-                    <u-cell :title="'司机:' + focus_plan.driver.name" :value="focus_plan.driver.phone" clickable @click="copy_text(focus_plan.driver.phone)"></u-cell>
-                    <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
-                </u-cell-group>
+                <u-cell title="车辆信息">
+                    <view slot="right-icon">
+                        <fui-button type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
+                    </view>
+                </u-cell>
+                <u-cell title="主车" :value="focus_plan.main_vehicle.plate">
+                </u-cell>
+                <u-cell title="挂车" :value="focus_plan.behind_vehicle.plate"></u-cell>
+                <u-cell :title="'司机:' + focus_plan.driver.name" :value="focus_plan.driver.phone" clickable @click="copy_text(focus_plan.driver.phone)"></u-cell>
+                <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
             </view>
             <view class="group_sep">
                 <u-cell-group title="出入信息">
@@ -283,6 +287,14 @@
     </fui-modal>
     <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
     </fui-modal>
+    <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
+        <fui-form ref="plan_update" :model="update_req">
+            <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
+            <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
+            <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
+            <fui-input label="备注" v-model="update_req.comment"></fui-input>
+        </fui-form>
+    </fui-modal>
 </view>
 </template>
 
@@ -303,6 +315,12 @@ export default {
     },
     data: function () {
         return {
+            show_update: false,
+            update_req: {
+                main_vehicle_plate: '',
+                behind_vehicle_plate: '',
+                driver_phone: '',
+            },
             rollback_msg: '',
             use_for_array: [
                 '气化', '气站', '其他'
@@ -341,6 +359,7 @@ export default {
             cur_batch_confirm_url: '',
             cur_confirm_url: '',
             cur_rollback_url: '',
+            cur_update_url: '',
             cur_cancel_url: '',
             cur_dup_url: '',
             cur_close_url: '',
@@ -525,6 +544,53 @@ export default {
         },
     },
     methods: {
+        update_plan: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                        name: 'main_vehicle_plate',
+                        rule: ['isCarNo'],
+                        msg: ['请填写正确的车牌号']
+                    },
+                    {
+                        name: 'behind_vehicle_plate',
+                        rule: ['isCarNo'],
+                        msg: ['请填写正确的车牌号']
+                    }, {
+                        name: 'driver_phone',
+                        rule: ['isMobile'],
+                        msg: ['请填写正确的手机号']
+                    }
+                ];
+                let val_ret = await this.$refs.plan_update.validator(this.update_req, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                if (this.update_req.main_vehicle_plate == this.focus_plan.main_vehicle.plate) {
+                    delete this.update_req.main_vehicle_plate;
+                }
+                if (this.update_req.behind_vehicle_plate == this.focus_plan.behind_vehicle.plate) {
+                    delete this.update_req.behind_vehicle_plate;
+                }
+                if (this.update_req.driver_phone == this.focus_plan.driver.phone) {
+                    delete this.update_req.driver_phone;
+                }
+                if (this.update_req.comment == this.focus_plan.comment) {
+                    delete this.update_req.comment;
+                }
+                this.update_req.plan_id = this.focus_plan.id;
+                await this.$send_req(this.cur_update_url, this.update_req);
+                this.refresh_plans();
+                this.show_plan_detail = false;
+            }
+            this.show_update = false;
+        },
+        prepare_update: function () {
+            this.show_update = true;
+            this.update_req.main_vehicle_plate = this.focus_plan.main_vehicle.plate;
+            this.update_req.behind_vehicle_plate = this.focus_plan.behind_vehicle.plate;
+            this.update_req.driver_phone = this.focus_plan.driver.phone;
+            this.update_req.comment = this.focus_plan.comment;
+        },
         choose_use_for: function (_name) {
             this.dup_plan.use_for = _name;
             this.show_use_for = false;
@@ -871,6 +937,7 @@ export default {
             this.cur_batch_confirm_url = e.batch_url;
             this.cur_confirm_url = e.confirm_url;
             this.cur_rollback_url = e.rollback_url;
+            this.cur_update_url = e.update_url;
             this.cur_close_url = e.close_url;
             this.cur_cancel_url = e.cancel_url;
             this.cur_dup_url = e.dup_url;
@@ -1004,6 +1071,7 @@ export default {
                     url: '/customer/order_buy_search',
                     cancel_url: '/customer/order_buy_cancel',
                     dup_url: '/customer/batch_copy',
+                    update_url: '/customer/order_buy_update',
                     motion: true,
                     is_buy: false,
                 });
@@ -1016,6 +1084,7 @@ export default {
                     confirm_url: '/sale_management/order_sale_confirm',
                     rollback_url: '/sale_management/order_rollback',
                     close_url: '/sale_management/close',
+                    update_url: '/sale_management/order_update',
                     motion: false,
                     is_buy: false,
                 });
@@ -1026,6 +1095,7 @@ export default {
                     url: '/supplier/order_sale_search',
                     cancel_url: '/supplier/order_sale_cancel',
                     dup_url: '/supplier/batch_copy',
+                    update_url: '/supplier/order_sale_update',
                     motion: true,
                     is_buy: true,
                 });
@@ -1038,6 +1108,7 @@ export default {
                     confirm_url: '/buy_management/order_buy_confirm',
                     rollback_url: '/buy_management/order_rollback',
                     close_url: '/buy_management/close',
+                    update_url: '/buy_management/order_update',
                     motion: false,
                     is_buy: true,
                 });
@@ -1051,6 +1122,7 @@ export default {
                 this.cur_dup_url = this.seg[0].dup_url;
                 this.cur_confirm_url = this.seg[0].confirm_url;
                 this.cur_rollback_url = this.seg[0].rollback_url;
+                this.cur_update_url = this.seg[0].update_url;
                 this.cur_close_url = this.seg[0].close_url;
                 this.init_tabs();
             }

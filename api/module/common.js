@@ -65,6 +65,45 @@ module.exports = {
             return await plan_lib.fetch_vehicle(body.plate, (lastChar === '挂'));
         },
     },
+    order_update: {
+        name: '更新订单',
+        description: '更新订单',
+        is_write: true,
+        is_get_api: false,
+        params: {
+            plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            plan_time: { type: String, have_to: false, mean: '计划时间', example: '2020-01-01 12:00:00' },
+            main_vehicle_plate: { type: String, have_to: false, mean: '主车车牌', example: '主车车牌' },
+            behind_vehicle_plate: { type: String, have_to: false, mean: '挂车车牌', example: '挂车车牌' },
+            driver_phone: { type: String, have_to: false, mean: '司机电话', example: '19999991111' },
+            comment: { type: String, have_to: false, mean: '备注', example: '备注' },
+            use_for: { type: String, have_to: false, mean: '用途', example: '用途' },
+            drop_address: { type: String, have_to: false, mean: '卸货地址', example: '卸货地址' },
+        },
+        result: {
+            result: { type: Boolean, mean: '结果', example: true }
+        },
+        func: async function (body, token) {
+            let main_vehicle_id = undefined;
+            if (body.main_vehicle_plate)
+            {
+                main_vehicle_id = (await plan_lib.fetch_vehicle(body.main_vehicle_plate, false)).id;
+            }
+            let behind_vehicle_id = undefined;
+            if (body.behind_vehicle_plate)
+            {
+                behind_vehicle_id = (await plan_lib.fetch_vehicle(body.behind_vehicle_plate, true)).id;
+            }
+            let driver_id = undefined;
+            if (body.driver_phone)
+            {
+                let orig_driver = (await plan_lib.get_single_plan_by_id(body.plan_id)).driver;
+                driver_id = (await plan_lib.fetch_driver(orig_driver.name, body.driver_phone, orig_driver.id_card)).id;
+            }
+            await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, main_vehicle_id, behind_vehicle_id, driver_id, body.comment, body.use_for, body.drop_address);
+            return { result: true };
+        },
+    },
     get_vehicle_pair: {
         name: '获取车辆历史数据',
         description: '获取车辆历史数据',
@@ -90,7 +129,7 @@ module.exports = {
             }
         }
     },
-    do_export_later:do_export_later,
+    do_export_later: do_export_later,
     export_plans: function (func) {
         return {
             name: '导出计划',
