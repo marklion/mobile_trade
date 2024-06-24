@@ -591,11 +591,13 @@ module.exports = {
     },
     manual_pay_plan: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 1, async (plan) => {
-            plan.status = 2;
-            wx_api_util.send_plan_status_msg(plan);
-            await plan.save();
-            await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
-            hook_plan('order_ready', plan);
+            if (!plan.is_buy) {
+                plan.status = 2;
+                wx_api_util.send_plan_status_msg(plan);
+                await plan.save();
+                await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                hook_plan('order_ready', plan);
+            }
         });
     },
     dup_plan: async function (plan, token) {
@@ -1130,13 +1132,14 @@ module.exports = {
                 bv: element.behind_vehicle.plate,
                 driver_name: element.driver.name,
                 driver_phone: element.driver.phone,
-                p_weight: this.place_hold(element.p_weight, 0).toFixed(2),
-                m_weight: this.place_hold(element.m_weight, 0).toFixed(2),
-                count: this.place_hold(element.count).toFixed(2),
-                unit_price: element.unit_price.toFixed(2),
-                total_price: (this.place_hold(element.unit_price, 0) * this.place_hold(element.count, 0)).toFixed(2),
+                p_weight: this.place_hold(element.p_weight, 0),
+                m_weight: this.place_hold(element.m_weight, 0),
+                count: this.place_hold(element.count),
+                unit_price: element.unit_price,
+                total_price: this.place_hold(element.unit_price, 0) * this.place_hold(element.count, 0),
                 seal_no: element.seal_no,
                 ticket_no: element.ticket_no,
+                drop_address: element.drop_address,
             });
         }
         let columns = [{
@@ -1190,11 +1193,20 @@ module.exports = {
         }, {
             header: '物料名',
             key: 'stuff_name',
-        },];
+        }, {
+            header: '卸货地址',
+            key: 'drop_address',
+        }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
         worksheet.columns = columns;
         worksheet.addRows(json);
+        worksheet.getColumn('p_weight').numFmt = '0.00';
+        worksheet.getColumn('m_weight').numFmt = '0.00';
+        worksheet.getColumn('count').numFmt = '0.00';
+        worksheet.getColumn('unit_price').numFmt = '0.00';
+        worksheet.getColumn('total_price').numFmt = '0.00';
+
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
         return file_name;

@@ -100,6 +100,7 @@ module.exports = {
                 width: 20
             }];
             worksheet.addRows(json);
+            worksheet.getColumn('cash_increased').numFmt = '0.00';
             let file_name = '/uploads/balance' + uuid.v4() + '.xlsx';
             await workbook.xlsx.writeFile('/database' + file_name);
             return file_name;

@@ -102,7 +102,7 @@ module.exports = {
                     new_plan.unit_price = body.price
                     new_plan.status = 0;
                     new_plan.is_repeat = body.is_repeat;
-                    new_plan.is_proxy = true;
+                    new_plan.is_proxy = is_proxy;
                     new_plan.is_buy = true;
                     new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();

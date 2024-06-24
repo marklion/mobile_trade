@@ -408,7 +408,11 @@ module.exports = {
                 character_string10: {
                     value: plan.count.toFixed(2),
                 },
-            }
+            },
+            miniprogram: {
+                appid: appid,
+                pagepath: 'pages/Ticket?id=' + plan.id
+            },
         }
         let tar_array = [plan.rbac_user.open_id, plan.driver.open_id];
         let users = await plan.stuff.company.getRbac_users();
