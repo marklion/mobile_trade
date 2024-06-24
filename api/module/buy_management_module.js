@@ -8,6 +8,7 @@ module.exports = {
     name: 'buy_management',
     description: '采购管理',
     methods: {
+        order_update:common.order_update,
         contract_make: {
             name: '生成合同',
             description: '生成合同',

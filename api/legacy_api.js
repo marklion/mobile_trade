@@ -22,8 +22,7 @@ async function make_plan_resp(plan) {
         company_name = full_plan.company.name;
     }
     let trans_company_name = full_plan.trans_company_name;
-    if (!trans_company_name)
-    {
+    if (!trans_company_name) {
         trans_company_name = company_name;
     }
     return {
@@ -58,10 +57,11 @@ async function make_plan_resp(plan) {
 function mkplan_filter(cond = undefined) {
     let = real_cond = { id: { [db_opt.Op.ne]: 0 } };
     let status_filter = {
-        [db_opt.Op.in]:[1,2]
+        [db_opt.Op.in]: [1, 2]
     };
     if (cond) {
-        real_cond = {...cond,
+        real_cond = {
+            ...cond,
         };
         status_filter = 2;
     }
@@ -77,6 +77,10 @@ function mkplan_filter(cond = undefined) {
             }, {
                 is_buy: false,
                 status: status_filter,
+                register_time: {
+                    [db_opt.Op.ne]: null,
+                    [db_opt.Op.ne]: '',
+                },
             }
         ],
     }
@@ -127,7 +131,9 @@ module.exports = {
                 }
             } catch (error) {
                 console.log(error);
-                ret.err_msg = error.err_msg
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             };
             res.send(ret);
         });
@@ -159,7 +165,9 @@ module.exports = {
                 ret.result = resp;
             } catch (error) {
                 console.log(error);
-                ret.err_msg = error.err_msg
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             };
             res.send(ret);
         });
@@ -180,7 +188,9 @@ module.exports = {
                 }
                 ret.result = result;
             } catch (error) {
-                ret = { err_msg: error.msg };
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
 
             res.send(ret);
@@ -196,7 +206,9 @@ module.exports = {
                 ret = { err_msg: '' };
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.err_msg};
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
             console.log(`Response sent for /pa_rest/push_weight: ${JSON.stringify(ret)}`); // 打印响应
             res.send(ret);
@@ -223,7 +235,7 @@ module.exports = {
                             code: req_body.code
                         }
                     })
-                    let exist_rec = await db_opt.get_sq().models.hd_base_info.findOne({ where: { name: req_body.name} });
+                    let exist_rec = await db_opt.get_sq().models.hd_base_info.findOne({ where: { name: req_body.name } });
                     exist_rec.base_id = req_body.id;
                     exist_rec.name = req_body.name;
                     exist_rec.unit = req_body.unit;
@@ -238,10 +250,12 @@ module.exports = {
                         await found_one.destroy()
                     }
                 }
-                ret = {err_msg:''};
+                ret = { err_msg: '' };
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.err_msg};
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
 
             res.send(ret);
@@ -262,7 +276,9 @@ module.exports = {
                 }
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.err_msg};
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
             res.send(ret);
         });
@@ -300,7 +316,9 @@ module.exports = {
                 }
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.err_msg};
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
             res.send(ret);
         });
@@ -314,7 +332,9 @@ module.exports = {
                 ret = { err_msg: '' };
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.err_msg};
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
 
             res.send(ret);
@@ -354,7 +374,9 @@ module.exports = {
                 }
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.err_msg};
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
             res.send(ret);
         });
@@ -369,7 +391,9 @@ module.exports = {
                 ret.err_msg = "";
             } catch (error) {
                 console.log(error);
-                ret = { err_msg: error.err_msg};
+                if (error.err_msg) {
+                    ret.err_msg = error.err_msg
+                }
             }
             res.send(ret);
             console.log(`Response sent for /pa_rest/cancel_plan: ${JSON.stringify(ret)}`); // 打印响应

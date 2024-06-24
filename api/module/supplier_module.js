@@ -118,6 +118,7 @@ module.exports = {
                 return await plan_lib.get_single_plan_by_id(new_plan.id);
             },
         },
+        order_sale_update: common.order_update,
         order_sale_search: {
             name: '查询销售单',
             description: '查询销售单',

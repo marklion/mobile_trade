@@ -8,6 +8,7 @@ module.exports = {
     name: 'sale_management',
     description: '销售管理',
     methods: {
+        order_update:common.order_update,
         order_sale_confirm: {
             name: '销售订单确认',
             description: '销售订单确认',
