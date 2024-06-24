@@ -300,7 +300,7 @@ module.exports = {
         let sq = db_opt.get_sq();
         let plan = await sq.models.plan.findByPk(_plan_id);
 
-        if (!plan || (plan.enter_time && plan.enter_time.length > 0)) {
+        if (!plan || (plan.enter_time && plan.enter_time.length > 0) || (plan.status == 3)) {
             throw { err_msg: '已进厂,无法修改' };
         }
         let company = await plan.getCompany();
