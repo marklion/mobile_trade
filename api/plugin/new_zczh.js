@@ -177,5 +177,17 @@ module.exports = {
         }, company, name);
         ret = company.zczh_back_end + ret;
         return ret;
-    }
+    },
+    get_p_weight: async function (plate, company) {
+        let ret = 0;
+        let ut = get_url_token_by_company(company, '/api/order/search');
+        let resp = await push_req2zc({
+            plate_number: plate,
+            status: 2,
+        }, ut.url, ut.token);
+        if (resp && resp.result.length > 0) {
+            ret = resp.result[0].p_weight;
+        }
+        return ret;
+    },
 }
