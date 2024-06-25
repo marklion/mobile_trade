@@ -46,8 +46,8 @@ start_all_server() {
     echo 'export LC_ALL=zh_CN.UTF-8' >> ~/.bashrc
     cp /conf/*.xlsx /database/uploads/
     pushd /api
-    pm2 --node-args="--inspect=0.0.0.0:9229" start index.js
-    # pm2 start index.js
+    # pm2 --node-args="--inspect=0.0.0.0:9229" start index.js
+    pm2 start index.js
     popd
     while true
     do
@@ -73,7 +73,7 @@ start_docker_con() {
     then
         SSH_PORT_ARG=""
     fi
-    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -p 39229:9229 -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e SHARE_KEY="${SHARE_KEY_INPUT}" -e MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -v ${OLD_DATA_PATH}:/database/logo_res -e MAIL_PWD="${MAIL_PWD_INPUT}" -e DEFAULT_PWD="${DEFAULT_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
+    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e SHARE_KEY="${SHARE_KEY_INPUT}" -e MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -v ${OLD_DATA_PATH}:/database/logo_res -e MAIL_PWD="${MAIL_PWD_INPUT}" -e DEFAULT_PWD="${DEFAULT_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
     docker cp $0 ${CON_ID}:/root/ > /dev/null 2>&1
     docker start ${CON_ID} > /dev/null 2>&1
     echo ${CON_ID}
