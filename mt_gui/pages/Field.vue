@@ -10,6 +10,7 @@
                         <fui-text type="primary" :text="'排号时间：' + item.register_time" size="24"></fui-text>
                         <fui-text v-if="item.call_time" type="success" :text="'叫号时间：' + item.call_time" size="24"></fui-text>
                         <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + item.seal_no" size="24"></fui-text>
+                        <fui-text v-if="item.enter_time" type="purple" :text="'一次重量:' + item.p_weight" size="24"></fui-text>
                     </view>
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-text :text="item.driver.name" size="24"></fui-text>

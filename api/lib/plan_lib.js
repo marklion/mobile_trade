@@ -6,6 +6,7 @@ const { hook_plan } = require('./hook_lib');
 const field_lib = require('./field_lib');
 const ExcelJS = require('exceljs');
 const uuid = require('uuid');
+const new_zczh = require('../plugin/new_zczh');
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -25,7 +26,7 @@ module.exports = {
         }
         let stuff_found = await _company.getStuff({ where: { name: _name, use_for_buy: use_for_buy } });
         if (stuff_found.length != 1) {
-            stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count, use_for_buy: use_for_buy});
+            stuff_found = await sq.models.stuff.create({ name: _name, comment: _comment, expect_count: _expect_count, use_for_buy: use_for_buy });
             await _company.addStuff(stuff_found);
         }
         let ret = {};
@@ -915,12 +916,16 @@ module.exports = {
     get_wait_que: async function (pageNo, token) {
         let sq = db_opt.get_sq();
         let stuff_array = [0];
+        let need_get_p_weight = false;
         let company = await rbac_lib.get_company_by_token(token);
         if (company) {
             let tmp = await company.getStuff();
             for (let index = 0; index < tmp.length; index++) {
                 const element = tmp[index];
                 stuff_array.push(element.id);
+            }
+            if (company.script == 'new_zczh') {
+                need_get_p_weight = true;
             }
         }
         let cond = {
@@ -944,6 +949,12 @@ module.exports = {
         let count = await sq.models.plan.count({
             where: cond,
         });
+        if (need_get_p_weight) {
+            for (let index = 0; index < plans.length; index++) {
+                const element = plans[index];
+                element.p_weight = await new_zczh.get_p_weight(element.main_vehicle.plate, company);
+            }
+        }
         return { rows: plans, count: count };
     },
     check_if_never_checkin: async function (driver) {
