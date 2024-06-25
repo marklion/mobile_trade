@@ -14,7 +14,7 @@ const rbac_lib = require('./lib/rbac_lib');
 
 async function module_install(admin_role_id, app, module) {
     let mo = module;
-    await rbac_lib.connect_role2module(admin_role_id, (await rbac_lib.add_module(mo.name, mo.description)).id );
+    await rbac_lib.connect_role2module(admin_role_id, (await rbac_lib.add_module(mo.name, mo.description)).id);
     let need_rbac = true;
     Object.keys(mo.methods).forEach(itr => {
         let method_name = itr;
@@ -195,26 +195,52 @@ if (fs.existsSync('/database/map.json')) {
 } else {
     wx_api_util.openid_map.sync_map()
 }
-
+const g_timer_node_set = [];
 function add_min_timer(min_count, func) {
-    setInterval(async function() {
-        try {
-            await func();
-        } catch (error) {
-            console.error(error);
-        }
-    }, min_count * 60 * 1000);
+    g_timer_node_set.push({
+        min_last: min_count - 1,
+        min_count: min_count - 1,
+        func: func
+    });
 }
 
-add_min_timer(107, async ()=>{
+add_min_timer(207, async () => {
     await wx_api_util.openid_map.sync_map();
 });
-add_min_timer(10, async ()=>{
+add_min_timer(10, async () => {
     await plan_lib.auto_close_plan();
 });
+add_min_timer(1, async () => {
+    console.log('1 min timer');
+});
+add_min_timer(2, async () => {
+    console.log('2 min timer');
+});
+
+app.post('/api/v1/internal_timeout', async (req, res) => {
+    let body = req.body;
+    if (body.pwd = process.env.DEFAULT_PWD) {
+        for (let index = 0; index < g_timer_node_set.length; index++) {
+            const element = g_timer_node_set[index];
+            if (element.min_last == 0) {
+                element.func();
+                element.min_last = element.min_count;
+            }
+            else {
+                element.min_last--;
+            }
+        }
+    }
+    res.send({ err_msg: '' });
+});
+
 
 process.on('uncaughtException', (err) => {
     console.error('An uncaught error occurred!');
     console.error(err.stack);
 });
-app.listen(8080, () => console.log('Server running on port 8080'));
+let server = app.listen(8080, () => console.log('Server running on port 8080'));
+process.on('SIGINT', () => {
+    console.log('SIGINT signal received. Closing server...');
+    server.close();
+});

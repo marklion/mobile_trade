@@ -6,7 +6,9 @@ all:$(DELIVER_PATH)
 $(DELIVER_PATH):
 	[ -d $(DELIVER_PATH) ] || mkdir -p $(DELIVER_PATH)
 	cp $(SRC_DIR)/*.py $(DELIVER_PATH)/
+	cp $(SRC_DIR)/*.sh $(DELIVER_PATH)/
 	chmod +x $(DELIVER_PATH)/*.py
+	chmod +x $(DELIVER_PATH)/*.sh
 clean:
 	rm -rf $(DELIVER_PATH)
 
