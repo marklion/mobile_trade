@@ -205,6 +205,7 @@ async function send_wx_msg(req) {
             await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
         }
     }
+    console.log('send wx msg:', req);
 }
 
 module.exports = {
@@ -470,6 +471,26 @@ module.exports = {
             send_wx_msg({ ...req });
         });
     },
+    bidding_success_msg: async function (bc) {
+        let stuff = await bc.getStuff()
+        let bidding_name = bc.comment + stuff.name;
+        let req = {
+            template_id: 'NlG21tpsDBdefio1qwDsvNwsAA3LWL4PSkQpRnQU0-g',
+            data: {
+                first: {
+                    value: '恭喜您，中标了',
+                },
+                keyword1: {
+                    value: bidding_name,
+                },
+                keyword2: {
+                    value: '竞价结束',
+                },
+            }
+        }
+        req.touser = this.openid_map.get_pub_openid(bc.bidding_turns[0].bidding_items[0].rbac_user.open_id);
+        send_wx_msg({ ...req });
+    },
     bidding_finish_msg: async function (bc) {
         let stuff = await bc.getStuff()
         let bidding_name = bc.comment + stuff.name;
@@ -496,7 +517,7 @@ module.exports = {
             const element = bt[index];
             let bis = await element.getBidding_items();
             for (let i = 0; i < bis.length; i++) {
-                let user = await bis.getRbac_user();
+                let user = await bis[i].getRbac_user();
                 if (user) {
                     tar_array.push(user.open_id)
                 }

@@ -37,10 +37,18 @@ export default {
                         uni.saveImageToPhotosAlbum({
                             filePath: res.tempFilePath,
                             success: () => {
-                                this.$toast('保存成功');
+                                uni.showToast({
+                                    title: '保存成功',
+                                    icon: 'success',
+                                    duration: 2000
+                                });
                             },
                             fail: () => {
-                                this.$toast('保存失败');
+                                uni.showToast({
+                                    title: '保存失败',
+                                    icon: 'none',
+                                    duration: 2000
+                                });
                             }
                         });
                     }

@@ -21,6 +21,7 @@
             </view>
         </u-cell>
     </view>
+    <fui-button type="success" text="导出" @click="export_bc(bd)"></fui-button>
 
     <fui-modal width="600" :descr="'确定要停止吗？'" v-if="show_stop_bid" :show="show_stop_bid" @click="stop_bid">
     </fui-modal>
@@ -60,8 +61,8 @@
     <fui-bottom-popup :show="show_bi" @close="show_bi= false">
         <view>
             <scroll-view style="height: 60vh" show-scrollbar scroll-y>
-                <view v-for="si in focus_bt.bidding_items" :key="si.id">
-                    <u-cell :title="si.rbac_user.company.name " :label="si.rbac_user.name + '(' + (si.accept?'已接受':'未接受') + ')'" :value="si.time?(si.time + '出价' + si.price):'未出价'"></u-cell>
+                <view v-for="(si, index) in focus_bt.bidding_items" :key="si.id">
+                    <u-cell :icon="((index == 0)&&si.time)?'thumb-up':''" :title="si.rbac_user.company.name " :label="si.rbac_user.name + '(' + (si.accept?'已接受':'未接受') + ')'" :value="si.time?(si.time + '出价' + si.price):'未出价'"></u-cell>
                 </view>
             </scroll-view>
         </view>
@@ -130,6 +131,15 @@ export default {
         };
     },
     methods: {
+        export_bc: async function (bc) {
+            await this.$send_req('/bid/export_bc', {
+                bc_id: bc.id
+            });
+            uni.showToast({
+                title: '请到导出记录中查看',
+                icon: 'success'
+            });
+        },
         next_bid: async function (e) {
             if (e.index == 1) {
                 this.next_bid_req.begin_time = this.start_bid_req.begin_time;
@@ -177,8 +187,7 @@ export default {
                         id: item
                     });
                 });
-                if (this.selected_companies.length <= 1)
-                {
+                if (this.selected_companies.length <= 1) {
                     uni.showToast({
                         title: '至少选择两家客户',
                         icon: 'none'
