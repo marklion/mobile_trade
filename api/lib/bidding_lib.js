@@ -2,6 +2,9 @@ const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const wx_api_util = require('./wx_api_util');
+const officegen = require('officegen');
+const uuid = require('uuid');
+const fs = require('fs');
 module.exports = {
     create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token) {
         let sq = db_opt.get_sq();
@@ -23,44 +26,57 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
+    bidding_order_cond: function () {
+        let sq = db_opt.get_sq();
+        return {
+            include: [{
+                model: sq.models.bidding_turn,
+                include: [{
+                    model: sq.models.bidding_item,
+                    include: [{
+                        model: sq.models.rbac_user,
+                        include: [sq.models.company]
+                    }],
+                    order: [['accept', 'DESC'], ['price', 'DESC']]
+                }],
+                order: [['id', 'DESC']]
+            },
+            sq.models.stuff],
+            order: [
+                ['id', 'DESC'],
+                [sq.models.bidding_turn, 'id', 'DESC'],
+                [sq.models.bidding_turn, sq.models.bidding_item, 'accept', 'DESC'],
+                [sq.models.bidding_turn, sq.models.bidding_item, 'price', 'DESC'],
+                [sq.models.bidding_turn, sq.models.bidding_item, 'time', 'ASC'],
+            ],
+        }
+    },
+    get_bidding_by_created_company: async function (company, pageNo) {
+        let sq = db_opt.get_sq();
+        let ret = { biddings: [], total: 0 };
+        let where_cond = { [db_opt.Op.or]: [] };
+        let stuffs = await company.getStuff({ paranoid: false });
+        for (let index = 0; index < stuffs.length; index++) {
+            const element = stuffs[index];
+            where_cond[db_opt.Op.or].push({ stuffId: element.id });
+        }
+        let biddings = await sq.models.bidding_config.findAndCountAll({
+            where: where_cond,
+            include: this.bidding_order_cond().include,
+            limit: 20,
+            offset: 20 * pageNo,
+            order: this.bidding_order_cond().order,
+        });
+        ret.biddings = biddings.rows;
+        ret.total = biddings.count;
+        return ret;
+    },
     get_all_created_bidding: async function (token, pageNo) {
         let ret = { biddings: [], total: 0 };
         let sq = db_opt.get_sq();
         let company = await rbac_lib.get_company_by_token(token);
         if (company) {
-            let where_cond = { [db_opt.Op.or]: [] };
-            let stuffs = await company.getStuff({ paranoid: false });
-            for (let index = 0; index < stuffs.length; index++) {
-                const element = stuffs[index];
-                where_cond[db_opt.Op.or].push({ stuffId: element.id });
-            }
-            let biddings = await sq.models.bidding_config.findAndCountAll({
-                where: where_cond,
-                include: [{
-                    model: sq.models.bidding_turn,
-                    include: [{
-                        model: sq.models.bidding_item,
-                        include: [{
-                            model: sq.models.rbac_user,
-                            include: [sq.models.company]
-                        }],
-                        order: [['accept', 'DESC'], ['price', 'DESC']]
-                    }],
-                    order: [['id', 'DESC']]
-                },
-                sq.models.stuff],
-                limit: 20,
-                offset: 20 * pageNo,
-                order: [
-                    ['id', 'DESC'],
-                    [sq.models.bidding_turn, 'id', 'DESC'],
-                    [sq.models.bidding_turn, sq.models.bidding_item, 'accept', 'DESC'],
-                    [sq.models.bidding_turn, sq.models.bidding_item, 'price', 'DESC'],
-                    [sq.models.bidding_turn, sq.models.bidding_item, 'time', 'ASC'],
-                ],
-            });
-            ret.biddings = biddings.rows;
-            ret.total = biddings.count;
+            ret = await this.get_bidding_by_created_company(company, pageNo);
         }
         else {
             throw { err_msg: '无权限' };
@@ -200,11 +216,18 @@ module.exports = {
     try_finish_bidding: async function (bt, expect_status) {
         bt.finish = true;
         await bt.save();
-        let bc = await bt.getBidding_config({ include: [{ model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company] }] });
-        if (bc) {
+        let bc = await bt.getBidding_config({
+            include: this.bidding_order_cond().include,
+            order: this.bidding_order_cond().order,
+        });
+        if (bc && bc.status == 0) {
             if (bc.total_turn == bt.turn + 1 || expect_status == 2) {
                 bc.status = expect_status;
                 await bc.save();
+                wx_api_util.bidding_finish_msg(bc);
+                if (bc.bidding_turns.length > 0 && bc.bidding_turns[0].bidding_items.length > 0) {
+                    wx_api_util.bidding_success_msg(bc);
+                }
             }
         }
 
@@ -248,5 +271,113 @@ module.exports = {
                 await bc.save();
             }
         }
+    },
+    stop_timeup_bt: async function () {
+        let sq = db_opt.get_sq();
+        let open_bts = await sq.models.bidding_turn.findAll({
+            where: {
+                [db_opt.Op.and]: [{
+                    finish: false,
+                },
+                sq.where(sq.fn('datetime', sq.col('end_time')), {
+                    [db_opt.Op.lt]: sq.fn('datetime', moment().format('YYYY-MM-DD HH:mm:ss'))
+                }),
+                ]
+            },
+        });
+        for (let index = 0; index < open_bts.length; index++) {
+            const element = open_bts[index];
+            this.try_finish_bidding(element, 1);
+        }
+    },
+    output_docx: function (docx) {
+        return new Promise((resolve, reject) => {
+            let file_name = '/uploads/bidding' + uuid.v4() + '.docx';
+            let out = fs.createWriteStream('/database' + file_name);
+            out.on('close', () => {
+                resolve(file_name);
+            });
+            out.on('error', (err) => {
+                reject(err);
+            });
+            docx.on('error', (err) => {
+                reject(err);
+            });
+            docx.generate(out);
+        });
+    },
+    make_export_bidding_file: async function (bc_id) {
+        let sq = db_opt.get_sq();
+        let bc = await sq.models.bidding_config.findByPk(bc_id, {
+            include: this.bidding_order_cond().include,
+            order: this.bidding_order_cond().order,
+        });
+        let docx = officegen('docx');
+        docx.createP({ align: 'center' }).addText(bc.stuff.name + '竞价结果', { bold: true, font_size: 20 });
+        for (let index = 0; index < bc.bidding_turns.length; index++) {
+            const element = bc.bidding_turns[index];
+            docx.createP().addText('第' + (element.turn + 1) + '轮竞价', { bold: true, font_size: 16, underline: true });
+            docx.createP({ align: 'right' }).addText(element.begin_time + '至' + element.end_time, { font_size: 16 });
+            docx.createP().addText('出价情况', { font_size: 16 });
+            let bi_table = [
+                [{
+                    val: '公司',
+                    opts: {
+                        cellColWidth: 4261,
+                        b: true,
+                        sz: '48',
+                    },
+                }, {
+                    val: '出价',
+                    opts: {
+                        cellColWidth: 4261,
+                        b: true,
+                        sz: '48',
+                    },
+                }, {
+                    val: '时间',
+                    opts: {
+                        cellColWidth: 4261,
+                        b: true,
+                        sz: '48',
+                    },
+                }, {
+                    val: '姓名',
+                    opts: {
+                        cellColWidth: 4261,
+                        b: true,
+                        sz: '48',
+                    },
+                }],
+            ];
+            for (let index = 0; index < element.bidding_items.length; index++) {
+                const bi = element.bidding_items[index];
+                let bid_time = '';
+                if (bi.time) {
+                    bid_time = bi.time;
+                }
+                let bid_price = '未接受';
+                if (bi.accept) {
+                    if (bi.price >= 0) {
+                        bid_price = bi.price;
+                    }
+                    else {
+                        bid_price = '未出价';
+                    }
+                }
+                // docx.createP().addText(bi.rbac_user.company.name + '\t' + bid_price + '\t' + bid_time + '\t' + bi.rbac_user.name, { font_size: 11 });
+                bi_table.push([bi.rbac_user.company.name, bid_price, bid_time, bi.rbac_user.name]);
+            }
+            docx.createTable(bi_table,
+                {
+                    tableColWidth: 4261,
+                    tableSize: 72,
+                    tableAlign: 'left',
+                    borders: true
+                }
+            );
+        }
+        ret = await this.output_docx(docx);
+        return ret;
     },
 };

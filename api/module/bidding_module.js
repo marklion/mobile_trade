@@ -3,6 +3,7 @@ const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
+const common = require('./common')
 module.exports = {
     name: 'bid',
     description: '竞价管理',
@@ -100,6 +101,23 @@ module.exports = {
             func: async function (body, token) {
                 await bidding_lib.stop_bidding(body.bc_id, token);
                 return { result: true };
+            },
+        },
+        export_bc:{
+            name:'导出竞价结果',
+            description:'导出竞价结果',
+            is_write: false,
+            is_get_api: false,
+            params:{
+                bc_id: { type: Number, have_to: true, mean: '竞价ID', example: 1 },
+            },
+            result:{
+                result: { type: Boolean, mean: '是否成功', example: true },
+            },
+            func: async function (body, token) {
+                return await common.do_export_later(token, '竞价结果导出', async () => {
+                    return await bidding_lib.make_export_bidding_file(body.bc_id)
+                })
             },
         },
     }

@@ -188,6 +188,7 @@ const fs = require('fs');
 const legacy_api = require('./legacy_api');
 const plan_lib = require('./lib/plan_lib');
 const global_module = require('./module/global_module');
+const bidding_lib = require('./lib/bidding_lib');
 legacy_api.install(app);
 
 if (fs.existsSync('/database/map.json')) {
@@ -212,6 +213,7 @@ add_min_timer(10, async () => {
 });
 add_min_timer(1, async () => {
     console.log('1 min timer');
+    bidding_lib.stop_timeup_bt();
 });
 add_min_timer(2, async () => {
     console.log('2 min timer');
