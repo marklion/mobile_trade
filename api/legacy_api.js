@@ -54,7 +54,7 @@ async function make_plan_resp(plan) {
         transCompanyName: full_plan.trans_company_name,
     };
 }
-function mkplan_filter(cond = undefined) {
+function mkplan_filter(cond = undefined, is_all = false) {
     let = real_cond = { id: { [db_opt.Op.ne]: 0 } };
     let status_filter = {
         [db_opt.Op.in]: [1, 2]
@@ -65,7 +65,8 @@ function mkplan_filter(cond = undefined) {
         };
         status_filter = 2;
     }
-    return {
+
+    let ret = {
         ...real_cond,
         [db_opt.Op.or]: [
             {
@@ -84,6 +85,11 @@ function mkplan_filter(cond = undefined) {
             }
         ],
     }
+    if (is_all) {
+        delete ret[db_opt.Op.or][1].register_time;
+    }
+
+    return ret;
 }
 
 module.exports = {
@@ -148,7 +154,7 @@ module.exports = {
                     for (let index = 0; index < stuff.length; index++) {
                         const element = stuff[index];
                         let plans = await element.getPlans({
-                            where: mkplan_filter(),
+                            where: mkplan_filter(undefined, true),
                         })
                         plans.forEach(item => { all_plans.push(item) });
                     }
@@ -355,7 +361,7 @@ module.exports = {
                     await rbac_lib.user_bind_company(user, buy_company, 'no_open_id', '第三方代提用户', '');
                 }
                 let user_token = await rbac_lib.user_login('28887888777');
-                let resp = await axios.post('http://localhost:8080/api/v1/customer/order_buy_create', {
+                let create_req = {
                     "behind_vehicle_id": bv.id,
                     "comment": "第三方创建",
                     "driver_id": dr.id,
@@ -364,8 +370,11 @@ module.exports = {
                     "plan_time": req_body.arriveDate,
                     "stuff_id": stuff[0].id,
                     "trans_company_name": req_body.trans_company_name,
-                    "use_for": req_body.userFor,
-                }, { headers: { token: user_token } });
+                    "use_for": req_body.userFor ? req_body.userFor : '其他',
+                };
+                let create_header = { headers: { token: user_token } }
+                console.log('call localhost order_buy_create:', create_req, create_header);
+                let resp = await axios.post('http://localhost:8080/api/v1/customer/order_buy_create', create_req, create_header);
                 if (resp.data.err_msg == "") {
                     let plan_id = resp.data.result.id;
                     await plan_lib.confirm_single_plan(plan_id, token, true);

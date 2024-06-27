@@ -16,7 +16,7 @@ function make_url(url, plan) {
 }
 
 module.exports = {
-    call_vehicle: async function (plan) {
+    order_ready: async function (plan) {
         await push_req2zc([{
             behind_vehicle_number: plan.behind_vehicle.plate,
             company_name: plan.company.name,
@@ -27,6 +27,8 @@ module.exports = {
             stuff_name: plan.stuff.name,
             trans_company: plan.trans_company_name,
         }], make_url('/vehicle_order/add', plan));
+    },
+    call_vehicle: async function (plan) {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
         await push_req2zc(zc_vo.basic_info, make_url('/order_register/add', plan));
         await lag_rpc.requeset_rpc(plan.stuff.company, 'field_queue_call', [
@@ -36,7 +38,13 @@ module.exports = {
     },
     cancel_check_in: async function (plan) {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
-        await push_req2zc([zc_vo.basic_info], make_url('/vehicle_order/del', plan));
+        await lag_rpc.requeset_rpc(plan.stuff.company, 'field_queue_pass', [
+            zc_vo.basic_info.id,
+        ])
+    },
+    order_close:async function(plan) {
+        let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
+        push_req2zc([zc_vo.basic_info], make_url('/vehicle_order/del', plan));
     },
     confirm_vehicle: async function (plan) {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
@@ -44,6 +52,10 @@ module.exports = {
             zc_vo.basic_info.id,
             plan.confirmed,
         ]);
+    },
+    get_p_weight:async function(plan) {
+        let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
+        return zc_vo.basic_info.p_weight;
     },
     get_device_status: async function (company) {
         let devs = await lag_rpc.requeset_rpc(company, 'get_device_status', [
@@ -80,8 +92,7 @@ module.exports = {
     },
     take_pic: async function (company, name, is_enter) {
         let ret = await lag_rpc.requeset_rpc(company, 'do_device_opt_take_pic', [name, is_enter]);
-        if (ret == undefined)
-        {
+        if (ret == undefined) {
             ret = '';
         }
         return ret;

@@ -924,9 +924,6 @@ module.exports = {
                 const element = tmp[index];
                 stuff_array.push(element.id);
             }
-            if (company.script == 'new_zczh') {
-                need_get_p_weight = true;
-            }
         }
         let cond = {
             [db_opt.Op.and]: [
@@ -949,11 +946,9 @@ module.exports = {
         let count = await sq.models.plan.count({
             where: cond,
         });
-        if (need_get_p_weight) {
-            for (let index = 0; index < plans.length; index++) {
-                const element = plans[index];
-                element.p_weight = await new_zczh.get_p_weight(element.main_vehicle.plate, company);
-            }
+        for (let index = 0; index < plans.length; index++) {
+            const element = plans[index];
+            element.p_weight = await hook_plan('get_p_weight', element);
         }
         return { rows: plans, count: count };
     },
