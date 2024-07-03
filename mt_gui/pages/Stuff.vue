@@ -9,6 +9,7 @@
                     <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" :scaleRatio="0.8" type="warning"></fui-tag>
                     <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
                     <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" :scaleRatio="0.8" type="primary"></fui-tag>
+                    <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
                     <fui-tag v-else text="用于销售" theme="plain" :scaleRatio="0.8" type="success"></fui-tag>
                 </view>
                 <view style="display:flex;">
@@ -16,6 +17,8 @@
                     <fui-button text="删除" type="danger" radius="0" btnSize="mini" @click="prepare_delete(item)"></fui-button>
                     <fui-button text="调价" type="warning" radius="0" btnSize="mini" @click="prepare_change_price(item)"></fui-button>
                     <fui-button text="调价历史" type="purple" radius="0" btnSize="mini" @click="prepare_history(item)"></fui-button>
+                    <fui-button v-if="!item.change_last_minutes" text="定时调价" type="success" radius="0" btnSize="mini" @click="prepare_next_price(item)"></fui-button>
+                    <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
                 </view>
                 <view style="display:flex; font-size:13px;">
                     <view style="display:flex;">
@@ -52,6 +55,8 @@
     </fui-modal>
     <fui-modal width="600" :show="show_delete" v-if="show_delete" :descr="'确定要删除' + item_for_delete.name + '吗？'" @click="delete_stuff">
     </fui-modal>
+    <fui-modal width="600" :show="show_cancel_next_price" v-if="show_cancel_next_price" descr="确定要关闭定时调价吗?" @click="do_cancel_next_price">
+    </fui-modal>
     <fui-modal width="600" :show="show_change_price" v-if="show_change_price" @click="change_price">
         <fui-form ref="change_price_form" top="100">
             <fui-input required label="新价格" borderTop placeholder="请输入新价格" v-model="stuff2change_price.price"></fui-input>
@@ -61,6 +66,15 @@
             </fui-form-item>
         </fui-form>
     </fui-modal>
+    <fui-modal width="600" :show="show_next_price" v-if="show_next_price" @click="do_next_price">
+        <fui-form ref="next_price_form" top="100">
+            <fui-input required label="新价格" borderTop placeholder="请输入新价格" v-model="next_price_req.next_price"></fui-input>
+            <fui-input required label="备注" borderTop placeholder="请输入备注" v-model="next_price_req.next_comment"></fui-input>
+            <fui-input label="调价时间" borderTop disabled placeholder="点击选择时间" v-model="next_price_req.next_time" @click="show_next_date = true"></fui-input>
+        </fui-form>
+    </fui-modal>
+
+    <fui-date-picker :show="show_next_date" :minDate="today_date" :value="today_date" type="5" @change="set_next_date" @cancel="show_next_date =false"></fui-date-picker>
     <fui-bottom-popup :show="show_history" @close="show_history = false">
         <view>
             <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id]" search_key="comment" height="40vh">
@@ -80,6 +94,7 @@
 
 <script>
 import ListShow from '../components/ListShow.vue'
+import utils from '@/components/firstui/fui-utils';
 export default {
     name: 'Stuff',
     components: {
@@ -87,6 +102,22 @@ export default {
     },
     data: function () {
         return {
+            show_cancel_next_price: false,
+            cancel_next_stuff_id: 0,
+            show_next_date: false,
+            show_next_price: false,
+            next_price_req: {
+                next_price: '',
+                next_comment: '',
+                next_time: '',
+            },
+            next_price_show: function (item) {
+                let ret = '';
+                let now = new Date();
+                now.setMinutes(now.getMinutes() + item.change_last_minutes);
+                ret = utils.dateFormatter(now, 'y-m-d h:i', 4, false) + '后，调价为' + item.next_price.toFixed(2);
+                return ret;
+            },
             stuff_ready_fetch: {
                 name: '',
                 comment: undefined,
@@ -115,9 +146,14 @@ export default {
             data2show: [],
             data2show2: [],
             show_close_time: false,
+            today_date: utils.dateFormatter(new Date(), 'y-m-d h:i', 4, false),
         }
     },
     methods: {
+        set_next_date: function (e) {
+            this.next_price_req.next_time = e.result;
+            this.show_next_date = false;
+        },
         choose_time: function (e) {
             this.stuff_ready_fetch.close_time = e.result;
             this.show_close_time = false;
@@ -153,6 +189,50 @@ export default {
             });
 
             return ret.histories;
+        },
+        do_next_price: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                    name: 'next_price',
+                    rule: ['required', 'isAmount'],
+                    msg: ['请输入新价格', '价格请填写数字']
+                }, {
+                    name: 'next_comment',
+                    rule: ['required'],
+                    msg: ['请输入备注']
+                }];
+                let val_ret = await this.$refs.next_price_form.validator(this.next_price_req, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                let clm = new Date(this.next_price_req.next_time).getTime() - new Date().getTime();
+                clm = clm / 1000 / 60;
+                await this.$send_req('/stuff/set_next_price', {
+                    stuff_id: this.next_price_req.stuff_id,
+                    next_price: parseFloat(this.next_price_req.next_price),
+                    next_comment: this.next_price_req.next_comment,
+                    change_last_minutes: clm
+                });
+                uni.startPullDownRefresh();
+            }
+            this.show_next_price = false;
+        },
+        do_cancel_next_price: async function (e) {
+            if (e.index == 1) {
+                await this.$send_req('/stuff/clear_next_price', {
+                    stuff_id: this.cancel_next_stuff_id,
+                })
+                uni.startPullDownRefresh();
+            }
+            this.show_cancel_next_price = false;
+        },
+        prepare_cancel_next_price: function (item) {
+            this.show_cancel_next_price = true;
+            this.cancel_next_stuff_id = item.id;
+        },
+        prepare_next_price: function (item) {
+            this.next_price_req.stuff_id = item.id;
+            this.show_next_price = true;
         },
         prepare_history: function (item) {
             this.show_history = true;
