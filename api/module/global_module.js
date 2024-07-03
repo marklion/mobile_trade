@@ -1082,7 +1082,7 @@ module.exports = {
                 return { url: filePath };
             },
         },
-        set_order_perfer: {
+        set_order_prefer: {
             name: '设置订单偏移',
             description: '设置订单偏移',
             need_rbac: false,

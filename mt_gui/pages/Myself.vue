@@ -28,6 +28,9 @@
                 司机排号设置
             </fui-list-cell>
         </module-filter>
+        <fui-list-cell arrow @click="prepare_prefer">
+            偏好设置
+        </fui-list-cell>
 
         <module-filter require_module="rbac">
             <u-cell title="开发选项" isLink url="/pages/DevPage"></u-cell>
@@ -86,22 +89,24 @@ export default {
         "module-filter": ModuleFilter
     },
     methods: {
+        prepare_prefer: async function () {
+            let self_info = uni.getStorageSync('self_info');
+            this.prefer_req.begin_offset = self_info.prefer_order_begin_offset;
+            this.prefer_req.end_offset = self_info.prefer_order_end_offset;
+            this.show_order_prefer = true;
+        },
         config_order_prefer: async function (e) {
             if (e.index == 1) {
                 let rules = [{
-                    name: 'being_offset',
+                    name: 'begin_offset',
                     rule: ['required', 'isNumber'],
-                    msg: ['请输入纬度']
+                    msg: ['请输入天数', '天数请填写数字']
                 }, {
-                    name: 'lon',
-                    rule: ['required', ],
-                    msg: ['请输入经度']
-                }, {
-                    name: 'distance_limit',
-                    rule: ['required', 'isAmount'],
-                    msg: ['请输入距离', '距离请填写数字']
+                    name: 'end_offset',
+                    rule: ['required', 'isNumber'],
+                    msg: ['请输入天数', '天数请填写数字']
                 }];
-                let val_ret = await this.$refs.form.validator(this.checkin_config, rules);
+                let val_ret = await this.$refs.op_form.validator(this.prefer_req, rules);
                 if (!val_ret.isPassed) {
                     return;
                 }

@@ -39,7 +39,10 @@
     </view>
     <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
-        <fui-button slot="right-icon" text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
+        <view slot="right-icon" style="display:flex;">
+            <fui-button text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
+            <fui-button text="恢复默认" @click="reset_order_date" btnSize="mini" type="primary"></fui-button>
+        </view>
     </u-cell>
     <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
     <u-checkbox-group v-model="plan_selected" placement="column">
@@ -987,10 +990,10 @@ export default {
             this.confirm_info = info;
             this.xxx_url = url;
         },
-        authorize_user:async function() {
+        authorize_user: async function () {
             await this.$send_req('/sale_management/authorize_user', {
-                contract_id:this.cur_contract.id,
-                phone:this.focus_plan.rbac_user.phone,
+                contract_id: this.cur_contract.id,
+                phone: this.focus_plan.rbac_user.phone,
             })
             this.show_plan_detail = false;
             this.refresh_plans();
@@ -1223,6 +1226,17 @@ export default {
                 this.init_tabs();
             }
         },
+        reset_order_date: function (need_refresh = true) {
+            let bt = new Date();
+            let et = new Date();
+            bt.setDate(bt.getDate() - uni.getStorageSync('self_info').prefer_order_begin_offset);
+            et.setDate(et.getDate() + uni.getStorageSync('self_info').prefer_order_end_offset);
+            this.begin_time = utils.dateFormatter(bt, 'y-m-d', 4, false);
+            this.end_time = utils.dateFormatter(et, 'y-m-d', 4, false);
+            if (need_refresh) {
+                this.refresh_plans();
+            }
+        },
     },
     onPullDownRefresh() {
         this.refresh_plans();
@@ -1232,9 +1246,9 @@ export default {
         this.init_top_seg();
         let tom = new Date();
         tom.setDate(tom.getDate() + 1);
-        this.end_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
+        this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
-        this.default_time = this.end_time;
+        this.reset_order_date(false);
     },
 }
 </script>
