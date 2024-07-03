@@ -420,12 +420,13 @@ module.exports = {
         if (plan.enter_time && plan.enter_time.length > 0) {
             throw { err_msg: '已进厂,无法关闭' };
         }
-        plan.status = 3;
-        plan.manual_close = true;
-        await plan.save();
         if (plan.register_time) {
             await field_lib.handle_cancel_check_in(plan);
         }
+        await hook_plan('order_close', plan);
+        plan.status = 3;
+        plan.manual_close = true;
+        await plan.save();
         let buy_company = plan.company;
         if (buy_company && need_verify_balance) {
             let plans = await buy_company.getPlans({ where: { status: 1 } });
@@ -434,7 +435,6 @@ module.exports = {
                 await this.verify_plan_pay(element)
             }
         }
-        await hook_plan('order_close', plan);
         if (!no_need_cast) {
             wx_api_util.send_plan_status_msg(plan);
         }

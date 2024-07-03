@@ -156,8 +156,8 @@ module.exports = {
             },
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
-                    await field_lib.handle_confirm_vehicle(plan, body.is_confirm);
                     plan.seal_no = body.seal_no;
+                    await field_lib.handle_confirm_vehicle(plan, body.is_confirm);
                     await plan.save();
                 });
                 return { result: true };

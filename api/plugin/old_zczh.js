@@ -42,18 +42,29 @@ module.exports = {
             zc_vo.basic_info.id,
         ])
     },
-    order_close:async function(plan) {
-        let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
-        push_req2zc([zc_vo.basic_info], make_url('/vehicle_order/del', plan));
+    order_close: async function (plan) {
+        let zc_vo = undefined;
+        try {
+            zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
+        } catch (error) {
+            console.log(error);
+        }
+        if (zc_vo) {
+            await push_req2zc([zc_vo.basic_info], make_url('/vehicle_order/del', plan));
+        }
     },
     confirm_vehicle: async function (plan) {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
+        await lag_rpc.requeset_rpc(plan.stuff.company, 'field_queue_set_seal', [
+            zc_vo.basic_info.id,
+            plan.seal_no
+        ])
         await lag_rpc.requeset_rpc(plan.stuff.company, 'field_queue_confirm', [
             zc_vo.basic_info.id,
             plan.confirmed,
         ]);
     },
-    get_p_weight:async function(plan) {
+    get_p_weight: async function (plan) {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
         return zc_vo.basic_info.p_weight;
     },
