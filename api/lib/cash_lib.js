@@ -52,9 +52,11 @@ module.exports = {
 
         return ret;
     },
-    export_cash_history:async function(token, contract_id, begin_time, end_time)
-    {
+    export_cash_history: async function (token, contract_id, begin_time, end_time) {
         let sq = db_opt.get_sq();
+        if (!end_time.includes(':')) {
+            end_time += ' 23:59:59';
+        }
         let company = await rbac_lib.get_company_by_token(token);
         let contract = await db_opt.get_sq().models.contract.findByPk(contract_id);
         if (company && contract && (await company.hasSale_contract(contract) || await company.hasBuy_contract(contract))) {
@@ -71,12 +73,12 @@ module.exports = {
                 }
             });
             let json = [];
-            resp.forEach(item=>{
+            resp.forEach(item => {
                 json.push({
-                    time:item.time,
-                    operator:item.operator,
-                    comment:item.comment,
-                    cash_increased:item.cash_increased
+                    time: item.time,
+                    operator: item.operator,
+                    comment: item.comment,
+                    cash_increased: item.cash_increased
                 })
             });
 

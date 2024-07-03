@@ -249,7 +249,7 @@ export default {
             if (detail.index == 1) {
                 let rules = [{
                     name: 'cash',
-                    rule: ['required', 'isAmount'],
+                    rule: ['required', 'range:[-99999999999,99999999999]'],
                     msg: ['请输入金额', '金额必须为数字']
                 }, {
                     name: 'comment',

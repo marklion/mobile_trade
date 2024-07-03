@@ -454,7 +454,6 @@ module.exports = {
                     plan_time: moment().add(day_offset, 'days').format('YYYY-MM-DD'), stuffId: {
                         [db_opt.Op.in]: [],
                     },
-                    manual_close: false,
                 };
                 let stuff = await company.getStuff({ where: { use_for_buy: false } });
                 for (let index = 0; index < stuff.length; index++) {
@@ -479,7 +478,8 @@ module.exports = {
                     let finish_count = await customer.countPlans({
                         where: {
                             ...condition,
-                            status: 3
+                            status: 3,
+                            manual_close: false
                         }
                     });
                     ret.push({
