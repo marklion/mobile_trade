@@ -35,6 +35,8 @@ let db_opt = {
             password: { type: DataTypes.STRING },
             email: { type: DataTypes.STRING },
             fixed: { type: DataTypes.BOOLEAN },
+            prefer_order_begin_offset: { type: DataTypes.INTEGER, defaultValue: 0 },
+            prefer_order_end_offset: { type: DataTypes.INTEGER, defaultValue: 1 },
         },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
