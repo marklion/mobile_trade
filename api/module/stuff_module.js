@@ -267,5 +267,63 @@ module.exports = {
                 return ret;
             }
         },
+        set_next_price: {
+            name: '启动定时调价',
+            description: '启动定时调价',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                next_price: { type: Number, have_to: true, mean: '下次单价', example: 1 },
+                change_last_minutes: { type: Number, have_to: true, mean: '调价所剩分钟', example: 23 },
+                next_comment: { type: String, have_to: true, mean: '下次调价备注', example: '备注' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
+                if (stuff.length == 1) {
+                    stuff = stuff[0];
+                    stuff.next_price = body.next_price;
+                    stuff.change_last_minutes = body.change_last_minutes;
+                    stuff.next_comment = body.next_comment;
+                    stuff.next_operator = (await rbac_lib.get_user_by_token(token)).name;
+                    await stuff.save();
+                }
+                else {
+                    throw { err_msg: '货物不存在' };
+                }
+                return { result: true };
+            },
+        },
+        clear_next_price: {
+            name: '清除定时调价',
+            description: '清除定时调价',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
+                if (stuff.length == 1) {
+                    stuff = stuff[0];
+                    stuff.next_price = 0;
+                    stuff.change_last_minutes = 0;
+                    stuff.next_comment = '';
+                    await stuff.save();
+                }
+                else {
+                    throw { err_msg: '货物不存在' };
+                }
+                return { result: true };
+            }
+        },
     }
 }

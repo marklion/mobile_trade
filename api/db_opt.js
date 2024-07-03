@@ -128,6 +128,8 @@ let db_opt = {
             no_need_register: { type: DataTypes.BOOLEAN, defaultValue: false },
             close_time: { type: DataTypes.STRING },
             delay_days: { type: DataTypes.INTEGER, defaultValue: 0 },
+            next_comment: { type: DataTypes.STRING },
+            next_operator: { type: DataTypes.STRING },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

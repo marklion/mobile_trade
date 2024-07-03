@@ -214,6 +214,7 @@ add_min_timer(10, async () => {
 add_min_timer(1, async () => {
     console.log('1 min timer');
     bidding_lib.stop_timeup_bt();
+    plan_lib.stuff_price_timeout();
 });
 add_min_timer(2, async () => {
     console.log('2 min timer');
