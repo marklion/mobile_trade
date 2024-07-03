@@ -44,6 +44,15 @@
             <fui-input label="排号范围" borderTop placeholder="请输入距离(千米)" v-model="checkin_config.distance_limit"></fui-input>
         </fui-form>
     </fui-modal>
+    <fui-modal width="600" v-if="show_order_prefer" :show="show_order_prefer" @click="config_order_prefer">
+        <view style="display:flex; justify-content: center;">
+            请设置订单页面的默认时间范围
+        </view>
+        <fui-form ref="op_form" top="100">
+            <fui-input label="前几天？" borderTop placeholder="请输入天数" v-model="prefer_req.begin_offset"></fui-input>
+            <fui-input label="后几天？" borderTop placeholder="请输入天数" v-model="prefer_req.end_offset"></fui-input>
+        </fui-form>
+    </fui-modal>
 </view>
 </template>
 
@@ -53,6 +62,11 @@ export default {
     name: 'Myself',
     data: function () {
         return {
+            show_order_prefer: false,
+            prefer_req: {
+                begin_offset: '',
+                end_offset: ''
+            },
             show_change_pwd: false,
             new_pwd: '',
             self_info: {
@@ -72,6 +86,32 @@ export default {
         "module-filter": ModuleFilter
     },
     methods: {
+        config_order_prefer: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                    name: 'being_offset',
+                    rule: ['required', 'isNumber'],
+                    msg: ['请输入纬度']
+                }, {
+                    name: 'lon',
+                    rule: ['required', ],
+                    msg: ['请输入经度']
+                }, {
+                    name: 'distance_limit',
+                    rule: ['required', 'isAmount'],
+                    msg: ['请输入距离', '距离请填写数字']
+                }];
+                let val_ret = await this.$refs.form.validator(this.checkin_config, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                this.prefer_req.begin_offset = parseInt(this.prefer_req.begin_offset);
+                this.prefer_req.end_offset = parseInt(this.prefer_req.end_offset);
+                await this.$send_req('/global/set_order_prefer', this.prefer_req);
+                await this.$init_self();
+            }
+            this.show_order_prefer = false;
+        },
         get_checkin_config: async function () {
             if (this.$has_module('sale_management') == false) {
                 return;

@@ -539,6 +539,8 @@ module.exports = {
                         description: { type: String, mean: '模块描述', example: 'module_desp_example' }
                     }
                 },
+                prefer_order_begin_offset: { type: Number, mean: '订单开始时间偏移', example: 0 },
+                prefer_order_end_offset: { type: Number, mean: '订单结束时间偏移', example: 0 },
             },
             func: async function (body, token) {
                 let ret = {};
@@ -1078,6 +1080,32 @@ module.exports = {
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
                 await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
+            },
+        },
+        set_order_perfer: {
+            name: '设置订单偏移',
+            description: '设置订单偏移',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                begin_offset: { type: Number, have_to: true, mean: '开始偏移', example: 0 },
+                end_offset: { type: Number, have_to: true, mean: '结束偏移', example: 0 },
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (user) {
+                    user.prefer_order_begin_offset = body.begin_offset;
+                    user.prefer_order_end_offset = body.end_offset;
+                    await user.save();
+                    return { result: true };
+                }
+                else {
+                    throw { err_msg: '用户不存在' };
+                }
             },
         },
     },
