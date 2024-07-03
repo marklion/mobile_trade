@@ -324,6 +324,7 @@
             <fui-input label="备注" v-model="update_req.comment"></fui-input>
         </fui-form>
     </fui-modal>
+    <fui-message ref="po_msg"></fui-message>
 </view>
 </template>
 
@@ -1227,6 +1228,11 @@ export default {
             }
         },
         reset_order_date: function (need_refresh = true) {
+            if (need_refresh) {
+                this.$refs.po_msg.show({
+                    text: '默认日期范围可以在我的页面配置'
+                })
+            }
             let bt = new Date();
             let et = new Date();
             bt.setDate(bt.getDate() - uni.getStorageSync('self_info').prefer_order_begin_offset);
