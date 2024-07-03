@@ -1326,7 +1326,7 @@ module.exports = {
                 delay_days = 0;
             }
             if (close_time.length > 0) {
-                let expired_day = moment().subtract(1 - delay_days, 'days').format('YYYY-MM-DD');
+                let expired_day = moment().subtract(1 + delay_days, 'days').format('YYYY-MM-DD');
                 if (moment().isAfter(moment(close_time, 'HH:mm'))) {
                     let plans = await element.getPlans({
                         where: {

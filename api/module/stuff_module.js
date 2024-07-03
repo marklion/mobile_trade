@@ -40,7 +40,6 @@ module.exports = {
         get_all: {
             name: '获取所有物料',
             description: '获取所有物料',
-
             is_write: false,
             is_get_api: true,
             params: {},
@@ -59,6 +58,7 @@ module.exports = {
                         need_enter_weight: { type: Boolean, mean: '是否需要入场前重量', example: false },
                         no_need_register: { type: Boolean, mean: '是否不需要登记', example: false },
                         close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
+                        delay_days: { type: Number, mean: '延迟天数', example: 1 },
                     }
                 },
             },

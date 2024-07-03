@@ -245,7 +245,7 @@ export default {
             if (detail.index == 1) {
                 let rules = [{
                     name: 'price',
-                    rule: ['required', 'isAmount'],
+                    rule: ['required', 'isNumber'],
                     msg: ['请输入新价格', '价格请填写数字']
                 }, {
                     name: 'comment',

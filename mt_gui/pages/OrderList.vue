@@ -47,7 +47,7 @@
             <view v-for="item in sp_data2show" :key="item.id">
                 <u-cell :title="item.company_show + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
                     <view slot="icon" style="display:flex;">
-                        <u-checkbox :name="item.id" shape="circle" v-if="select_active">
+                        <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
                         </u-checkbox>
                         <u-icon :name="get_status_icon(item)"></u-icon>
                     </view>
