@@ -468,12 +468,23 @@ module.exports = {
                     const element = plans[index];
                     let customer = await db_opt.get_sq().models.company.findByPk(element.companyId);
                     let confirm_count = await customer.countPlans({
-                        where: {
-                            ...condition,
-                            status: {
-                                [db_opt.Op.ne]: 0
-                            },
-                        }
+                        where: function () {
+                            let total_cond = {
+                                ...condition,
+                                status: {
+                                    [db_opt.Op.ne]: 0
+                                },
+                                '$plan_histories.action_type$': '确认'
+                            }
+                            if (body.day_offset == 0) {
+                                total_cond.manual_close = false;
+                            }
+                            return total_cond;
+                        }(),
+                        include: [{
+                            model: db_opt.get_sq().models.plan_history,
+                            where: { action_type: '确认' }
+                        }]
                     });
                     let finish_count = await customer.countPlans({
                         where: {
