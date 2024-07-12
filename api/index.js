@@ -189,6 +189,7 @@ const legacy_api = require('./legacy_api');
 const plan_lib = require('./lib/plan_lib');
 const global_module = require('./module/global_module');
 const bidding_lib = require('./lib/bidding_lib');
+const old_zczh = require('./plugin/old_zczh');
 legacy_api.install(app);
 
 if (fs.existsSync('/database/map.json')) {
@@ -218,6 +219,10 @@ add_min_timer(1, async () => {
 });
 add_min_timer(2, async () => {
     console.log('2 min timer');
+});
+add_min_timer(5, async ()=>{
+    console.log('5 min timer');
+    old_zczh.proc_timeout_5min();
 });
 
 app.post('/api/v1/internal_timeout', async (req, res) => {

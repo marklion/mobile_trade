@@ -1,6 +1,5 @@
 const axios = require('axios');
 const db_opt = require('../db_opt');
-const plan_lib = require('../lib/plan_lib');
 const { push_req2zc } = require('./zczh_api_utils');
 const lag_rpc = require('../lib/lag_rpc');
 
@@ -107,5 +106,34 @@ module.exports = {
             ret = '';
         }
         return ret;
-    }
+    },
+    proc_timeout_5min: async function () {
+        let company = await db_opt.get_sq().models.company.findAll({ where: { script: 'old_zczh' } });
+        for (let index = 0; index < company.length; index++) {
+            const element = company[index];
+            let stuff = await element.getStuff();
+            for (let index = 0; index < stuff.length; index++) {
+                const single_s = stuff[index];
+                let plans = await single_s.getPlans({
+                    where: {
+                        status: 2,
+                    }
+                });
+                for (let index = 0; index < plans.length; index++) {
+                    let plan = await db_opt.get_sq().models.plan.findByPk(plans[index].id, {
+                        include:
+                            [
+                                { model: db_opt.get_sq().models.company, paranoid: false },
+                                { model: db_opt.get_sq().models.rbac_user, paranoid: false },
+                                { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
+                                { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
+                                { model: db_opt.get_sq().models.driver, paranoid: false },
+                                { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company], paranoid: false },
+                            ],
+                    });
+                    this.order_ready(plan);
+                }
+            }
+        }
+    },
 }
