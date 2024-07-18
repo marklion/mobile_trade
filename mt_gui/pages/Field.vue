@@ -49,7 +49,9 @@
     <fui-modal width="600" :descr="'确定' + (is_exit_confirm?'撤销':'') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
-        <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no"></fui-input>
+		<fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
+		</fui-input>
+		
     </fui-modal>
 </view>
 </template>
@@ -154,6 +156,7 @@ export default {
         },
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
+			this.tmp_seal_no = '正在泄压';
             this.show_confirm_vehicle = true;
         },
         confirm_vehicle: async function (e) {
