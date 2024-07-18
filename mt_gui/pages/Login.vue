@@ -63,7 +63,7 @@ export default {
 						uni.setStorageSync('token', res.token);
 						await this.$init_self();
 						uni.reLaunch({
-						    url: '/pages/Home' 
+						    url: '/pages/Home'
 						});
 					}
 				}).catch(err => {
