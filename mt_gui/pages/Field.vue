@@ -50,6 +50,9 @@
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
 		<fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
+			<slot name="default">
+				<fui-button type="success" btnSize="mini" @click="confirmSealNo">确认泄压</fui-button>
+			</slot>
 		</fui-input>
 		
     </fui-modal>
@@ -156,17 +159,22 @@ export default {
         },
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
-			this.tmp_seal_no = '正在泄压';
+			this.tmp_seal_no = item.seal_no;
             this.show_confirm_vehicle = true;
         },
+		confirmSealNo:function(){
+			this.tmp_seal_no = '正在泄压';
+		},
         confirm_vehicle: async function (e) {
-            await this.$send_req('/scale/confirm_vehicle', {
-                plan_id: this.focus_plan_id,
-                is_confirm: e.index == 1,
-                seal_no: this.tmp_seal_no
-            });
+			if(e.text==="确定"){
+				await this.$send_req('/scale/confirm_vehicle', {
+					plan_id: this.focus_plan_id,
+					is_confirm: e.index == 1,
+					seal_no: this.tmp_seal_no
+				});
+				uni.startPullDownRefresh();
+			}
             this.show_confirm_vehicle = false;
-            uni.startPullDownRefresh();
         },
         icon_make: function (item) {
             let ret = 'hourglass';
