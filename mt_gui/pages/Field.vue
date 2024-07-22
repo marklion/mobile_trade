@@ -1,62 +1,78 @@
 <template>
-<view>
-    <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
-    <view v-if="cur_page == 0">
-        <list-show ref="plans" :fetch_function="get_wait_que" height="90vh" search_key="search_cond" v-model="plans">
-            <view v-for="item in  plans" :key="item.id">
-                <u-cell :icon="icon_make(item)" :title="item.main_vehicle.plate + '-' + item.behind_vehicle.plate">
-                    <view slot="label" style="display:flex; flex-direction: column;">
-                        <fui-text :text="item.company.name" size="24"></fui-text>
-                        <fui-text type="primary" :text="'排号时间：' + item.register_time" size="24"></fui-text>
-                        <fui-text v-if="item.call_time" type="success" :text="'叫号时间：' + item.call_time" size="24"></fui-text>
-                        <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + item.seal_no" size="24"></fui-text>
-                        <fui-text v-if="item.enter_time" type="purple" :text="'一次重量:' + item.p_weight" size="24"></fui-text>
-                    </view>
-                    <view slot="value" style="display:flex; flex-direction: column;">
-                        <fui-text :text="item.driver.name" size="24"></fui-text>
-                        <fui-text type="primary" :text="item.driver.phone" size="24" textType="mobile" @click="copy_text(item.driver.phone)"></fui-text>
-                        <fui-text :text="'序号:' + item.register_number" size="24"></fui-text>
-                    </view>
-                    <view slot="right-icon">
-                        <fui-button btnSize="mini" v-if="!item.call_time" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
-                        <view v-else-if="!item.enter_time">
-                            <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
-                            <fui-button btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
+    <view>
+        <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
+        <view v-if="cur_page == 0">
+            <list-show ref="plans" :fetch_function="get_wait_que" height="90vh" search_key="search_cond"
+                v-model="plans">
+                <view v-for="item in plans" :key="item.id">
+                    <u-cell :icon="icon_make(item)" :title="item.main_vehicle.plate + '-' + item.behind_vehicle.plate">
+                        <view slot="label" style="display:flex; flex-direction: column;">
+                            <fui-text :text="item.company.name" size="24"></fui-text>
+                            <fui-text type="primary" :text="'排号时间：' + item.register_time" size="24"></fui-text>
+                            <fui-text v-if="item.call_time" type="success" :text="'叫号时间：' + item.call_time"
+                                size="24"></fui-text>
+                            <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + item.seal_no"
+                                size="24"></fui-text>
+                            <fui-text v-if="item.enter_time" type="purple" :text="'一次重量:' + item.p_weight"
+                                size="24"></fui-text>
                         </view>
-                        <view v-else>
-                            <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
-                            <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
+                        <view slot="value" style="display:flex; flex-direction: column;">
+                            <fui-text :text="item.driver.name" size="24"></fui-text>
+                            <fui-text type="primary" :text="item.driver.phone" size="24" textType="mobile"
+                                @click="copy_text(item.driver.phone)"></fui-text>
+                            <fui-text :text="'序号:' + item.register_number" size="24"></fui-text>
                         </view>
-                    </view>
-                </u-cell>
+                        <view slot="right-icon">
+                            <fui-button btnSize="mini" v-if="!item.call_time" text="叫号" type="success"
+                                @click="call_vehicle(item)"></fui-button>
+                            <view v-else-if="!item.enter_time">
+                                <fui-button btnSize="mini" text="过号" type="danger"
+                                    @click="prepare_pass_vehicle(item)"></fui-button>
+                                <fui-button btnSize="mini" text="进厂" type="primary"
+                                    @click="prepare_enter_vehicle(item)"></fui-button>
+                            </view>
+                            <view v-else>
+                                <fui-button btnSize="mini" text="装卸货" type="warning"
+                                    @click="prepare_confirm_vehicle(item)"></fui-button>
+                                <fui-button btnSize="mini" text="撤销进厂" type="danger"
+                                    @click="prepare_enter_vehicle(item, true)"></fui-button>
+                            </view>
+                        </view>
+                    </u-cell>
+                </view>
+            </list-show>
+        </view>
+        <view v-else-if="cur_page == 1">
+            <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :cur_weight="single_dev.cur_weight"
+                :enter_gate="single_dev.enter_gate" :exit_gate="single_dev.exit_gate" :name="single_dev.name"
+                :scale_status="single_dev.scale_status" @refresh="dev_refresh"></dev-opt>
+        </view>
+        <view v-else-if="cur_page == 2">
+            <view v-if="stamp_pic">
+                <fui-avatar width="100%" mode="widthFix" block shape="square" v-if="stamp_pic"
+                    :src="$convert_attach_url(stamp_pic)"></fui-avatar>
+                <fui-button text="删除" @click="delete_stamp_pic" type="danger"></fui-button>
             </view>
-        </list-show>
-    </view>
-    <view v-else-if="cur_page == 1">
-        <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :cur_weight="single_dev.cur_weight" :enter_gate="single_dev.enter_gate" :exit_gate="single_dev.exit_gate" :name="single_dev.name" :scale_status="single_dev.scale_status" @refresh="dev_refresh"></dev-opt>
-    </view>
-    <view v-else-if="cur_page == 2">
-        <view v-if="stamp_pic">
-            <fui-avatar width="100%" mode="widthFix" block shape="square" v-if="stamp_pic" :src="$convert_attach_url(stamp_pic)"></fui-avatar>
-            <fui-button text="删除" @click="delete_stamp_pic" type="danger"></fui-button>
+            <view v-else>
+                <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url"
+                    ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error"
+                    @complete="after_other_action"></fui-upload>
+            </view>
         </view>
-        <view v-else>
-            <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url" ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error" @complete="after_other_action"></fui-upload>
-        </view>
+        <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
+        </fui-modal>
+        <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle"
+            :show="show_enter_vehicle" @click="enter_vehicle">
+        </fui-modal>
+        <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
+            <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
+                <slot name="default">
+                    <fui-button type="success" btnSize="mini" @click="confirmSealNo">确认泄压</fui-button>
+                </slot>
+            </fui-input>
+
+        </fui-modal>
     </view>
-    <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
-    </fui-modal>
-    <fui-modal width="600" :descr="'确定' + (is_exit_confirm?'撤销':'') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
-    </fui-modal>
-    <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
-		<fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
-			<slot name="default">
-				<fui-button type="success" btnSize="mini" @click="confirmSealNo">确认泄压</fui-button>
-			</slot>
-		</fui-input>
-		
-    </fui-modal>
-</view>
 </template>
 
 <script>
@@ -159,21 +175,21 @@ export default {
         },
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
-			this.tmp_seal_no = item.seal_no;
+            this.tmp_seal_no = item.seal_no;
             this.show_confirm_vehicle = true;
         },
-		confirmSealNo:function(){
-			this.tmp_seal_no = '正在泄压';
-		},
+        confirmSealNo: function () {
+            this.tmp_seal_no = '正在泄压';
+        },
         confirm_vehicle: async function (e) {
-			if(e.text==="确定"){
-				await this.$send_req('/scale/confirm_vehicle', {
-					plan_id: this.focus_plan_id,
-					is_confirm: e.index == 1,
-					seal_no: this.tmp_seal_no
-				});
-				uni.startPullDownRefresh();
-			}
+            if (e.text === "确定") {
+                await this.$send_req('/scale/confirm_vehicle', {
+                    plan_id: this.focus_plan_id,
+                    is_confirm: e.index == 1,
+                    seal_no: this.tmp_seal_no
+                });
+                uni.startPullDownRefresh();
+            }
             this.show_confirm_vehicle = false;
         },
         icon_make: function (item) {
@@ -228,6 +244,4 @@ export default {
 }
 </script>
 
-<style>
-
-</style>
+<style></style>
