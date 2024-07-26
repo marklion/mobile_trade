@@ -1,86 +1,88 @@
 <template>
-<view class="main-warp">
-	<view style="padding: 15px 0;background-color: white;">
-		<fui-row isFlex justify="end" align="top">
-			<fui-col :span="6" :pushLeft="1">
-				<fui-avatar shape="square" :text="self_info.name.charAt(0)" background="#465CFF">
-					<!-- <fui-icon name="my"></fui-icon> -->
-				</fui-avatar>
-			</fui-col>
-			<fui-col>
-				<fui-row isFlex>
-					<fui-col>
-						<fui-text :text="self_info.name" :size="45" :fontWeight="500"></fui-text>
-					</fui-col>
-				</fui-row>
-				<fui-row isFlex justify="space-around">
-					<fui-col>
-						<fui-text :text="self_info.company" :size="32"></fui-text>
-					</fui-col>
-					<fui-col :pushLeft="3">
-						<fui-text :text="self_info.phone"></fui-text>
-					</fui-col>
-				</fui-row>
-				
-			</fui-col>
-		</fui-row>
-	</view>
-	
-    <fui-card full  :headerLine="false"  color="black">
-		<view slot="default" style="padding: 15rpx 20rpx">
-		 <fui-tag marginLeft="8" margin-top="10" v-for="(item, index) in self_info.modules" :key="index" theme="plain" :text="item.description"></fui-tag>
-		 </view>
-    </fui-card>
-    <fui-list style="background-color: white;">
-        <fui-list-cell arrow @click="show_change_pwd = true">
-            重置密码
-        </fui-list-cell>
-        <fui-list-cell arrow @click="rebind">
-            重新绑定信息
-        </fui-list-cell>
-        <module-filter require_module="rbac">
-            <fui-list-cell arrow @click="config_role">
-                角色配置
-            </fui-list-cell>
-        </module-filter>
-        <module-filter require_module="global">
-            <u-cell title="超级管理员" isLink url="/pages/Admin"></u-cell>
-        </module-filter>
-        <module-filter require_module="sale_management">
-            <fui-list-cell arrow @click="show_checkin_config = true">
-                司机排号设置
-            </fui-list-cell>
-        </module-filter>
-        <fui-list-cell arrow @click="prepare_prefer">
-            偏好设置
-        </fui-list-cell>
+    <view class="main-warp">
+        <view style="padding: 15px 0;background-color: white;">
+            <fui-row isFlex justify="end" align="top">
+                <fui-col :span="6" :pushLeft="1">
+                    <fui-avatar shape="square" :text="self_info.name.charAt(0)" background="#465CFF">
+                        <!-- <fui-icon name="my"></fui-icon> -->
+                    </fui-avatar>
+                </fui-col>
+                <fui-col>
+                    <fui-row isFlex>
+                        <fui-col>
+                            <fui-text :text="self_info.name" :size="45" :fontWeight="500"></fui-text>
+                        </fui-col>
+                    </fui-row>
+                    <fui-row isFlex justify="space-around">
+                        <fui-col>
+                            <fui-text :text="self_info.company" :size="32"></fui-text>
+                        </fui-col>
+                        <fui-col :pushLeft="3">
+                            <fui-text :text="self_info.phone"></fui-text>
+                        </fui-col>
+                    </fui-row>
 
-        <module-filter require_module="rbac">
-            <u-cell title="开发选项" isLink url="/pages/DevPage"></u-cell>
-        </module-filter>
-    </fui-list>
-	<fui-white-space></fui-white-space>
-    <fui-button type="success" text="退出登录" @click="unLogin"></fui-button>
-    <fui-modal width="600" :show="show_change_pwd" v-if="show_change_pwd" @click="change_pwd">
-        <fui-input label="新密码" borderTop placeholder="请输入新密码" v-model="new_pwd"></fui-input>
-    </fui-modal>
-    <fui-modal width="600" v-if="show_checkin_config" :show="show_checkin_config" @click="config_checkin">
-        <fui-form ref="form" top="100">
-            <fui-input label="工厂纬度" borderTop placeholder="请输入纬度" v-model="checkin_config.lat"></fui-input>
-            <fui-input label="工厂经度" borderTop placeholder="请输入经度" v-model="checkin_config.lon"></fui-input>
-            <fui-input label="排号范围" borderTop placeholder="请输入距离(千米)" v-model="checkin_config.distance_limit"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-modal width="600" v-if="show_order_prefer" :show="show_order_prefer" @click="config_order_prefer">
-        <view style="display:flex; justify-content: center;">
-            请设置订单页面的默认时间范围
+                </fui-col>
+            </fui-row>
         </view>
-        <fui-form ref="op_form" top="100">
-            <fui-input label="前几天？" borderTop placeholder="请输入天数" v-model="prefer_req.begin_offset"></fui-input>
-            <fui-input label="后几天？" borderTop placeholder="请输入天数" v-model="prefer_req.end_offset"></fui-input>
-        </fui-form>
-    </fui-modal>
-</view>
+
+        <fui-card full :headerLine="false" color="black">
+            <view slot="default" style="padding: 15rpx 20rpx">
+                <fui-tag marginLeft="8" margin-top="10" v-for="(item, index) in self_info.modules" :key="index"
+                    theme="plain" :text="item.description"></fui-tag>
+            </view>
+        </fui-card>
+        <fui-list style="background-color: white;">
+            <fui-list-cell arrow @click="show_change_pwd = true">
+                重置密码
+            </fui-list-cell>
+            <fui-list-cell arrow @click="rebind">
+                重新绑定信息
+            </fui-list-cell>
+            <module-filter require_module="rbac">
+                <fui-list-cell arrow @click="config_role">
+                    角色配置
+                </fui-list-cell>
+            </module-filter>
+            <module-filter require_module="global">
+                <u-cell title="超级管理员" isLink url="/pages/Admin"></u-cell>
+            </module-filter>
+            <module-filter require_module="sale_management">
+                <fui-list-cell arrow @click="show_checkin_config = true">
+                    司机排号设置
+                </fui-list-cell>
+            </module-filter>
+            <fui-list-cell arrow @click="prepare_prefer">
+                偏好设置
+            </fui-list-cell>
+
+            <module-filter require_module="rbac">
+                <u-cell title="开发选项" isLink url="/pages/DevPage"></u-cell>
+            </module-filter>
+        </fui-list>
+        <fui-white-space></fui-white-space>
+        <fui-button type="success" text="退出登录" @click="unLogin"></fui-button>
+        <fui-modal width="600" :show="show_change_pwd" v-if="show_change_pwd" @click="change_pwd">
+            <fui-input label="新密码" borderTop placeholder="请输入新密码" v-model="new_pwd"></fui-input>
+        </fui-modal>
+        <fui-modal width="600" v-if="show_checkin_config" :show="show_checkin_config" @click="config_checkin">
+            <fui-form ref="form" top="100">
+                <fui-input label="工厂纬度" borderTop placeholder="请输入纬度" v-model="checkin_config.lat"></fui-input>
+                <fui-input label="工厂经度" borderTop placeholder="请输入经度" v-model="checkin_config.lon"></fui-input>
+                <fui-input label="排号范围" borderTop placeholder="请输入距离(千米)"
+                    v-model="checkin_config.distance_limit"></fui-input>
+            </fui-form>
+        </fui-modal>
+        <fui-modal width="600" v-if="show_order_prefer" :show="show_order_prefer" @click="config_order_prefer">
+            <view style="display:flex; justify-content: center;">
+                请设置订单页面的默认时间范围
+            </view>
+            <fui-form ref="op_form" top="100">
+                <fui-input label="前几天？" borderTop placeholder="请输入天数" v-model="prefer_req.begin_offset"></fui-input>
+                <fui-input label="后几天？" borderTop placeholder="请输入天数" v-model="prefer_req.end_offset"></fui-input>
+            </fui-form>
+        </fui-modal>
+    </view>
 </template>
 
 <script>
@@ -156,7 +158,7 @@ export default {
                     msg: ['请输入纬度']
                 }, {
                     name: 'lon',
-                    rule: ['required', ],
+                    rule: ['required',],
                     msg: ['请输入经度']
                 }, {
                     name: 'distance_limit',
