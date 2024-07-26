@@ -1,14 +1,37 @@
 <template>
-<view>
-    <fui-card showBorder :title="self_info.name" :headerLine="false" background="#5cdbd5" headerBackground="#5cdbd5" size="50" :tag="self_info.phone" color="black" tagColor="blue">
-        <view slot="footer">
-            <view>
-                {{self_info.company}}
-            </view>
-            <fui-tag v-for="(item, index) in self_info.modules" :key="index" theme="plain" :text="item.description"></fui-tag>
-        </view>
+<view class="main-warp">
+	<view style="padding: 15px 0;background-color: white;">
+		<fui-row isFlex justify="end" align="top">
+			<fui-col :span="6" :pushLeft="1">
+				<fui-avatar shape="square" :text="self_info.name.charAt(0)" background="#465CFF">
+					<!-- <fui-icon name="my"></fui-icon> -->
+				</fui-avatar>
+			</fui-col>
+			<fui-col>
+				<fui-row isFlex>
+					<fui-col>
+						<fui-text :text="self_info.name" :size="45" :fontWeight="500"></fui-text>
+					</fui-col>
+				</fui-row>
+				<fui-row isFlex justify="space-around">
+					<fui-col>
+						<fui-text :text="self_info.company" :size="32"></fui-text>
+					</fui-col>
+					<fui-col :pushLeft="3">
+						<fui-text :text="self_info.phone"></fui-text>
+					</fui-col>
+				</fui-row>
+				
+			</fui-col>
+		</fui-row>
+	</view>
+	
+    <fui-card full  :headerLine="false"  color="black">
+		<view slot="default" style="padding: 15rpx 20rpx">
+		 <fui-tag marginLeft="8" margin-top="10" v-for="(item, index) in self_info.modules" :key="index" theme="plain" :text="item.description"></fui-tag>
+		 </view>
     </fui-card>
-    <fui-list>
+    <fui-list style="background-color: white;">
         <fui-list-cell arrow @click="show_change_pwd = true">
             重置密码
         </fui-list-cell>
@@ -36,7 +59,8 @@
             <u-cell title="开发选项" isLink url="/pages/DevPage"></u-cell>
         </module-filter>
     </fui-list>
-    <fui-button type="danger" text="退出登录" @click="unLogin"></fui-button>
+	<fui-white-space></fui-white-space>
+    <fui-button type="success" text="退出登录" @click="unLogin"></fui-button>
     <fui-modal width="600" :show="show_change_pwd" v-if="show_change_pwd" @click="change_pwd">
         <fui-input label="新密码" borderTop placeholder="请输入新密码" v-model="new_pwd"></fui-input>
     </fui-modal>
@@ -187,7 +211,8 @@ export default {
     },
 }
 </script>
-
-<style>
-
+<style scoped>
+.main-warp {
+    background-color: #F1F4FA;
+}
 </style>

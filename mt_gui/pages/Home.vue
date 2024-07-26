@@ -1,63 +1,71 @@
 <template>
-<view>
-    <fui-white-space size="large"></fui-white-space>
-    <fui-section :title="self_info.company" size="50" isLine></fui-section>
-    <fui-divider></fui-divider>
-    <view class="brief_section">
-        <fui-section title="数据统计"></fui-section>
-        <view style="display:flex">
-            <view class="charts-box" v-for="(single_cts, index) in charts" :key="index">
-                <qiun-data-charts type="ring" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
+    <view class="main-warp">
+        <fui-row style="background-color: white;padding: 20rpx 0rpx;" isFlex justify="start">
+            <fui-col :span="24">
+                <fui-section :title="self_info.company" isLine size="50" fontWeight="500"></fui-section>
+            </fui-col>
+        </fui-row>
+        <fui-divider style="background-color: white;"></fui-divider>
+        <fui-card title="数据统计" full color="black" size="35">
+            <view style="display: flex;flex-wrap: wrap;">
+                <view class="charts-box" v-for="(single_cts, index) in charts" :key="index">
+                    <qiun-data-charts type="ring" :chartData="single_cts.chartData"
+                        :opts="single_cts.opts"></qiun-data-charts>
+                </view>
             </view>
-        </view>
-        <module-filter require_module="sale_management">
-            <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
-                <u-radio  label="昨天" :name="-1"></u-radio>
-                <u-radio  label="今天" :name="0"></u-radio>
-                <u-radio  label="明天" :name="1"></u-radio>
-            </u-radio-group>
-            <fui-table fixed :height="700" stripe :itemList="tableData" :header="headerData"></fui-table>
+            <view>
+                <u-radio-group style="margin: 3rpx 3rpx;" v-model="day_offset" @change="init_statistic">
+                    <u-radio label="昨天" :name="-1"></u-radio>
+                    <u-radio label="今天" :name="0"></u-radio>
+                    <u-radio label="明天" :name="1"></u-radio>
+                </u-radio-group>
+                <fui-table fixed full :height="700" align="left" :itemList="tableData" :header="headerData"></fui-table>
+            </view>
+        </fui-card>
+        <fui-white-space size="default"></fui-white-space>
+        <module-filter require_module="customer">
+            <fui-card title="采购提单" full color="black" size="35">
+                <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
+                    <view v-for="item in stuff2buy" :key="item.id">
+                        <u-cell :title="item.name + '-' + item.company.name" :label="item.comment"
+                            :value="item.price == -1 ? '未关注' : item.price">
+                            <view slot="right-icon">
+                                <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
+                            </view>
+                        </u-cell>
+                    </view>
+                </list-show>
+            </fui-card>
         </module-filter>
+        <fui-white-space size="default"></fui-white-space>
+        <module-filter require_module="supplier">
+            <fui-card title="销售提单" full color="black" size="35">
+                <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
+                    <view>
+                        <u-cell v-for="(item, index) in stuff2sale" :key="index"
+                            :title="item.name + '-' + item.company.name" :label="item.comment">
+                            <view slot="right-icon">
+                                <fui-button v-if="item.price != -1" btnSize="mini" text="下单"
+                                    @click="start_plan_creation(item, true)"></fui-button>
+                            </view>
+                        </u-cell>
+                    </view>
+                </list-show>
+            </fui-card>
+        </module-filter>
+        <fui-white-space size="default"></fui-white-space>
+        <module-filter require_module="stuff">
+            <fui-card title="通知管理" full color="black" size="35">
+                <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容"
+                    v-model="notice.notice"></fui-textarea>
+                <fui-textarea flexStart isCounter label="司机通知" maxlength="2000" placeholder="请输入内容"
+                    v-model="notice.driver_notice"></fui-textarea>
+                <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
+            </fui-card>
+
+        </module-filter>
+
     </view>
-    <module-filter require_module="customer">
-        <view class="brief_section">
-            <fui-section title="采购提单"></fui-section>
-            <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
-                <view v-for="item in stuff2buy" :key="item.id">
-                    <u-cell :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
-                        <view slot="right-icon">
-                            <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
-                        </view>
-                    </u-cell>
-                </view>
-            </list-show>
-        </view>
-    </module-filter>
-
-    <module-filter require_module="supplier">
-        <view class="brief_section">
-            <fui-section title="销售提单"></fui-section>
-            <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
-                <view>
-                    <u-cell v-for="(item, index) in stuff2sale" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment">
-                        <view slot="right-icon">
-                            <fui-button v-if="item.price != -1" btnSize="mini" text="下单" @click="start_plan_creation(item, true)"></fui-button>
-                        </view>
-                    </u-cell>
-                </view>
-            </list-show>
-        </view>
-    </module-filter>
-    <module-filter require_module="stuff">
-        <view class="brief_section">
-            <fui-section title="通知管理"></fui-section>
-            <fui-textarea isCounter label="下单通知" maxlength="2000" placeholder="请输入内容" v-model="notice.notice"></fui-textarea>
-            <fui-textarea isCounter label="司机通知" maxlength="2000" placeholder="请输入内容" v-model="notice.driver_notice"></fui-textarea>
-            <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
-        </view>
-    </module-filter>
-
-</view>
 </template>
 
 <script>
@@ -96,7 +104,7 @@ export default {
                 label: '完成数',
                 width: '160'
             }],
-            day_offset:0,
+            day_offset: 0,
         }
     },
     methods: {
@@ -141,16 +149,16 @@ export default {
                     show: true,
                     position: "bottom",
                     lineHeight: 25,
-                    float: "center",
-                    padding: 5,
-                    margin: 5,
+                    float: "left",
+                    padding: 3,
+                    margin: 3,
                     backgroundColor: "rgba(0,0,0,0)",
                     borderColor: "rgba(0,0,0,0)",
                     borderWidth: 0,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontColor: "#666666",
                     hiddenColor: "#CECECE",
-                    itemGap: 10
+                    itemGap: 3
                 },
                 title: {
                     name: title,
@@ -273,24 +281,24 @@ export default {
                     opts: this.chart_opt(title, subtitle),
                     chartData: {
                         series: [{
-                                data: [{
-                                        name: '今日未完成:' + db.today_unfinish_count,
-                                        value: db.today_unfinish_count
-                                    },
-                                    {
-                                        name: '今日已完成:' + db.today_finished_count,
-                                        value: db.today_finished_count
-                                    },
-                                    {
-                                        name: '昨日:' + db.yst_count,
-                                        value: db.yst_count
-                                    },
-                                    {
-                                        name: '明日:' + db.tmr_count,
-                                        value: db.tmr_count
-                                    },
-                                ]
+                            data: [{
+                                name: '今日未完成:' + db.today_unfinish_count,
+                                value: db.today_unfinish_count
                             },
+                            {
+                                name: '今日已完成:' + db.today_finished_count,
+                                value: db.today_finished_count
+                            },
+                            {
+                                name: '昨日:' + db.yst_count,
+                                value: db.yst_count
+                            },
+                            {
+                                name: '明日:' + db.tmr_count,
+                                value: db.tmr_count
+                            },
+                            ]
+                        },
 
                         ],
                     },
@@ -344,15 +352,12 @@ export default {
 </script>
 
 <style scoped>
-.brief_section {
-    border: 3px dashed #45d5bd;
-    border-radius: 10px;
-    /* 添加圆角 */
-    margin-bottom: 20px;
-}
-
 .charts-box {
     width: 50%;
     height: 300px;
+}
+
+.main-warp {
+    background-color: #F1F4FA;
 }
 </style>
