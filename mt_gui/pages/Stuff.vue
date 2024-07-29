@@ -4,20 +4,20 @@
             :fetch_function="get_all_stuff" search_key="name" height="90vh">
             <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name"
                 :tag="item.price + ''" v-for="(item, index) in data2show2" :key="index">
-                <view style="display:flex;flex-wrap: wrap; padding: 0;">
-                    <fui-tag v-if="item.comment" :text="item.comment" theme="plain" :scaleRatio="0.8"
+                <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
+                    <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8"
                         type="purple"></fui-tag>
                     <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain"
-                        :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" :scaleRatio="0.8"
+                       originLeft :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" originLeft :scaleRatio="0.8"
                         type="warning"></fui-tag>
                     <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain"
-                        :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" :scaleRatio="0.8"
+                       originLeft :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" originLeft :scaleRatio="0.8"
                         type="primary"></fui-tag>
                     <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain"
-                        :scaleRatio="0.8" type="purple"></fui-tag>
-                    <fui-tag v-else text="用于销售" theme="plain" :scaleRatio="0.8" type="success"></fui-tag>
+                       originLeft :scaleRatio="0.8" type="purple"></fui-tag>
+                    <fui-tag v-else text="用于销售" theme="plain" originLeft :scaleRatio="0.8" type="success"></fui-tag>
                 </view>
                 <fui-white-space size="large"></fui-white-space>
                 <view style="display:flex;justify-content: space-around;">
