@@ -1,5 +1,5 @@
 <template>
-<view style="padding: 10rpx 0;">
+<view style="padding: 10rpx 0">
     <fui-tag theme="plain" :type="tag_color" @click="show_list= true" marginLeft="30">
         {{value.id == undefined?('全部'+filter_name):value.name}}
         <fui-icon v-if=" !value.id" name="arrowright" size="32"></fui-icon>
