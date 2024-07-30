@@ -649,6 +649,7 @@ module.exports = {
             if (plan.is_repeat) {
                 await this.dup_plan(plan, _token);
             }
+            await hook_plan('deliver_plan', plan);
         });
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
@@ -1423,20 +1424,19 @@ module.exports = {
             count: total
         }
     },
-    stuff_price_timeout:async function() {
+    stuff_price_timeout: async function () {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findAll({
-            where:{
-                change_last_minutes:{
-                    [db_opt.Op.ne]:0,
+            where: {
+                change_last_minutes: {
+                    [db_opt.Op.ne]: 0,
                 }
             }
         });
         for (let index = 0; index < stuff.length; index++) {
             const element = stuff[index];
             element.change_last_minutes--;
-            if (element.change_last_minutes <= 0)
-            {
+            if (element.change_last_minutes <= 0) {
                 await this.pri_change_stuff_price(element, element.next_price, '定时调价:' + element.next_comment, element.next_operator, false);
                 element.next_price = 0;
                 element.next_comment = '';
