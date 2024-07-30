@@ -1,77 +1,70 @@
 <template>
-    <view>
-        <fui-white-space size="large"></fui-white-space>
-        <fui-section :title="self_info.company" size="50" isLine></fui-section>
-        <fui-divider></fui-divider>
-        <view class="brief_section">
-            <fui-section title="数据统计"></fui-section>
-            <view style="display:flex">
-                <view class="charts-box" v-for="(single_cts, index) in charts" :key="index">
-                    <qiun-data-charts type="ring" :chartData="single_cts.chartData"
-                        :opts="single_cts.opts"></qiun-data-charts>
-                </view>
+<view>
+    <fui-white-space size="large"></fui-white-space>
+    <fui-section :title="self_info.company" size="50" isLine></fui-section>
+    <fui-divider></fui-divider>
+    <view class="brief_section">
+        <fui-section title="数据统计"></fui-section>
+        <view style="display:flex">
+            <view class="charts-box" v-for="(single_cts, index) in charts" :key="index">
+                <qiun-data-charts type="ring" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
             </view>
-            <module-filter require_module="sale_management">
-                <u-row>
-                    <u-col span="10">
-                        <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
-                            <u-radio label="昨天" :name="-1"></u-radio>
-                            <u-radio label="今天" :name="0"></u-radio>
-                            <u-radio label="明天" :name="1"></u-radio>
-                        </u-radio-group>
-                    </u-col>
-                    <u-col v-if="tableData.length > 7" span="2">
-                        <u-button type="link" shape="square" size="medium"
-                            @click="handle_expand">{{ expand_text }}</u-button>
-                    </u-col>
-                </u-row>
-                <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
-            </module-filter>
         </view>
-        <module-filter require_module="customer">
-            <view class="brief_section">
-                <fui-section title="采购提单"></fui-section>
-                <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
-                    <view v-for="item in stuff2buy" :key="item.id">
-                        <u-cell :title="item.name + '-' + item.company.name" :label="item.comment"
-                            :value="item.price == -1 ? '未关注' : item.price">
-                            <view slot="right-icon">
-                                <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
-                            </view>
-                        </u-cell>
-                    </view>
-                </list-show>
-            </view>
+        <module-filter require_module="sale_management">
+            <u-row>
+                <u-col span="10">
+                    <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
+                        <u-radio label="昨天" :name="-1"></u-radio>
+                        <u-radio label="今天" :name="0"></u-radio>
+                        <u-radio label="明天" :name="1"></u-radio>
+                    </u-radio-group>
+                </u-col>
+                <u-col v-if="tableData.length > 7" span="2">
+                    <u-button type="link" shape="square" size="medium" @click="handle_expand">{{ expand_text }}</u-button>
+                </u-col>
+            </u-row>
+            <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
         </module-filter>
-
-        <module-filter require_module="supplier">
-            <view class="brief_section">
-                <fui-section title="销售提单"></fui-section>
-                <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
-                    <view>
-                        <u-cell v-for="(item, index) in stuff2sale" :key="index"
-                            :title="item.name + '-' + item.company.name" :label="item.comment">
-                            <view slot="right-icon">
-                                <fui-button v-if="item.price != -1" btnSize="mini" text="下单"
-                                    @click="start_plan_creation(item, true)"></fui-button>
-                            </view>
-                        </u-cell>
-                    </view>
-                </list-show>
-            </view>
-        </module-filter>
-        <module-filter require_module="stuff">
-            <view class="brief_section">
-                <fui-section title="通知管理"></fui-section>
-                <fui-textarea isCounter label="下单通知" maxlength="2000" placeholder="请输入内容"
-                    v-model="notice.notice"></fui-textarea>
-                <fui-textarea isCounter label="司机通知" maxlength="2000" placeholder="请输入内容"
-                    v-model="notice.driver_notice"></fui-textarea>
-                <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
-            </view>
-        </module-filter>
-
     </view>
+    <module-filter require_module="customer">
+        <view class="brief_section">
+            <fui-section title="采购提单"></fui-section>
+            <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
+                <view v-for="item in stuff2buy" :key="item.id">
+                    <u-cell :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price == -1 ? '未关注' : item.price">
+                        <view slot="right-icon">
+                            <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
+                        </view>
+                    </u-cell>
+                </view>
+            </list-show>
+        </view>
+    </module-filter>
+
+    <module-filter require_module="supplier">
+        <view class="brief_section">
+            <fui-section title="销售提单"></fui-section>
+            <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
+                <view>
+                    <u-cell v-for="(item, index) in stuff2sale" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment">
+                        <view slot="right-icon">
+                            <fui-button v-if="item.price != -1" btnSize="mini" text="下单" @click="start_plan_creation(item, true)"></fui-button>
+                        </view>
+                    </u-cell>
+                </view>
+            </list-show>
+        </view>
+    </module-filter>
+    <module-filter require_module="stuff">
+        <view class="brief_section">
+            <fui-section title="通知管理"></fui-section>
+            <fui-textarea isCounter label="下单通知" maxlength="2000" placeholder="请输入内容" v-model="notice.notice"></fui-textarea>
+            <fui-textarea isCounter label="司机通知" maxlength="2000" placeholder="请输入内容" v-model="notice.driver_notice"></fui-textarea>
+            <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
+        </view>
+    </module-filter>
+
+</view>
 </template>
 
 <script>
@@ -123,8 +116,7 @@ export default {
                 //this.tmp_tableData = this.tableData.slice(0,this.tableData.length)
                 this.expand_text = "收缩"
                 this.table_height = 0
-            }
-            else {
+            } else {
                 //this.tmp_tableData = this.tableData.slice(0,this.dataCount)
                 this.expand_text = "展开"
                 this.table_height = 700
@@ -305,24 +297,24 @@ export default {
                     opts: this.chart_opt(title, subtitle),
                     chartData: {
                         series: [{
-                            data: [{
-                                name: '今日未完成:' + db.today_unfinish_count,
-                                value: db.today_unfinish_count
+                                data: [{
+                                        name: '今日未完成:' + db.today_unfinish_count,
+                                        value: db.today_unfinish_count
+                                    },
+                                    {
+                                        name: '今日已完成:' + db.today_finished_count,
+                                        value: db.today_finished_count
+                                    },
+                                    {
+                                        name: '昨日:' + db.yst_count,
+                                        value: db.yst_count
+                                    },
+                                    {
+                                        name: '明日:' + db.tmr_count,
+                                        value: db.tmr_count
+                                    },
+                                ]
                             },
-                            {
-                                name: '今日已完成:' + db.today_finished_count,
-                                value: db.today_finished_count
-                            },
-                            {
-                                name: '昨日:' + db.yst_count,
-                                value: db.yst_count
-                            },
-                            {
-                                name: '明日:' + db.tmr_count,
-                                value: db.tmr_count
-                            },
-                            ]
-                        },
 
                         ],
                     },
