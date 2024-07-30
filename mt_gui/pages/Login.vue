@@ -42,7 +42,7 @@ export default {
             },
             rules: [{
                 name: "phone",
-                rule: ["required", "isNumber"],
+                rule: ["required", "isMobile"],
                 msg: ["请输入手机号", "请输入有效的手机号"]
             }, {
                 name: "password",
