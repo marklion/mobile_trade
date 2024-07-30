@@ -11,12 +11,19 @@
             </view>
         </view>
         <module-filter require_module="sale_management">
-            <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
-                <u-radio  label="昨天" :name="-1"></u-radio>
-                <u-radio  label="今天" :name="0"></u-radio>
-                <u-radio  label="明天" :name="1"></u-radio>
-            </u-radio-group>
-            <fui-table fixed :height="700" stripe :itemList="tableData" :header="headerData"></fui-table>
+            <u-row>
+                <u-col span="10">
+                    <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
+                        <u-radio label="昨天" :name="-1"></u-radio>
+                        <u-radio label="今天" :name="0"></u-radio>
+                        <u-radio label="明天" :name="1"></u-radio>
+                    </u-radio-group>
+                </u-col>
+                <u-col v-if="tableData.length > 7" span="2">
+                    <u-button type="link" shape="square" size="medium" @click="handle_expand">{{ expand_text }}</u-button>
+                </u-col>
+            </u-row>
+            <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
         </module-filter>
     </view>
     <module-filter require_module="customer">
@@ -24,7 +31,7 @@
             <fui-section title="采购提单"></fui-section>
             <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
                 <view v-for="item in stuff2buy" :key="item.id">
-                    <u-cell :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price==-1?'未关注':item.price">
+                    <u-cell :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price == -1 ? '未关注' : item.price">
                         <view slot="right-icon">
                             <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
                         </view>
@@ -96,10 +103,25 @@ export default {
                 label: '完成数',
                 width: '160'
             }],
-            day_offset:0,
+            day_offset: 0,
+            expand_text: '展开',
+            table_height: 700,
+            tmp_tableData: [],
+            dataCount: 7
         }
     },
     methods: {
+        handle_expand() {
+            if (this.expand_text == "展开") {
+                //this.tmp_tableData = this.tableData.slice(0,this.tableData.length)
+                this.expand_text = "收缩"
+                this.table_height = 0
+            } else {
+                //this.tmp_tableData = this.tableData.slice(0,this.dataCount)
+                this.expand_text = "展开"
+                this.table_height = 700
+            }
+        },
         init_statistic: async function () {
             if (this.$has_module('sale_management') == false) {
                 return
@@ -116,6 +138,8 @@ export default {
                     finish_count: element.finish_count,
                 })
             }
+            // 默认UI展示前dataCount条数据
+            // this.tmp_tableData = this.tableData.slice(0,this.dataCount)
         },
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);
@@ -337,6 +361,7 @@ export default {
         uni.stopPullDownRefresh();
     },
     onLoad: async function () {
+
         await this.init_brief_info()
         await this.init_statistic()
     },
