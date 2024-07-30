@@ -102,6 +102,17 @@ export default {
         }
     },
     methods: {
+        handle_expand() {
+            if (this.expand_text == "展开") {
+                //this.tmp_tableData = this.tableData.slice(0,this.tableData.length)
+                this.expand_text = "收缩"
+                this.table_height = 0
+            } else {
+                //this.tmp_tableData = this.tableData.slice(0,this.dataCount)
+                this.expand_text = "展开"
+                this.table_height = 700
+            }
+        },
         init_statistic: async function () {
             if (this.$has_module('sale_management') == false) {
                 return
@@ -118,6 +129,8 @@ export default {
                     finish_count: element.finish_count,
                 })
             }
+            // 默认UI展示前dataCount条数据
+            // this.tmp_tableData = this.tableData.slice(0,this.dataCount)
         },
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);
@@ -339,6 +352,7 @@ export default {
         uni.stopPullDownRefresh();
     },
     onLoad: async function () {
+
         await this.init_brief_info()
         await this.init_statistic()
     },
