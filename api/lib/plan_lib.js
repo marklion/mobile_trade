@@ -655,6 +655,7 @@ module.exports = {
             if (plan.is_repeat) {
                 await this.dup_plan(plan, _token);
             }
+            await hook_plan('deliver_plan', plan);
         });
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
