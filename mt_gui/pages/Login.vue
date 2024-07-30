@@ -1,34 +1,32 @@
 <template>
-    <view>
-        <fui-card full>
-            <view style="display: flex; justify-content: center; flex-direction: column; align-items: center;">
-                <view style="margin-top: 10vh; margin-bottom: 3vh;">
-                    <fui-avatar src="/static/logo.jpg" size="large"></fui-avatar>
-                </view>
-                <view style="font-size:30px;">
-                    掌易助理
-                </view>
+<view>
+    <fui-card full>
+        <view style="display: flex; justify-content: center; flex-direction: column; align-items: center;">
+            <view style="margin-top: 10vh; margin-bottom: 3vh;">
+                <fui-avatar src="/static/logo.jpg" size="large"></fui-avatar>
             </view>
+            <view style="font-size:30px;">
+                掌易助理
+            </view>
+        </view>
 
-        </fui-card>
-        <fui-tabs :tabs="tabs" @change="change"></fui-tabs>
-        <view v-if="cur_tab == 0" style="margin-top: 10vh">
-            <fui-button text="微信登录" type="success" @click="wx_login"></fui-button>
-        </view>
-        <view v-else>
-            <fui-form ref="form" top="100" :model="formData" :show="true" :top="50">
-                <fui-form-item label="手机号码" asterisk prop="phone">
-                    <fui-input maxlength="11" :borderBottom="false" :padding="[0]" placeholder="请输入手机号码"
-                        v-model="formData.phone"></fui-input>
-                </fui-form-item>
-                <fui-form-item label="密码" asterisk prop="password">
-                    <fui-input :borderBottom="false" :padding="[0]" password placeholder="请输入密码"
-                        v-model="formData.password"></fui-input>
-                </fui-form-item>
-                <fui-button text="登录" bold @click="submit"></fui-button>
-            </fui-form>
-        </view>
+    </fui-card>
+    <fui-tabs :tabs="tabs" @change="change"></fui-tabs>
+    <view v-if="cur_tab == 0" style="margin-top: 10vh">
+        <fui-button text="微信登录" type="success" @click="wx_login"></fui-button>
     </view>
+    <view v-else>
+        <fui-form ref="form" top="100" :model="formData" :show="true" :top="50">
+            <fui-form-item label="手机号码" asterisk prop="phone">
+                <fui-input maxlength="11" :borderBottom="false" :padding="[0]" placeholder="请输入手机号码" v-model="formData.phone"></fui-input>
+            </fui-form-item>
+            <fui-form-item label="密码" asterisk prop="password">
+                <fui-input :borderBottom="false" :padding="[0]" password placeholder="请输入密码" v-model="formData.password"></fui-input>
+            </fui-form-item>
+            <fui-button text="登录" bold @click="submit"></fui-button>
+        </fui-form>
+    </view>
+</view>
 </template>
 
 <script>
@@ -44,8 +42,8 @@ export default {
             },
             rules: [{
                 name: "phone",
-                rule: ["required","isNumber"],
-                msg: ["请输入手机号","请输入有效的手机号"]
+                rule: ["required", "isNumber"],
+                msg: ["请输入手机号", "请输入有效的手机号"]
             }, {
                 name: "password",
                 rule: ["required"],
