@@ -1,23 +1,25 @@
 <template>
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
-    <list-show ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" search_key="search_cond" :fetch_params="[cur_urls]">
-        <u-cell v-for="item in data2show" :key="item.id" size="large" :title="item.company.name" :value="'￥' + item.balance">
-            <view slot="label">
+    <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls]">
+        <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :title="item.company.name" color="black" :tag="'￥' + item.balance">
+            <view style="padding: 0 20rpx;">
                 <module-filter require_module="sale_management">
                     <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su || cur_urls.buy_setting">
-                        <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" :scaleRatio="0.8" type="purple">
+                        <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" originLeft :scaleRatio="0.8" type="purple">
                             {{single_stuff.name}}
                             <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
                         </fui-tag>
-                        <fui-tag text="新增物料" :scaleRatio="0.8" type="purple" @click="prepare_add_stuff(item)"></fui-tag>
-                        <view v-if="cur_urls.need_su">
-                            <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" :scaleRatio="0.8" type="success">
-                                {{single_user.name + '|' + single_user.phone}}
+                        <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su">
+                            <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" originLeft :scaleRatio="0.8" type="success">
+                                {{single_user.name?single_user.name +'|'+single_user.phone: single_user.phone}}
                                 <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
                             </fui-tag>
-                            <fui-tag :scaleRatio="0.8" type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
                         </view>
+                    </view>
+                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su || cur_urls.buy_setting">
+                        <fui-tag text="新增物料" :scaleRatio="0.8" originLeft type="purple" @click="prepare_add_stuff(item)"></fui-tag>
+                        <fui-tag v-if="cur_urls.need_su" :scaleRatio="0.8" originLeft type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
                     </view>
                 </module-filter>
                 <view>
@@ -34,14 +36,14 @@
                 </view>
                 <view style="display:flex; flex-wrap: wrap;">
                     <module-filter require_module="cash" v-if="cur_urls.need_su">
-                        <fui-tag :scaleRatio="0.8" type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
-                        <fui-tag :scaleRatio="0.8" type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
+                        <fui-tag :scaleRatio="0.8" originLeft type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
+                        <fui-tag :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
                     </module-filter>
-                    <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
+                    <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
                 </view>
             </view>
-
-        </u-cell>
+            <fui-white-space size="large"></fui-white-space>
+        </fui-card>
     </list-show>
     <fui-button v-if="cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
     <fui-modal width="600" :show="show_add_contract" @click="add_contract" v-if="show_add_contract">
@@ -75,9 +77,9 @@
     <fui-modal width="600" :descr="'确定要取消' + focus_item.company.name + '关注' + focus_stuff.name + '吗？'" v-if="show_del_stuff" :show="show_del_stuff" @click="del_stuff">
     </fui-modal>
 
-    <fui-modal width="600" :show="show_add_auth" v-if="show_add_auth" @click="add_auth">
+    <fui-modal width="600" :show="show_add_auth" v-if="show_add_auth" maskClosable @click="add_auth" @cancel="close_add_auth">
         <fui-form ref="add_auth" top="100">
-            <fui-input required label="用户手机号" borderTop placeholder="请输入手机号" v-model="phone"></fui-input>
+            <fui-input required label="用户手机号" maxlength="11" borderTop placeholder="请输入手机号" v-model="phone"></fui-input>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :descr="'确定要取消授权' + focus_user.phone + '吗？'" :show="show_unauth" v-if="show_unauth" @click="unauth_user">
@@ -153,7 +155,7 @@ export default {
                 need_su: false,
                 motive: false,
                 buy_setting: false,
-            },
+            }
 
         };
     },
@@ -299,15 +301,33 @@ export default {
             }
             this.show_unauth = false;
         },
+        close_add_auth() {
+            this.show_add_auth = false;
+            this.phone = ''
+        },
         add_auth: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/sale_management/authorize_user', {
-                    contract_id: this.focus_item.id,
+                this.$refs.add_auth.validator({
                     phone: this.phone
-                });
-                uni.startPullDownRefresh();
+                }, [{
+                    name: "phone",
+                    rule: ["required", 'isMobile'],
+                    msg: ["请输入手机号", "请输入有效手机号"]
+                }]).then(async res => {
+                    if (res.isPassed) {
+                        await this.$send_req('/sale_management/authorize_user', {
+                            contract_id: this.focus_item.id,
+                            phone: this.phone
+                        });
+                        uni.startPullDownRefresh();
+                        this.close_add_auth()
+                    }
+                }).catch(err => {
+                    console.log(err)
+                })
+            } else {
+                this.close_add_auth()
             }
-            this.show_add_auth = false;
         },
         prepare_auth: function (item) {
             this.show_add_auth = true;
