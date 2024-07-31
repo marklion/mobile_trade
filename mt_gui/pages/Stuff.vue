@@ -1,41 +1,42 @@
 <template>
 <view>
-    <list-show ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
-        <u-cell v-for="(item, index) in data2show2" :key="index" size="large" :title="item.name" :value="item.price">
-            <view slot="label">
-                <view>
-                    <fui-tag v-if="item.comment" :text="item.comment" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
-                    <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" :scaleRatio="0.8" type="warning"></fui-tag>
-                    <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" :scaleRatio="0.8" type="primary"></fui-tag>
-                    <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
-                    <fui-tag v-else text="用于销售" theme="plain" :scaleRatio="0.8" type="success"></fui-tag>
+    <list-show style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
+        <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name" :tag="item.price + ''" v-for="(item, index) in data2show2" :key="index">
+            <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
+                <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
+                <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
+                <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" originLeft :scaleRatio="0.8" type="warning"></fui-tag>
+                <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
+                <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
+                <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
+                <fui-tag v-else text="用于销售" theme="plain" originLeft :scaleRatio="0.8" type="success"></fui-tag>
+            </view>
+            <fui-white-space size="large"></fui-white-space>
+            <view style="display:flex;justify-content: space-around;">
+                <fui-button text="修改" btnSize="mini" radius="0" @click="prepare_update(item)"></fui-button>
+                <fui-button text="删除" type="danger" radius="0" btnSize="mini" @click="prepare_delete(item)"></fui-button>
+                <fui-button text="调价" type="warning" radius="0" btnSize="mini" @click="prepare_change_price(item)"></fui-button>
+                <fui-button text="调价历史" type="purple" radius="0" btnSize="mini" @click="prepare_history(item)"></fui-button>
+                <fui-button v-if="!item.change_last_minutes" text="定时调价" type="success" radius="0" btnSize="mini" @click="prepare_next_price(item)"></fui-button>
+                <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
+            </view>
+            <fui-white-space size="large"></fui-white-space>
+            <view style="display:flex;justify-content: space-around; flex-wrap: wrap;">
+                <view style="display: flex;">
+                    需要安检
+                    <u-switch size="18" v-model="item.need_sc" @change="change_need_sc(item)"></u-switch>
                 </view>
-                <view style="display:flex;">
-                    <fui-button text="修改" btnSize="mini" radius="0" @click="prepare_update(item)"></fui-button>
-                    <fui-button text="删除" type="danger" radius="0" btnSize="mini" @click="prepare_delete(item)"></fui-button>
-                    <fui-button text="调价" type="warning" radius="0" btnSize="mini" @click="prepare_change_price(item)"></fui-button>
-                    <fui-button text="调价历史" type="purple" radius="0" btnSize="mini" @click="prepare_history(item)"></fui-button>
-                    <fui-button v-if="!item.change_last_minutes" text="定时调价" type="success" radius="0" btnSize="mini" @click="prepare_next_price(item)"></fui-button>
-                    <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
+                <view style="display: flex;">
+                    需要进厂前重量
+                    <u-switch size="18" v-model="item.need_enter_weight" @change="change_need_enter_weight(item)"></u-switch>
                 </view>
-                <view style="display:flex; font-size:13px;">
-                    <view style="display:flex;">
-                        需要安检
-                        <u-switch size="18" v-model="item.need_sc" @change="change_need_sc(item)"></u-switch>
-                    </view>
-                    <view style="display:flex;">
-                        需要进厂前重量
-                        <u-switch size="18" v-model="item.need_enter_weight" @change="change_need_enter_weight(item)"></u-switch>
-                    </view>
-                    <view style="display:flex;">
-                        不用排号
-                        <u-switch size="18" v-model="item.no_need_register" @change="change_no_need_register(item)"></u-switch>
-                    </view>
+                <view style="display: flex;">
+                    不用排号
+                    <u-switch size="18" v-model="item.no_need_register" @change="change_no_need_register(item)"></u-switch>
                 </view>
             </view>
-        </u-cell>
+            <fui-white-space size="large"></fui-white-space>
+        </fui-card>
     </list-show>
     <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
     <fui-modal width="600" :show="show_stuff_fetch" v-if="show_stuff_fetch" @click="fetch_stuff">
@@ -74,7 +75,7 @@
         </fui-form>
     </fui-modal>
 
-    <fui-date-picker :show="show_next_date" :minDate="today_date" :value="today_date" type="5" @change="set_next_date" @cancel="show_next_date =false"></fui-date-picker>
+    <fui-date-picker :show="show_next_date" :minDate="today_date" :value="today_date" type="5" @change="set_next_date" @cancel="show_next_date = false"></fui-date-picker>
     <fui-bottom-popup :show="show_history" @close="show_history = false">
         <view>
             <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id]" search_key="comment" height="40vh">
@@ -352,6 +353,4 @@ export default {
 }
 </script>
 
-<style>
-
-</style>
+<style></style>

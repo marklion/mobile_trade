@@ -3,7 +3,7 @@
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
         <u-cell-group title="时间段">
-            <u-cell :title="begin_date+ '~' + end_date">
+            <u-cell :title="begin_date + '~' + end_date">
                 <fui-button slot="right-icon" text="选择日期" @click="show_plan_date = true" btnSize="mini" type="warning"></fui-button>
             </u-cell>
         </u-cell-group>
@@ -12,7 +12,7 @@
         <module-filter :rm_array="['sale_management', 'buy_management', 'supplier', 'customer']">
             <u-cell-group title="计划导出">
                 <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <view style="display:flex; justify-content: center;">
+                    <view style="display:flex; justify-content: start;">
                         <data-filter filter_name="公司" :get_func="get_customers" search_key="name" tag_color="success" v-model="company_filter"></data-filter>
                         <data-filter filter_name="物料" :get_func="get_stuff" search_key="name" tag_color="purple" v-model="stuff_filter"></data-filter>
                     </view>
@@ -211,6 +211,4 @@ export default {
 }
 </script>
 
-<style>
-
-</style>
+<style></style>
