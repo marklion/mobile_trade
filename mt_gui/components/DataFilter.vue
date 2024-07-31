@@ -1,8 +1,8 @@
 <template>
-<view>
-    <fui-tag theme="plain" :type="tag_color">
+<view style="padding: 10rpx 0;">
+    <fui-tag theme="plain" :type="tag_color" @click="show_list= true" marginLeft="30">
         {{value.id == undefined?('全部'+filter_name):value.name}}
-        <fui-icon v-if="!value.id" name="arrowright" size="32" @click="show_list= true"></fui-icon>
+        <fui-icon v-if=" !value.id" name="arrowright" size="32"></fui-icon>
         <fui-icon v-else name="close" size="32" @click="reset_filter"></fui-icon>
     </fui-tag>
     <fui-bottom-popup :show="show_list" @close="show_list= false">

@@ -13,7 +13,7 @@
             </view>
         </view>
         <view>
-            <u-radio-group style="margin: 3rpx 3rpx;" v-model="day_offset" @change="init_statistic">
+            <u-radio-group style="margin: 3rpx 3rpx" v-model="day_offset" @change="init_statistic">
                 <u-radio label="昨天" :name="-1"></u-radio>
                 <u-radio label="今天" :name="0"></u-radio>
                 <u-radio label="明天" :name="1"></u-radio>
