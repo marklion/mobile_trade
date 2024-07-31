@@ -166,14 +166,12 @@ export default {
             this.tmp_seal_no = '正在泄压';
         },
         confirm_vehicle: async function (e) {
-            if (e.text === "确定") {
-                await this.$send_req('/scale/confirm_vehicle', {
-                    plan_id: this.focus_plan_id,
-                    is_confirm: e.index == 1,
-                    seal_no: this.tmp_seal_no
-                });
-                uni.startPullDownRefresh();
-            }
+            await this.$send_req('/scale/confirm_vehicle', {
+                plan_id: this.focus_plan_id,
+                is_confirm: e.index == 1,
+                seal_no: this.tmp_seal_no
+            });
+            uni.startPullDownRefresh();
             this.show_confirm_vehicle = false;
         },
         icon_make: function (item) {
