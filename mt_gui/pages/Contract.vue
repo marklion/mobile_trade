@@ -7,14 +7,12 @@
                 <module-filter require_module="sale_management">
                     <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su || cur_urls.buy_setting">
                         <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" originLeft :scaleRatio="0.8" type="purple">
-                            {{ single_stuff.name }}
+                            {{single_stuff.name}}
                             <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
                         </fui-tag>
                         <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su">
                             <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" originLeft :scaleRatio="0.8" type="success">
-                                {{ single_user.name ? single_user.name + '|' + single_user.phone : single_user.phone
-
-}}
+                                {{single_user.name?single_user.name +'|'+single_user.phone: single_user.phone}}
                                 <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
                             </fui-tag>
                         </view>
@@ -26,13 +24,13 @@
                 </module-filter>
                 <view>
                     <view v-if="item.begin_time && item.end_time" style="color: blue;">
-                        {{ item.begin_time }}至{{ item.end_time }}
+                        {{item.begin_time}}至{{item.end_time}}
                     </view>
                     <view v-if="item.number" style="color: green;">
-                        合同编号: {{ item.number }}
+                        合同编号: {{item.number}}
                     </view>
                     <view v-if="item.customer_code" style="color: red;">
-                        客商编码: {{ item.customer_code }}
+                        客商编码: {{item.customer_code}}
                     </view>
 
                 </view>
@@ -57,21 +55,21 @@
             <fui-input label="合同编号" borderTop placeholder="请输入合同编号" v-model="new_contract.number"></fui-input>
         </fui-form>
     </fui-modal>
-    <fui-bottom-popup :show="show_customers" @close="show_customers = false">
+    <fui-bottom-popup :show="show_customers" @close="show_customers= false">
         <fui-list>
             <list-show v-model="customers_data2show" :fetch_function="get_customers" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in customers_data2show" :key="item.id" @click="select_company(item)">
-                    {{ item.name }}
+                    {{item.name}}
                 </fui-list-cell>
             </list-show>
         </fui-list>
     </fui-bottom-popup>
-    <fui-date-picker range :show="show_date_range" type="3" :value="new_contract.begin_time" :valueEnd="new_contract.end_time" @change="set_date_range" @cancel="show_date_range = false"></fui-date-picker>
+    <fui-date-picker range :show="show_date_range" type="3" :value="new_contract.begin_time" :valueEnd="new_contract.end_time" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
             <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls.buy_setting]" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2contract(item)">
-                    {{ item.name }}
+                    {{item.name}}
                 </fui-list-cell>
             </list-show>
         </fui-list>
@@ -99,7 +97,7 @@
             <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id]" search_key="search_cond" height="40vh">
                 <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased.toFixed(2)">
                     <view slot="label">
-                        {{ item.time }}:{{ item.comment }}
+                        {{item.time}}:{{item.comment}}
                     </view>
                 </u-cell>
             </list-show>
@@ -451,4 +449,6 @@ export default {
 }
 </script>
 
-<style></style>
+<style>
+
+</style>

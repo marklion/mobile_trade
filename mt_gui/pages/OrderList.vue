@@ -2,25 +2,25 @@
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
     <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
-    <view>
+    <view style="padding: 10rpx;">
         <module-filter :rm_array="['sale_management', 'buy_management']">
-            <fui-tag theme="plain" type="purple">
+            <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
                 {{stuff_filter.name}}
-                <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32" @click="show_stuff_list= true"></fui-icon>
+                <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
                 <fui-icon v-else name="close" size="32" @click="reset_stuff_filter"></fui-icon>
             </fui-tag>
-            <fui-tag theme="plain" type="success">
+            <fui-tag theme="plain" type="success" @click="show_company_filter = true" marginLeft="20">
                 {{company_filter.name}}
-                <fui-icon v-if="!company_filter.id" name="arrowright" size="32" @click="show_company_filter= true"></fui-icon>
+                <fui-icon v-if="!company_filter.id" name="arrowright" size="32"></fui-icon>
                 <fui-icon v-else name="close" size="32" @click="reset_company_filter"></fui-icon>
             </fui-tag>
         </module-filter>
         <module-filter :rm_array="['customer', 'supplier']">
-            <fui-tag type="primary" text="全部复制" @click="show_batch_copy = true">
+            <fui-tag type="primary" text="全部复制" @click="show_batch_copy = true" marginLeft="20">
             </fui-tag>
         </module-filter>
 
-        <view style="display:flex; align-items: center;">
+        <view style="display:flex; align-items: center;padding: 0 20rpx;">
             显示取消计划
             <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
             <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
