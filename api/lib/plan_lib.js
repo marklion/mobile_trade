@@ -136,6 +136,9 @@ module.exports = {
             await _contract.removeStuff(_stuff);
         }
     },
+    contractOutOfDate:function(endDate){
+        return moment(endDate).diff(moment().format('YYYY-MM-DD'), 'days') < 1;
+    },
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         let conditions = {
@@ -156,7 +159,7 @@ module.exports = {
         let count = await _compnay.countSale_contracts();
         rows.forEach(item => {
             item.company = item.buy_company
-            item.expired = moment(item.end_time).diff(moment().format('YYYY-MM-DD'), 'days') < 1 ? true : false
+            item.expired = this.contractOutOfDate(item.end_time)
         })
         return { rows: rows, count: count };
     },
@@ -175,7 +178,7 @@ module.exports = {
         let count = await _compnay.countBuy_contracts();
         rows.forEach(item => {
             item.company = item.sale_company
-            item.expired = moment(item.end_time).diff(moment().format('YYYY-MM-DD'), 'days') < 1 ? true : false
+            item.expired = this.contractOutOfDate(item.end_time)
         });
         return { rows: rows, count: count };
     },
