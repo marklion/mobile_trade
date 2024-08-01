@@ -2,7 +2,7 @@
 Resource  ../database.resource
 Resource  ../api_base.resource
 Resource  ../stuff/stuff_opt.resource
-Library    ../.venv/lib/python3.9/site-packages/robot/libraries/String.py
+Library  String
 
 *** Keywords ***
 Cleanup Exam
