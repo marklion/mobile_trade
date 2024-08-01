@@ -209,16 +209,19 @@ export default {
                     rule: ['required'],
                     msg: ['请输入题目']
                 }];
-                for (let index = 0; index < this.new_question.option_answers.length; index++) {
-                    rules.push({
-                        name: 'option_answers[' + index + '].name',
-                        rule: ['required'],
-                        msg: ['请输入选项' + (index + 1)]
-                    });
-                }
                 let val_ret = await this.$refs.add_question.validator(this.new_question, rules);
                 if (!val_ret.isPassed) {
                     return;
+                }
+                for (let index = 0; index < this.new_question.option_answers.length; index++) {
+                    let sub_val_ret = await this.$refs.add_question.validateField('name', this.new_question.option_answers[index], [{
+                        name: 'name',
+                        rule: ['required'],
+                        msg: ['请输入选项' + (index + 1)]
+                    }]);
+                    if (!sub_val_ret.isPassed) {
+                        return;
+                    }
                 }
                 await this.$send_req('/exam/add_question', this.new_question);
                 uni.startPullDownRefresh();
