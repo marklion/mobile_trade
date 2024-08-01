@@ -283,6 +283,7 @@ module.exports = {
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                         number: { type: String, mean: '合同号', example: "abc" },
                         customer_code: { type: String, mean: '客户合同号', example: "sss" },
+                        expired:{type:Boolean,mean:'是否过期',example:false},
                         stuff: {
                             type: Array, mean: '货物', explain: {
                                 id: { type: Number, mean: '货物ID', example: 1 },

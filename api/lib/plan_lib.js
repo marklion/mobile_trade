@@ -156,6 +156,7 @@ module.exports = {
         let count = await _compnay.countSale_contracts();
         rows.forEach(item => {
             item.company = item.buy_company
+            item.expired = moment(item.end_time).diff(moment().format('YYYY-MM-DD'), 'days') < 1 ? true : false
         })
         return { rows: rows, count: count };
     },
@@ -174,6 +175,7 @@ module.exports = {
         let count = await _compnay.countBuy_contracts();
         rows.forEach(item => {
             item.company = item.sale_company
+            item.expired = moment(item.end_time).diff(moment().format('YYYY-MM-DD'), 'days') < 1 ? true : false
         });
         return { rows: rows, count: count };
     },
@@ -828,18 +830,21 @@ module.exports = {
             const element = found_ret[index].toJSON();
             if (element.sc_contents.length == 1) {
                 element.sc_content = element.sc_contents[0];
+                // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
+                element.sc_content.passed = moment(moment(element.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0 ? true : false
             }
             delete element.sc_contents;
             ret.reqs.push(element);
         }
         ret.total = count;
-
         delete search_cond.offset
         delete search_cond.limit
         let first_one = await plan.stuff.getSc_reqs(search_cond);
         if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
             ret.passed = true;
         }
+        // 安检有未通过项，标记未通过状态
+        ret.passed = ret.reqs.findIndex((item)=>item.sc_content.passed==false) ==-1 ? true : false;
 
         return ret;
     },
