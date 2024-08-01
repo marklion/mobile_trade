@@ -5,7 +5,7 @@ const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 const common = require('./common');
 const cash_lib = require('../lib/cash_lib');
-const wx_api_util = require('../lib/wx_api_util');
+const wx_api_util = require('../lib/wx_api_util')
 module.exports = {
     name: 'customer',
     description: '客户',

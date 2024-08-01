@@ -6,7 +6,7 @@ const { hook_plan } = require('./hook_lib');
 const field_lib = require('./field_lib');
 const ExcelJS = require('exceljs');
 const uuid = require('uuid');
-const new_zczh = require('../plugin/new_zczh');
+const new_zczh = require('../plugin/new_zczh')
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {

@@ -3,7 +3,7 @@ const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const common = require('./common');
-const moment = require('moment');
+const moment = require('moment')
 module.exports = {
     name: 'sale_management',
     description: '销售管理',

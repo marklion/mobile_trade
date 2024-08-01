@@ -4,7 +4,7 @@ const rbac_lib = require('../lib/rbac_lib');
 const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 const common = require('./common');
-const wx_api_util = require('../lib/wx_api_util');
+const wx_api_util = require('../lib/wx_api_util')
 module.exports = {
     name: 'supplier',
     description: '供应商',
