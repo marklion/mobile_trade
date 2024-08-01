@@ -70,7 +70,45 @@ const sc_req_detail = {
         }
     },
 };
+
+const exam_paper_info = {
+    id: { type: Number, mean: 'ID', example: 1 },
+    name: { type: String, mean: '试卷', example: '试卷' },
+    questions: {
+        type: Array, mean: '题目', explain: {
+            id: { type: Number, mean: 'ID', example: 1 },
+            name: { type: String, mean: '题目', example: '题目' },
+            option_answers: {
+                type: Array, mean: '选项', explain: {
+                    id: { type: Number, mean: 'ID', example: 1 },
+                    name: { type: String, mean: '选项', example: '选项' },
+                    is_correct: { type: Boolean, mean: '是否正确', example: true },
+                }
+            },
+        }
+    },
+};
+
 module.exports = {
+    exam_paper_info: exam_paper_info,
+    exam_info: {
+        id: { type: Number, mean: 'ID', example: 1 },
+        name: { type: String, mean: '考试名称', example: '考试名称' },
+        score: { type: Number, mean: '分数', example: 100 },
+        exam_paper: { type: Object, mean: '试卷', explain: exam_paper_info },
+        exam_answers: {
+            type: Array, mean: '答案', explain: {
+                id: { type: Number, mean: 'ID', example: 1 },
+                option_answer: {
+                    type: Object, mean: '选项', explain: {
+                        id: { type: Number, mean: 'ID', example: 1 },
+                        name: { type: String, mean: '选项', example: '选项' },
+                        is_correct: { type: Boolean, mean: '是否正确', example: true },
+                    },
+                }
+            },
+        },
+    },
     driver_info: {
         id: { type: Number, mean: '司机ID', example: 1 },
         name: { type: String, mean: '司机姓名', example: '张三' },
@@ -139,6 +177,7 @@ module.exports = {
         trans_company_name: { type: String, mean: '运输公司名称', example: '运输公司名称' },
         need_sc: { type: Boolean, mean: '是否需要安检', example: true },
         need_enter_weight: { type: Boolean, mean: '是否需要进场称重', example: true },
+        need_exam: { type: Boolean, mean: '是否需要考试', example: true },
         confirmed: { type: Boolean, mean: '是否确认装卸货', example: true },
         is_proxy: { type: Boolean, mean: '是否代理', example: true },
         is_repeat: { type: Boolean, mean: '是否多次进厂', example: true },
@@ -165,6 +204,7 @@ module.exports = {
                 need_sc: { type: Boolean, mean: '是否需要安检', example: true },
                 need_enter_weight: { type: Boolean, mean: '是否需要进场称重', example: true },
                 no_need_register: { type: Boolean, mean: '不需要登记', example: true },
+                need_exam: { type: Boolean, mean: '是否需要考试', example: true },
             }
         },
         company: {

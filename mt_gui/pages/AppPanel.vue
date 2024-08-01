@@ -56,6 +56,13 @@ export default {
                     path: 'VehicleTeam',
                     sub_page_name: 'subPage1'
                 },
+                {
+                    name: '考试配置',
+                    icon: 'edit',
+                    require_module: 'exam',
+                    path: 'ExamConfig',
+                    sub_page_name: 'subPage1'
+                },
             ]
         }
     },
