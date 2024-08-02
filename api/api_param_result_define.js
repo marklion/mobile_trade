@@ -149,6 +149,7 @@ module.exports = {
         stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
         company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
         hide_manual_close: { type: Boolean, have_to: false, mean: '隐藏手动关闭', example: true },
+        only_count: { type: Boolean, have_to: false, mean: '只返回数量', example: true },
     },
     sc_req_detail: sc_req_detail,
     plan_detail_define: {

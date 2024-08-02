@@ -12,14 +12,21 @@
                 <qiun-data-charts type="ring" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
             </view>
         </view>
-        <view>
-            <u-radio-group style="margin: 3rpx 3rpx" v-model="day_offset" @change="init_statistic">
-                <u-radio label="昨天" :name="-1"></u-radio>
-                <u-radio label="今天" :name="0"></u-radio>
-                <u-radio label="明天" :name="1"></u-radio>
-            </u-radio-group>
-            <fui-table fixed full :height="700" align="left" :itemList="tableData" :header="headerData"></fui-table>
-        </view>
+        <module-filter require_module="sale_management">
+            <u-row>
+                <u-col span="10">
+                    <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
+                        <u-radio label="昨天" :name="-1"></u-radio>
+                        <u-radio label="今天" :name="0"></u-radio>
+                        <u-radio label="明天" :name="1"></u-radio>
+                    </u-radio-group>
+                </u-col>
+                <u-col v-if="tableData.length > 7" span="2">
+                    <fui-text type="primary" :text="expand_text" decoration="underline" @click="handle_expand"></fui-text>
+                </u-col>
+            </u-row>
+            <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
+        </module-filter>
     </fui-card>
     <fui-white-space size="default"></fui-white-space>
     <module-filter require_module="customer">
@@ -99,16 +106,18 @@ export default {
                 width: '160'
             }],
             day_offset: 0,
+            expand_text: '展开',
+            table_height: 700,
+            tmp_tableData: [],
+            dataCount: 7
         }
     },
     methods: {
         handle_expand() {
             if (this.expand_text == "展开") {
-                //this.tmp_tableData = this.tableData.slice(0,this.tableData.length)
                 this.expand_text = "收缩"
                 this.table_height = 0
             } else {
-                //this.tmp_tableData = this.tableData.slice(0,this.dataCount)
                 this.expand_text = "展开"
                 this.table_height = 700
             }
@@ -129,8 +138,6 @@ export default {
                     finish_count: element.finish_count,
                 })
             }
-            // 默认UI展示前dataCount条数据
-            // this.tmp_tableData = this.tableData.slice(0,this.dataCount)
         },
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);
@@ -270,6 +277,7 @@ export default {
                     end_time: utils.dateFormatter(date, 'y-m-d', 4, false),
                     status: status,
                     hide_manual_close: true,
+                    only_count: true,
                 };
             };
             let get_count = async (url, cond) => {
