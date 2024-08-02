@@ -60,7 +60,7 @@
         </module-filter>
     </fui-list>
     <fui-white-space></fui-white-space>
-    <fui-button type="success" text="退出登录" @click="unLogin"></fui-button>
+    <fui-button type="danger" text="退出登录" @click="unLogin"></fui-button>
     <fui-modal width="600" :show="show_change_pwd" v-if="show_change_pwd" @click="change_pwd">
         <fui-input label="新密码" borderTop placeholder="请输入新密码" v-model="new_pwd"></fui-input>
     </fui-modal>
