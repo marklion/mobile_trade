@@ -74,16 +74,6 @@ module.exports = {
         let plan = await plan_lib.get_single_plan_by_id(_plan_id);
         if (plan && plan.driver && plan.driver.open_id == _open_id && plan.stuff) {
             ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
-            if(ret.reqs.length>0)
-            {
-                ret.reqs.forEach((item)=>{
-                    // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
-                    if(item.sc_content)
-                        item.sc_content.passed = moment(moment(item.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0
-                })
-                // 安检有未通过项，标记未通过状态
-                ret.passed = ret.reqs.findIndex((item)=>item.sc_content.passed==false) ==-1;
-            } 
         }
         else {
             throw { err_msg: '无权限' };
