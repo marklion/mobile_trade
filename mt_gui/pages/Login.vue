@@ -16,7 +16,7 @@
         <fui-button text="微信登录" type="success" @click="wx_login"></fui-button>
     </view>
     <view v-else>
-        <fui-form ref="form" :model="formData" :show="true" :top="50">
+        <fui-form ref="form" top="100" :model="formData" :show="true" :top="50">
             <fui-form-item label="手机号码" asterisk prop="phone">
                 <fui-input maxlength="11" :borderBottom="false" :padding="[0]" placeholder="请输入手机号码" v-model="formData.phone"></fui-input>
             </fui-form-item>
