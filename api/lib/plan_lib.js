@@ -859,9 +859,7 @@ module.exports = {
         if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
             ret.passed = true;
         }
-        // 安检有未通过项，接口返回标记未通过状态
-        ret.passed = ret.reqs.findIndex((item)=>item.sc_content.passed==false) ==-1;
-
+        
         return ret;
     },
     get_self_vehicle_pairs: async function (token, pageNo) {
