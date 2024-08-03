@@ -829,25 +829,10 @@ module.exports = {
         }
         let found_ret = await plan.stuff.getSc_reqs(search_cond);
         let count = await plan.stuff.countSc_reqs();
-        // 已过期的安检项
-        let expired_sc=null;
         for (let index = 0; index < found_ret.length; index++) {
             const element = found_ret[index].toJSON();
             if (element.sc_contents.length == 1) {
                 element.sc_content = element.sc_contents[0];
-                // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
-                element.sc_content.passed = moment(moment(element.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;
-                if (element.sc_content) {
-                    expired_sc = await sq.models.sc_content.findOne({
-                        where: { id: element.sc_content.id },
-                    });
-                    if (expired_sc) {
-                        expired_sc.passed = element.sc_content.passed;
-                        //expired_sc.comment = '已过期';
-                        //expired_sc.check_time= moment().format('YYYY-MM-DD HH:mm:ss');
-                        await expired_sc.save();
-                    }
-                }
             }
             delete element.sc_contents;
             ret.reqs.push(element);
@@ -859,9 +844,27 @@ module.exports = {
         if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
             ret.passed = true;
         }
-        else {
-            ret.passed = false;
-        }
+        // 已过期的安检项
+        let expired_sc=null;
+        ret.reqs = ret.reqs.map( async (item)=>{
+            if (item.sc_content) {
+                // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
+                item.sc_content.passed = moment(moment(item.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;
+
+                expired_sc = await sq.models.sc_content.findOne({
+                    where: { id: element.sc_content.id },
+                });
+                if (expired_sc) {
+                    expired_sc.passed = item.sc_content.passed;
+                    if (expired_sc.passed == false) {
+                        expired_sc.comment = '已过期';
+                        ret.passed = false;
+                    }
+                    //expired_sc.check_time= moment().format('YYYY-MM-DD HH:mm:ss');
+                    await expired_sc.save();
+                }
+            }
+        })
         
         return ret;
     },
