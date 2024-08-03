@@ -843,8 +843,8 @@ module.exports = {
                     });
                     if (expired_sc) {
                         expired_sc.passed = element.sc_content.passed;
-                        expired_sc.comment = '已过期';
-                        expired_sc.check_time= moment().format('YYYY-MM-DD HH:mm:ss');
+                        //expired_sc.comment = '已过期';
+                        //expired_sc.check_time= moment().format('YYYY-MM-DD HH:mm:ss');
                         await expired_sc.save();
                     }
                 }
@@ -858,6 +858,9 @@ module.exports = {
         let first_one = await plan.stuff.getSc_reqs(search_cond);
         if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
             ret.passed = true;
+        }
+        else {
+            ret.passed = false;
         }
         
         return ret;
