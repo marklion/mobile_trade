@@ -1,11 +1,12 @@
-const api_param_result_define = require('../api_param_result_define');
-const plan_lib = require('../lib/plan_lib');
-const rbac_lib = require('../lib/rbac_lib');
-const bidding_lib = require('../lib/bidding_lib');
-const db_opt = require('../db_opt');
-const common = require('./common');
-const cash_lib = require('../lib/cash_lib');
-const wx_api_util = require('../lib/wx_api_util');
+const {
+    api_param_result_define,
+    plan_lib,
+    rbac_lib,
+    bidding_lib,
+    db_opt,
+    common,
+    cash_lib,
+    wx_api_util } = require('./common_header');
 module.exports = {
     name: 'customer',
     description: '客户',

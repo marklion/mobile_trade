@@ -6,7 +6,7 @@ const { hook_plan } = require('./hook_lib');
 const field_lib = require('./field_lib');
 const ExcelJS = require('exceljs');
 const uuid = require('uuid');
-const new_zczh = require('../plugin/new_zczh');
+const new_zczh = require('../plugin/new_zczh')
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -136,6 +136,9 @@ module.exports = {
             await _contract.removeStuff(_stuff);
         }
     },
+    contractOutOfDate:function(endDate){
+        return moment(endDate).diff(moment().format('YYYY-MM-DD'), 'days') < 1;
+    },
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         let conditions = {
@@ -156,6 +159,7 @@ module.exports = {
         let count = await _compnay.countSale_contracts();
         rows.forEach(item => {
             item.company = item.buy_company
+            item.expired = this.contractOutOfDate(item.end_time)
         })
         return { rows: rows, count: count };
     },
@@ -174,6 +178,7 @@ module.exports = {
         let count = await _compnay.countBuy_contracts();
         rows.forEach(item => {
             item.company = item.sale_company
+            item.expired = this.contractOutOfDate(item.end_time)
         });
         return { rows: rows, count: count };
     },
@@ -649,7 +654,6 @@ module.exports = {
             if (plan.is_repeat) {
                 await this.dup_plan(plan, _token);
             }
-            await hook_plan('deliver_plan', plan);
         });
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
@@ -834,14 +838,37 @@ module.exports = {
             ret.reqs.push(element);
         }
         ret.total = count;
-
         delete search_cond.offset
         delete search_cond.limit
         let first_one = await plan.stuff.getSc_reqs(search_cond);
         if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
             ret.passed = true;
         }
+        // 已过期的安检项
+        let expired_sc=null;
+        ret.reqs.map( async (item)=>{
+            if (item.sc_content) {
+                // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
+                item.sc_content.passed = moment(moment(item.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;
 
+                expired_sc = await sq.models.sc_content.findOne({
+                    where: { id: item.sc_content.id },
+                });
+                if (expired_sc) {
+                    expired_sc.passed = item.sc_content.passed;
+                    if (expired_sc.passed == false) {
+                        expired_sc.comment = '已过期';
+                        ret.passed = false;
+                    }
+                    else{
+                        expired_sc.comment = '';
+                        ret.passed = true;
+                    }
+                    await expired_sc.save();
+                }
+            }
+        })
+        
         return ret;
     },
     get_self_vehicle_pairs: async function (token, pageNo) {
@@ -1424,19 +1451,20 @@ module.exports = {
             count: total
         }
     },
-    stuff_price_timeout: async function () {
+    stuff_price_timeout:async function() {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findAll({
-            where: {
-                change_last_minutes: {
-                    [db_opt.Op.ne]: 0,
+            where:{
+                change_last_minutes:{
+                    [db_opt.Op.ne]:0,
                 }
             }
         });
         for (let index = 0; index < stuff.length; index++) {
             const element = stuff[index];
             element.change_last_minutes--;
-            if (element.change_last_minutes <= 0) {
+            if (element.change_last_minutes <= 0)
+            {
                 await this.pri_change_stuff_price(element, element.next_price, '定时调价:' + element.next_comment, element.next_operator, false);
                 element.next_price = 0;
                 element.next_comment = '';
