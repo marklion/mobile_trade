@@ -3,7 +3,7 @@
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
         <list-show ref="plans" :fetch_function="get_wait_que" height="90vh" search_key="search_cond" v-model="plans">
-            <view v-for="item in  plans" :key="item.id">
+            <view v-for="item in plans" :key="item.id">
                 <u-cell :icon="icon_make(item)" :title="item.main_vehicle.plate + '-' + item.behind_vehicle.plate">
                     <view slot="label" style="display:flex; flex-direction: column;">
                         <fui-text :text="item.company.name" size="24"></fui-text>
@@ -46,10 +46,15 @@
     </view>
     <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
     </fui-modal>
-    <fui-modal width="600" :descr="'确定' + (is_exit_confirm?'撤销':'') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
+    <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
-        <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no"></fui-input>
+        <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
+            <slot name="default">
+                <fui-button type="success" btnSize="mini" @click="confirmSealNo">确认泄压</fui-button>
+            </slot>
+        </fui-input>
+
     </fui-modal>
 </view>
 </template>
@@ -154,7 +159,11 @@ export default {
         },
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
+            this.tmp_seal_no = item.seal_no;
             this.show_confirm_vehicle = true;
+        },
+        confirmSealNo: function () {
+            this.tmp_seal_no = '正在泄压';
         },
         confirm_vehicle: async function (e) {
             await this.$send_req('/scale/confirm_vehicle', {
@@ -162,8 +171,8 @@ export default {
                 is_confirm: e.index == 1,
                 seal_no: this.tmp_seal_no
             });
-            this.show_confirm_vehicle = false;
             uni.startPullDownRefresh();
+            this.show_confirm_vehicle = false;
         },
         icon_make: function (item) {
             let ret = 'hourglass';
@@ -217,6 +226,4 @@ export default {
 }
 </script>
 
-<style>
-
-</style>
+<style></style>

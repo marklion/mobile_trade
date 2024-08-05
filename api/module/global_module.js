@@ -7,6 +7,7 @@ const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
 const captureWebsite = require('capture-website');
 const moment = require('moment');
+const exam_lib = require('../lib/exam_lib');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -46,6 +47,31 @@ async function get_ticket_func(body, token) {
         trans_company_name: plan.trans_company_name,
         stuff_name: plan.stuff.name,
     }
+}
+async function checkif_plan_checkinable(plan, driver, lat, lon) {
+    let ret = '';
+    if (!(await sc_lib.plan_passed_sc(plan.id))) {
+        ret = '安检未通过，请先安检';
+    }
+    if (ret == '' && !moment(plan.plan_time).isBefore(moment())) {
+        ret = '未到计划时间，不能签到';
+    }
+    if (ret == '' && plan.stuff.need_enter_weight && (!plan.enter_attachment || plan.enter_count == 0)) {
+        ret = '未上传进厂前信息';
+    }
+    if (ret == '' && !plan.company) {
+        ret = '未指定公司';
+    }
+    if (ret == '' && !(await plan_lib.check_if_never_checkin(driver))) {
+        ret = '已经签到其他计划';
+    }
+    if (ret == '' && !(await plan_lib.verify_plan_location(plan, lat, lon))) {
+        ret = '当前位置超出要求范围';
+    }
+    if (ret == '' && !(await exam_lib.plan_pass_exam(plan))) {
+        ret = '未通过考试';
+    }
+    return ret;
 }
 module.exports = {
     name: 'global',
@@ -400,38 +426,13 @@ module.exports = {
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
                 if (driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
-                    if (await sc_lib.plan_passed_sc(body.plan_id)) {
-                        if (!plan.stuff.need_enter_weight || (plan.enter_attachment && plan.enter_count > 0)) {
-                            if (plan.company) {
-                                if (await plan_lib.check_if_never_checkin(driver)) {
-                                    if (moment(plan.plan_time).isBefore(moment())) {
-                                        if (await plan_lib.verify_plan_location(plan, body.lat, body.lon)) {
-                                            await require('../lib/field_lib').handle_driver_check_in(plan);
-                                            return { result: true };
-                                        }
-                                        else {
-                                            throw { err_msg: '当前位置超出要求范围' };
-                                        }
-                                    }
-                                    else {
-                                        throw { err_msg: '未到计划时间，不能签到' };
-                                    }
-
-                                }
-                                else {
-                                    throw { err_msg: '已经签到其他计划' };
-                                }
-                            }
-                            else {
-                                throw { err_msg: '未指定公司' };
-                            }
-                        }
-                        else {
-                            throw { err_msg: '未上传进厂前信息' };
-                        }
+                    let reason = await checkif_plan_checkinable(plan, driver, body.lat, body.lon);
+                    if (reason === '') {
+                        await require('../lib/field_lib').handle_driver_check_in(plan);
+                        return { result: true };
                     }
                     else {
-                        throw { err_msg: '安检未通过，请先安检' };
+                        throw { err_msg: reason };
                     }
                 }
                 else {
@@ -1107,6 +1108,132 @@ module.exports = {
                     throw { err_msg: '用户不存在' };
                 }
             },
+        },
+        driver_get_paper: {
+            name: '司机获取试卷',
+            description: '司机获取试卷',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+            },
+            result: {
+                papers: { type: Array, mean: '试卷', explain: api_param_result_define.exam_paper_info },
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let ret = { papers: [], total: 0 };
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (driver && stuff) {
+                    ret = await exam_lib.get_all_paper(stuff, body.pageNo);
+                    ret.papers.forEach(item => {
+                        item.questions.forEach(ele_q => {
+                            ele_q.option_answers.forEach(ele => {
+                                ele.is_correct = undefined;
+                            })
+                        });
+                    });
+                }
+                else {
+                    throw { err_msg: '无法获取' };
+                }
+                return ret;
+            },
+        },
+        commit_answers: {
+            name: '提交答案',
+            description: '提交答案',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                paper_id: { type: Number, have_to: true, mean: '试卷ID', example: 1 },
+                name: { type: String, have_to: true, mean: '姓名', example: '张三' },
+                answers: {
+                    type: Array, have_to: true, mean: '答案', explain: {
+                        answer_id: { type: Number, have_to: true, mean: '答案ID', example: 1 },
+                    }
+                },
+            },
+            result: {
+                result: { type: Boolean, mean: '提交结果', example: true },
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let ret = { result: false };
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                if (plan && driver && await driver.hasPlan(plan)) {
+                    let sq = db_opt.get_sq();
+                    let paper = await sq.models.exam_paper.findByPk(body.paper_id);
+                    let all_question_count = await paper.countQuestions();
+                    let correct_count = 0;
+                    for (let index = 0; index < body.answers.length; index++) {
+                        const aid = body.answers[index].answer_id;
+                        let answer = await sq.models.option_answer.findByPk(aid);
+                        let question = await answer.getQuestion();
+                        if (await paper.hasQuestion(question) && answer.is_correct) {
+                            correct_count++;
+                        }
+                    }
+                    let score = correct_count / all_question_count * 100;
+                    if (score >= paper.pass_score) {
+                        let exam = await sq.models.exam.create({ name: body.name });
+                        await exam.setPlan(plan);
+                        await exam.setExam_paper(paper);
+                        await exam.setDriver(driver);
+                        for (let index = 0; index < body.answers.length; index++) {
+                            const aid = body.answers[index].answer_id;
+                            let tmp = await sq.models.exam_answer.create();
+                            await tmp.setExam(exam);
+                            tmp.optionAnswerId = aid;
+                            await tmp.save();
+                        }
+                        exam.score = score;
+                        await exam.save();
+                        ret.result = true;
+                    }
+                    else {
+                        throw { err_msg: '未及格，请重新作答' };
+                    }
+                }
+                else {
+                    throw { err_msg: '无法提交' };
+                }
+                return ret;
+            },
+        },
+        driver_get_exam: {
+            name: '司机获取考试',
+            description: '司机获取考试',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                exams: { type: Array, mean: '考试', explain: api_param_result_define.exam_info },
+            },
+            func: async function (body, token) {
+                let ret = {exams:[]}
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                if (driver && plan && await driver.hasPlan(plan)) {
+                    ret.exams = await exam_lib.get_exam_by_plan(plan);
+                }
+                else {
+                    throw { err_msg: '无法获取' };
+                }
+                return ret;
+            }
         },
     },
 }

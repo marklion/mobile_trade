@@ -139,12 +139,4 @@ module.exports = {
             data: [req],
         });
     },
-    deliver_plan: async function (plan) {
-        axios.post('http://123.178.131.22:8180/api/v1/vehicle_pass/deliver', {
-            pTime:plan.p_time,
-            mTime:plan.m_time,
-            enterLocation:plan.register_comment,
-            plateNo:plan.main_vehicle.plate,
-        });
-    },
 }
