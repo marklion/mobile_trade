@@ -233,26 +233,4 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
-    check_sc_content_expired: async function (_content_id) {
-        let sq = db_opt.get_sq();
-        let content = await sq.models.sc_content.findByPk(_content_id, {
-            include: [{
-                model: sq.models.sc_req,
-                include: [{
-                    model: sq.models.stuff,
-                    include: [sq.models.company]
-                }]
-            }]
-        });
-        
-        if (content && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
-            content.passed = moment(moment(content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;;
-            content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
-            content.comment = '已过期';
-            await content.save();
-        }
-        else {
-            throw { err_msg: '无权限' };
-        }
-    },
 };

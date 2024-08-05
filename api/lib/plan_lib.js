@@ -8,8 +8,6 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const new_zczh = require('../plugin/new_zczh');
 const safe_check_module = require('../module/safe_check_module');
-const sc_lib = require('./sc_lib');
-
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
         let sq = db_opt.get_sq();
@@ -842,10 +840,6 @@ module.exports = {
         ret.total = count;
         delete search_cond.offset
         delete search_cond.limit
-        for (let index = 0; index < ret.reqs.length; index++) {
-            let item = ret.reqs[index];
-            sc_lib.check_sc_content_expired(item.sc_content.id);
-        }
         let first_one = await plan.stuff.getSc_reqs(search_cond);
         if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
             ret.passed = true;
