@@ -840,32 +840,32 @@ module.exports = {
         ret.total = count;
         delete search_cond.offset
         delete search_cond.limit
-        let first_one = await plan.stuff.getSc_reqs(search_cond);
-        if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
-            ret.passed = true;
-        }
         // 已过期的安检项
         let expired_sc=null;
         for (let index = 0; index < ret.reqs.length; index++) {
             let item = ret.reqs[index];
             if (item.sc_content) {
-                // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
-                item.sc_content.passed = moment(moment(item.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;
-
                 expired_sc = await sq.models.sc_content.findOne({
                     where: { id: item.sc_content.id },
                 });
                 if (expired_sc) {
-                    expired_sc.passed = item.sc_content.passed;
+                    // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
+                    expired_sc.passed = moment(moment(item.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;;
                     if (expired_sc.passed == false) {
                         expired_sc.comment = '已过期';
-                        ret.passed = false;
+                    }else{
+                        expired_sc.comment = '';
                     }
                     await expired_sc.save();
                 }
             }
             
         }
+        let first_one = await plan.stuff.getSc_reqs(search_cond);
+        if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
+            ret.passed = true;
+        }
+        
         return ret;
     },
     get_self_vehicle_pairs: async function (token, pageNo) {
