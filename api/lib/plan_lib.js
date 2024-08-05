@@ -846,7 +846,8 @@ module.exports = {
         }
         // 已过期的安检项
         let expired_sc=null;
-        ret.reqs.map( async (item)=>{
+        for (let index = 0; index < ret.reqs.length; index++) {
+            let item = ret.reqs[index];
             if (item.sc_content) {
                 // 比较安检项有效期与当前日期时差，小于等于0则标记已过期状态
                 item.sc_content.passed = moment(moment(item.sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;
@@ -860,15 +861,11 @@ module.exports = {
                         expired_sc.comment = '已过期';
                         ret.passed = false;
                     }
-                    else{
-                        expired_sc.comment = '';
-                        ret.passed = true;
-                    }
                     await expired_sc.save();
                 }
             }
-        })
-        
+            
+        }
         return ret;
     },
     get_self_vehicle_pairs: async function (token, pageNo) {
