@@ -91,7 +91,15 @@
             </view>
         </list-show>
     </fui-bottom-popup>
-    <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
+    <!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
+    <fui-backdrop :zIndex="8888" :show="show_one_att">
+        <movable-area scale-area class="movable-area">
+            <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
+            <movable-view  class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
+                <image lazy-load class="lookimg" :src="one_att" mode="aspectFit"></image>
+            </movable-view>
+        </movable-area>
+    </fui-backdrop>
     <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
     <fui-bottom-popup :show="show_company_select" @close="show_company_select= false">
         <list-show ref="cp" v-model="company_list" :fetch_function="get_company4select" :fetch_params="[focus_plan, driver_self.open_id]" height="45vh" search_key="cond">
@@ -148,6 +156,7 @@ export default {
     },
     data: function () {
         return {
+            scale:1,
             phone_login_req: {
                 phone: '',
                 password: '',
@@ -647,5 +656,28 @@ export default {
 .status_bar {
     height: var(--status-bar-height);
     width: 100%;
+}
+
+.movable-view {
+    height: 100%;
+    width: 100%;
+}
+
+.movable-area {
+    height: 90%;
+    width: 100%;
+    overflow: hidden;
+    z-index: 9999;
+}
+
+.lookimg {
+    width: 100%;
+    height: 100%;
+}
+
+.imagecontent {
+    width: 50%;
+    height: 100vh;
+    margin: 0 40rpx;
 }
 </style>
