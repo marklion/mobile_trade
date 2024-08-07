@@ -21,20 +21,30 @@
                 <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
             </view>
             <fui-white-space size="large"></fui-white-space>
-            <view style="display:flex;justify-content: space-around; flex-wrap: wrap;">
-                <view style="display: flex;">
-                    需要安检
-                    <u-switch size="18" v-model="item.need_sc" @change="change_need_sc(item)"></u-switch>
-                </view>
+            <fui-grid :columns="2" :square="false">
+                <fui-grid-item>
+                    <view style="display: flex;">
+                        需要安检
+                        <u-switch size="18" v-model="item.need_sc" @change="change_need_sc(item)"></u-switch>
+                    </view>
+                </fui-grid-item>
                 <view style="display: flex;">
                     需要进厂前重量
                     <u-switch size="18" v-model="item.need_enter_weight" @change="change_need_enter_weight(item)"></u-switch>
                 </view>
-                <view style="display: flex;">
-                    不用排号
-                    <u-switch size="18" v-model="item.no_need_register" @change="change_no_need_register(item)"></u-switch>
-                </view>
-            </view>
+                <fui-grid-item>
+                    <view style="display: flex;">
+                        需要考试
+                        <u-switch size="18" v-model="item.need_exam" @change="change_need_exam(item)"></u-switch>
+                    </view>
+                </fui-grid-item>
+                <fui-grid-item>
+                    <view style="display: flex;">
+                        不用排号
+                        <u-switch size="18" v-model="item.no_need_register" @change="change_no_need_register(item)"></u-switch>
+                    </view>
+                </fui-grid-item>
+            </fui-grid>
             <fui-white-space size="large"></fui-white-space>
         </fui-card>
     </list-show>
@@ -163,6 +173,13 @@ export default {
             await this.$send_req('/stuff/no_need_register', {
                 stuff_id: item.id,
                 no_need_register: item.no_need_register,
+            });
+            uni.startPullDownRefresh();
+        },
+        change_need_exam: async function (item) {
+            await this.$send_req('/stuff/exam_config', {
+                stuff_id: item.id,
+                need_exam: item.need_exam,
             });
             uni.startPullDownRefresh();
         },
