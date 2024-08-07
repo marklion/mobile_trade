@@ -216,7 +216,7 @@ module.exports = {
                 if (item.sc_contents.length > 0) {
                     expiredDay = moment(moment(item.sc_contents[0].expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0
                     if (!expiredDay) {
-                        await this.check_sc_content(item.sc_contents[0].id, _token, '内容已过期')
+                        await this.check_sc_content(item.sc_contents[0].id, _token, '内容已过期');
                     }
                 }
             }

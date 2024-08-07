@@ -838,7 +838,6 @@ module.exports = {
         for (let index = 0; index < found_ret.length; index++) {
             const element = found_ret[index].toJSON();
             if (element.sc_contents.length == 1) {
-                element.sc_contents[0].passed = moment(moment(element.sc_contents[0].expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;
                 element.sc_content = element.sc_contents[0];
             }
             delete element.sc_contents;
