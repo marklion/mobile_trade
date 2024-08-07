@@ -2,6 +2,8 @@ const all_plugin = require('../plugin/all_plugin');
 const moment = require('moment');
 const wx_api_util = require('./wx_api_util');
 const { hook_plan } = require('./hook_lib');
+const db_opt = require('../db_opt');
+const util_lib = require('./util_lib');
 let currentDay = moment().format('YYYY-MM-DD');
 let currentNumber = 0;
 function get_increased_number() {
@@ -25,6 +27,40 @@ async function run_plugin_based_on_company(company, name, func) {
 }
 
 module.exports = {
+    auto_uncheck_in: async function () {
+        let companies = await db_opt.get_sq().models.company.findAll({
+            where: {
+                check_in_stay_minutes: {
+                    [db_opt.Op.gt]: 0
+                }
+            }
+        });
+        for (let index = 0; index < companies.length; index++) {
+            const element = companies[index];
+            let stuff_ids = [];
+            let stuff = await element.getStuff();
+            stuff_ids = stuff.map(s => s.id);
+            let plans = await db_opt.get_sq().models.plan.findAll({
+                where: {
+                    register_time: {
+                        [db_opt.Op.ne]: null
+                    },
+                    status: 2,
+                    stuffId: {
+                        [db_opt.Op.in]: stuff_ids
+                    },
+                }
+            });
+            for (let j = 0; j < plans.length; j++) {
+                let stop_time = moment(plans[j].register_time).add(element.check_in_stay_minutes, 'minutes');
+                if (moment().isAfter(stop_time)) {
+                    let full_plan = await util_lib.get_single_plan_by_id(plans[j].id);
+                    await this.handle_cancel_check_in(full_plan);
+                }
+            }
+        }
+
+    },
     handle_driver_check_in: async function (_plan) {
         await hook_plan('check_in', _plan);
         _plan.register_time = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -35,7 +71,7 @@ module.exports = {
         _plan.register_time = null;
         _plan.register_number = 0;
         _plan.call_time = null;
-        await hook_plan('cancel_check_in', _plan);
+        await hook_plan('cancel_check_icancel_check_inn', _plan);
         await _plan.save();
     },
     handle_call_vehicle: async function (_plan) {

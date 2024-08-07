@@ -73,6 +73,7 @@ let db_opt = {
             pos_lon: { type: DataTypes.FLOAT, defaultValue: 0 },
             distance_limit: { type: DataTypes.FLOAT, defaultValue: 0 },
             zc_phone: { type: DataTypes.STRING },
+            check_in_stay_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -257,7 +258,7 @@ let db_opt = {
             score: { type: DataTypes.INTEGER, defaultValue: 0 },
             sign_pic: { type: DataTypes.STRING },
         },
-        exam_answer:{
+        exam_answer: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
         },
     },
@@ -348,8 +349,8 @@ let db_opt = {
         _sq.models.question.hasMany(_sq.models.option_answer);
         _sq.models.question.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.question);
-        _sq.models.question.belongsToMany(_sq.models.exam_paper, {through: 'paper_question'});
-        _sq.models.exam_paper.belongsToMany(_sq.models.question, {through: 'paper_question'});
+        _sq.models.question.belongsToMany(_sq.models.exam_paper, { through: 'paper_question' });
+        _sq.models.exam_paper.belongsToMany(_sq.models.question, { through: 'paper_question' });
         _sq.models.exam.belongsTo(_sq.models.exam_paper);
         _sq.models.exam_paper.hasMany(_sq.models.exam);
         _sq.models.exam.belongsTo(_sq.models.plan);

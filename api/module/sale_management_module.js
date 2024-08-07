@@ -8,7 +8,7 @@ module.exports = {
     name: 'sale_management',
     description: '销售管理',
     methods: {
-        order_update:common.order_update,
+        order_update: common.order_update,
         order_sale_confirm: {
             name: '销售订单确认',
             description: '销售订单确认',
@@ -135,7 +135,6 @@ module.exports = {
         get_checkin_config: {
             name: '获取签到配置',
             description: '获取签到配置',
-
             is_write: false,
             is_get_api: false,
             params: {},
@@ -143,6 +142,7 @@ module.exports = {
                 lat: { type: Number, mean: '纬度', example: 1 },
                 lon: { type: Number, mean: '经度', example: 1 },
                 distance_limit: { type: Number, mean: '距离限制', example: 1 },
+                check_in_stay_minutes: { type: Number, mean: '排队后多久自动过号', example: 1 },
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
@@ -150,19 +150,20 @@ module.exports = {
                     lat: company.pos_lat,
                     lon: company.pos_lon,
                     distance_limit: company.distance_limit,
+                    check_in_stay_minutes: company.check_in_stay_minutes,
                 }
             },
         },
         set_checkin_config: {
             name: '设置签到配置',
             description: '设置签到配置',
-
             is_write: true,
             is_get_api: false,
             params: {
                 lat: { type: Number, have_to: true, mean: '纬度', example: 1 },
                 lon: { type: Number, have_to: true, mean: '经度', example: 1 },
                 distance_limit: { type: Number, have_to: true, mean: '距离限制', example: 1 },
+                check_in_stay_minutes: { type: Number, have_to: false, mean: '排队后多久自动过号', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -172,6 +173,7 @@ module.exports = {
                 company.pos_lat = body.lat;
                 company.pos_lon = body.lon;
                 company.distance_limit = body.distance_limit;
+                company.check_in_stay_minutes = body.check_in_stay_minutes;
                 await company.save();
                 return { result: true };
             },
@@ -226,13 +228,13 @@ module.exports = {
                 return ret;
             },
         },
-        get_contract_by_customer:{
+        get_contract_by_customer: {
             name: '获取客户合同',
             description: '获取客户合同',
             is_write: false,
             is_get_api: false,
-            params:{
-                customer_id:{type:Number,have_to:true,mean:'客户ID',example:1}
+            params: {
+                customer_id: { type: Number, have_to: true, mean: '客户ID', example: 1 }
             },
             result: {
                 id: { type: Number, mean: '合同ID', example: 1 },
@@ -250,18 +252,17 @@ module.exports = {
                     }
                 }
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 let contracts = await company.getSale_contracts({
-                    where:{
-                        buyCompanyId:body.customer_id
+                    where: {
+                        buyCompanyId: body.customer_id
                     },
-                    paranoid:false,
-                    include:db_opt.get_sq().models.rbac_user
+                    paranoid: false,
+                    include: db_opt.get_sq().models.rbac_user
                 })
-                if (contracts.length != 1)
-                {
-                    throw {err_msg:"合同不存在"}
+                if (contracts.length != 1) {
+                    throw { err_msg: "合同不存在" }
                 }
                 return contracts[0]
             },

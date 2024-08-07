@@ -2,6 +2,7 @@ const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const plan_lib = require('./plan_lib');
+const util_lib = require('./util_lib');
 module.exports = {
     sc_req_detail: {
         id: { type: Number, have_to: true, mean: 'ID', example: 1 },
@@ -71,7 +72,7 @@ module.exports = {
     },
     get_sc_driver_req: async function (_open_id, _plan_id, pageNo) {
         let ret = { reqs: [], total: 0, passed: false };
-        let plan = await plan_lib.get_single_plan_by_id(_plan_id);
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
         if (plan && plan.driver && plan.driver.open_id == _open_id && plan.stuff) {
             ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
         }
@@ -111,7 +112,7 @@ module.exports = {
     },
     plan_passed_sc: async function (_plan_id) {
         let ret = false;
-        let plan = await plan_lib.get_single_plan_by_id(_plan_id);
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
         if (plan && plan.status != 3 && plan.stuff) {
             if (plan.stuff.need_sc) {
                 let sc_reqs = await plan.stuff.getSc_reqs();
@@ -151,7 +152,7 @@ module.exports = {
     driver_upload_content: async function (_open_id, _req_id, _plan_id, _input, _attachment, _expired_time, token) {
         let sq = await db_opt.get_sq();
         let sc_req = await sq.models.sc_req.findByPk(_req_id, { include: [sq.models.stuff] });
-        let plan = await plan_lib.get_single_plan_by_id(_plan_id);
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
         let company = await rbac_lib.get_company_by_token(token);
         if (sc_req && plan && plan.driver && plan.stuff && (plan.driver.open_id == _open_id || (company && await company.hasStuff(plan.stuff))) && plan.stuff.id == sc_req.stuff.id) {
             let condition = undefined;
@@ -193,7 +194,7 @@ module.exports = {
     },
     get_plan_sc_status: async function (_plan_id, _token, pageNo) {
         let ret = { reqs: [], total: 0, passed: false };
-        let plan = await plan_lib.get_single_plan_by_id(_plan_id);
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
         let company = await rbac_lib.get_company_by_token(_token);
         if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
             ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);

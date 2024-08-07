@@ -2,6 +2,7 @@ const { default: axios } = require("axios");
 const db_opt = require("./db_opt");
 const cash_lib = require("./lib/cash_lib");
 const plan_lib = require("./lib/plan_lib");
+const util_lib = require("./lib/util_lib");
 const rbac_lib = require("./lib/rbac_lib");
 const moment = require('moment');
 async function get_base_id_by_name(name) {
@@ -13,7 +14,7 @@ async function get_base_id_by_name(name) {
     return ret;
 }
 async function make_plan_resp(plan) {
-    let full_plan = await plan_lib.get_single_plan_by_id(plan.id);
+    let full_plan = await util_lib.get_single_plan_by_id(plan.id);
     let back_plate = '';
     let company_name = '';
     if (full_plan.behind_vehicle) {
@@ -128,7 +129,7 @@ module.exports = {
                     where: mkplan_filter(plan_content_cond),
                 });
                 if (plan) {
-                    let full_plan = await plan_lib.get_single_plan_by_id(plan.id);
+                    let full_plan = await util_lib.get_single_plan_by_id(plan.id);
                     if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment)) {
                         if (full_plan.stuff.no_need_register || full_plan.register_time) {
                             ret.err_msg = '';
@@ -163,7 +164,7 @@ module.exports = {
                 let resp = [];
                 for (let index = 0; index < all_plans.length; index++) {
                     const element = all_plans[index];
-                    let full_plan = await plan_lib.get_single_plan_by_id(element.id);
+                    let full_plan = await util_lib.get_single_plan_by_id(element.id);
                     if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment.length > 0)) {
                         resp.push(await make_plan_resp(element));
                     }
@@ -313,7 +314,7 @@ module.exports = {
                     });
                     for (let index = 0; index < plans.length; index++) {
                         const element = plans[index];
-                        let focus_plan = await plan_lib.get_single_plan_by_id(element.id);
+                        let focus_plan = await util_lib.get_single_plan_by_id(element.id);
                         if (focus_plan && focus_plan.stuff.company.id == company.id && focus_plan.register_time) {
                             await plan_lib.plan_call_vehicle(focus_plan.id, token);
                             ret.err_msg = "";
@@ -396,7 +397,7 @@ module.exports = {
             var ret = { err_msg: '无权限' };
             try {
                 let req_body = req.body;
-                let plan = await plan_lib.get_single_plan_by_id(parseInt(req_body.orderNumber))
+                let plan = await util_lib.get_single_plan_by_id(parseInt(req_body.orderNumber))
                 await plan_lib.plan_close(plan, '第三方');
                 ret.err_msg = "";
             } catch (error) {

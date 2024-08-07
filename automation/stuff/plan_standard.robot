@@ -248,6 +248,34 @@ Change Price After Plan Closed
     Change Stuff Price  ${test_stuff}[id]  ${998}  ${True}
     Should Not Be Equal As Numbers  ${plan}[unit_price]  ${998}
 
+Auto Uncheck In
+    [Teardown]  Plan Reset
+    #设定自动取消排号时间为1分钟
+    Set Check In Stay Minutes  ${1}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan_id}  Get From Dictionary  ${plan}  id
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Check In A Plan  ${plan}
+    #检查过三分钟(20秒模拟)后是否被过号了
+    ${plan}  Get Plan By Id  ${plan_id}
+    Should Not Be Empty    ${plan}[register_time]
+    Sleep  3m
+    ${plan}  Get Plan By Id  ${plan_id}
+    Should Not Contain    ${plan}    register_time
+    #关闭自动排号并再次排号
+    Set Check In Stay Minutes
+    #检查过三分钟后是否被过号了
+    Check In A Plan  ${plan}
+    ${plan}  Get Plan By Id  ${plan_id}
+    Should Not Be Empty    ${plan}[register_time]
+    Sleep  3m
+    ${plan}  Get Plan By Id  ${plan_id}
+    Should Not Be Empty    ${plan}[register_time]
+
 *** Keywords ***
 Verify Order Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}

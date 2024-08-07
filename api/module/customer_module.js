@@ -6,6 +6,7 @@ const db_opt = require('../db_opt');
 const common = require('./common');
 const cash_lib = require('../lib/cash_lib');
 const wx_api_util = require('../lib/wx_api_util');
+const util_lib = require('../lib/util_lib');
 module.exports = {
     name: 'customer',
     description: '客户',
@@ -158,12 +159,12 @@ module.exports = {
                     new_plan.status = 0;
                     new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();
-                    wx_api_util.send_plan_status_msg(await plan_lib.get_single_plan_by_id(new_plan.id));
+                    wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
                 }
                 else {
                     throw { err_msg: '创建计划失败' };
                 }
-                return await plan_lib.get_single_plan_by_id(new_plan.id);
+                return await util_lib.get_single_plan_by_id(new_plan.id);
             },
         },
         order_buy_update: common.order_update,
@@ -181,7 +182,7 @@ module.exports = {
             func: async function (body, token) {
                 let opt_company = await rbac_lib.get_company_by_token(token);
                 let user = await rbac_lib.get_user_by_token(token);
-                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (user && plan && opt_company && await opt_company.hasPlan(plan)) {
                     await plan_lib.plan_close(plan, user.name, true);
                 }
@@ -254,7 +255,7 @@ module.exports = {
                 return { result: true };
             },
         },
-        batch_copy:{
+        batch_copy: {
             name: '批量复制',
             description: '批量复制',
             is_write: true,
@@ -282,7 +283,7 @@ module.exports = {
                     comment: body.comment,
                     use_for: body.use_for,
                     drop_address: body.drop_address,
-                    trans_company_name:body.trans_company_name,
+                    trans_company_name: body.trans_company_name,
                 });
                 return { result: true };
             },

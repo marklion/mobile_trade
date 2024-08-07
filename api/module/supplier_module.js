@@ -1,10 +1,10 @@
 const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
-const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 const common = require('./common');
 const wx_api_util = require('../lib/wx_api_util');
+const util_lib = require('../lib/util_lib');
 module.exports = {
     name: 'supplier',
     description: '供应商',
@@ -58,7 +58,7 @@ module.exports = {
                 main_vehicle_id: { type: Number, have_to: true, mean: '主车ID', example: 1 },
                 behind_vehicle_id: { type: Number, have_to: true, mean: '挂车ID', example: 1 },
                 driver_id: { type: Number, have_to: true, mean: '司机ID', example: 1 },
-                price:{type:Number, have_to:false, mean:'单价', example:102},
+                price: { type: Number, have_to: false, mean: '单价', example: 102 },
                 trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
                 proxy_company_name: { type: String, have_to: false, mean: '代理公司名称', example: 1 },
                 is_proxy: { type: Boolean, have_to: false, mean: '是否代理', example: true },
@@ -106,16 +106,15 @@ module.exports = {
                     new_plan.is_buy = true;
                     new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();
-                    wx_api_util.send_plan_status_msg(await plan_lib.get_single_plan_by_id(new_plan.id));
-                    if (!stuff.need_enter_weight && stuff.no_need_register && !stuff.need_sc)
-                    {
+                    wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
+                    if (!stuff.need_enter_weight && stuff.no_need_register && !stuff.need_sc) {
                         await plan_lib.confirm_single_plan(new_plan.id, token, true)
                     }
                 }
                 else {
                     throw { err_msg: '创建计划失败' };
                 }
-                return await plan_lib.get_single_plan_by_id(new_plan.id);
+                return await util_lib.get_single_plan_by_id(new_plan.id);
             },
         },
         order_sale_update: common.order_update,
@@ -129,7 +128,7 @@ module.exports = {
                 plans: { type: Array, mean: '订单', explain: api_param_result_define.plan_detail_define }
             },
             func: async function (body, token) {
-                let user= await rbac_lib.get_user_by_token(token);
+                let user = await rbac_lib.get_user_by_token(token);
                 let search_ret = await plan_lib.search_bought_plans(user, body.pageNo, body, true);
                 return { plans: search_ret.rows, total: search_ret.count };
             },
@@ -147,8 +146,8 @@ module.exports = {
             },
             func: async function (body, token) {
                 let user = await rbac_lib.get_user_by_token(token);
-                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
-                if (user && plan && await user.hasPlan(plan) ) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (user && plan && await user.hasPlan(plan)) {
                     await plan_lib.plan_close(plan, user.name, true);
                 }
                 else {
@@ -199,7 +198,7 @@ module.exports = {
             params: {
                 plan_time: { type: String, have_to: true, mean: '计划时间', example: '2020-01-01 12:00:00' },
                 comment: { type: String, have_to: false, mean: '备注', example: '备注' },
-                price:{type:Number, have_to:false, mean:'单价', example:102},
+                price: { type: Number, have_to: false, mean: '单价', example: 102 },
                 trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
                 start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
@@ -222,7 +221,7 @@ module.exports = {
                 return { result: true };
             },
         },
-        get_company4proxy:{
+        get_company4proxy: {
             name: '获取可代理的公司列表',
             description: '获取可代理的公司列表',
             is_write: false,
@@ -230,13 +229,15 @@ module.exports = {
             params: {
                 company_id: { type: Number, have_to: true, mean: '公司ID', example: 1 },
             },
-            result:{
-                companies: {type:Array,mean:'公司列表',explain:{
-                    id: { type: Number, mean: '公司ID', example: 1 },
-                    name: { type: String, mean: '公司名', example: 'company_example' },
-                }}
+            result: {
+                companies: {
+                    type: Array, mean: '公司列表', explain: {
+                        id: { type: Number, mean: '公司ID', example: 1 },
+                        name: { type: String, mean: '公司名', example: 'company_example' },
+                    }
+                }
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 let ret = {
                     total: 0,
                     companies: []
@@ -249,8 +250,8 @@ module.exports = {
                     for (let index = 0; index < resp.rows.length; index++) {
                         const element = resp.rows[index];
                         ret.companies.push({
-                            name:element.company.name,
-                            id:element.company.id,
+                            name: element.company.name,
+                            id: element.company.id,
                         });
                     }
                     ret.total = resp.count;
