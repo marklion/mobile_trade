@@ -159,7 +159,7 @@ module.exports = {
         let count = await _compnay.countSale_contracts();
         rows.forEach(item => {
             item.company = item.buy_company
-            //item.expired = this.contractOutOfDate(item.end_time)
+            item.expired = this.contractOutOfDate(item.end_time)
         })
         return { rows: rows, count: count };
     },
@@ -178,7 +178,7 @@ module.exports = {
         let count = await _compnay.countBuy_contracts();
         rows.forEach(item => {
             item.company = item.sale_company
-            //item.expired = this.contractOutOfDate(item.end_time)
+            item.expired = this.contractOutOfDate(item.end_time)
         });
         return { rows: rows, count: count };
     },
@@ -838,6 +838,7 @@ module.exports = {
         for (let index = 0; index < found_ret.length; index++) {
             const element = found_ret[index].toJSON();
             if (element.sc_contents.length == 1) {
+                element.sc_contents[0].passed = moment(moment(element.sc_contents[0].expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0;
                 element.sc_content = element.sc_contents[0];
             }
             delete element.sc_contents;
