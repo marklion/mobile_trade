@@ -2,6 +2,7 @@ const db_opt = require('../db_opt');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const moment = require('moment');
+const util_lib = require('../lib/util_lib');
 async function do_export_later(token, name, func) {
     let user = await rbac_lib.get_user_by_token(token);
     await user.addExport_record(await db_opt.get_sq().models.export_record.create({
@@ -85,19 +86,16 @@ module.exports = {
         },
         func: async function (body, token) {
             let main_vehicle_id = undefined;
-            if (body.main_vehicle_plate)
-            {
+            if (body.main_vehicle_plate) {
                 main_vehicle_id = (await plan_lib.fetch_vehicle(body.main_vehicle_plate, false)).id;
             }
             let behind_vehicle_id = undefined;
-            if (body.behind_vehicle_plate)
-            {
+            if (body.behind_vehicle_plate) {
                 behind_vehicle_id = (await plan_lib.fetch_vehicle(body.behind_vehicle_plate, true)).id;
             }
             let driver_id = undefined;
-            if (body.driver_phone)
-            {
-                let orig_driver = (await plan_lib.get_single_plan_by_id(body.plan_id)).driver;
+            if (body.driver_phone) {
+                let orig_driver = (await util_lib.get_single_plan_by_id(body.plan_id)).driver;
                 driver_id = (await plan_lib.fetch_driver(orig_driver.name, body.driver_phone, orig_driver.id_card)).id;
             }
             await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, main_vehicle_id, behind_vehicle_id, driver_id, body.comment, body.use_for, body.drop_address);

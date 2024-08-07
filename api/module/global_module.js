@@ -8,6 +8,7 @@ const hook_lib = require('../lib/hook_lib');
 const captureWebsite = require('capture-website');
 const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
+const util_lib = require('../lib/util_lib');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -24,7 +25,7 @@ async function do_web_cap(url, file_name) {
 }
 
 async function get_ticket_func(body, token) {
-    let orig_plan = await plan_lib.get_single_plan_by_id(body.id);
+    let orig_plan = await util_lib.get_single_plan_by_id(body.id);
     let plan = await plan_lib.replace_plan2archive(orig_plan)
     if (!plan) {
         plan = orig_plan;
@@ -188,7 +189,7 @@ module.exports = {
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 if (driver) {
                     let ret = { plans: [], total: 0 };
-                    ret.plans = await driver.getPlans({ where: plan_get_where, limit: 20, offset: body.pageNo * 20, include: plan_lib.plan_detail_include() });
+                    ret.plans = await driver.getPlans({ where: plan_get_where, limit: 20, offset: body.pageNo * 20, include: util_lib.plan_detail_include() });
                     for (let index = 0; index < ret.plans.length; index++) {
                         const element = ret.plans[index];
                         let wc = await plan_lib.get_wait_count(element);
@@ -316,7 +317,7 @@ module.exports = {
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
-                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     plan.enter_count = body.enter_count;
                     plan.enter_attachment = body.enter_attachment;
@@ -387,7 +388,7 @@ module.exports = {
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
-                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 let company = await sq.models.company.findByPk(body.company_id);
                 if (company && driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     await plan.setCompany(company);
@@ -424,7 +425,7 @@ module.exports = {
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
-                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     let reason = await checkif_plan_checkinable(plan, driver, body.lat, body.lon);
                     if (reason === '') {
@@ -1167,7 +1168,7 @@ module.exports = {
                 let sq = db_opt.get_sq();
                 let ret = { result: false };
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
-                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (plan && driver && await driver.hasPlan(plan)) {
                     let sq = db_opt.get_sq();
                     let paper = await sq.models.exam_paper.findByPk(body.paper_id);
@@ -1222,10 +1223,10 @@ module.exports = {
                 exams: { type: Array, mean: '考试', explain: api_param_result_define.exam_info },
             },
             func: async function (body, token) {
-                let ret = {exams:[]}
+                let ret = { exams: [] }
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
-                let plan = await plan_lib.get_single_plan_by_id(body.plan_id);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (driver && plan && await driver.hasPlan(plan)) {
                     ret.exams = await exam_lib.get_exam_by_plan(plan);
                 }

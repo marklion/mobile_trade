@@ -191,6 +191,7 @@ const plan_lib = require('./lib/plan_lib');
 const global_module = require('./module/global_module');
 const bidding_lib = require('./lib/bidding_lib');
 const old_zczh = require('./plugin/old_zczh');
+const field_lib = require('./lib/field_lib');
 legacy_api.install(app);
 
 if (fs.existsSync('/database/map.json')) {
@@ -217,6 +218,7 @@ add_min_timer(1, async () => {
     console.log('1 min timer');
     bidding_lib.stop_timeup_bt();
     plan_lib.stuff_price_timeout();
+    field_lib.auto_uncheck_in();
 });
 add_min_timer(2, async () => {
     console.log('2 min timer');

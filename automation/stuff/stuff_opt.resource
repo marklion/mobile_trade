@@ -410,3 +410,8 @@ Close A Plan
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /sale_management/close  ${sc_admin_token}  ${req}
+
+Set Check In Stay Minutes
+    [Arguments]  ${minutes}=${0}
+    ${req}  Create Dictionary  check_in_stay_minutes=${minutes}  lat=${0}  lon=${0}  distance_limit=${0}
+    Req to Server  /sale_management/set_checkin_config  ${sc_admin_token}  ${req}

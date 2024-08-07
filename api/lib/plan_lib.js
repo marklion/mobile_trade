@@ -6,7 +6,7 @@ const { hook_plan } = require('./hook_lib');
 const field_lib = require('./field_lib');
 const ExcelJS = require('exceljs');
 const uuid = require('uuid');
-const new_zczh = require('../plugin/new_zczh');
+const util_lib = require('./util_lib');
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -177,17 +177,6 @@ module.exports = {
         });
         return { rows: rows, count: count };
     },
-    plan_detail_include: function () {
-        return [
-            { model: db_opt.get_sq().models.company, paranoid: false },
-            { model: db_opt.get_sq().models.rbac_user, paranoid: false },
-            { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
-            { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
-            { model: db_opt.get_sq().models.driver, paranoid: false },
-            { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company], paranoid: false },
-            { model: db_opt.get_sq().models.plan_history, order: [[db_opt.get_sq().fn('datetime', db_opt.get_sq().col('time')), 'ASC']], paranoid: false }
-        ];
-    },
     make_plan_where_condition: function (_condition, search_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = {
@@ -239,7 +228,7 @@ module.exports = {
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
-            include: this.plan_detail_include(),
+            include: util_lib.plan_detail_include(),
         };
         let result = [];
         let count = await user.countPlans({ where: where_condition });
@@ -280,7 +269,7 @@ module.exports = {
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
-            include: this.plan_detail_include(),
+            include: util_lib.plan_detail_include(),
         };
         let result = [];
         let count = await sq.models.plan.count({ where: where_condition });
@@ -311,7 +300,7 @@ module.exports = {
             throw { err_msg: '已进厂,无法修改' };
         }
         let company = await plan.getCompany();
-        let owner_company = (await this.get_single_plan_by_id(_plan_id)).stuff.company;
+        let owner_company = (await util_lib.get_single_plan_by_id(_plan_id)).stuff.company;
         let opt_company = await rbac_lib.get_company_by_token(_token);
         if ((company && opt_company && company.id == opt_company.id) || (owner_company && opt_company && owner_company.id == opt_company.id)) {
             let change_comment = '';
@@ -452,7 +441,7 @@ module.exports = {
         }
     },
     plan_enter: async function (_plan_id, _token, is_exit = false) {
-        let tmp_plan = await this.get_single_plan_by_id(_plan_id);
+        let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
         let status_req = 2;
         if (tmp_plan && tmp_plan.is_buy) {
             status_req = 1;
@@ -528,13 +517,6 @@ module.exports = {
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
         });
     },
-    get_single_plan_by_id: async function (_plan_id) {
-        let ret = {};
-        let sq = db_opt.get_sq();
-        ret = await sq.models.plan.findByPk(_plan_id, { include: this.plan_detail_include() });
-
-        return ret;
-    },
     plan_cost: async function (plan) {
         let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
         if (contracts.length == 1) {
@@ -567,7 +549,7 @@ module.exports = {
     },
     verify_plan_pay: async function (_plan) {
         if (_plan.status == 1) {
-            let plan = await this.get_single_plan_by_id(_plan.id);
+            let plan = await util_lib.get_single_plan_by_id(_plan.id);
             let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
             let cur_balance = 0;
             if (contracts.length == 1) {
@@ -632,7 +614,7 @@ module.exports = {
         await this.confirm_single_plan(new_plan.id, token, true);
     },
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
-        let tmp_plan = await this.get_single_plan_by_id(_plan_id);
+        let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
         let status_req = 2;
         if (tmp_plan && tmp_plan.is_buy) {
             status_req = 1;
@@ -659,7 +641,7 @@ module.exports = {
         });
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
-        let plan = await this.get_single_plan_by_id(_plan_id);
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
         if (force) {
             await _action(plan);
         }
@@ -711,7 +693,7 @@ module.exports = {
     },
     rp_history_deliver: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '发车');
-        let plan = await this.get_single_plan_by_id(_plan.id);
+        let plan = await util_lib.get_single_plan_by_id(_plan.id);
         let last_archive = await plan.getArchive_plan();
         if (last_archive) {
             await last_archive.destroy();
@@ -723,7 +705,7 @@ module.exports = {
     },
     rp_history_close: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '关闭');
-        let plan = await this.get_single_plan_by_id(_plan.id);
+        let plan = await util_lib.get_single_plan_by_id(_plan.id);
         let last_archive = await plan.getArchive_plan();
         if (last_archive) {
             await last_archive.destroy();
@@ -737,7 +719,7 @@ module.exports = {
     },
     rp_history_cancel: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '取消');
-        let plan = await this.get_single_plan_by_id(_plan.id);
+        let plan = await util_lib.get_single_plan_by_id(_plan.id);
         let last_archive = await plan.getArchive_plan();
         if (last_archive) {
             await last_archive.destroy();
@@ -948,7 +930,7 @@ module.exports = {
             order: [[sq.fn('datetime', sq.col('register_time')), 'ASC']],
             offset: pageNo * 20,
             limit: 20,
-            include: this.plan_detail_include(),
+            include: util_lib.plan_detail_include(),
         });
         let count = await sq.models.plan.count({
             where: cond,
@@ -1032,7 +1014,7 @@ module.exports = {
                     new_plan.is_buy = is_buy;
                     new_plan.trans_company_name = element.trans_company_name;
                     await new_plan.save();
-                    await wx_api_util.send_plan_status_msg(await this.get_single_plan_by_id(new_plan.id));
+                    await wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
                 } catch (error) {
                     err_msg += error.err_msg + '\n';
                     throw error;
@@ -1081,7 +1063,7 @@ module.exports = {
         }
         let user = await rbac_lib.get_user_by_token(token);
 
-        return await user.getPlans({ where: cond, include: this.plan_detail_include() });
+        return await user.getPlans({ where: cond, include: util_lib.plan_detail_include() });
     },
     filter_plan4manager: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -1120,7 +1102,7 @@ module.exports = {
             cond.is_buy = false;
         }
 
-        return await sq.models.plan.findAll({ where: cond, include: this.plan_detail_include() });
+        return await sq.models.plan.findAll({ where: cond, include: util_lib.plan_detail_include() });
     },
     place_hold: function (input, holder) {
         if (input == undefined) {
@@ -1347,7 +1329,7 @@ module.exports = {
                     })
                     for (let index = 0; index < plans.length; index++) {
                         try {
-                            let plan = await this.get_single_plan_by_id(plans[index].id);
+                            let plan = await util_lib.get_single_plan_by_id(plans[index].id);
                             await this.plan_close(plan, '过期自动删除', false, true);
                         } catch (error) {
                             console.log(error);

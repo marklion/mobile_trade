@@ -30,7 +30,7 @@ get_docker_image() {
 
 start_all_server() {
     line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 129`
+    line=`expr $line - 133`
     mkdir /tmp/sys_mt
     tail -n $line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
@@ -49,6 +49,10 @@ start_all_server() {
     # pm2 --node-args="--inspect=0.0.0.0:9229" start index.js
     pm2 start index.js
     popd
+    if [ 'none' == ${MP_SECRET} ]
+    then
+        /script/timer.sh &
+    fi
     while true
     do
         sleep 1000

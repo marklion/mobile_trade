@@ -69,6 +69,7 @@
             <fui-input label="工厂纬度" borderTop placeholder="请输入纬度" v-model="checkin_config.lat"></fui-input>
             <fui-input label="工厂经度" borderTop placeholder="请输入经度" v-model="checkin_config.lon"></fui-input>
             <fui-input label="排号范围" borderTop placeholder="请输入距离(千米)" v-model="checkin_config.distance_limit"></fui-input>
+            <fui-input label="过号间隔" borderTop placeholder="请输入过号间隔(分钟)" v-model="checkin_config.check_in_stay_minutes"></fui-input>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" v-if="show_order_prefer" :show="show_order_prefer" @click="config_order_prefer">
@@ -105,7 +106,8 @@ export default {
             checkin_config: {
                 lat: '',
                 lon: '',
-                distance_limit: ''
+                distance_limit: '',
+                check_in_stay_minutes:''
             },
         };
     },
@@ -162,6 +164,10 @@ export default {
                     name: 'distance_limit',
                     rule: ['required', 'isAmount'],
                     msg: ['请输入距离', '距离请填写数字']
+                },{
+                    name: 'check_in_stay_minutes',
+                    rule: ['isAmount'],
+                    msg: ['间隔请填写数字']
                 }];
                 let val_ret = await this.$refs.form.validator(this.checkin_config, rules);
                 if (!val_ret.isPassed) {
@@ -170,6 +176,7 @@ export default {
                 this.checkin_config.lat = parseFloat(this.checkin_config.lat);
                 this.checkin_config.lon = parseFloat(this.checkin_config.lon);
                 this.checkin_config.distance_limit = parseFloat(this.checkin_config.distance_limit);
+                this.checkin_config.check_in_stay_minutes = parseInt(this.checkin_config.check_in_stay_minutes);
                 await this.$send_req('/sale_management/set_checkin_config', this.checkin_config);
             }
             await this.get_checkin_config();
