@@ -1,0 +1,55 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'V2.*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      deployments: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - uses: chrnorm/deployment-action@v2
+      name: Create GitHub deployment
+      id: deployment
+      with:
+        token: '${{ github.token }}'
+        environment: production
+
+    - name: Build BackEnd
+      run: |
+        docker pull marklion/mt_deploy:v1.0
+        docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.0 make -j 10 -f `realpath .`/Makefile
+
+    - name: Deploy
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        SERVER: ${{ secrets.SERVER }}
+        USER: ${{ secrets.USER }}
+      run: |
+        eval `ssh-agent`
+        echo "$SSH_PRIVATE_KEY" | ssh-add -
+        scp -o StrictHostKeyChecking=no build/install.sh $USER@$SERVER:/root/install_new.sh
+        ssh -o StrictHostKeyChecking=no $USER@$SERVER 'bash -s' < backend_deploy.sh
+        ./frontend_deploy.sh
+
+    - name: Update deployment status (success)
+      if: success()
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+        state: 'success'
+
+    - name: Update deployment status (failure)
+      if: failure()
+      uses: chrnorm/deployment-status@v2
+      with:
+        token: '${{ github.token }}'
+        deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+        state: 'failure'
