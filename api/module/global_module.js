@@ -543,6 +543,7 @@ module.exports = {
                 },
                 prefer_order_begin_offset: { type: Number, mean: '订单开始时间偏移', example: 0 },
                 prefer_order_end_offset: { type: Number, mean: '订单结束时间偏移', example: 0 },
+                company_logo: { type: String, mean: '公司logo', example: 'http://www.baidu.com' },
             },
             func: async function (body, token) {
                 let ret = {};
@@ -551,6 +552,7 @@ module.exports = {
                     let company = await user.getCompany();
                     if (company) {
                         user.company = company.name;
+                        user.company_logo = company.logo;
                     }
                     user.modules = [];
                     let roles = await user.getRbac_roles();
@@ -639,6 +641,7 @@ module.exports = {
                     explain: {
                         id: { type: Number, mean: '公司id', example: 123 },
                         name: { type: String, mean: '公司名', example: 'company_example' },
+                        logo: { type: String, mean: '公司logo', example: 'logo_example' },
                         bound_modules: {
                             type: Array, mean: '绑定模块列表', explain: {
                                 id: { type: Number, mean: '模块id', example: 123 },
@@ -663,6 +666,30 @@ module.exports = {
                 ret.total = result.count;
                 return ret;
             }
+        },
+        company_set_logo: {
+            name: '设置公司logo',
+            description: '设置公司logo',
+            need_rbac: true,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '公司id', example: 123 },
+                logo: { type: String, have_to: true, mean: 'logo', example: 'logo_example' },
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true },
+            },
+            func: async function (body, token) {
+                let ret = { result: false };
+                let company = await db_opt.get_sq().models.company.findByPk(body.id);
+                if (company) {
+                    company.logo = body.logo;
+                    await company.save();
+                    ret.result = true;
+                }
+                return ret;
+            },
         },
         company_add_module: {
             name: '公司添加模块',
