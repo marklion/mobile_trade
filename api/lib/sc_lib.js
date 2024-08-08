@@ -196,6 +196,7 @@ module.exports = {
         let ret = { reqs: [], total: 0, passed: false };
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
         let company = await rbac_lib.get_company_by_token(_token);
+        let sq = db_opt.get_sq();
         if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
             let content = await plan.stuff.getSc_reqs({
                 order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
