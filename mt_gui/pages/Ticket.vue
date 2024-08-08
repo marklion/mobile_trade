@@ -4,7 +4,7 @@
     <fui-preview :previewData="ticket_content"></fui-preview>
     <view style="display:flex; justify-content: center;">
         <fui-qrcode width="240" height="240" :value="'http://mt.d8sis.cn/#/pages/Ticket?id=' + id"></fui-qrcode>
-        <fui-avatar mode="widthFix" shape="square" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
+        <fui-avatar mode="widthFix" shape="square" background="white" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
     </view>
     <fui-button text="下载磅单图片" @click="download_pic" type="primary"></fui-button>
     <fui-button text="转发给好友" type="success" open-type="share"></fui-button>
