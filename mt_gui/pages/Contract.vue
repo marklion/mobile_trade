@@ -2,8 +2,9 @@
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
     <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls]">
-        <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :title="item.company.name" color="black" :tag="'￥' + item.balance">
-            <view style="padding: 0 20rpx;">
+        <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']"  :title="item.company.name" color="black" :tag="'￥' + item.balance">
+            <view style="padding: 0 20rpx;position: relative;">
+                <view v-if="item.expired" class="expired_text">已过期</view>
                 <module-filter require_module="sale_management">
                     <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su || cur_urls.buy_setting">
                         <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" originLeft :scaleRatio="0.8" type="purple">
@@ -449,6 +450,18 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+.expired_line{
+    text-decoration: line-through gray;
+}
+.expired_text{
+    position: absolute;
+    transform-origin: center;
+    transform: rotate(45deg);
+    right: 10rpx;
+    top: -30rpx;
+    border: solid 1px gray;
+    padding: 10rpx;
+    border-radius: 20%;
+}
 </style>
