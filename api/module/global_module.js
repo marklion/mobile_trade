@@ -543,7 +543,7 @@ module.exports = {
                 },
                 prefer_order_begin_offset: { type: Number, mean: '订单开始时间偏移', example: 0 },
                 prefer_order_end_offset: { type: Number, mean: '订单结束时间偏移', example: 0 },
-                company_logo: { type: String, mean: '公司logo', example: 'http://www.baidu.com' },
+                company_logo: { type: String, mean: '公司logo', example: 'https://www.baidu.com' },
             },
             func: async function (body, token) {
                 let ret = {};
