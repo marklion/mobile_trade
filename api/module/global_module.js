@@ -1118,7 +1118,7 @@ module.exports = {
             is_get_api: true,
             params: {
                 open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
-                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
             },
             result: {
                 papers: { type: Array, mean: '试卷', explain: api_param_result_define.exam_paper_info },
@@ -1127,7 +1127,8 @@ module.exports = {
                 let sq = db_opt.get_sq();
                 let ret = { papers: [], total: 0 };
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
-                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                let stuff = plan.stuff;
                 if (driver && stuff) {
                     ret = await exam_lib.get_all_paper(stuff, body.pageNo);
                     ret.papers.forEach(item => {
