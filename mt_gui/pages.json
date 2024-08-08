@@ -121,6 +121,12 @@
 					"style": {
 						"enablePullDownRefresh": true
 					}
+				},
+				{
+					"path": "Exam",
+					"style": {
+						"enablePullDownRefresh": true
+					}
 				}
 			]
 		}
