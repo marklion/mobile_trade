@@ -27,6 +27,7 @@ module.exports = {
                         begin_time: { type: String, mean: '开始时间', example: '2020-01-01 12:00:00' },
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                         number: { type: String, mean: '合同号', example: "abc" },
+                        expired:{type:Boolean,mean:'是否过期',example:false},
                         stuff: {
                             type: Array, mean: '货物', explain: {
                                 id: { type: Number, mean: '货物ID', example: 1 },
