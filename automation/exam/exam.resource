@@ -69,6 +69,6 @@ Disable Stuff Exam
 Driver Get Paper
     [Arguments]  ${plan}
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
-    ${req}  Create Dictionary  stuff_id=${plan}[stuff][id]  open_id=${driver}[open_id]
+    ${req}  Create Dictionary  plan_id=${plan}[id]  open_id=${driver}[open_id]
     ${resp}  Req Get to Server    /global/driver_get_paper    none  papers    ${-1}    &{req}
     RETURN  ${resp}

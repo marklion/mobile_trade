@@ -538,7 +538,7 @@ export default {
                 });
             } else if (e.text == '考试') {
                 uni.navigateTo({
-                    url: '/subPage1/Exam?id=' + e.item.id
+                    url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id,
                 });
             }
         },
