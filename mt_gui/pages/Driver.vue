@@ -95,7 +95,7 @@
     <fui-backdrop :zIndex="8888" :show="show_one_att">
         <movable-area scale-area class="movable-area">
             <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
-            <movable-view  class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
+            <movable-view class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
                 <image lazy-load class="lookimg" :src="one_att" mode="aspectFit"></image>
             </movable-view>
         </movable-area>
@@ -156,7 +156,7 @@ export default {
     },
     data: function () {
         return {
-            scale:1,
+            scale: 1,
             phone_login_req: {
                 phone: '',
                 password: '',
@@ -304,6 +304,13 @@ export default {
                     ret.buttons.push({
                         text: '传磅单',
                         color: 'purple',
+                        item: item,
+                    });
+                }
+                if (item.stuff.need_exam) {
+                    ret.buttons.push({
+                        text: '考试',
+                        color: 'orange',
                         item: item,
                     });
                 }
@@ -523,11 +530,15 @@ export default {
             } else if (e.text == "传磅单") {
                 vue_this.show_upload_enter = true;
                 vue_this.focus_plan = e.item;
-            } else if (e.text = "选择公司") {
+            } else if (e.text == "选择货源") {
                 vue_this.focus_plan = e.item;
                 vue_this.show_company_select = true;
                 vue_this.$nextTick(() => {
                     vue_this.$refs.cp.refresh();
+                });
+            } else if (e.text == '考试') {
+                uni.navigateTo({
+                    url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id,
                 });
             }
         },
