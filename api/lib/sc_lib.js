@@ -250,8 +250,33 @@ module.exports = {
         let ret = { reqs: [], total: 0, passed: false };
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
         let company = await rbac_lib.get_company_by_token(_token);
+        let sq = db_opt.get_sq();
         if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
-            ret = await this.get_sc_status_by_plan(plan, pageNo);
+            let content = await plan.stuff.getSc_reqs({
+                order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
+                include: [
+                    {
+                        model: sq.models.sc_content, required: false, where: {
+                            [db_opt.Op.or]: [
+                                { driverId: plan.driver.id },
+                                { vehicleId: plan.main_vehicle.id },
+                                { vehicleId: plan.behind_vehicle.id },
+                            ]
+                        }
+                    },
+                ],
+            });
+            let expiredDay = true;
+            for (let index = 0; index < content.length; index++) {
+                let item = content[index].toJSON();
+                if (item.sc_contents.length > 0) {
+                    expiredDay = moment(moment(item.sc_contents[0].expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0
+                    if (!expiredDay) {
+                        await this.check_sc_content(item.sc_contents[0].id, _token, '内容已过期')
+                    }
+                }
+            }
+            ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
         }
         else {
             throw { err_msg: '无权限' };
