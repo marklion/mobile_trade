@@ -11,11 +11,13 @@
     <fui-divider style="background-color: white;"></fui-divider>
     <fui-card title="数据统计" full color="black" size="35">
         <view style="display: flex;flex-wrap: wrap;">
-            <view class="charts-box" v-for="(single_cts, index) in charts" :key="index">
-                <qiun-data-charts type="ring" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
+            <view :class="charts.length>1?'charts-box':'charts-box-full'" v-for="(single_cts, index) in charts" :key="index">
+                <qiun-data-charts v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0)>0" type="column" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
+                <view v-else style="height: 300px; display: flex; justify-content: center;align-items: center; font-size: 13px;font-weight: 500;color:#DDD;">无数据</view>
+                <view style="display: flex; justify-content: center;font-size: 13px;font-weight: 500;">{{single_cts.opts.title}}</view>
             </view>
         </view>
-        <module-filter require_module="sale_management">
+        <module-filter style="margin-top: 20px;" require_module="sale_management">
             <u-row>
                 <u-col span="10">
                     <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
@@ -153,58 +155,31 @@ export default {
                 duration: 1000,
                 rotate: false,
                 rotateLock: false,
-                color: ["#1890FF", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4", "#ea7ccc"],
-                padding: [5, 5, 5, 5],
                 fontSize: 13,
                 fontColor: "#666666",
-                dataLabel: false,
+                dataLabel: true,
                 dataPointShape: true,
                 dataPointShapeType: "solid",
                 touchMoveLimit: 60,
-                enableScroll: false,
-                enableMarkLine: false,
+                title: `${title} (${subtitle})`,
                 legend: {
-                    show: true,
-                    position: "bottom",
-                    lineHeight: 25,
-                    float: "left",
-                    padding: 3,
-                    margin: 3,
-                    backgroundColor: "rgba(0,0,0,0)",
-                    borderColor: "rgba(0,0,0,0)",
-                    borderWidth: 0,
-                    fontSize: 12,
-                    fontColor: "#666666",
-                    hiddenColor: "#CECECE",
-                    itemGap: 3
+                    show: false
                 },
-                title: {
-                    name: title,
-                    fontSize: 15,
-                    color: "#666666",
-                    offsetX: 0,
-                    offsetY: 0
+                yAxis: {
+                    disabled: true,
+                    disableGrid: true,
                 },
-                subtitle: {
-                    name: subtitle,
-                    fontSize: 25,
-                    color: "#7cb5ec",
-                    offsetX: 0,
-                    offsetY: 0
+                xAxis: {
+                    disableGrid: true,
                 },
                 extra: {
-                    ring: {
-                        ringWidth: 30,
-                        activeOpacity: 0.5,
-                        activeRadius: 10,
-                        offsetAngle: 0,
-                        labelWidth: 15,
-                        border: true,
-                        borderWidth: 3,
-                        borderColor: "#FFFFFF",
-                        centerColor: "#FFFFFF",
-                        customRadius: 0,
-                        linearType: "none"
+                    column: {
+                        type: "meter",
+                        width: 30,
+                        activeBgColor: "#000000",
+                        activeBgOpacity: 0.08,
+                        meterBorder: 2,
+                        meterFillColor: "#FFFFFF"
                     },
                     tooltip: {
                         showBox: true,
@@ -289,36 +264,28 @@ export default {
             }
             let make_data = async (url, title, subtitle) => {
                 let db = {
-                    today_unfinish_count: await get_count(url, cond(0, 1)) +
-                        await get_count(url, cond(0, 2)),
+                    today_unfinish_count: await get_count(url, cond(0, 1)) + await get_count(url, cond(0, 2)),
                     today_finished_count: await get_count(url, cond(0, 3)),
-                    yst_count: await get_count(url, cond(-1, 3)),
-                    tmr_count: await get_count(url, cond(1, 1)) +
-                        await get_count(url, cond(1, 2)),
+
+                    yst_unfinish_count: await get_count(url, cond(-1, 1)) + await get_count(url, cond(-1, 2)),
+                    yst_finished_count: await get_count(url, cond(-1, 3)),
+
+                    tmr_unfinish_count: await get_count(url, cond(1, 1)) + await get_count(url, cond(1, 2)),
+                    tmr_finished_count: await get_count(url, cond(1, 3)),
                 }
                 return {
                     opts: this.chart_opt(title, subtitle),
                     chartData: {
+                        categories: ['昨日', '今日', '明日'],
                         series: [{
-                                data: [{
-                                        name: '今日未完成:' + db.today_unfinish_count,
-                                        value: db.today_unfinish_count
-                                    },
-                                    {
-                                        name: '今日已完成:' + db.today_finished_count,
-                                        value: db.today_finished_count
-                                    },
-                                    {
-                                        name: '昨日:' + db.yst_count,
-                                        value: db.yst_count
-                                    },
-                                    {
-                                        name: '明日:' + db.tmr_count,
-                                        value: db.tmr_count
-                                    },
-                                ]
+                                name: '订单总数',
+                                data: [db.yst_unfinish_count + db.yst_finished_count, db.today_unfinish_count + db.today_finished_count, db.tmr_unfinish_count + db.tmr_finished_count]
                             },
-
+                            {
+                                name: '已完成',
+                                            color:'#1890ff',
+                                data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
+                            }
                         ],
                     },
                 }
@@ -375,6 +342,13 @@ export default {
 .charts-box {
     width: 50%;
     height: 300px;
+    margin: 10px 0;
+}
+
+.charts-box-full {
+    width: 100%;
+    height: 300px;
+    margin: 10px 0;
 }
 
 .main-warp {
