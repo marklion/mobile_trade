@@ -1,7 +1,10 @@
 <template>
 <view class="main-warp">
     <fui-row style="background-color: white;padding: 20rpx 0rpx;" isFlex justify="start">
-        <fui-col :span="24">
+        <fui-col :span="6" v-if="self_info.company_logo">
+            <fui-avatar size="large" shape="square" :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
+        </fui-col>
+        <fui-col>
             <fui-section :title="self_info.company" isLine size="50" fontWeight="500"></fui-section>
         </fui-col>
     </fui-row>
@@ -83,6 +86,7 @@ export default {
         return {
             self_info: {
                 company: '',
+                company_logo: '',
             },
             stuff2buy: [],
             stuff2sale: [],
