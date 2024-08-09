@@ -11,11 +11,13 @@
     <fui-divider style="background-color: white;"></fui-divider>
     <fui-card title="数据统计" full color="black" size="35">
         <view style="display: flex;flex-wrap: wrap;">
-            <view class="charts-box">
-                <qiun-data-charts type="column" :chartData="chart.chartData" :opts="chart.opts"></qiun-data-charts>
+            <view :class="charts.length>1?'charts-box':'charts-box-full'" v-for="(single_cts, index) in charts" :key="index">
+                <qiun-data-charts v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0)>0" type="column" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
+                <view v-else style="height: 300px; display: flex; justify-content: center;align-items: center; font-size: 13px;font-weight: 500;color:#DDD;">无数据</view>
+                <view style="display: flex; justify-content: center;font-size: 13px;font-weight: 500;">{{single_cts.opts.title}}</view>
             </view>
         </view>
-        <module-filter require_module="sale_management">
+        <module-filter style="margin-top: 20px;" require_module="sale_management">
             <u-row>
                 <u-col span="10">
                     <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
@@ -113,68 +115,7 @@ export default {
             expand_text: '展开',
             table_height: 700,
             tmp_tableData: [],
-            dataCount: 7,
-            chart: {
-                opt: {
-                    color: ["#CCCCCC", "#91CB74", "#FAC858", "#EE6666", "#73C0DE", "#3CA272", "#FC8452", "#9A60B4",
-                        "#ea7ccc"
-                    ],
-                    padding: [15, 15, 0, 5],
-                    enableScroll: true,
-                    legend: {},
-                    xAxis: {
-                        disableGrid: false
-                    },
-                    yAxis: {
-                        data: [{
-                            min: 0
-                        }],
-                    },
-                    extra: {
-                        column: {
-                            type: "group",
-                            width: 30,
-                            activeBgColor: "#000000",
-                            activeBgOpacity: 0.08,
-                            labelPosition: "center",
-                            barBorderCircle:true
-                        },
-                        tooltip: {
-                            showBox: true,
-                            showArrow: true,
-                            showCategory: false,
-                            borderWidth: 0,
-                            borderRadius: 0,
-                            borderColor: "#000000",
-                            borderOpacity: 0.7,
-                            bgColor: "#000000",
-                            bgOpacity: 0.7,
-                            gridType: "solid",
-                            dashLength: 4,
-                            gridColor: "#CCCCCC",
-                            boxPadding: 3,
-                            fontSize: 13,
-                            lineHeight: 20,
-                            fontColor: "#FFFFFF",
-                            legendShow: true,
-                            legendShape: "auto",
-                            splitLine: true,
-                            horizentalLine: false,
-                            xAxisLabel: false,
-                            yAxisLabel: false,
-                            labelBgColor: "#FFFFFF",
-                            labelBgOpacity: 0.7,
-                            labelFontColor: "#666666"
-                        }
-                    }
-
-                },
-                chartData: {
-                    categories: [],
-                    series: []
-                }
-            }
-
+            dataCount: 7
         }
     },
     methods: {
@@ -204,88 +145,71 @@ export default {
                 })
             }
         },
-        init_data_brief: async function () {
-            let cond = function (day_offset, status) {
-                let date = new Date();
-                date.setDate(date.getDate() + day_offset);
-                return {
-                    start_time: utils.dateFormatter(date, 'y-m-d', 4, false),
-                    end_time: utils.dateFormatter(date, 'y-m-d', 4, false),
-                    status: status,
-                    hide_manual_close: true,
-                    only_count: true,
-                };
-            }
-            let get_count = async (url, cond) => {
-                return (await this.$send_req(url, cond)).total
-            }
-
-            let statistics_total_data = async (url) => {
-                let today_unfinish_count = await get_count(url, cond(0, 1)) + await get_count(url, cond(0, 2));
-                let today_finished_count = await get_count(url, cond(0, 3));
-                let yst_count = await get_count(url, cond(-1, 3))
-                let tmr_count = await get_count(url, cond(1, 1)) + await get_count(url, cond(1, 2))
-
-                //return [13, 3, 11, 8]
-                return [today_unfinish_count,today_finished_count,yst_count,tmr_count]
-            }
-
-            let make_data = async () => {
-                let chartData = {
-                    categories: [],
-                    series: [{
-                            name: '今日未完成',
-                            data: [0, 0, 0, 0]
-                        },
-                        {
-                            name: '今日已完成',
-                            data: [0, 0, 0, 0]
-                        },
-                        {
-                            name: '昨日',
-                            data: [0, 0, 0, 0]
-                        },
-                        {
-                            name: '明日',
-                            data: [0, 0, 0, 0]
-                        }
-                    ]
-                };
-                let data = [];
-                if (this.$has_module('customer')) {
-                    chartData.categories.push('我方下单(采购)');
-                    data = await statistics_total_data('/customer/order_buy_search')
-                    this.series_data_load(data, 0, chartData.series)
-                }
-                if (this.$has_module('buy_management')) {
-                    chartData.categories.push('对方下单(采购)');
-                    data = await statistics_total_data('/buy_management/order_search')
-                    this.series_data_load(data, 1, chartData.series)
-                }
-                if (this.$has_module('supplier')) {
-                    chartData.categories.push('我方下单(销售)');
-                    data = await statistics_total_data('/supplier/order_sale_search')
-                    this.series_data_load(data, 2, chartData.series)
-
-                }
-                if (this.$has_module('sale_management')) {
-                    chartData.categories.push('对方下单(销售)');
-                    data = await statistics_total_data('/sale_management/order_search')
-                    this.series_data_load(data, 3, chartData.series)
-                }
-                this.chart.chartData = chartData;
-            }
-            make_data()
-
-        },
-        series_data_load: function (data, categories_index, series) {
-            data.map((value, index) => {
-                series[index].data[categories_index] = value;
-            })
-        },
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);
             uni.startPullDownRefresh();
+        },
+        chart_opt: function (title, subtitle) {
+            return {
+                timing: "easeOut",
+                duration: 1000,
+                rotate: false,
+                rotateLock: false,
+                fontSize: 13,
+                fontColor: "#666666",
+                dataLabel: true,
+                dataPointShape: true,
+                dataPointShapeType: "solid",
+                touchMoveLimit: 60,
+                title: `${title} (${subtitle})`,
+                legend: {
+                    show: false
+                },
+                yAxis: {
+                    disabled: true,
+                    disableGrid: true,
+                },
+                xAxis: {
+                    disableGrid: true,
+                },
+                extra: {
+                    column: {
+                        type: "meter",
+                        width: 30,
+                        activeBgColor: "#000000",
+                        activeBgOpacity: 0.08,
+                        meterBorder: 2,
+                        meterFillColor: "#FFFFFF"
+                    },
+                    tooltip: {
+                        showBox: true,
+                        showArrow: true,
+                        showCategory: false,
+                        borderWidth: 0,
+                        borderRadius: 0,
+                        borderColor: "#000000",
+                        borderOpacity: 0.7,
+                        bgColor: "#000000",
+                        bgOpacity: 0.7,
+                        gridType: "solid",
+                        dashLength: 4,
+                        gridColor: "#CCCCCC",
+                        boxPadding: 3,
+                        fontSize: 13,
+                        lineHeight: 20,
+                        fontColor: "#FFFFFF",
+                        legendShow: true,
+                        legendShape: "auto",
+                        splitLine: true,
+                        horizentalLine: false,
+                        xAxisLabel: false,
+                        yAxisLabel: false,
+                        labelBgColor: "#FFFFFF",
+                        labelBgOpacity: 0.7,
+                        labelFontColor: "#666666"
+                    }
+                }
+            }
         },
         start_plan_creation: function (item, is_sale) {
             let is_buy = 'false';
@@ -293,9 +217,7 @@ export default {
                 is_buy = 'true'
             }
             uni.navigateTo({
-                url: '/pages/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name +
-                    '&company_name=' + item.company.name + '&is_buy=' + is_buy + "&company_id=" + item
-                    .company.id,
+                url: '/pages/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name + '&is_buy=' + is_buy + "&company_id=" + item.company.id,
             });
         },
         get_stuff2buy: async function (pageNo) {
@@ -325,6 +247,66 @@ export default {
             }
         },
 
+        init_data_brief: async function () {
+            let cond = function (day_offset, status) {
+                let date = new Date();
+                date.setDate(date.getDate() + day_offset);
+                return {
+                    start_time: utils.dateFormatter(date, 'y-m-d', 4, false),
+                    end_time: utils.dateFormatter(date, 'y-m-d', 4, false),
+                    status: status,
+                    hide_manual_close: true,
+                    only_count: true,
+                };
+            };
+            let get_count = async (url, cond) => {
+                return (await this.$send_req(url, cond)).total
+            }
+            let make_data = async (url, title, subtitle) => {
+                let db = {
+                    today_unfinish_count: await get_count(url, cond(0, 1)) + await get_count(url, cond(0, 2)),
+                    today_finished_count: await get_count(url, cond(0, 3)),
+
+                    yst_unfinish_count: await get_count(url, cond(-1, 1)) + await get_count(url, cond(-1, 2)),
+                    yst_finished_count: await get_count(url, cond(-1, 3)),
+
+                    tmr_unfinish_count: await get_count(url, cond(1, 1)) + await get_count(url, cond(1, 2)),
+                    tmr_finished_count: await get_count(url, cond(1, 3)),
+                }
+                return {
+                    opts: this.chart_opt(title, subtitle),
+                    chartData: {
+                        categories: ['昨日', '今日', '明日'],
+                        series: [{
+                                name: '订单总数',
+                                data: [db.yst_unfinish_count + db.yst_finished_count, db.today_unfinish_count + db.today_finished_count, db.tmr_unfinish_count + db.tmr_finished_count]
+                            },
+                            {
+                                name: '已完成',
+                                data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
+                            }
+                        ],
+                    },
+                }
+            }
+            let tmp = []
+            if (this.$has_module('customer')) {
+                tmp.push(await make_data('/customer/order_buy_search', '我方下单', '采购'))
+            }
+            if (this.$has_module('buy_management')) {
+                tmp.push(await make_data('/buy_management/order_search', '对方下单', '采购'))
+            }
+            if (this.$has_module('supplier')) {
+                tmp.push(await make_data('/supplier/order_sale_search', '我方下单', '销售'))
+            }
+            if (this.$has_module('sale_management')) {
+                tmp.push(await make_data('/sale_management/order_search', '对方下单', '销售'))
+            }
+            this.charts = []
+            tmp.forEach((item, index) => {
+                this.$set(this.charts, index, JSON.parse(JSON.stringify(item)))
+            });
+        },
         init_notice: async function () {
             if (this.$has_module('stuff') == false) {
                 return
@@ -351,14 +333,21 @@ export default {
 
         await this.init_brief_info()
         await this.init_statistic()
-    }
+    },
 }
 </script>
 
 <style scoped>
 .charts-box {
+    width: 50%;
+    height: 300px;
+    margin: 10px 0;
+}
+
+.charts-box-full {
     width: 100%;
     height: 300px;
+    margin: 10px 0;
 }
 
 .main-warp {
