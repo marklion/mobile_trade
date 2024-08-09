@@ -74,6 +74,7 @@ let db_opt = {
             distance_limit: { type: DataTypes.FLOAT, defaultValue: 0 },
             zc_phone: { type: DataTypes.STRING },
             check_in_stay_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
+            logo: { type: DataTypes.STRING },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

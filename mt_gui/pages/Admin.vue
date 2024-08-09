@@ -4,10 +4,15 @@
         <fui-panel v-for="item in data2show" :key="item.id" :panelData="item">
             <view style="display: flex;">
                 <fui-button btn-size="mini" text="管理员配置" style="margin-right: 10px;" @click="show_admin_config = true;focus_company=item.id"></fui-button>
-                <fui-button btn-size="mini" text="模块配置" @click="open_module_config(item)"></fui-button>
+                <fui-button btn-size="mini" text="模块配置" style="margin-right: 10px;" @click="open_module_config(item)"></fui-button>
+                <fui-button btn-size="mini" text="设置logo" style="margin-right: 10px;" @click="show_logo_set = true;focus_company=item.id;has_logo=item.src"></fui-button>
             </view>
         </fui-panel>
     </list-show>
+    <fui-bottom-popup :show="show_logo_set" @close="show_logo_set= false">
+        <fui-upload v-if="!has_logo" max="1" :sizeType="['compressed']" immediate :url="upload_url" ref="upload_kit" @success="after_attach_uploaded"></fui-upload>
+        <fui-button v-else text="删除logo" type="danger" @click="delete_logo"></fui-button>
+    </fui-bottom-popup>
     <fui-bottom-popup :show="show_admin_config" @close="show_admin_config = false">
         <view>
             <fui-input label="姓名" placeholder="请输入姓名" v-model="admin_config.name"></fui-input>
@@ -42,6 +47,8 @@ export default {
     },
     data: function () {
         return {
+            has_logo: undefined,
+            show_logo_set: false,
             admin_config: {
                 name: '',
                 phone: ''
@@ -53,9 +60,27 @@ export default {
             valid_modules: [],
             module_data2show: [],
             data2show: [],
+            upload_url: this.$remote_url() + '/api/v1/upload_file',
         }
     },
     methods: {
+        delete_logo: async function () {
+            await this.$send_req('/global/company_set_logo', {
+                id: this.focus_company,
+                logo: '',
+            });
+            this.show_logo_set = false;
+            uni.startPullDownRefresh();
+        },
+        after_attach_uploaded: async function (e) {
+            let logo = e.res.data;
+            await this.$send_req('/global/company_set_logo', {
+                id: this.focus_company,
+                logo: logo,
+            });
+            this.show_logo_set = false;
+            uni.startPullDownRefresh();
+        },
         config_module: async function () {
             let need_delete = [];
             for (let i = 0; i < this.modules_pool.length; i++) {
@@ -117,13 +142,17 @@ export default {
                 ele.config_users.forEach(item => {
                     config_users.push(item.name + '|' + item.phone);
                 });
-                ret.push({
+                let tmp = {
                     head: ele.name,
                     desc: module_array.join('|'),
                     source: config_users.join('\n'),
                     id: ele.id,
                     bound_modules: ele.bound_modules
-                });
+                };
+                if (ele.logo) {
+                    tmp.src = this.$convert_attach_url(ele.logo);
+                }
+                ret.push(tmp);
             });
             return ret;
         },
