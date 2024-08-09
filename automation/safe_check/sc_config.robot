@@ -105,6 +105,50 @@ Check Driver Upload SC
     Check Pass SC Status By Index  ${test_plan}  0  ${False}
     Check In A Plan  ${test_plan}  ${True}
 
+SC Expired Before Check In
+    [Setup]  Enable SC AND Add Some SC req
+    [Teardown]  Run Keywords  Cancel Check In Plan  ${test_plan}  AND  SC Reset
+    ${current_time}  Get Current Date  result_format=%Y-%m-%d %H:%M:%S
+    ${next_time}  Add Time To Date  ${current_time}  1 day  result_format=%Y-%m-%d %H:%M:%S
+    ${prev_time}  Subtract Time From Date    ${current_time}    1 day  result_format=%Y-%m-%d %H:%M:%S
+
+    #司机获取安检需求
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    FOR  ${itr}  IN  @{resp}
+        #上传证件并批准
+        Driver Upload SC Content  ${test_plan}  ${itr}[id]  abc  def  ${next_time}
+        Check Pass SC Status By Index  ${test_plan}  0
+    END
+    #可以正常排号
+    Check In A Plan  ${test_plan}
+    Cancel Check In Plan    ${test_plan}
+
+    #从数据库把没有过期要求的安检内容的有效期改前
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${True}
+    FOR  ${itr}  IN  @{resp}
+        IF  ${itr}[need_expired] == ${False}
+            Change SC Content Expired Date    ${itr}[sc_content][id]    ${prev_time}
+            BREAK
+        END
+    END
+    #可以正常排号
+    Check In A Plan  ${test_plan}
+    Cancel Check In Plan    ${test_plan}
+
+    #从数据库把有过期要求的安检内容的有效期改前
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${True}
+    FOR  ${itr}  IN  @{resp}
+        IF  ${itr}[need_expired] == ${True}
+            Change SC Content Expired Date    ${itr}[sc_content][id]    ${prev_time}
+            BREAK
+        END
+    END
+    #获取到的安检状态应该是不通过
+    ${resp}  Get Driver And Sale Plan SC  ${test_plan}  ${False}
+    #应该不可以排号
+    Check In A Plan  ${test_plan}  ${True}
+
+
 SC Archived After Plan Finish
     [Setup]  Enable SC AND Add Some SC req
     [Teardown]  SC Reset
@@ -127,6 +171,7 @@ SC Archived After Plan Finish
     FOR  ${itr}  IN  @{resp}[sc_info]
         Should Be True  ${itr}[sc_content][passed]
     END
+
 
 
 
