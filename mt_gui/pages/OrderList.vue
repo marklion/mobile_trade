@@ -7,12 +7,12 @@
             <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
                 {{stuff_filter.name}}
                 <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
-                <fui-icon v-else name="close" size="32" @click="reset_stuff_filter"></fui-icon>
+                <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
             </fui-tag>
             <fui-tag theme="plain" type="success" @click="show_company_filter = true" marginLeft="20">
                 {{company_filter.name}}
                 <fui-icon v-if="!company_filter.id" name="arrowright" size="32"></fui-icon>
-                <fui-icon v-else name="close" size="32" @click="reset_company_filter"></fui-icon>
+                <fui-icon v-else name="close" size="32" @click.native.stop="reset_company_filter"></fui-icon>
             </fui-tag>
         </module-filter>
         <module-filter :rm_array="['customer', 'supplier']">
@@ -258,7 +258,7 @@
     <fui-backdrop :zIndex="8888" :show="show_one_att">
         <movable-area scale-area class="movable-area">
             <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
-            <movable-view  class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
+            <movable-view class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
                 <image class="lookimg" :src="one_att" mode="aspectFit"></image>
             </movable-view>
         </movable-area>
@@ -336,6 +336,7 @@
 </view>
 </template>
 
+    
 <script>
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
@@ -1267,6 +1268,7 @@ export default {
 }
 </script>
 
+    
 <style scoped>
 .group_sep:nth-child(odd) {
     background-color: #ffffff;
@@ -1277,6 +1279,7 @@ export default {
     background-color: #f1f1f1;
     /* 更浅的颜色 */
 }
+
 .movable-view {
     height: 100%;
     width: 100%;
