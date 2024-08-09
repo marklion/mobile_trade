@@ -283,6 +283,7 @@ export default {
                             },
                             {
                                 name: '已完成',
+                                            color:'#1890ff',
                                 data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
                             }
                         ],
