@@ -1,13 +1,32 @@
 <template>
-    <view>
-        <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
-        <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
-        <view style="padding: 10rpx;">
-            <module-filter :rm_array="['sale_management', 'buy_management']">
-                <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
-                    {{stuff_filter.name}}
-                    <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
-                    <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
+<view>
+    <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
+    <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
+    <view style="padding: 10rpx;">
+        <module-filter :rm_array="['sale_management', 'buy_management']">
+            <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
+                {{stuff_filter.name}}
+                <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
+                <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
+            </fui-tag>
+            <fui-tag theme="plain" type="success" @click="show_company_filter = true" marginLeft="20">
+                {{company_filter.name}}
+                <fui-icon v-if="!company_filter.id" name="arrowright" size="32"></fui-icon>
+                <fui-icon v-else name="close" size="32" @click.native.stop="reset_company_filter"></fui-icon>
+            </fui-tag>
+        </module-filter>
+        <module-filter :rm_array="['customer', 'supplier']">
+            <fui-tag type="primary" text="全部复制" @click="show_batch_copy = true" marginLeft="20">
+            </fui-tag>
+        </module-filter>
+
+        <view style="display:flex; align-items: center;padding: 0 20rpx;">
+            显示取消计划
+            <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
+            <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
+            </fui-tag>
+            <view v-else style="display:flex; align-items: center;">
+                <fui-tag type="warning" text="关闭多选" @click="select_active = false">
                 </fui-tag>
                 <fui-tag type="success" text="全选" @click="select_all">
                 </fui-tag>
@@ -235,7 +254,15 @@
             </view>
         </list-show>
     </fui-bottom-popup>
-    <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
+    <!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
+    <fui-backdrop :zIndex="8888" :show="show_one_att">
+        <movable-area scale-area class="movable-area">
+            <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
+            <movable-view class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
+                <image class="lookimg" :src="one_att" mode="aspectFit"></image>
+            </movable-view>
+        </movable-area>
+    </fui-backdrop>
     <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
     </fui-modal>
     <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
@@ -287,102 +314,255 @@
                 </fui-list-cell>
             </fui-list>
         </fui-bottom-popup>
-        <!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
-        <fui-backdrop   :zIndex="8888" :show="show_one_att">
-            <movable-area scale-area class="movable-area">
-                <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
-                <movable-view   class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
-                    <image class="lookimg" :src="one_att" mode="aspectFit"></image>
-                </movable-view>
-            </movable-area>
-        </fui-backdrop>
-        <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
-        </fui-modal>
-        <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
-            <fui-form ref="rollback_form" top="100">
-                <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
-            </fui-form>
-        </fui-modal>
-        <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
-            <fui-form ref="deliver" top="100">
-                <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
-                <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
-                <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
-                <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
-                <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
-                    <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
-                </fui-input>
-            </fui-form>
-        </fui-modal>
+    </fui-modal>
+    <fui-modal :zIndex="1004" width="600" v-if="show_reject_sc" :show="show_reject_sc" @click="reject_sc">
+        <fui-input required label="附言" borderTop placeholder="请输入附言" v-model="reject_sc_comment"></fui-input>
+    </fui-modal>
+    <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
+    <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
+    <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" v-if="show_delete_sc_content" :show="show_delete_sc_content" @click="delete_sc_content">
+    </fui-modal>
+    <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
+    </fui-modal>
+    <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
+        <fui-form ref="plan_update" :model="update_req">
+            <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
+            <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
+            <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
+            <fui-input label="备注" v-model="update_req.comment"></fui-input>
+        </fui-form>
+    </fui-modal>
+    <fui-message ref="po_msg"></fui-message>
+</view>
+</template>
+
     
-        <fui-modal :zIndex="80" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
-            <fui-form ref="plan_form" :model="dup_plan">
-                <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
-                    <fui-input placeholder="请输入计划日期" disabled v-model="dup_plan.plan_time"></fui-input>
-                </fui-form-item>
-                <view v-if="!cur_is_buy">
-                    <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
-                        <fui-input placeholder="请输入用途" disabled v-model="dup_plan.use_for"></fui-input>
-                    </fui-form-item>
-                    <pick-regions @getRegion="pick_address">
-                        <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
-                            <fui-input placeholder="请输入卸车地点" disabled v-model="dup_plan.drop_address"></fui-input>
-                        </fui-form-item>
-                    </pick-regions>
-                </view>
-                <view v-else>
-                    <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
-                        <fui-input placeholder="请输入单价" v-model="dup_plan.price"></fui-input>
-                    </fui-form-item>
-                </view>
-                <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
-                    <fui-input placeholder="请输入承运公司" v-model="dup_plan.trans_company_name"></fui-input>
-                </fui-form-item>
-            </fui-form>
-            <fui-date-picker :show="show_plan_time" type="3" :value="default_time" @change="fill_plan_time" @cancel="show_plan_time = false"></fui-date-picker>
-            <fui-bottom-popup :show="show_use_for" @close="show_use_for = false">
-                <fui-list>
-                    <fui-list-cell v-for="(single_uf, index) in use_for_array" :key="index" arrow @click="choose_use_for(single_uf)">
-                        {{single_uf}}
-                    </fui-list-cell>
-                </fui-list>
-            </fui-bottom-popup>
-        </fui-modal>
-        <fui-modal :zIndex="1004" width="600" v-if="show_reject_sc" :show="show_reject_sc" @click="reject_sc">
-            <fui-input required label="附言" borderTop placeholder="请输入附言" v-model="reject_sc_comment"></fui-input>
-        </fui-modal>
-        <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
-        <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
-        <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" v-if="show_delete_sc_content" :show="show_delete_sc_content" @click="delete_sc_content">
-        </fui-modal>
-        <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
-        </fui-modal>
-        <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
-            <fui-form ref="plan_update" :model="update_req">
-                <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
-                <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
-                <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
-                <fui-input label="备注" v-model="update_req.comment"></fui-input>
-            </fui-form>
-        </fui-modal>
-        <fui-message ref="po_msg"></fui-message>
-    </view>
-    </template>
-    
-    <script>
-    import ListShow from '../components/ListShow.vue';
-    import utils from '@/components/firstui/fui-utils';
-    import ModuleFilterVue from '../components/ModuleFilter.vue';
-    import $fui from '@/components/firstui/fui-clipboard';
-    import ScUpload from '../components/ScUpload.vue';
-    import pickRegions from '@/components/pick-regions/pick-regions.vue'
-    export default {
-        name: 'OrderList',
-        components: {
-            "list-show": ListShow,
-            "module-filter": ModuleFilterVue,
-            "sc-upload": ScUpload,
-            "pick-regions": pickRegions,
+<script>
+import ListShow from '../components/ListShow.vue';
+import utils from '@/components/firstui/fui-utils';
+import ModuleFilterVue from '../components/ModuleFilter.vue';
+import $fui from '@/components/firstui/fui-clipboard';
+import ScUpload from '../components/ScUpload.vue';
+import pickRegions from '@/components/pick-regions/pick-regions.vue'
+export default {
+    name: 'OrderList',
+    components: {
+        "list-show": ListShow,
+        "module-filter": ModuleFilterVue,
+        "sc-upload": ScUpload,
+        "pick-regions": pickRegions,
+    },
+    data: function () {
+        return {
+            cur_contract: {
+                balance: 0,
+                rbac_users: [],
+            },
+            action_show: false,
+            action_list: () => {
+                return [{
+                    text: "批量确认",
+                    url: this.cur_confirm_url,
+                }, {
+                    text: '批量验款',
+                    url: '/sale_management/order_sale_pay'
+                }, {
+                    text: '批量取消',
+                    url: this.cur_close_url ? this.cur_close_url : this.cur_cancel_url,
+                }]
+            },
+            select_active: false,
+            plan_selected: [],
+            show_update: false,
+            update_req: {
+                main_vehicle_plate: '',
+                behind_vehicle_plate: '',
+                driver_phone: '',
+            },
+            rollback_msg: '',
+            use_for_array: [
+                '气化', '气站', '其他'
+            ],
+            default_time: '',
+            dup_plan: {
+                comment: "",
+                drop_address: "",
+                plan_time: "",
+                stuff_id: 0,
+                use_for: "",
+                trans_company_name: '',
+                price: 0,
+            },
+            show_plan_time: false,
+            show_use_for: false,
+            show_reassign_prompt: false,
+            supplier_list: [],
+            choose_company_show: false,
+            comp_title: function (is_buy) {
+                let ret = {
+                    a_title: '买方',
+                    b_title: '卖方'
+                }
+                if (is_buy) {
+                    ret = {
+                        a_title: '卖方',
+                        b_title: '买方',
+                    }
+                }
+                return ret;
+            },
+            cur_get_url: '',
+            cur_is_motion: false,
+            cur_is_buy: false,
+            cur_batch_confirm_url: '',
+            cur_confirm_url: '',
+            cur_rollback_url: '',
+            cur_update_url: '',
+            cur_cancel_url: '',
+            cur_dup_url: '',
+            cur_close_url: '',
+            sc_data2show: [],
+            customer_data2show: [],
+            stuff_data2show: [],
+            sp_data2show: [],
+            show_delete_sc_content: false,
+            upload_sc: {
+                plan_id: 0,
+                open_id: '',
+                req_id: 0,
+                content_id: 0,
+                need_attach: false,
+                need_expired: false,
+                need_input: false,
+                name: '',
+                prompt: '',
+            },
+            focus_sc_content_id: 0,
+            show_reject_sc: false,
+            reject_sc_comment: '',
+            one_att: [''],
+            show_one_att: false,
+            sc_passed: false,
+            show_sc_confirm: false,
+            need_show_close: false,
+            show_deliver_date: false,
+            show_scale_input: false,
+            deliver_req: {
+                count: "",
+                m_time: '',
+                m_weight: '',
+                p_time: '',
+                p_weight: '',
+            },
+            xxx_url: '',
+            confirm_info: '',
+            show_xxx_confirm: false,
+            show_rollback_confirm: false,
+            show_sc: false,
+            focus_plan: {
+                "behind_vehicle": {
+                    "id": 1,
+                    "plate": "车牌"
+                },
+                "comment": "备注",
+                "company": {
+                    "id": 1,
+                    "name": "公司名称"
+                },
+                "count": 1,
+                "driver": {
+                    "id": 1,
+                    "id_card": "司机身份证",
+                    "name": "司机名称",
+                    "phone": "司机电话"
+                },
+                "drop_address": "卸货地址",
+                "enter_time": "2020-01-01 12:00:00",
+                "from_bidding": true,
+                "id": 0,
+                "m_time": "2020-01-01 12:00:00",
+                "m_weight": 1,
+                "main_vehicle": {
+                    "id": 1,
+                    "plate": "车牌"
+                },
+                "p_time": "2020-01-01 12:00:00",
+                "p_weight": 1,
+                "plan_histories": [{
+                    "action_type": "操作",
+                    "id": 1,
+                    "operator": "操作人",
+                    "time": "2020-01-01 12:00:00"
+                }],
+                "plan_time": "2020-01-01 12:00:00",
+                "rbac_user": {
+                    "id": 1,
+                    "name": "用户姓名",
+                    "phone": "用户电话"
+                },
+                "register_number": 1,
+                "register_time": "2020-01-01 12:00:00",
+                "sc_info": [{
+                    "belong_type": 0,
+                    "id": 1,
+                    "name": "安检需求",
+                    "need_attach": true,
+                    "need_expired": true,
+                    "need_input": true,
+                    "sc_content": {
+                        "attachment": "http://www.baidu.com",
+                        "checker": "张三",
+                        "expired_time": "2020-01-01 00:00:00",
+                        "id": 1,
+                        "input": "请输入",
+                        "passed": true
+                    }
+                }],
+                "status": 1,
+                "stuff": {
+                    "company": {
+                        "id": 1,
+                        "name": "公司名称"
+                    },
+                    "id": 1,
+                    "name": "货物名称"
+                },
+                "unit_price": 1,
+                "use_for": "用途"
+            },
+            show_plan_detail: false,
+            seg: [],
+            company_filter: {
+                name: '全部公司',
+                id: undefined,
+            },
+            stuff_filter: {
+                name: '全部物料',
+                id: undefined,
+            },
+            show_stuff_list: false,
+            show_company_filter: false,
+            show_plan_date: false,
+            focus_status: undefined,
+            begin_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
+            end_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
+            deliver_time: utils.dateFormatter(new Date(), 'y-m-d h:i:s', 4, false),
+
+            deliver_time_type: '',
+            tabs: [],
+            show_batch_copy: false,
+        }
+    },
+    computed: {
+        user_authorize: function () {
+            let ret = '未授权';
+            this.cur_contract.rbac_users.forEach(ele => {
+                if (ele.id == this.focus_plan.rbac_user.id) {
+                    ret = '已授权';
+                }
+            });
+
+            return ret;
         },
         plan_status: function () {
             let ret = '';
@@ -1054,207 +1234,7 @@
                 this.cur_update_url = this.seg[0].update_url;
                 this.cur_close_url = this.seg[0].close_url;
                 this.init_tabs();
-                this.refresh_plans();
-            },
-            reset_company_filter: function () {
-                this.company_filter = {
-                    name: '全部公司',
-                    id: undefined,
-                }
-                this.refresh_plans();
-            },
-            reset_stuff_filter: function () {
-                this.stuff_filter = {
-                    name: '全部物料',
-                    id: undefined,
-                }
-                this.refresh_plans();
-            },
-            refresh_plans: function () {
-                this.$nextTick(() => {
-                    this.init_number_of_sold_plan();
-                });
-                this.$nextTick(() => {
-                    this.$refs.sold_plans.refresh();
-                })
-    
-            },
-            choose_company: function (item) {
-                this.company_filter = {
-                    name: item.company.name,
-                    id: item.company.id,
-                }
-                this.show_company_filter = false;
-                this.refresh_plans();
-            },
-            choose_stuff: function (item) {
-                this.stuff_filter = {
-                    name: item.name,
-                    id: item.id,
-                }
-                this.show_stuff_list = false;
-                this.refresh_plans();
-            },
-            choose_date: function (e) {
-                this.show_plan_date = false;
-                this.begin_time = e.startDate.result;
-                this.end_time = e.endDate.result;
-                this.refresh_plans();
-            },
-            change_tab: function (e) {
-                let index = e.index
-                if (index > 0) {
-                    this.focus_status = index - 1;
-                    if (this.focus_status == 2 && this.cur_is_buy) {
-                        this.focus_status = 3;
-                    }
-                } else {
-                    this.focus_status = undefined;
-                }
-                this.refresh_plans();
-            },
-            make_plan_get_url: function () {
-                return this.cur_get_url;
-            },
-            get_sold_plans: async function (pageNo, [plan_filter, cur_get_url, cur_is_motion]) {
-                let res = await this.$send_req(cur_get_url, {
-                    ...plan_filter,
-                    pageNo: pageNo,
-                });
-                let ret = [];
-                res.plans.forEach(element => {
-                    element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
-                    if (cur_is_motion) {
-                        element.company_show = element.stuff.company.name;
-                    } else {
-                        element.company_show = element.company.name;
-                    }
-                    ret.push(element)
-                });
-                return ret;
-            },
-            init_number_of_sold_plan: async function () {
-                let max_status = 3;
-                if (this.cur_is_buy) {
-                    max_status = 2;
-                }
-                for (let i = 0; i < max_status; i++) {
-                    let res = await this.$send_req(this.make_plan_get_url(), {
-                        ...this.plan_filter,
-                        status: i
-                    });
-                    this.tabs[i + 1].badge = res.total;
-                }
-            },
-            get_stuff: async function (pageNo) {
-                let mods = uni.getStorageSync('self_info').modules.map(ele => {
-                    return ele.name
-                })
-                if (mods.indexOf('stuff') != -1) {
-                    let ret = await this.$send_req('/stuff/get_all', {
-                        pageNo: pageNo
-                    });
-                    return ret.stuff;
-                } else {
-                    return [];
-                }
-            },
-            get_customers: async function (pageNo) {
-                let mods = uni.getStorageSync('self_info').modules.map(ele => {
-                    return ele.name
-                })
-                if (mods.indexOf('stuff') != -1) {
-                    let ret = await this.$send_req('/sale_management/contract_get', {
-                        pageNo: pageNo
-                    });
-                    ret.contracts.forEach(item => {
-                        item.search_cond = item.company.name;
-                    });
-                    return ret.contracts;
-                } else {
-                    return [];
-                }
-            },
-            init_top_seg: function () {
-                this.seg = []
-                if (this.$has_module('customer')) {
-                    this.seg.push({
-                        name: '主动采购',
-                        url: '/customer/order_buy_search',
-                        cancel_url: '/customer/order_buy_cancel',
-                        dup_url: '/customer/batch_copy',
-                        update_url: '/customer/order_buy_update',
-                        motion: true,
-                        is_buy: false,
-                    });
-                }
-                if (this.$has_module('sale_management')) {
-                    this.seg.push({
-                        name: '被动销售',
-                        url: '/sale_management/order_search',
-                        batch_url: '/sale_management/order_batch_confirm',
-                        confirm_url: '/sale_management/order_sale_confirm',
-                        rollback_url: '/sale_management/order_rollback',
-                        close_url: '/sale_management/close',
-                        update_url: '/sale_management/order_update',
-                        motion: false,
-                        is_buy: false,
-                    });
-                }
-                if (this.$has_module('supplier')) {
-                    this.seg.push({
-                        name: '主动销售',
-                        url: '/supplier/order_sale_search',
-                        cancel_url: '/supplier/order_sale_cancel',
-                        dup_url: '/supplier/batch_copy',
-                        update_url: '/supplier/order_sale_update',
-                        motion: true,
-                        is_buy: true,
-                    });
-                }
-                if (this.$has_module('buy_management')) {
-                    this.seg.push({
-                        name: '被动采购',
-                        url: '/buy_management/order_search',
-                        batch_url: '/buy_management/order_batch_confirm',
-                        confirm_url: '/buy_management/order_buy_confirm',
-                        rollback_url: '/buy_management/order_rollback',
-                        close_url: '/buy_management/close',
-                        update_url: '/buy_management/order_update',
-                        motion: false,
-                        is_buy: true,
-                    });
-                }
-                if (this.seg.length > 0) {
-                    this.cur_get_url = this.seg[0].url;
-                    this.cur_is_motion = this.seg[0].motion;
-                    this.cur_is_buy = this.seg[0].is_buy;
-                    this.cur_batch_confirm_url = this.seg[0].batch_url;
-                    this.cur_cancel_url = this.seg[0].cancel_url;
-                    this.cur_dup_url = this.seg[0].dup_url;
-                    this.cur_confirm_url = this.seg[0].confirm_url;
-                    this.cur_rollback_url = this.seg[0].rollback_url;
-                    this.cur_update_url = this.seg[0].update_url;
-                    this.cur_close_url = this.seg[0].close_url;
-                    this.init_tabs();
-                }
-            },
-            reset_order_date: function (need_refresh = true) {
-                if (need_refresh) {
-                    this.$refs.po_msg.show({
-                        text: '默认日期范围可以在我的页面配置'
-                    })
-                }
-                let bt = new Date();
-                let et = new Date();
-                bt.setDate(bt.getDate() - uni.getStorageSync('self_info').prefer_order_begin_offset);
-                et.setDate(et.getDate() + uni.getStorageSync('self_info').prefer_order_end_offset);
-                this.begin_time = utils.dateFormatter(bt, 'y-m-d', 4, false);
-                this.end_time = utils.dateFormatter(et, 'y-m-d', 4, false);
-                if (need_refresh) {
-                    this.refresh_plans();
-                }
-            },
+            }
         },
         reset_order_date: function (need_refresh = true) {
             if (need_refresh) {
@@ -1272,48 +1252,54 @@
                 this.refresh_plans();
             }
         },
-        onLoad() {
-            this.init_top_seg();
-            let tom = new Date();
-            tom.setDate(tom.getDate() + 1);
-            this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
-            this.init_number_of_sold_plan();
-            this.reset_order_date(false);
-        },
-    }
-    </script>
+    },
+    onPullDownRefresh() {
+        this.refresh_plans();
+        uni.stopPullDownRefresh();
+    },
+    onLoad() {
+        this.init_top_seg();
+        let tom = new Date();
+        tom.setDate(tom.getDate() + 1);
+        this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
+        this.init_number_of_sold_plan();
+        this.reset_order_date(false);
+    },
+}
+</script>
+
     
-    <style scoped>
-    .group_sep:nth-child(odd) {
-        background-color: #ffffff;
-        /* 更深的颜色 */
-    }
-    
-    .group_sep:nth-child(even) {
-        background-color: #f1f1f1;
-        /* 更浅的颜色 */
-    }
-    .movable-view {
-        height: 100%;
-        width: 100%;
-    }
-    
-    .movable-area {
-        height: 90%;
-        width: 100%;
-        overflow: hidden;
-        z-index: 9999;
-    }
-    
-    .lookimg {
-        width: 100%;
-        height: 100%;
-    }
-    
-    .imagecontent {
-        width: 50%;
-        height: 100vh;
-        margin: 0 40rpx;
-    }
-    </style>
-    
+<style scoped>
+.group_sep:nth-child(odd) {
+    background-color: #ffffff;
+    /* 更深的颜色 */
+}
+
+.group_sep:nth-child(even) {
+    background-color: #f1f1f1;
+    /* 更浅的颜色 */
+}
+
+.movable-view {
+    height: 100%;
+    width: 100%;
+}
+
+.movable-area {
+    height: 90%;
+    width: 100%;
+    overflow: hidden;
+    z-index: 9999;
+}
+
+.lookimg {
+    width: 100%;
+    height: 100%;
+}
+
+.imagecontent {
+    width: 50%;
+    height: 100vh;
+    margin: 0 40rpx;
+}
+</style>
