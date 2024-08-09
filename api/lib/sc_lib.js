@@ -1,7 +1,6 @@
 const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
-const plan_lib = require('./plan_lib');
 const util_lib = require('./util_lib');
 module.exports = {
     sc_req_detail: {
@@ -70,11 +69,48 @@ module.exports = {
 
         return ret;
     },
+    get_sc_status_by_plan: async function (plan, pageNo = -1) {
+        let sq = db_opt.get_sq();
+        let ret = { reqs: [], total: 0, passed: false }
+        let search_cond = {
+            order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
+            include: [
+                {
+                    model: sq.models.sc_content, required: false, where: {
+                        [db_opt.Op.or]: [
+                            { driverId: plan.driver.id },
+                            { vehicleId: plan.main_vehicle.id },
+                            { vehicleId: plan.behind_vehicle.id },
+                        ]
+                    }
+                },
+            ],
+        };
+        if (-1 != pageNo) {
+            search_cond.offset = 20 * pageNo;
+            search_cond.limit = 20;
+        }
+
+        ret.passed = await this.plan_passed_sc(plan.id);
+        let found_ret = await plan.stuff.getSc_reqs(search_cond);
+        let count = await plan.stuff.countSc_reqs();
+        for (let index = 0; index < found_ret.length; index++) {
+            const element = found_ret[index].toJSON();
+            if (element.sc_contents.length == 1) {
+                element.sc_content = element.sc_contents[0];
+            }
+            delete element.sc_contents;
+            ret.reqs.push(element);
+        }
+        ret.total = count;
+
+        return ret;
+    },
     get_sc_driver_req: async function (_open_id, _plan_id, pageNo) {
         let ret = { reqs: [], total: 0, passed: false };
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
         if (plan && plan.driver && plan.driver.open_id == _open_id && plan.stuff) {
-            ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
+            ret = await this.get_sc_status_by_plan(plan, pageNo);
         }
         else {
             throw { err_msg: '无权限' };
@@ -134,9 +170,27 @@ module.exports = {
                             break;
                     }
                     let sc_content = await sc_req.getSc_contents({ where: condition });
-                    if (sc_content.length != 1 || !sc_content[0].passed) {
+                    if (sc_content.length == 1) {
+                        sc_content = sc_content[0];
+                        if (sc_req.need_expired && sc_content.passed) {
+                            expiredDay = moment(moment(sc_content.expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0
+                            if (!expiredDay) {
+                                sc_content.passed = false;
+                                sc_content.comment = '内容已过期';
+                                sc_content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                                sc_content.checker = '系统';
+                                await sc_content.save();
+                            }
+                        }
+                        if (sc_content.passed) {
+                            passed = passed && true;
+                        }
+                        else {
+                            passed = false;
+                        }
+                    }
+                    else {
                         passed = false;
-                        break;
                     }
                 }
                 ret = passed
@@ -196,33 +250,8 @@ module.exports = {
         let ret = { reqs: [], total: 0, passed: false };
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
         let company = await rbac_lib.get_company_by_token(_token);
-        let sq = db_opt.get_sq();
         if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
-            let content = await plan.stuff.getSc_reqs({
-                order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
-                include: [
-                    {
-                        model: sq.models.sc_content, required: false, where: {
-                            [db_opt.Op.or]: [
-                                { driverId: plan.driver.id },
-                                { vehicleId: plan.main_vehicle.id },
-                                { vehicleId: plan.behind_vehicle.id },
-                            ]
-                        }
-                    },
-                ],
-            });
-            let expiredDay = true;
-            for (let index = 0; index < content.length; index++) {
-                let item = content[index].toJSON();
-                if (item.sc_contents.length > 0) {
-                    expiredDay = moment(moment(item.sc_contents[0].expired_time)).diff(moment().format('YYYY-MM-DD'), 'days') > 0
-                    if (!expiredDay) {
-                        await this.check_sc_content(item.sc_contents[0].id, _token, '内容已过期')
-                    }
-                }
-            }
-            ret = await plan_lib.get_sc_status_by_plan(plan, pageNo);
+            ret = await this.get_sc_status_by_plan(plan, pageNo);
         }
         else {
             throw { err_msg: '无权限' };
