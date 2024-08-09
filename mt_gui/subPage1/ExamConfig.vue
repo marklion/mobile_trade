@@ -22,19 +22,40 @@
         <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
         <list-show ref="papers" :fetch_function="get_papers" height="80vh" search_key="name" v-model="all_papers" :fetch_params="[focus_stuff_id]">
             <view v-for="single_p in all_papers" :key="single_p.id">
-                <fui-section :title="single_p.name" isLine>
-                    <view slot="right">
-                        <fui-icon name="close" color="red" @click="prepare_delete_paper(single_p)"></fui-icon>
+                <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="single_p.name" :tag="'共' + single_p.questions.length + '题'">
+                    <view style="padding: 0 20rpx;position: relative;">
+                        <view v-for="single_question in single_p.questions" :key="single_question.id">
+                            <fui-notice-bar :content="single_question.name" background="#fff8d5">
+                                <view slot="right">
+                                    <fui-icon name="close" color="red" @click="prepare_unlink_question(single_question, single_p)"></fui-icon>
+                                </view>
+                            </fui-notice-bar>
+                        </view>
+                        <view style="display:flex; flex-wrap: wrap;">
+                            <fui-tag text="新增题目" :scaleRatio="0.8" originLeft type="success" @click="prepare_link_question(single_p)"></fui-tag>
+                            <fui-tag text="删除试卷" :scaleRatio="0.8" originLeft type="danger" @click="prepare_delete_paper(single_p)"></fui-tag>
+                        </view>
                     </view>
-                </fui-section>
+                </fui-card>
             </view>
         </list-show>
         <fui-button text="新增" @click="show_paper_add = true"></fui-button>
     </view>
+    <fui-bottom-popup :show="show_link_question" @close="show_link_question= false">
+        <fui-list>
+            <list-show :fetch_function="get_questions" height="40vh" search_key="name" v-model="questions_for_select">
+                <fui-list-cell arrow v-for="item in questions_for_select" :key="item.id" @click="link_question(item.id)">
+                    {{item.name}}
+                </fui-list-cell>
+            </list-show>
+        </fui-list>
+    </fui-bottom-popup>
     <fui-modal width="600" :show="show_paper_add" @click="add_paper" v-if="show_paper_add">
         <fui-form ref="add_paper" top="100">
             <fui-input required label="试卷名称" borderTop placeholder="请输入名称" v-model="new_paper.name"></fui-input>
         </fui-form>
+    </fui-modal>
+    <fui-modal width="600" :show="show_unlink_confirm" @click="unlink_question" v-if="show_unlink_confirm" descr="确定要从试卷中删除该题吗？">
     </fui-modal>
     <fui-modal width="600" :show="show_delete_confirm" @click="do_delete" v-if="show_delete_confirm" descr="确定要删除吗？">
     </fui-modal>
@@ -90,6 +111,11 @@ export default {
     },
     data: function () {
         return {
+            questions_for_select: [],
+            focus_paper_id: 0,
+            focus_question_id: 0,
+            show_unlink_confirm: false,
+            show_link_question: false,
             show_paper_add: false,
             new_paper: {
                 name: ''
@@ -113,6 +139,31 @@ export default {
         };
     },
     methods: {
+        link_question: async function (id) {
+            await this.$send_req('/exam/add_question2paper', {
+                paper_id: this.focus_paper_id,
+                question_id: id
+            });
+            this.refresh_paper();
+            this.show_link_question = false;
+        },
+        prepare_link_question: function (paper) {
+            this.focus_paper_id = paper.id;
+            this.show_link_question = true;
+        },
+        prepare_unlink_question: function (question, paper) {
+            this.focus_paper_id = paper.id;
+            this.focus_question_id = question.id;
+            this.show_unlink_confirm = true;
+        },
+        unlink_question: async function () {
+            await this.$send_req('/exam/del_question_from_paper', {
+                paper_id: this.focus_paper_id,
+                question_id: this.focus_question_id
+            });
+            this.refresh_paper();
+            this.show_unlink_confirm = false;
+        },
         do_delete_paper: async function (e) {
             if (e.index == 1) {
                 await this.$send_req('/exam/del_paper', {
@@ -253,11 +304,19 @@ export default {
         sectionChange: function (e) {
             this.cur_page = e;
             this.refresh_paper();
-        }
+        },
+        refresh_questions: function () {
+            this.$nextTick(() => {
+                if (this.$refs.questions != undefined) {
+                    this.$refs.questions.refresh()
+                }
+            })
+        },
     },
     onPullDownRefresh: function () {
-        this.$refs.questions.refresh();
-        uni.startPullDownRefresh();
+        this.refresh_questions();
+        this.refresh_paper();
+        uni.stopPullDownRefresh();
     },
     onLoad: async function () {
         let stuff = [];
