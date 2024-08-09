@@ -7,7 +7,7 @@
                 <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
                     {{stuff_filter.name}}
                     <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
-                    <fui-icon v-else name="close" size="32"  @click.native.stop="reset_stuff_filter"></fui-icon>
+                    <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
                 </fui-tag>
                 <fui-tag theme="plain" type="success" @click="show_company_filter = true" marginLeft="20">
                     {{company_filter.name}}
@@ -254,7 +254,15 @@
                 </view>
             </list-show>
         </fui-bottom-popup>
-        <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery>
+        <!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
+        <fui-backdrop   :zIndex="8888" :show="show_one_att">
+            <movable-area scale-area class="movable-area">
+                <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
+                <movable-view   class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
+                    <image class="lookimg" :src="one_att" mode="aspectFit"></image>
+                </movable-view>
+            </movable-area>
+        </fui-backdrop>
         <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
         </fui-modal>
         <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
@@ -1051,7 +1059,7 @@
                 }
                 this.refresh_plans();
             },
-            reset_stuff_filter: function() {
+            reset_stuff_filter: function () {
                 this.stuff_filter = {
                     name: '全部物料',
                     id: undefined,
@@ -1268,6 +1276,28 @@
     .group_sep:nth-child(even) {
         background-color: #f1f1f1;
         /* 更浅的颜色 */
+    }
+    .movable-view {
+        height: 100%;
+        width: 100%;
+    }
+    
+    .movable-area {
+        height: 90%;
+        width: 100%;
+        overflow: hidden;
+        z-index: 9999;
+    }
+    
+    .lookimg {
+        width: 100%;
+        height: 100%;
+    }
+    
+    .imagecontent {
+        width: 50%;
+        height: 100vh;
+        margin: 0 40rpx;
     }
     </style>
     
