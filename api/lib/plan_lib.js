@@ -7,6 +7,7 @@ const field_lib = require('./field_lib');
 const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const util_lib = require('./util_lib');
+const sc_lib = require('./sc_lib');
 
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
@@ -704,7 +705,7 @@ module.exports = {
             await last_archive.destroy();
         }
         let content = plan.toJSON();
-        content.sc_info = (await this.get_sc_status_by_plan(plan)).reqs;
+        content.sc_info = (await sc_lib.get_sc_status_by_plan(plan)).reqs;
         console.log(content.sc_info);
         plan.createArchive_plan({ content: JSON.stringify(content) });
     },
@@ -716,7 +717,7 @@ module.exports = {
             await last_archive.destroy();
         }
         let content = plan.toJSON();
-        content.sc_info = (await this.get_sc_status_by_plan(plan)).reqs;
+        content.sc_info = (await sc_lib.get_sc_status_by_plan(plan)).reqs;
         if (!content.company) {
             content.company = { name: '(司机选择)' };
         }
@@ -795,48 +796,7 @@ module.exports = {
         let count = await stuff.countPrice_histories();
         return { rows: rows, count: count };
     },
-    get_sc_status_by_plan: async function (plan, pageNo = -1) {
-        let sq = db_opt.get_sq();
-        let ret = { reqs: [], total: 0, passed: false }
-        let search_cond = {
-            order: [[sq.models.sc_content, 'passed'], ['id', 'DESC']],
-            include: [
-                {
-                    model: sq.models.sc_content, required: false, where: {
-                        [db_opt.Op.or]: [
-                            { driverId: plan.driver.id },
-                            { vehicleId: plan.main_vehicle.id },
-                            { vehicleId: plan.behind_vehicle.id },
-                        ]
-                    }
-                },
-            ],
-        };
-        if (-1 != pageNo) {
-            search_cond.offset = 20 * pageNo;
-            search_cond.limit = 20;
-        }
-        let found_ret = await plan.stuff.getSc_reqs(search_cond);
-        let count = await plan.stuff.countSc_reqs();
-        for (let index = 0; index < found_ret.length; index++) {
-            const element = found_ret[index].toJSON();
-            if (element.sc_contents.length == 1) {
-                element.sc_content = element.sc_contents[0];
-            }
-            delete element.sc_contents;
-            ret.reqs.push(element);
-        }
-        ret.total = count;
 
-        delete search_cond.offset
-        delete search_cond.limit
-        let first_one = await plan.stuff.getSc_reqs(search_cond);
-        if (first_one.length == 0 || (first_one[0].sc_contents.length > 0 && first_one[0].sc_contents[0].passed)) {
-            ret.passed = true;
-        }
-
-        return ret;
-    },
     get_self_vehicle_pairs: async function (token, pageNo) {
         let rows = [];
         let company = await rbac_lib.get_company_by_token(token);
