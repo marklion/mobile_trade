@@ -68,6 +68,13 @@ Change Bidding Begin Time
     Execute Sql String  update bidding_turn set begin_time = '${begin_time}' where id = ${turn_id};
     Disconnect From All Databases
 
+Change SC Content Expired Date
+    [Arguments]  ${sc_id}  ${expired_date}
+    ${db_p}  Get DB Path
+    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    Execute Sql String  update sc_content set expired_time = '${expired_date}' where id = ${sc_id};
+    Disconnect From All Databases
+
 Exam Reset
     Clear Table  option_answer
     Clear Table  question
