@@ -66,6 +66,7 @@ export default {
         begin_exam: function (paper) {
             this.show_qa = true;
             this.qa_list=[];
+			const randomValue = (window.crypto.getRandomValues(new Uint32Array(1))[0]/ 2**32)-0.68;
             let tmp = paper.questions.map((item, index) => {
                 return {
                     id: paper.id,
@@ -77,7 +78,7 @@ export default {
                     }) => ({
                         id: id,
                         answer: name
-                    })).sort(() => Math.random() - 0.5)
+                    })).sort(()=>randomValue)
                 }
             })
             this.qa_list = tmp;
