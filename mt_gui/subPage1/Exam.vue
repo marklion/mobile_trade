@@ -5,12 +5,11 @@
             <u-cell :title="single_paper.name">
                 <view slot="right-icon">
                     <fui-button :disabled="examPassed(single_paper)" btnSize="mini" :text="examPassed(single_paper)?'答毕':'答题'" type="primary" @click="begin_exam(single_paper)"></fui-button>
-                    <!-- <fui-button btnSize="mini" text="答题" type="primary" @click="begin_exam(single_paper)"></fui-button> -->
                 </view>
             </u-cell>
         </view>
-        <Qa v-show="show_qa" :dataList="qa_list" @submit="subData"></Qa>
-        <fui-result v-show="show_exam_info" :type="exam_result.type" :title="`总分数:${exam_result.currentScore}`" :descr="exam_result.descr">
+        <Qa v-if="show_qa" :dataList="qa_list" @submit="subData"></Qa>
+        <fui-result v-if="show_exam_info" :type="exam_result.type" :title="`总分数:${exam_result.currentScore}`" :descr="exam_result.descr">
             <fui-button width="400rpx" height="84rpx" @click="exitExam" text="退出考试" type="gray" color="#09BE4F" bold></fui-button>
         </fui-result>
     </list-show>
@@ -66,12 +65,12 @@ export default {
         },
         begin_exam: function (paper) {
             this.show_qa = true;
+            this.qa_list=[];
             let tmp = paper.questions.map((item, index) => {
                 return {
                     id: paper.id,
                     title: item.name,
                     problemType: 'SINGLE',
-                    isSelect: 0,
                     children: item.option_answers.map(({
                         id,
                         name
