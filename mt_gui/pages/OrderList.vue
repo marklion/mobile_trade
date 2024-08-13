@@ -104,8 +104,10 @@
                     <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
-                        <u-cell title="余额" :value="cur_contract.balance" :label="user_authorize">
+                        <u-cell title="余额" :value="cur_contract.balance" :disabled="!cur_contract.balance" :label="user_authorize">
                             <view slot="right-icon">
+                                <!-- 无权限查看余额信息 -->
+                                <fui-icon name="invisible" :size="40" v-if="!cur_contract.balance"></fui-icon>
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
                             </view>
                         </u-cell>
