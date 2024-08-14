@@ -258,8 +258,8 @@
     <fui-backdrop :zIndex="8888" :show="show_one_att">
         <movable-area scale-area class="movable-area">
             <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
-            <movable-view class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
-                <image class="lookimg" :src="one_att" mode="aspectFit"></image>
+            <movable-view class="movable-view" direction="all" inertia scale   scale-min="1" scale-max="6">
+                <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
             </movable-view>
         </movable-area>
     </fui-backdrop>

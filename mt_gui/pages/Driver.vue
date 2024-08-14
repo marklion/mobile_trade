@@ -96,7 +96,7 @@
         <movable-area scale-area class="movable-area">
             <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
             <movable-view class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
-                <image lazy-load class="lookimg" :src="one_att" mode="aspectFit"></image>
+                <image lazy-load class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
             </movable-view>
         </movable-area>
     </fui-backdrop>
@@ -538,7 +538,7 @@ export default {
                 });
             } else if (e.text == '考试') {
                 uni.navigateTo({
-                    url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id,
+                    url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id+'&driver_name='+this.driver_self.name,
                 });
             }
         },
