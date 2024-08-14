@@ -628,7 +628,9 @@ module.exports = {
             plan.p_weight = p_weight;
             plan.m_time = (m_time ? m_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.m_weight = m_weight;
-            plan.seal_no = seal_no;
+            if (seal_no) {
+                plan.seal_no = seal_no;
+            }
             wx_api_util.plan_scale_msg(plan);
             await plan.save();
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);

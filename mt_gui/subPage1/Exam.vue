@@ -19,7 +19,7 @@
 
 <script>
 import ListShow from '../components/ListShow.vue';
-import Qa from '../components/Qa.vue';
+import Qa from './Qa.vue';
 export default {
     name: 'Exam',
     components: {
