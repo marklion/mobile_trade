@@ -45,17 +45,30 @@ module.exports = {
                     register_time: {
                         [db_opt.Op.ne]: null
                     },
-                    status: 2,
+                    status: [1, 2],
                     stuffId: {
                         [db_opt.Op.in]: stuff_ids
                     },
                 }
             });
             for (let j = 0; j < plans.length; j++) {
-                let stop_time = moment(plans[j].register_time).add(element.check_in_stay_minutes, 'minutes');
-                if (moment().isAfter(stop_time)) {
-                    let full_plan = await util_lib.get_single_plan_by_id(plans[j].id);
-                    await this.handle_cancel_check_in(full_plan);
+                let plan = plans[j];
+                let expect_status = 2;
+                if (plan.is_buy) {
+                    expect_status = 1;
+                }
+                if (expect_status != plan.status) {
+                    continue;
+                }
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    continue;
+                }
+                if (plan.call_time && plan.call_time.length > 0) {
+                    let stop_time = moment(plans[j].register_time).add(element.check_in_stay_minutes, 'minutes');
+                    if (moment().isAfter(stop_time)) {
+                        let full_plan = await util_lib.get_single_plan_by_id(plans[j].id);
+                        await this.handle_cancel_check_in(full_plan);
+                    }
                 }
             }
         }
@@ -71,7 +84,7 @@ module.exports = {
         _plan.register_time = null;
         _plan.register_number = 0;
         _plan.call_time = null;
-        await hook_plan('cancel_check_icancel_check_inn', _plan);
+        await hook_plan('cancel_check_in', _plan);
         await _plan.save();
     },
     handle_call_vehicle: async function (_plan) {

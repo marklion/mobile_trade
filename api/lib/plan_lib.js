@@ -75,6 +75,7 @@ module.exports = {
         let stuffs = await sq.models.stuff.findAll({
             where: {
                 use_for_buy: false,
+                // '$contract.buyCompanyId$': _buy_company.id
             },
             offset: pageNo * 20,
             limit: 20,
@@ -83,21 +84,15 @@ module.exports = {
                 ['id', 'ASC'],
             ],
             include: [
-                { model: sq.models.company, }
+                { model: sq.models.company, },
+                {
+                    model: sq.models.contract, where: {
+                        buyCompanyId: _buy_company.id
+                    }, required: true
+                }
             ]
         });
-        let ret = [];
-        for (let index = 0; index < stuffs.length; index++) {
-            const element = stuffs[index];
-            let contract = await _buy_company.getBuy_contracts({ where: { saleCompanyId: element.company.id } });
-            if (contract.length == 1 && await contract[0].hasStuff(element)) {
-                ret.push(element.toJSON());
-            }
-            else {
-                element.price = -1;
-                ret.push(element.toJSON());
-            }
-        }
+        let ret = stuffs;
         let count = await sq.models.stuff.count();
         return { rows: ret, count: count };
     },
@@ -137,7 +132,7 @@ module.exports = {
             await _contract.removeStuff(_stuff);
         }
     },
-    contractOutOfDate:function(endDate){
+    contractOutOfDate: function (endDate) {
         return moment(endDate).diff(moment().format('YYYY-MM-DD'), 'days') < 1;
     },
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
