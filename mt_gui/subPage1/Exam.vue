@@ -4,7 +4,7 @@
         <view v-for="single_paper in all_paper" :key="single_paper.id">
             <u-cell :title="single_paper.name">
                 <view slot="right-icon">
-                    <fui-button :disabled="examPassed(single_paper)" btnSize="mini" :text="examPassed(single_paper)?'答毕':'答题'" type="primary" @click="begin_exam(single_paper)"></fui-button>
+                    <fui-button :disabled="examPassed(single_paper)" btnSize="mini" :text="examPassed(single_paper)?'已通过':'答题'" type="primary" @click="begin_exam(single_paper)"></fui-button>
                 </view>
             </u-cell>
         </view>
@@ -44,10 +44,6 @@ export default {
             }
         }
     },
-
-    created() {
-        this.getExamDetial()
-    },
     methods: {
         get_all_paper: async function (pageNo, [plan_id, open_id]) {
             if (plan_id == 0) {
@@ -66,7 +62,7 @@ export default {
         begin_exam: function (paper) {
             this.show_qa = true;
             this.qa_list=[];
-			const randomValue = (window.crypto.getRandomValues(new Uint32Array(1))[0]/ 2**32)-0.68;
+			const randomValue = uni.$u.random(0,1)-0.68;
             let tmp = paper.questions.map((item, index) => {
                 return {
                     id: paper.id,
@@ -140,6 +136,7 @@ export default {
         this.plan_id = parseInt(option.plan_id);
         this.open_id = option.open_id;
         this.driver_name = option.driver_name;
+        this.getExamDetial();
     }
 }
 </script>

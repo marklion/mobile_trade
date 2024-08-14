@@ -19,7 +19,7 @@
                                     <image class="sinchoose-on" v-if="self.isSelect" :src="chooseonImg" mode="">
                                     </image>
                                     <view class="sinchoose" v-else></view>
-                                    <view class="bodyr">{{self.alias}}、{{self.answer}}</view>
+                                    <view class="bodyr">{{self.answer}}</view>
                                 </view>
                             </view>
                         </view>
@@ -29,34 +29,24 @@
                                     <image class="sinchoose-on" v-if="self.isSelect" :src="chooseonImg2" mode="">
                                     </image>
                                     <view class="sinchoose sinchoose2" v-else></view>
-                                    <view class="bodyr">{{self.alias}}、{{self.answer}}</view>
+                                    <view class="bodyr">{{self.answer}}</view>
                                 </view>
                             </view>
                         </view>
                         <view class="writeitem" v-if="item.problemType == 'QUESTION'">
-                            <textarea class="textInfo" v-model="item.userAnswer" @input="bindTextAreaBlur(index)" auto-height maxlength="200" placeholder="请输入您的答案" />
-                            </view>
-
-</view>
-
-<view class="footbtn">
-
-<view class="ftbtn1" @click="back(index)">上一题</view>
-
-<view class="ftbtn1" v-if="(index + 1) < totalNum" @click="next(index)">下一题</view>
-
-<view class="ftbtn2" v-else @click="submitData">提交</view>
-
-</view>
-
-</view>
-
-</swiper-item>
-
-</block>
-
-</swiper>
-
+                            <textarea class="textInfo" v-model="item.userAnswer" @input="bindTextAreaBlur(index)" auto-height maxlength="200" placeholder="请输入您的答案">
+                            </textarea>
+                        </view>
+                    </view>
+                    <view class="footbtn">
+                        <view class="ftbtn1" @click="back(index)">上一题</view>
+                        <view class="ftbtn1" v-if="(index + 1) < totalNum" @click="next(index)">下一题</view>
+                        <view class="ftbtn2" v-else @click="submitData">提交</view>
+                    </view>
+                </view>
+            </swiper-item>
+        </block>
+    </swiper>
 </view>
 </template>
 
