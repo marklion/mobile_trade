@@ -21,30 +21,35 @@
                 <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
             </view>
             <fui-white-space size="large"></fui-white-space>
-            <fui-grid :columns="2" :square="false">
-                <fui-grid-item>
-                    <view style="display: flex;">
-                        需要安检
-                        <u-switch size="18" v-model="item.need_sc" @change="change_need_sc(item)"></u-switch>
-                    </view>
-                </fui-grid-item>
-                <view style="display: flex;">
-                    需要进厂前重量
-                    <u-switch size="18" v-model="item.need_enter_weight" @change="change_need_enter_weight(item)"></u-switch>
-                </view>
-                <fui-grid-item>
-                    <view style="display: flex;">
-                        需要考试
-                        <u-switch size="18" v-model="item.need_exam" @change="change_need_exam(item)"></u-switch>
-                    </view>
-                </fui-grid-item>
-                <fui-grid-item>
-                    <view style="display: flex;">
-                        不用排号
-                        <u-switch size="18" v-model="item.no_need_register" @change="change_no_need_register(item)"></u-switch>
-                    </view>
-                </fui-grid-item>
-            </fui-grid>
+            <fui-row style="padding: 0 13rpx;">
+                <fui-col :span="12">
+                    <fui-label full style="display: flex;align-items: center;">
+                        <text>需要安检</text>
+                        <fui-switch :scaleRatio="0.8" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
+                    </fui-label>
+                </fui-col>
+                <fui-col :span="12">
+                    <fui-label full style="display: flex;align-items: center;">
+                        <text>需要进厂前重量</text>
+                        <fui-switch :scaleRatio="0.8" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
+                    </fui-label>
+                </fui-col>
+            </fui-row>
+            <fui-white-space size="large"></fui-white-space>
+            <fui-row style="padding: 0 13rpx;">
+                <fui-col :span="12">
+                    <fui-label full style="display: flex;align-items: center;">
+                        <text>需要考试</text>
+                        <fui-switch :scaleRatio="0.8" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
+                    </fui-label>
+                </fui-col>
+                <fui-col :span="12">
+                    <fui-label full style="display: flex;align-items: center;">
+                        <text>不用排号</text>
+                        <fui-switch :scaleRatio="0.8" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
+                    </fui-label>
+                </fui-col>
+            </fui-row>
             <fui-white-space size="large"></fui-white-space>
         </fui-card>
     </list-show>
@@ -169,33 +174,29 @@ export default {
             this.stuff_ready_fetch.close_time = e.result;
             this.show_close_time = false;
         },
-        change_no_need_register: async function (item) {
+        change_no_need_register: async function (event, item) {
             await this.$send_req('/stuff/no_need_register', {
                 stuff_id: item.id,
-                no_need_register: item.no_need_register,
+                no_need_register: event.detail.value,
             });
-            uni.startPullDownRefresh();
         },
-        change_need_exam: async function (item) {
+        change_need_exam: async function (event, item) {
             await this.$send_req('/stuff/exam_config', {
                 stuff_id: item.id,
-                need_exam: item.need_exam,
+                need_exam: event.detail.value,
             });
-            uni.startPullDownRefresh();
         },
-        change_need_enter_weight: async function (item) {
+        change_need_enter_weight: async function (event, item) {
             await this.$send_req('/stuff/enter_weight', {
                 stuff_id: item.id,
-                need_enter_weight: item.need_enter_weight
+                need_enter_weight: event.detail.value
             });
-            uni.startPullDownRefresh();
         },
-        change_need_sc: async function (item) {
+        change_need_sc: async function (event, item) {
             await this.$send_req('/stuff/sc_config', {
                 stuff_id: item.id,
-                need_sc: item.need_sc
+                need_sc: event.detail.value
             });
-            uni.startPullDownRefresh();
         },
         get_price_history: async function (_pageNo, params) {
             if (params[0] == 0) {
