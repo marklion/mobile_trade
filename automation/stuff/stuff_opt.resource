@@ -301,6 +301,12 @@ Check In A Plan
     ${resp}  Req Get to Server  /global/driver_get_order  none  plans  -1  &{req}
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  lat=${123}  lon=${333}
     Req to Server  /global/driver_checkin  none  ${req}  ${expect_fail}
+
+Call A Plan
+    [Arguments]  ${plan}  ${expect_fail}=${False}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server  /scale/call_vehicle  ${sc_admin_token}  ${req}  ${expect_fail}
+
 Deliver A Plan
     [Arguments]  ${plan}  ${count}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01

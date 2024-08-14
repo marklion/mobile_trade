@@ -260,7 +260,14 @@ Auto Uncheck In
     Confirm A Plan  ${plan}
     Manual Pay A Plan  ${plan}
     Check In A Plan  ${plan}
-    #检查过三分钟(20秒模拟)后是否被过号了
+    #不叫号，检查过三分钟后是否被过号了
+    ${plan}  Get Plan By Id  ${plan_id}
+    Should Not Be Empty    ${plan}[register_time]
+    Sleep  3m
+    ${plan}  Get Plan By Id  ${plan_id}
+    Should Contain    ${plan}    register_time
+    Call A Plan    ${plan}
+    #叫号，然后检查过三分钟后是否被过号了
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Be Empty    ${plan}[register_time]
     Sleep  3m
@@ -270,6 +277,7 @@ Auto Uncheck In
     Set Check In Stay Minutes
     #检查过三分钟后是否被过号了
     Check In A Plan  ${plan}
+    Call A Plan    ${plan}
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Be Empty    ${plan}[register_time]
     Sleep  3m

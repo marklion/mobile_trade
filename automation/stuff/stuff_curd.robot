@@ -73,8 +73,7 @@ Stuff via Contract Maintain
     Should Be Equal As Numbers  ${stuffs_found[0]}[price]  0
     Del A Stuff From Contract  st1  bc1
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
-    Length Should Be  ${stuffs_found}  1
-    Should Be Equal As Numbers  ${stuffs_found[0]}[price]  -1
+    Length Should Be  ${stuffs_found}  0
 
 Contract Charge And Check
     [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset
