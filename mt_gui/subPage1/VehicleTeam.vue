@@ -132,11 +132,11 @@ export default {
                 const element = ar[index];
                 await this.$send_req('/global/add_vehicle2team', {
                     vt_id: this.focus_team.id,
-                    main_vehicle: element.main_vehicle,
-                    behind_vehicle: element.behind_vehicle,
-                    driver_name: element.driver_name,
-                    driver_phone: element.driver_phone,
-                    driver_id_card: element.driver_id_card
+                    main_vehicle: element.main_vehicle.trim(),
+                    behind_vehicle: element.behind_vehicle.trim(),
+                    driver_name: element.driver_name.trim(),
+                    driver_phone: element.driver_phone.trim(),
+                    driver_id_card: element.driver_id_card.trim()
                 });
             }
             this.vt_detail_show = false;
@@ -186,11 +186,11 @@ export default {
                 }
                 await this.$send_req('/global/add_vehicle2team', {
                     vt_id: this.focus_team.id,
-                    main_vehicle: this.new_vehicle.main_vehicle,
-                    behind_vehicle: this.new_vehicle.behind_vehicle,
-                    driver_name: this.new_vehicle.driver_name,
-                    driver_phone: this.new_vehicle.driver_phone,
-                    driver_id_card: this.new_vehicle.driver_id_card
+                    main_vehicle: this.new_vehicle.main_vehicle.trim(),
+                    behind_vehicle: this.new_vehicle.behind_vehicle.trim(),
+                    driver_name: this.new_vehicle.driver_name.trim(),
+                    driver_phone: this.new_vehicle.driver_phone.trim(),
+                    driver_id_card: this.new_vehicle.driver_id_card.trim()
                 });
                 this.vt_detail_show = false;
                 uni.startPullDownRefresh();
