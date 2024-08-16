@@ -17,8 +17,8 @@
                 <view style="display: flex; justify-content: center;font-size: 13px;font-weight: 500;">{{single_cts.opts.title}}</view>
             </view>
         </view>
-        <module-filter style="margin-top: 20px;" require_module="sale_management">
-            <u-row>
+        <module-filter style="margin-top: 60rpx;" require_module="sale_management">
+            <u-row style="margin: 20rpx 20rpx;">
                 <u-col span="10">
                     <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
                         <u-radio label="昨天" :name="-1"></u-radio>
