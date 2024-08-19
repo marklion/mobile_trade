@@ -416,7 +416,7 @@ module.exports = {
         if (plan.enter_time && plan.enter_time.length > 0) {
             throw { err_msg: '已进厂,无法关闭' };
         }
-        if (plan.register_time) {
+        if (plan.call_time) {
             await field_lib.handle_cancel_check_in(plan);
         }
         await hook_plan('order_close', plan);
