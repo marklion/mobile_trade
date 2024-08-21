@@ -1223,7 +1223,7 @@ module.exports = {
                             tmp.optionAnswerId = aid;
                             await tmp.save();
                         }
-                        exam.score = score;
+                        exam.score = parseFloat(score.toFixed(2));
                         await exam.save();
                         ret.result = true;
                     }

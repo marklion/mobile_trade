@@ -127,6 +127,12 @@
 					"style": {
 						"enablePullDownRefresh": true
 					}
+				},
+				{
+					"path": "PlanExam",
+					"style": {
+						"enablePullDownRefresh": true
+					}
 				}
 			]
 		}

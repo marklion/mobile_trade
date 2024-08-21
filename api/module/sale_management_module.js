@@ -264,6 +264,17 @@ module.exports = {
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
+                let cash_module = await db_opt.get_sq().models.rbac_module.findOne({
+                    where:{
+                        name:'cash'
+                    }
+                });
+                if (company && cash_module) {
+                    let cashModule = await company.hasRbac_module(cash_module)
+                    // 没有余额管理模块不返回balance字段
+                    if(!cashModule)
+                        delete this.result.balance 
+                }
                 return contracts[0]
             },
         },

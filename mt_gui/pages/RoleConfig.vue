@@ -1,22 +1,23 @@
 <template>
-<view>
+<view style="background-color: #f1f4fa">
     <list-show ref="roles" v-model="data2show2" :fetch_function="get_all_roles" height="80vh" search_key="name">
-        <view v-for="(item, indexx) in data2show2" :key="indexx">
-            <fui-card :title="item.name + (item.is_readonly?'(只读)':'')" :tag="item.description" showBorder>
-                <fui-tag v-for="(user, index1) in item.related_users" :key="index1" type="danger" theme="light">
+        <view  v-for="(item, index) in data2show2" :key="index">
+            <fui-card :margin="['32rpx','20rpx']" :shadow="'0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)'" :title="item.name + (item.is_readonly?'(只读)':'')" :tag="item.description">
+                <section>角色配置</section>
+                <fui-tag style="margin:10rpx 20rpx;" v-for="(user, index1) in item.related_users" :key="index1" type="danger" theme="light">
                     {{user.name + '|' + user.phone}}
                     <fui-icon name="close" size="32" @click="show_confirm_user_unbind = true; focus_role = item.id; user_phone = user.phone"></fui-icon>
                 </fui-tag>
-                <fui-divider></fui-divider>
-                <fui-tag v-for="(mod, index2) in item.related_modules" :key="index2" type="primary" theme="light">
+                <section>模块配置</section>
+                <fui-tag style="margin:10rpx 20rpx;" v-for="(mod, index2) in item.related_modules" :key="index2" type="primary" theme="light">
                     {{mod.description}}
                     <fui-icon name="close" size="32" @click="show_confirm_module_unbind = true;focus_role = item.id;mod_id=mod.id"></fui-icon>
                 </fui-tag>
                 <template #footer>
-                    <view style="display: flex;">
-                        <fui-button btn-size="mini" text="新增用户" style="margin-right: 10px;" @click="focus_role = item.id;show_user_add = true" type="warning"></fui-button>
-                        <fui-button btn-size="mini" text="新增模块" style="margin-right: 10px;" @click="focus_role = item.id;show_module_add = true"></fui-button>
-                        <fui-button btn-size="mini" text="删除角色" style="margin-right: 10px;" @click="focus_role = item.id;show_delete_role = true" type="danger"></fui-button>
+                    <view class="btn_group">
+                        <fui-button :margin="['0','5rpx']" :radius="'3rpx'" btn-size="mini" text="新增用户" @click="focus_role = item.id;show_user_add = true" type="warning"></fui-button>
+                        <fui-button :margin="['0','5rpx']" class="btn" :radius="'3rpx'" btn-size="mini" text="新增模块" @click="focus_role = item.id;show_module_add = true"></fui-button>
+                        <fui-button :margin="['0','5rpx']" class="btn" :radius="'3rpx'" btn-size="mini" text="删除角色" @click="focus_role = item.id;show_delete_role = true" type="danger"></fui-button>
                     </view>
                 </template>
             </fui-card>
@@ -153,6 +154,18 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+.btn_group {
+    display: flex;
+    justify-content:flex-end;
+    margin:20rpx 20rpx;
+    background-color: #f1f4fa;
+    padding: 10rpx;
+}
+section{
+    font-size: 25rpx;
+    margin: 0 20rpx;
+    padding: 10rpx 0;
+    border-bottom: solid 1px #eee;
+}
 </style>

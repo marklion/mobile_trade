@@ -109,6 +109,7 @@
                                 <view slot="value" >{{cur_contract.balance}}</view>
                             </module-filter>
                             <view slot="right-icon">
+                                <fui-icon name="invisible" :size="40" v-if="!cur_contract.balance"></fui-icon>
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
                             </view>
                         </u-cell>
@@ -175,6 +176,9 @@
                     <u-cell title="安检执行">
                         <fui-button slot="right-icon" btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
                     </u-cell>
+                </module-filter>
+                <module-filter require_module="exam">
+                    <u-cell title="查看考试结果" isLink :url="'/subPage1/PlanExam?plan_id=' + focus_plan.id"></u-cell>
                 </module-filter>
             </view>
             <view class="group_sep">
@@ -261,8 +265,8 @@
     <fui-backdrop :zIndex="8888" :show="show_one_att">
         <movable-area scale-area class="movable-area">
             <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
-            <movable-view class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
-                <image class="lookimg" :src="one_att" mode="aspectFit"></image>
+            <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
+                <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
             </movable-view>
         </movable-area>
     </fui-backdrop>
@@ -339,7 +343,6 @@
 </view>
 </template>
 
-    
 <script>
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
@@ -1271,7 +1274,6 @@ export default {
 }
 </script>
 
-    
 <style scoped>
 .group_sep:nth-child(odd) {
     background-color: #ffffff;
