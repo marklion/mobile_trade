@@ -367,10 +367,10 @@ module.exports = {
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
-                let planIds = JSON.parse(`[${body.plan_id}]`);
                 const transaction = await sq.transaction();
                 try {
+                    let planIds = JSON.parse(`[${body.plan_id}]`);
+                    let company = await rbac_lib.get_company_by_token(token);
                     // 并行处理所有计划
                     await Promise.all(planIds.map(async (item) => {
                         let plan = await sq.models.plan.findOne({
@@ -379,25 +379,30 @@ module.exports = {
                             transaction
                         });
 
-                        if (!plan && !company && !(await company.hasStuff(plan.stuff, { transaction }))) {
-                            throw new Error(`无权限`);
+                        if (!plan || !company && !(await company.hasStuff(plan.stuff, { transaction }))) {
+                            return { result: false };
                         }
                         let unitPrice = Number(body.unit_price);
                         if (isNaN(unitPrice)) {
                             throw new Error('Invalid unit price');
                         }
                         let comment = String(body.comment).trim();
-                        // 更新价格
-                        plan.unit_price = unitPrice;
-                        plan.comment = comment;
-                        await plan.save({ transaction });
+                        if(plan){
+                            // 更新价格
+                            plan.unit_price = unitPrice;
+                            plan.comment = comment;
+                            await plan.save({ transaction });
+                        }else{
+                            throw new Error('无计划');
+                        }
+                        
                     }));
                     await transaction.commit();
                     return { result: true };
 
                 } catch (error) {
                     await transaction.rollback();
-                    throw { err_msg: error };
+                    return { result: false };
                 }
             }
         },
