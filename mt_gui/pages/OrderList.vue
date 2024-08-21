@@ -57,7 +57,7 @@
     <u-checkbox-group v-model="plan_selected" placement="column">
         <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
             <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :title="item.company_show + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
+                <u-cell :title="item.company_show + '-' + item.stuff.name" clickable @click="prepare_plan_detail(item)">
                     <view slot="icon" style="display:flex;">
                         <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
                         </u-checkbox>
@@ -69,6 +69,18 @@
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
                     </view>
+                    <template slot="label">
+                        <view>
+                            <fui-text size="24" type="success" :text="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate">
+                            </fui-text>
+                        </view>
+                        <view>
+                            <fui-text size="22" type="gray" v-if="item.comment" :text="item.comment">
+                            </fui-text>
+                            <fui-text size="22" :type="item.fapiao_delivered?'primary':'danger'" v-if="item.stuff.concern_fapiao" :text="' 发票' + (item.fapiao_delivered?'已开':'未开')">
+                            </fui-text>
+                        </view>
+                    </template>
                 </u-cell>
             </view>
         </list-show>
@@ -149,6 +161,15 @@
                         </view>
                     </u-cell>
                 </u-cell-group>
+            </view>
+            <view class="group_sep" v-if="focus_plan.stuff.concern_fapiao">
+                <u-cell title="发票信息" :value="(focus_plan.fapiao_delivered?'已开':'未开')">
+                    <view slot="right-icon">
+                        <module-filter :require_module="'sale_management'">
+                            <fui-button v-if="focus_plan.status != -1" btnSize="mini" type="primary" :text="'标记' + (focus_plan.fapiao_delivered?'未开':'已开')" @click="mark_fapiao_deliver"></fui-button>
+                        </module-filter>
+                    </view>
+                </u-cell>
             </view>
             <view class="group_sep">
                 <u-cell title="车辆信息">
@@ -565,7 +586,8 @@ export default {
                         "name": "公司名称"
                     },
                     "id": 1,
-                    "name": "货物名称"
+                    "name": "货物名称",
+                    concern_fapiao: false,
                 },
                 "unit_price": 1,
                 "use_for": "用途"
@@ -652,6 +674,14 @@ export default {
         },
     },
     methods: {
+        mark_fapiao_deliver: async function () {
+            await this.$send_req('/sale_management/set_fapiao_delivered', {
+                plan_id: this.focus_plan.id,
+                delivered: !this.focus_plan.fapiao_delivered
+            });
+            this.refresh_plans();
+            this.show_plan_detail = false;
+        },
         do_action: async function (e) {
             let muti_success = true;
             if (!this.new_stuff_price.isMuti) {

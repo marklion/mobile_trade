@@ -20,7 +20,7 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days, concern_fapiao) {
         let sq = db_opt.get_sq();
         if (use_for_buy == undefined) {
             use_for_buy = false;
@@ -38,6 +38,7 @@ module.exports = {
             stuff_found[0].use_for_buy = use_for_buy;
             stuff_found[0].close_time = close_time;
             stuff_found[0].delay_days = delay_days;
+            stuff_found[0].concern_fapiao = concern_fapiao;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
@@ -216,6 +217,8 @@ module.exports = {
             let archive_plan = await _plan.getArchive_plan();
             if (archive_plan) {
                 ret = JSON.parse(archive_plan.content);
+                ret.stuff.concern_fapiao = _plan.stuff.concern_fapiao;
+                ret.fapiao_delivered = _plan.fapiao_delivered;
             }
         }
 
@@ -1097,6 +1100,7 @@ module.exports = {
                 seal_no: element.seal_no,
                 ticket_no: element.ticket_no,
                 drop_address: element.drop_address,
+                fapiao_delivered: element.fapiao_delivered ? '是' : '否',
             });
         }
         let columns = [{
@@ -1153,6 +1157,9 @@ module.exports = {
         }, {
             header: '卸货地址',
             key: 'drop_address',
+        }, {
+            header: '发票已开?',
+            key: 'fapiao_delivered',
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
@@ -1395,5 +1402,15 @@ module.exports = {
             }
             await element.save();
         }
+    },
+    set_fapiao_delivered: async function (plan_id, token, delivered) {
+        await this.action_in_plan(plan_id, token, -1, async (plan) => {
+            if (plan.status == 0) {
+                throw { err_msg: '计划需要先未确认' };
+            }
+            plan.fapiao_delivered = delivered;
+            await plan.save();
+            await this.record_plan_history()
+        });
     },
 };
