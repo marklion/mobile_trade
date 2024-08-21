@@ -352,5 +352,59 @@ module.exports = {
                 return { result: true };
             }
         },
+        change_price_by_plan: {
+            name: '基于计划调价(批量或单个)',
+            description: '基于计划调价(批量或单个)',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                unit_price: { type: Number, have_to: true, mean: '新单价', example: 66.88 },
+                plan_id: { type: String, have_to: true, mean: '计划ID列表', example: '1,2,3' },
+                comment: { type: String, have_to: true, mean: '新单价调价备注', example: '测试备注' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                const transaction = await sq.transaction();
+                try {
+                    let planIds = JSON.parse(`[${body.plan_id}]`);
+                    let company = await rbac_lib.get_company_by_token(token);
+                    // 并行处理所有计划
+                    await Promise.all(planIds.map(async (item) => {
+                        let plan = await sq.models.plan.findOne({
+                            where: { id: item },
+                            include: [{ model: sq.models.stuff }],
+                            transaction
+                        });
+
+                        if (!plan || !company && !(await company.hasStuff(plan.stuff, { transaction }))) {
+                            return { result: false };
+                        }
+                        let unitPrice = Number(body.unit_price);
+                        if (isNaN(unitPrice)) {
+                            throw new Error('Invalid unit price');
+                        }
+                        if(plan && plan.status!=3){
+                            let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
+                            await plan_lib.record_plan_history(plan,(await rbac_lib.get_user_by_token(token)).name,comment,{transaction})
+                            // 更新价格
+                            plan.unit_price = unitPrice;
+                            await plan.save({ transaction });
+                        }else{
+                            throw new Error('计划已关闭');
+                        }
+                        
+                    }));
+                    await transaction.commit();
+                    return { result: true };
+
+                } catch (error) {
+                    await transaction.rollback();
+                    throw {err_msg:error.message}
+                }
+            }
+        },
     }
 }
