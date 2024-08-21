@@ -35,7 +35,6 @@ Verify Plan Prices Updated
 
 *** Test Cases ***
 Change Price With Muti Plan
-    [Teardown]  Contract Reset
     [Documentation]    测试更改计划价格（批量）
     ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
     ${plan_ids_str}=    Evaluate    ",".join(map(str, $plan_ids))
@@ -45,24 +44,17 @@ Change Price With Muti Plan
     Verify Plan Prices Updated    ${plan_ids}    ${NEW_PRICE}
 
 Change Price With Single Plan
-    [Teardown]  Contract Reset
     [Documentation]    测试更改计划价格（单个）
-    ${req}=    Create Dictionary    unit_price=${NEW_PRICE}   plan_id=1   comment=${COMMENT}
+    ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
+    ${plan_id}  Convert To String  ${plan_ids}[0]
+    ${req}=    Create Dictionary    unit_price=${123}   plan_id=${plan_id}   comment=${COMMENT}
     ${resp}=   Req to Server    /stuff/change_price_by_plan    ${sc_admin_token}    ${req} 
-    Should Be Equal As Strings    ${resp}[result]    True
+    ${plan}=    Get Plan By Id    ${plan_ids}[0]
+    Should Be Equal As Numbers    ${plan}[unit_price]    ${123}
 
 Change Price With Non-Existent Plan
-    [Teardown]  Contract Reset
     [Documentation]    测试使用不存在的计划ID
     ${req}=    Create Dictionary    unit_price=${NEW_PRICE}    plan_id=9999    comment=${COMMENT}
-    ${resp}=   Req to Server    /stuff/change_price_by_plan    ${sc_admin_token}    ${req}
-    Should Be Equal As Strings    ${resp}[result]    True
-
-# Change Price Without Permission
-#     [Teardown]  Contract Reset
-#     [Documentation]    测试无权限用户更改价格
-#     ${req}=    Create Dictionary    unit_price=${NEW_PRICE}    plan_id=1    comment=${COMMENT}
-#     ${resp}=   Req to Server    /stuff/change_price_by_plan    ${bc1_user_token}    ${req}
-#     Should Be Equal As Strings    ${resp}[result]    False
+    ${resp}=   Req to Server    /stuff/change_price_by_plan    ${sc_admin_token}    ${req}    ${False}
 
 

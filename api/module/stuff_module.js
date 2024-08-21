@@ -386,14 +386,14 @@ module.exports = {
                         if (isNaN(unitPrice)) {
                             throw new Error('Invalid unit price');
                         }
-                        let comment = String(body.comment).trim();
-                        if(plan){
+                        if(plan && plan.status!=3){
+                            let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
+                            await plan_lib.record_plan_history(plan,(await rbac_lib.get_user_by_token(token)).name,comment,{transaction})
                             // 更新价格
                             plan.unit_price = unitPrice;
-                            plan.comment = comment;
                             await plan.save({ transaction });
                         }else{
-                            throw new Error('无计划');
+                            throw new Error('计划已关闭');
                         }
                         
                     }));
@@ -402,7 +402,7 @@ module.exports = {
 
                 } catch (error) {
                     await transaction.rollback();
-                    return { result: false };
+                    throw {err_msg:error.message}
                 }
             }
         },

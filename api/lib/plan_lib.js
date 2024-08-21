@@ -676,8 +676,8 @@ module.exports = {
         }
 
     },
-    record_plan_history: async function (_plan, _operator, _action_type) {
-        await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type });
+    record_plan_history: async function (_plan, _operator, _action_type,_transation) {
+        await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type },_transation);
     },
     rp_history_create: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '创建');
