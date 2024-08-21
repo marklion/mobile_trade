@@ -11,7 +11,6 @@ module.exports = {
                 // 匹配tab制表符与空格符
                 if (/[\t\s]/g.test(driver.name) || /[\t\s]/g.test(driver.phone) || /[\t\s]/g.test(driver.id_card)) {
                     const cleanedName = driver.name.replace(/[\t\s]/g, '');
-                    // const cleanedPhone = driver.phone.replace(/[\t\s]/g, '');
                     const cleanedIdCard = driver.id_card.replace(/[\t\s]/g, '');
     
                     // 检查是否存在重复记录
@@ -47,10 +46,39 @@ module.exports = {
             // 提交事务
             await transaction.commit();
             console.info('============数据清理完成===========');
+            return true
         } catch (error) {
             console.error('driver数据清理过程中发生错误:', error);
             // 回滚事务
             await transaction.rollback();
+            throw new Error('driver数据清理过程中发生错误')
+        }
+    },
+    cleanVehicleData: async function () {
+        let sq = db_opt.get_sq();
+        // 启动事务
+        const transaction = await sq.transaction();
+        try {
+            const vehicles = await sq.models.vehicle.findAll({ transaction });
+    
+            await Promise.all(vehicles.map(async (vehicle) => {
+                // 匹配tab制表符与空格符
+                if (/[\t\s]/g.test(vehicle.plate)) {
+                    // 记录逻辑删除
+                    await vehicle.destroy({ transaction })
+                    // 记录物理删除
+                    // await vehicle.destroy({ transaction , force:true})
+                }
+            }));
+            // 提交事务
+            await transaction.commit();
+            console.info('============数据清理完成===========');
+            return true
+        } catch (error) {
+            console.error('vehicle数据清理过程中发生错误:', error);
+            // 回滚事务
+            await transaction.rollback();
+            throw new Error('vehicle数据清理过程中发生错误')
         }
     }
 }

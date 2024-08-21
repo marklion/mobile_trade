@@ -1,9 +1,8 @@
 const express = require('express');
 const json2md = require('json2md');
 const moment = require('moment');
-
-
 const app = express();
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
@@ -11,7 +10,6 @@ app.help_info = [];
 let mkapi = require('./api_utils');
 const db_opt = require('./db_opt');
 const rbac_lib = require('./lib/rbac_lib');
-const clean_driver = require('./lib/clean_driver')
 async function module_install(admin_role_id, app, module) {
     let mo = module;
     await rbac_lib.connect_role2module(admin_role_id, (await rbac_lib.add_module(mo.name, mo.description)).id);
@@ -41,8 +39,7 @@ async function init_super_user() {
             online_time: moment().format('YYYY-MM-DD HH:mm:ss'),
         }
     });
-    // 清除driver表脏数据
-    clean_driver.cleanDriverData();
+    
     let role = await rbac_lib.add_role('admin', '超级管理员', false, null);
     if (user_one[0] && role) {
         await rbac_lib.connect_user2role(user_one[0].id, role.id);

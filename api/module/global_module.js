@@ -9,6 +9,7 @@ const captureWebsite = require('capture-website');
 const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
+const clean_driver = require('../lib/clean_driver')
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -1262,6 +1263,28 @@ module.exports = {
                     throw { err_msg: '无法获取' };
                 }
                 return ret;
+            }
+        },
+        clean_table_data: {
+            name: '清除冗余数据',
+            description: '清除冗余数据',
+            is_write: true,
+            is_get_api: true,
+            params:{},
+            result: {
+                msg: { type: String, mean: '结果' },
+            },
+            func: async function () {
+                try {
+                    // 清除driver表脏数据
+                    await clean_driver.cleanDriverData();
+                    await clean_driver.cleanVehicleData();
+
+                    return { msg: '清除成功' };
+
+                } catch (error) {
+                    return { msg: '清除失败' };
+                }
             }
         },
     },
