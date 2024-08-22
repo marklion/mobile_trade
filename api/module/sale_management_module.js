@@ -12,7 +12,6 @@ module.exports = {
         order_sale_confirm: {
             name: '销售订单确认',
             description: '销售订单确认',
-
             is_write: true,
             is_get_api: false,
             params: {
@@ -73,7 +72,6 @@ module.exports = {
         order_search: {
             name: '销售订单查询',
             description: '销售订单查询',
-
             is_write: false,
             is_get_api: true,
             params: {
@@ -285,7 +283,7 @@ module.exports = {
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                         number: { type: String, mean: '合同号', example: "abc" },
                         customer_code: { type: String, mean: '客户合同号', example: "sss" },
-                        expired:{type:Boolean,mean:'是否过期',example:false},
+                        expired: { type: Boolean, mean: '是否过期', example: false },
                         stuff: {
                             type: Array, mean: '货物', explain: {
                                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -504,6 +502,22 @@ module.exports = {
                 }
                 return { statistic: ret };
             },
+        },
+        set_fapiao_delivered: {
+            name: '设置发票开具状态',
+            description: '设置发票开具状态',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                delivered: { type: Boolean, have_to: true, mean: '是否开具', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.set_fapiao_delivered(body.plan_id, token, body.delivered);
+            }
         },
     },
 }
