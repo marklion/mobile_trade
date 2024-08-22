@@ -375,7 +375,7 @@
             <fui-input label="备注" v-model="update_req.comment"></fui-input>
         </fui-form>
     </fui-modal>
-    <fui-modal :zIndex="1002" width="600" :title="`${this.focus_plan.stuff.name}${this.new_stuff_price.isMuti?'批量':''}调价`" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
+    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
         <fui-form ref="new_stuff_price_form" top="100">
             <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
             <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
