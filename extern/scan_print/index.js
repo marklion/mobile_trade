@@ -8,7 +8,7 @@ function getStringAfter(str, substr) {
 async function get_ticket(id)
 {
 	var myHeaders = new Headers();
-	myHeaders.append("Authorization", "APPCODE b7d2657dc4484135a256c339302e0f09");
+	myHeaders.append("Authorization", "APPCODE ");
 	myHeaders.append("Content-Type", "application/json");
 
 	var raw = JSON.stringify({

@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const moment = require('moment');
 async function get_plans() {
     var myHeaders = new Headers();
-    myHeaders.append("token", "ab954a75-4e19-4735-9007-e08b78cf23fa");
+    myHeaders.append("token", "project api code");
     myHeaders.append("Content-Type", "application/json");
     let ret = [];
     let page = 0;
