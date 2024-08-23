@@ -1265,11 +1265,13 @@ module.exports = {
                 return ret;
             }
         },
+        // NOSONAR
         clean_table_data: {
             name: '清除冗余数据',
             description: '清除冗余数据',
             is_write: true,
-            is_get_api: true,
+            is_get_api: false,
+            params: {},
             result: {
                 msg: { type: String, mean: '结果' },
             },
@@ -1277,7 +1279,6 @@ module.exports = {
                 try {
                     // 清除driver表脏数据
                     if (body.table == "driver") {
-                        // NOSONAR
                         await clean_driver.cleanDriverData();
                         return { msg: '清除成功' };
                     }
