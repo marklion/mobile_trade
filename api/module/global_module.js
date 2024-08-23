@@ -1270,20 +1270,26 @@ module.exports = {
             description: '清除冗余数据',
             is_write: true,
             is_get_api: true,
-            params:{},
             result: {
                 msg: { type: String, mean: '结果' },
             },
-            func: async function () {
+            func: async function (body) {
                 try {
                     // 清除driver表脏数据
-                    await clean_driver.cleanDriverData();
-                    await clean_driver.cleanVehicleData();
-
-                    return { msg: '清除成功' };
+                    if (body.table == "driver") {
+                        await clean_driver.cleanDriverData();
+                        return { msg: '清除成功' };
+                    }
+                    else if (body.table == "vehicle") {
+                        await clean_driver.cleanVehicleData();
+                        return { msg: '清除成功' };
+                    }
+                    else{
+                        return { msg: '参数错误' };
+                    }
 
                 } catch (error) {
-                    return { msg: '清除失败' };
+                    return { msg: `清除失败${error}` };
                 }
             }
         },
