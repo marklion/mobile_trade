@@ -2,6 +2,8 @@ const express = require('express');
 const json2md = require('json2md');
 const moment = require('moment');
 const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
 
 let mkapi = require('./api_utils');
