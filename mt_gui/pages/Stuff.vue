@@ -10,6 +10,7 @@
                 <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
                 <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
                 <fui-tag v-else text="用于销售" theme="plain" originLeft :scaleRatio="0.8" type="success"></fui-tag>
+                <fui-tag v-if="item.concern_fapiao" text="关注发票" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
             </view>
             <fui-white-space size="large"></fui-white-space>
             <view style="display:flex;justify-content: space-around;">
@@ -66,6 +67,9 @@
             <fui-date-picker :show="show_close_time" type="6" @change="choose_time" @cancel="show_close_time = false"></fui-date-picker>
             <fui-form-item label="用于采购">
                 <u-switch v-model="stuff_ready_fetch.use_for_buy"></u-switch>
+            </fui-form-item>
+            <fui-form-item label="关注发票">
+                <u-switch v-model="stuff_ready_fetch.concern_fapiao"></u-switch>
             </fui-form-item>
         </fui-form>
     </fui-modal>
@@ -141,6 +145,7 @@ export default {
                 use_for_buy: false,
                 close_time: '',
                 delay_days: 0,
+                concern_fapiao: false,
             },
             show_stuff_fetch: false,
             is_update: false,
@@ -314,6 +319,7 @@ export default {
                 use_for_buy: item.use_for_buy,
                 close_time: item.close_time,
                 delay_days: item.delay_days,
+                concern_fapiao: item.concern_fapiao,
             }
             this.show_stuff_fetch = true;
             this.is_update = true;
@@ -365,6 +371,7 @@ export default {
             use_for_buy: false,
             close_time: '',
             delay_days: 0,
+            concern_fapiao: false,
         }
         uni.stopPullDownRefresh();
     },

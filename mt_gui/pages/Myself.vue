@@ -208,7 +208,7 @@ export default {
         },
         config_role: function () {
             uni.navigateTo({
-                url: '/pages/RoleConfig'
+                url: '/subPage1/RoleConfig'
             });
         }
     },

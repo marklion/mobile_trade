@@ -20,21 +20,30 @@
             </fui-tag>
         </module-filter>
 
-        <view style="display:flex; align-items: center;padding: 0 20rpx;">
-            显示取消计划
-            <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
-            <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
-            </fui-tag>
-            <view v-else style="display:flex; align-items: center;">
-                <fui-tag type="warning" text="关闭多选" @click="select_active = false">
-                </fui-tag>
-                <fui-tag type="success" text="全选" @click="select_all">
-                </fui-tag>
-                <fui-tag type="danger" text="反选" @click="select_other">
-                </fui-tag>
-                <fui-tag type="primary" v-if="plan_selected.length > 0" :text="plan_selected.length + '项批量操作'" @click="action_show = true">
-                </fui-tag>
-            </view>
+        <view style="padding: 0 20rpx;">
+            <fui-row>
+                <fui-col style="display: flex;">
+                    显示取消计划
+                    <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
+                </fui-col>
+            </fui-row>
+            <fui-row>
+                <fui-col>
+                    <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
+                    </fui-tag>
+                    <view v-else style="display:flex; align-items: center;">
+                        <fui-tag type="warning" text="关闭多选" @click="select_active = false">
+                        </fui-tag>
+                        <fui-tag type="success" text="全选" @click="select_all">
+                        </fui-tag>
+                        <fui-tag type="danger" text="反选" @click="select_other">
+                        </fui-tag>
+                        <fui-tag type="primary" v-if="plan_selected.length > 0" :text="plan_selected.length + '项批量操作'" @click="action_show = true">
+                        </fui-tag>
+                    </view>
+                </fui-col>
+            </fui-row>
+
         </view>
     </view>
     <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
@@ -48,7 +57,7 @@
     <u-checkbox-group v-model="plan_selected" placement="column">
         <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
             <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :title="item.company_show + '-' + item.stuff.name" :label="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate" clickable @click="prepare_plan_detail(item)">
+                <u-cell :title="item.company_show + '-' + item.stuff.name" clickable @click="prepare_plan_detail(item)">
                     <view slot="icon" style="display:flex;">
                         <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
                         </u-checkbox>
@@ -60,6 +69,18 @@
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
                     </view>
+                    <template slot="label">
+                        <view>
+                            <fui-text size="24" type="success" :text="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate">
+                            </fui-text>
+                        </view>
+                        <view>
+                            <fui-text size="22" type="gray" v-if="item.comment" :text="item.comment">
+                            </fui-text>
+                            <fui-text size="22" :type="item.fapiao_delivered?'primary':'danger'" v-if="item.stuff.concern_fapiao" :text="' 发票' + (item.fapiao_delivered?'已开':'未开')">
+                            </fui-text>
+                        </view>
+                    </template>
                 </u-cell>
             </view>
         </list-show>
@@ -101,7 +122,17 @@
                             </module-filter>
                         </view>
                     </u-cell>
-                    <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name" :label="focus_plan.stuff.name + '-单价-' + focus_plan.unit_price"></u-cell>
+                    <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name">
+                        <view slot="label">
+                            <view style="display:flex;align-items: center">
+                                <view style="font-size: 25rpx;">{{ focus_plan.stuff.name + '-单价-' + focus_plan.unit_price }}</view>
+                                <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
+                                    <fui-button btnSize="mini" @click="new_stuff_price.show=true">调价</fui-button>
+                                </module-filter>
+                            </view>
+                        </view>
+                    </u-cell>
+
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
                         <u-cell title="余额" :value="cur_contract.balance" :label="user_authorize">
@@ -130,6 +161,15 @@
                         </view>
                     </u-cell>
                 </u-cell-group>
+            </view>
+            <view class="group_sep" v-if="focus_plan.stuff.concern_fapiao">
+                <u-cell title="发票信息" :value="(focus_plan.fapiao_delivered?'已开':'未开')">
+                    <view slot="right-icon">
+                        <module-filter :require_module="'sale_management'">
+                            <fui-button v-if="focus_plan.status != -1" btnSize="mini" type="primary" :text="'标记' + (focus_plan.fapiao_delivered?'未开':'已开')" @click="mark_fapiao_deliver"></fui-button>
+                        </module-filter>
+                    </view>
+                </u-cell>
             </view>
             <view class="group_sep">
                 <u-cell title="车辆信息">
@@ -335,7 +375,14 @@
             <fui-input label="备注" v-model="update_req.comment"></fui-input>
         </fui-form>
     </fui-modal>
+    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
+        <fui-form ref="new_stuff_price_form" top="100">
+            <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
+            <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
+        </fui-form>
+    </fui-modal>
     <fui-message ref="po_msg"></fui-message>
+    <fui-toast ref="toast"></fui-toast>
 </view>
 </template>
 
@@ -346,6 +393,9 @@ import ModuleFilterVue from '../components/ModuleFilter.vue';
 import $fui from '@/components/firstui/fui-clipboard';
 import ScUpload from '../components/ScUpload.vue';
 import pickRegions from '@/components/pick-regions/pick-regions.vue'
+import {
+    plus
+} from '../uni_modules/uview-ui/libs/function/digit';
 export default {
     name: 'OrderList',
     components: {
@@ -356,6 +406,12 @@ export default {
     },
     data: function () {
         return {
+            new_stuff_price: {
+                show: false,
+                price: 0,
+                comment: '',
+                isMuti: false
+            },
             cur_contract: {
                 balance: 0,
                 rbac_users: [],
@@ -371,6 +427,9 @@ export default {
                 }, {
                     text: '批量取消',
                     url: this.cur_close_url ? this.cur_close_url : this.cur_cancel_url,
+                }, {
+                    text: '批量调价',
+                    url: '/stuff/change_price_by_plan',
                 }]
             },
             select_active: false,
@@ -527,7 +586,8 @@ export default {
                         "name": "公司名称"
                     },
                     "id": 1,
-                    "name": "货物名称"
+                    "name": "货物名称",
+                    concern_fapiao: false,
                 },
                 "unit_price": 1,
                 "use_for": "用途"
@@ -614,19 +674,50 @@ export default {
         },
     },
     methods: {
+        mark_fapiao_deliver: async function () {
+            await this.$send_req('/sale_management/set_fapiao_delivered', {
+                plan_id: this.focus_plan.id,
+                delivered: !this.focus_plan.fapiao_delivered
+            });
+            this.refresh_plans();
+            this.show_plan_detail = false;
+        },
         do_action: async function (e) {
-            for (let index = 0; index < this.plan_selected.length; index++) {
-                const element = this.plan_selected[index];
-                try {
-                    await this.$send_req(e.url, {
-                        plan_id: element
-                    });
-                } catch (error) {
-                    console.log(error);
+            let muti_success = true;
+            if (!this.new_stuff_price.isMuti) {
+                if (e.text == "批量调价") {
+                    this.new_stuff_price.show = true;
+                    this.new_stuff_price.isMuti = true;
+                    this.new_stuff_price.comment = "批量调价"
+                    return
                 }
             }
-            this.action_show = false;
-            this.refresh_plans();
+            try {
+
+                for (let index = 0; index < this.plan_selected.length; index++) {
+                    const element = this.plan_selected[index];
+                    this.$send_req(e.url, {
+                        plan_id: element,
+                    }).catch((error) => {
+                        console.log(error)
+                        muti_success = false
+                    })
+                }
+                if (muti_success) {
+                    this.$refs.toast.show({
+                        text: '操作成功'
+                    })
+                }
+
+            } catch (error) {
+                console.log(error)
+            } finally {
+                this.action_show = false;
+                this.select_active = false;
+                this.plan_selected = [];
+                this.refresh_plans();
+            }
+
         },
         select_all: function () {
             this.plan_selected = this.sp_data2show.map(item => item.id);
@@ -974,6 +1065,49 @@ export default {
                 uni.startPullDownRefresh();
             }
             this.show_xxx_confirm = false;
+        },
+        // 订单新单价调价
+        do_new_stuff_pirce: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                    name: 'unit_price',
+                    rule: ['required', 'isNumber'],
+                    msg: ['请输入新单价', '请输入正确的金额']
+                }];
+                let val_ret = await this.$refs.new_stuff_price_form.validator({
+                    unit_price: this.new_stuff_price.price
+                }, rules);
+                if (val_ret.isPassed) {
+                    this.$send_req("/stuff/change_price_by_plan", {
+                        unit_price: Number(this.new_stuff_price.price),
+                        plan_id: this.new_stuff_price.isMuti ? this.plan_selected.toString() : this.focus_plan.id + '',
+                        comment: this.new_stuff_price.comment
+                    }).then(res => {
+                        this.$refs.toast.show({
+                            text: '调价成功',
+                        })
+                    }).catch((error) => {
+                        this.$refs.toast.show({
+                            text: error,
+                        })
+                    }).finally(() => {
+                        this.cancel_new_stuff_price();
+                        this.show_plan_detail = false;
+                        uni.startPullDownRefresh();
+                    });
+                }
+            } else {
+                this.cancel_new_stuff_price()
+            }
+        },
+        cancel_new_stuff_price: function (e) {
+            this.new_stuff_price.price = 0;
+            this.new_stuff_price.comment = "";
+            this.new_stuff_price.show = false;
+            this.new_stuff_price.isMuti = false;
+            this.action_show = false;
+            this.select_active = false;
+            this.plan_selected = [];
         },
         do_rollback: async function (e) {
             if (e.index == 1) {
