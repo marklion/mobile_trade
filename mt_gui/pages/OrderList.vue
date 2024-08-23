@@ -140,6 +140,7 @@
                                 <view slot="value" >{{cur_contract.balance}}</view>
                             </module-filter>
                             <view slot="right-icon">
+                                <fui-icon name="invisible" :size="40" v-if="!cur_contract.balance"></fui-icon>
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
                             </view>
                         </u-cell>
