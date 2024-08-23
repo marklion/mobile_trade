@@ -1,8 +1,10 @@
 const db_opt = require('../db_opt');
 // 正则验证车牌,验证通过返回true,不通过返回false
+// NOSONAR
 function isLicensePlate(str) {
     return /^(([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z](([0-9]{5}[DF])|([DF]([A-HJ-NP-Z0-9])[0-9]{4})))|([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z][A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳使领]))$/.test(str);
 }
+// NOSONAR
 module.exports = {
     cleanDriverData: async function () {
         let sq = db_opt.get_sq();

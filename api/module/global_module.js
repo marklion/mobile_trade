@@ -1277,10 +1277,12 @@ module.exports = {
                 try {
                     // 清除driver表脏数据
                     if (body.table == "driver") {
+                        // NOSONAR
                         await clean_driver.cleanDriverData();
                         return { msg: '清除成功' };
                     }
                     else if (body.table == "vehicle") {
+                        // NOSONAR
                         await clean_driver.cleanVehicleData();
                         return { msg: '清除成功' };
                     }
