@@ -182,6 +182,7 @@ module.exports = {
         confirmed: { type: Boolean, mean: '是否确认装卸货', example: true },
         is_proxy: { type: Boolean, mean: '是否代理', example: true },
         is_repeat: { type: Boolean, mean: '是否多次进厂', example: true },
+        fapiao_delivered: { type: Boolean, mean: '是否发票已开具', example: true },
         rbac_user: {
             type: Object, mean: '创建人', explain: {
                 id: { type: Number, mean: '用户ID', example: 1 },
@@ -206,6 +207,7 @@ module.exports = {
                 need_enter_weight: { type: Boolean, mean: '是否需要进场称重', example: true },
                 no_need_register: { type: Boolean, mean: '不需要登记', example: true },
                 need_exam: { type: Boolean, mean: '是否需要考试', example: true },
+                concern_fapiao: { type: Boolean, mean: '是否关注发票', example: true },
             }
         },
         company: {
