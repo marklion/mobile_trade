@@ -1,7 +1,5 @@
-const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
-const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 module.exports = {
     name: 'stuff',
@@ -16,9 +14,10 @@ module.exports = {
                 name: { type: String, have_to: true, mean: '货物名称', example: '货物名称' },
                 comment: { type: String, have_to: false, mean: '备注', example: '备注' },
                 expect_count: { type: Number, have_to: false, mean: '预期数量', example: 1 },
-                use_for_buy:{type:Boolean, have_to:false, mean:'用于采购', example:false},
+                use_for_buy: { type: Boolean, have_to: false, mean: '用于采购', example: false },
                 close_time: { type: String, have_to: false, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, have_to: false, mean: '延迟天数', example: 1 },
+                concern_fapiao: { type: Boolean, have_to: false, mean: '关注发票', example: false },
             },
             result: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -28,13 +27,14 @@ module.exports = {
                 next_price: { type: Number, mean: '下次单价', example: 1 },
                 change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
                 expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
-                use_for_buy:{type:Boolean, mean:'用于采购', example:false},
+                use_for_buy: { type: Boolean, mean: '用于采购', example: false },
                 close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, mean: '延迟天数', example: 1 },
+                concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days);
+                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao);
             }
         },
         get_all: {
@@ -60,6 +60,7 @@ module.exports = {
                         close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
                         delay_days: { type: Number, mean: '延迟天数', example: 1 },
                         need_exam: { type: Boolean, mean: '是否需要考试', example: false },
+                        concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
                     }
                 },
             },
@@ -150,7 +151,7 @@ module.exports = {
                 return { result: true };
             },
         },
-        exam_config:{
+        exam_config: {
             name: '配置货物是否需要考试',
             description: '配置货物是否需要考试',
             is_write: true,
@@ -350,6 +351,60 @@ module.exports = {
                     throw { err_msg: '货物不存在' };
                 }
                 return { result: true };
+            }
+        },
+        change_price_by_plan: {
+            name: '基于计划调价(批量或单个)',
+            description: '基于计划调价(批量或单个)',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                unit_price: { type: Number, have_to: true, mean: '新单价', example: 66.88 },
+                plan_id: { type: String, have_to: true, mean: '计划ID列表', example: '1,2,3' },
+                comment: { type: String, have_to: true, mean: '新单价调价备注', example: '测试备注' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                const transaction = await sq.transaction();
+                try {
+                    let planIds = JSON.parse(`[${body.plan_id}]`);
+                    let company = await rbac_lib.get_company_by_token(token);
+                    // 并行处理所有计划
+                    await Promise.all(planIds.map(async (item) => {
+                        let plan = await sq.models.plan.findOne({
+                            where: { id: item },
+                            include: [{ model: sq.models.stuff }],
+                            transaction
+                        });
+
+                        if (!plan || !company && !(await company.hasStuff(plan.stuff, { transaction }))) {
+                            return { result: false };
+                        }
+                        let unitPrice = Number(body.unit_price);
+                        if (isNaN(unitPrice)) {
+                            throw new Error('Invalid unit price');
+                        }
+                        if(plan && plan.status!=3){
+                            let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
+                            await plan_lib.record_plan_history(plan,(await rbac_lib.get_user_by_token(token)).name,comment,{transaction})
+                            // 更新价格
+                            plan.unit_price = unitPrice;
+                            await plan.save({ transaction });
+                        }else{
+                            throw new Error('计划已关闭');
+                        }
+                        
+                    }));
+                    await transaction.commit();
+                    return { result: true };
+
+                } catch (error) {
+                    await transaction.rollback();
+                    throw {err_msg:error.message}
+                }
             }
         },
     }
