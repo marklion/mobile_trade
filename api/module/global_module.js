@@ -1265,7 +1265,6 @@ module.exports = {
                 return ret;
             }
         },
-        // NOSONAR
         clean_table_data: {
             name: '清除冗余数据',
             description: '清除冗余数据',
@@ -1283,7 +1282,6 @@ module.exports = {
                         return { msg: '清除成功' };
                     }
                     else if (body.table == "vehicle") {
-                        // NOSONAR
                         await clean_driver.cleanVehicleData();
                         return { msg: '清除成功' };
                     }
