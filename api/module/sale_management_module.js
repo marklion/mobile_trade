@@ -262,7 +262,7 @@ module.exports = {
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
-                return contracts[0]
+                return contracts[0];
             },
         },
         contract_get: {

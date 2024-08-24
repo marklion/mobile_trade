@@ -135,7 +135,10 @@
 
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
-                        <u-cell title="余额" :value="cur_contract.balance" :label="user_authorize">
+                        <u-cell title="余额"  :label="user_authorize">
+                            <module-filter  require_module="cash">
+                                <view slot="value" >{{cur_contract.balance}}</view>
+                            </module-filter>
                             <view slot="right-icon">
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
                             </view>
