@@ -121,6 +121,15 @@ module.exports = {
         await contract.removeStuff();
         await contract.destroy();
     },
+    update_contract:async function (contract_id, being_time, end_time, number, customer_code) {
+        let sq = db_opt.get_sq();
+        let contract = await sq.models.contract.findByPk(contract_id);
+        contract.begin_time = being_time;
+        contract.end_time = end_time;
+        contract.number = number;
+        contract.customer_code = customer_code;
+        await contract.save();
+    },
     add_stuff_to_contract: async function (_stuff, _contract) {
         let exist_stuffs = await _contract.getStuff({ where: { id: _stuff.id } });
         if (exist_stuffs.length == 0) {

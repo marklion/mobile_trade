@@ -104,6 +104,16 @@ Del A Supplier Contract
     ${req}  Create Dictionary  contract_id=${contract_id}
     Req to Server  /buy_management/contract_destroy  ${sc_admin_token}  ${req}
 
+Update A Sale Contract
+    [Arguments]  ${contract_id}  &{update_info}
+    Set To Dictionary  ${update_info}  contract_id=${contract_id}
+    Req to Server  /sale_management/contract_update  ${sc_admin_token}  ${update_info}
+
+Update A Buy Contract
+    [Arguments]  ${contract_id}  &{update_info}
+    Set To Dictionary  ${update_info}  contract_id=${contract_id}
+    Req to Server  /buy_management/contract_update  ${sc_admin_token}  ${update_info}
+
 Add A Stuff To Contract
     [Arguments]  ${stuff_name}  ${customer_name}  ${token}=${sc_admin_token}
     ${target_contract}  Set Variable
