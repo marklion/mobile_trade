@@ -132,13 +132,16 @@
                             </view>
                         </view>
                     </u-cell>
+                    <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
 
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
-                        <u-cell title="余额"  :label="user_authorize">
-                            <module-filter  require_module="cash">
-                                <view slot="value" >{{cur_contract.balance}}</view>
-                            </module-filter>
+                        <u-cell title="余额" :label="user_authorize">
+                            <view slot="value">
+                                <module-filter require_module="cash">
+                                    {{cur_contract.balance}}
+                                </module-filter>
+                            </view>
                             <view slot="right-icon">
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
                             </view>
@@ -386,6 +389,7 @@
     </fui-modal>
     <fui-message ref="po_msg"></fui-message>
     <fui-toast ref="toast"></fui-toast>
+    <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false"></fui-gallery>
 </view>
 </template>
 
@@ -396,9 +400,6 @@ import ModuleFilterVue from '../components/ModuleFilter.vue';
 import $fui from '@/components/firstui/fui-clipboard';
 import ScUpload from '../components/ScUpload.vue';
 import pickRegions from '@/components/pick-regions/pick-regions.vue'
-import {
-    plus
-} from '../uni_modules/uview-ui/libs/function/digit';
 export default {
     name: 'OrderList',
     components: {
@@ -409,6 +410,7 @@ export default {
     },
     data: function () {
         return {
+            show_attach: false,
             new_stuff_price: {
                 show: false,
                 price: 0,
@@ -619,6 +621,28 @@ export default {
         }
     },
     computed: {
+        get_both_attach: function () {
+            let ret = [];
+            let func = (path) => {
+                let pic_ret = '';
+                if (path) {
+                    pic_ret = this.$convert_attach_url(path);
+                } else {
+                    pic_ret = '/static/no_att.jpg';
+                }
+                return pic_ret;
+            };
+            ret.push({
+                src: func(this.focus_plan.company.attachment),
+                descr: '下单方资质'
+            });
+            ret.push({
+                src: func(this.focus_plan.stuff.company.attachment),
+                descr: '接单方资质'
+            });
+
+            return ret;
+        },
         user_authorize: function () {
             let ret = '未授权';
             this.cur_contract.rbac_users.forEach(ele => {
@@ -677,6 +701,9 @@ export default {
         },
     },
     methods: {
+        open_attach_pics: function () {
+            this.show_attach = true;
+        },
         mark_fapiao_deliver: async function () {
             await this.$send_req('/sale_management/set_fapiao_delivered', {
                 plan_id: this.focus_plan.id,
