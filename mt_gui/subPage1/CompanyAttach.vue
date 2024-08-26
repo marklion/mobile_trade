@@ -10,6 +10,7 @@
         </view>
     </fui-card>
     <view v-if="show_upload">
+        <fui-notice-bar :padding="['0','32rpx']" content="可以上传多张照片，系统会将其自动拼图" single></fui-notice-bar>
         <fui-upload ref="upload" :sizeType="['compressed']" :url="$remote_url() + '/api/v1/upload_file'" @success="upload_done"></fui-upload>
         <fui-button text="上传" type="primary" @click="upload_pics"></fui-button>
         <fui-button text="取消" color="#465CFF" borderColor="#465CFF" :plain="true" @click="show_upload = false"></fui-button>
