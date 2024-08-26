@@ -176,10 +176,10 @@ module.exports = {
                 return { result: true };
             },
         },
+        contract_update: common.contract_update,
         contract_make: {
             name: '生成合同',
             description: '生成合同',
-
             is_write: true,
             is_get_api: false,
             params: {
