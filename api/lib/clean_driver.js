@@ -3,7 +3,8 @@ const db_opt = require('../db_opt');
 function isLicensePlate(str) {
     return /^(([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z](([0-9]{5}[DF])|([DF]([A-HJ-NP-Z0-9])[0-9]{4})))|([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z][A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳使领]))$/.test(str);
 }
-const regStr = /[\t\s]/g;
+const regStr = /[\t\s]/;
+const regStrReplace = /[\t\s]/g;
 module.exports = {
     cleanDriverData: async function () {
         let sq = db_opt.get_sq();
@@ -15,9 +16,9 @@ module.exports = {
             await Promise.all(drivers.map(async (driver) => {
                 // 匹配tab制表符与空格符
                 if (regStr.test(driver.name) || regStr.test(driver.phone) || regStr.test(driver.id_card)) {
-                    const cleanedName = driver.name.replace(regStr, '');
-                    const cleanedIdCard = driver.id_card.replace(regStr, '');
-                    const cleanedPhone = driver.phone.replace(regStr, '');
+                    const cleanedName = driver.name.replaceAll(regStrReplace, '');
+                    const cleanedIdCard = driver.id_card.replaceAll(regStrReplace, '');
+                    const cleanedPhone = driver.phone.replaceAll(regStrReplace, '');
 
                     // 检查是否存在重复记录
                     const duplicate = await sq.models.driver.findOne({
@@ -60,6 +61,7 @@ module.exports = {
                     }
 
                 }
+                return driver;
             }));
             // 提交事务
             await transaction.commit();
@@ -77,7 +79,7 @@ module.exports = {
             const vehicles = await sq.models.vehicle.findAll({ transaction });
 
             await Promise.all(vehicles.map(async (vehicle) => {
-                const cleanedName = vehicle.plate.replace(regStr, '');
+                const cleanedName = vehicle.plate.replaceAll(regStrReplace, '');
                 if (isLicensePlate(cleanedName.toUpperCase())) {
                     // 检查是否存在重复记录
                     const duplicate = await sq.models.vehicle.findOne({
@@ -89,7 +91,7 @@ module.exports = {
                     });
                     if (duplicate) {
                         const relatedTables = ['plan', 'vehicle_set', 'sc_content'];
-                        await Promise.all(relatedTables.map((table) => {
+                        await Promise.all(relatedTables.map(async (table) => {
                             if (table == "sc_content") {
                                 // 更新 sc_content 表
                                 sq.models[table].update(
@@ -123,6 +125,7 @@ module.exports = {
                         ))
                         // 删除重复记录
                         await vehicle.destroy({ transaction })
+                        return table;
 
                     } else {
                             // 车牌号去空格、制表符、转大写
@@ -139,6 +142,7 @@ module.exports = {
                     // 删除非车牌数据
                     await vehicle.destroy({ transaction })
                 }
+                return vehicle;
             }));
             // 提交事务
             await transaction.commit();
