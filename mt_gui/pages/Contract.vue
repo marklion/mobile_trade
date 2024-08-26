@@ -2,7 +2,7 @@
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
     <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls]">
-        <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']"  :title="item.company.name" color="black" :tag="'￥' + item.balance">
+        <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']" :title="item.company.name" color="black" :tag="'￥' + item.balance.toFixed(2)">
             <view style="padding: 0 20rpx;position: relative;">
                 <view v-if="item.expired" class="expired_text">已过期</view>
                 <module-filter require_module="sale_management">
@@ -40,6 +40,7 @@
                         <fui-tag :scaleRatio="0.8" originLeft type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
                         <fui-tag :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
                     </module-filter>
+                    <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="purple" text="修改" @click="prepare_update(item)"></fui-tag>
                     <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
                 </view>
             </view>
@@ -47,6 +48,14 @@
         </fui-card>
     </list-show>
     <fui-button v-if="cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
+    <fui-modal width="600" :show="show_update_contract" @click="update_contract" v-if="show_update_contract">
+        <fui-form ref="update_contract" top="100">
+            <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="show_date_range = true"></fui-input>
+            <fui-input label="结束时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.end_time" @click="show_date_range = true"></fui-input>
+            <fui-input label="客商编码" borderTop placeholder="请输入客商编码" v-model="new_contract.customer_code"></fui-input>
+            <fui-input label="合同编号" borderTop placeholder="请输入合同编号" v-model="new_contract.number"></fui-input>
+        </fui-form>
+    </fui-modal>
     <fui-modal width="600" :show="show_add_contract" @click="add_contract" v-if="show_add_contract">
         <fui-form ref="add_contract" top="100">
             <fui-input label="客商" borderTop placeholder="点击选择客商" v-model="company_name" disabled @click="show_customers = true"></fui-input>
@@ -152,12 +161,13 @@ export default {
             cur_urls: {
                 get_url: '',
                 make_url: '',
+                update_url: '',
                 del_url: '',
                 need_su: false,
                 motive: false,
                 buy_setting: false,
-            }
-
+            },
+            show_update_contract: false,
         };
     },
     components: {
@@ -168,6 +178,7 @@ export default {
         change_seg: function (e) {
             this.cur_urls.get_url = e.get_url;
             this.cur_urls.make_url = e.make_url;
+            this.cur_urls.update_url = e.update_url;
             this.cur_urls.del_url = e.del_url;
             this.cur_urls.need_su = e.need_su;
             this.cur_urls.motive = e.motive;
@@ -194,6 +205,7 @@ export default {
                     get_url: '/sale_management/contract_get',
                     make_url: '/sale_management/contract_make',
                     del_url: '/sale_management/contract_destroy',
+                    update_url: '/sale_management/contract_update',
                     need_su: true,
                     motive: true,
                     buy_setting: false,
@@ -214,6 +226,7 @@ export default {
                     get_url: '/buy_management/contract_get',
                     make_url: '/buy_management/contract_make',
                     del_url: '/buy_management/contract_destroy',
+                    update_url: '/buy_management/contract_update',
                     need_su: false,
                     motive: true,
                     buy_setting: true,
@@ -222,6 +235,7 @@ export default {
             if (this.seg.length > 0) {
                 this.cur_urls.get_url = this.seg[0].get_url;
                 this.cur_urls.make_url = this.seg[0].make_url;
+                this.cur_urls.update_url = this.seg[0].update_url;
                 this.cur_urls.del_url = this.seg[0].del_url;
                 this.cur_urls.motive = this.seg[0].motive;
                 this.cur_urls.need_su = this.seg[0].need_su;
@@ -291,6 +305,10 @@ export default {
         prepare_del: function (item) {
             this.show_del = true;
             this.focus_item = item;
+        },
+        prepare_update: function (item) {
+            this.show_update_contract = true;
+            this.new_contract.contract_id = item.id;
         },
         unauth_user: async function (detail) {
             if (detail.index == 1) {
@@ -398,6 +416,13 @@ export default {
             });
             return ret.all_company;
         },
+        update_contract: async function (detail) {
+            if (detail.index == 1) {
+                await this.$send_req(this.cur_urls.update_url, this.new_contract);
+                uni.startPullDownRefresh();
+            }
+            this.show_update_contract = false;
+        },
         add_contract: async function (detail) {
             if (detail.index == 1) {
                 let rules = [{
@@ -451,10 +476,11 @@ export default {
 </script>
 
 <style scoped>
-.expired_line{
+.expired_line {
     text-decoration: line-through gray;
 }
-.expired_text{
+
+.expired_text {
     position: absolute;
     transform-origin: center;
     transform: rotate(45deg);

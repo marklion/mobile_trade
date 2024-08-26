@@ -1,14 +1,14 @@
 const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
-const bidding_lib = require('../lib/bidding_lib');
 const db_opt = require('../db_opt');
 const common = require('./common')
 module.exports = {
     name: 'buy_management',
     description: '采购管理',
     methods: {
-        order_update:common.order_update,
+        order_update: common.order_update,
+        contract_update: common.contract_update,
         contract_make: {
             name: '生成合同',
             description: '生成合同',
@@ -74,7 +74,7 @@ module.exports = {
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                         number: { type: String, mean: '合同号', example: "abc" },
                         customer_code: { type: String, mean: '客户合同号', example: "sss" },
-                        expired:{type:Boolean,mean:'是否过期',example:false},
+                        expired: { type: Boolean, mean: '是否过期', example: false },
                         company: {
                             type: Object, mean: '销售公司', explain: {
                                 id: { type: Number, mean: '公司ID', example: 1 },

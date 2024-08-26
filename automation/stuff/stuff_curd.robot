@@ -37,6 +37,11 @@ Contract Maintain
     Length Should Be  ${found_contracts}  1
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  2
+    ${update_info}  Create Dictionary  begin_time=2019-01-01  end_time=2040-01-02
+    Update A Sale Contract    ${found_contracts}[0][id]  &{update_info}
+    ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
+    Should Be Equal As Strings    ${found_contracts}[0][begin_time]    ${update_info}[begin_time]
+    Should Be Equal As Strings    ${found_contracts}[0][end_time]    ${update_info}[end_time]
     Del A Customer Contract  ${found_contracts[1]}[id]
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  1
@@ -44,6 +49,10 @@ Contract Maintain
     Length Should Be  ${found_contracts}  0
     ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  2
+    Update A Sale Contract    ${found_contracts}[0][id]  &{update_info}
+    ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
+    Should Be Equal As Strings    ${found_contracts}[0][begin_time]    ${update_info}[begin_time]
+    Should Be Equal As Strings    ${found_contracts}[0][end_time]    ${update_info}[end_time]
     Del A Supplier Contract  ${found_contracts[0]}[id]
     ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  1
