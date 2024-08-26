@@ -54,14 +54,24 @@
         </fui-list>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_add_vehicle" @close="show_add_vehicle= false">
-        <fui-input label="主车牌" v-model="new_vehicle.main_vehicle_plate">
-            <fui-button btnSize="mini" type="purple" text="选择" @click="show_pick_vehicles = true"></fui-button>
-        </fui-input>
-        <fui-input label="挂车牌" v-model="new_vehicle.behind_vehicle_plate"></fui-input>
-        <fui-input label="司机姓名" v-model="new_vehicle.driver_name"></fui-input>
-        <fui-input label="司机电话" v-model="new_vehicle.driver_phone"></fui-input>
-        <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
-        <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
+        <fui-form ref="new_vehicle_form" :show="false" :model="new_vehicle">
+            <fui-form-item asterisk label="主车牌" :rules="rules[0]" prop="main_vehicle_plate">
+                <fui-input :padding="[0]" v-model="new_vehicle.main_vehicle_plate">
+                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_pick_vehicles = true"></fui-button>
+                </fui-input>
+            </fui-form-item>
+            <fui-form-item label="挂车牌" :rules="rules[1]" prop="behind_vehicle_plate">
+                <fui-input :padding="[0]" v-model="new_vehicle.behind_vehicle_plate"></fui-input>
+            </fui-form-item>
+            <fui-form-item asterisk label="司机姓名" :rules="rules[2]" prop="driver_name">
+                <fui-input :padding="[0]" v-model="new_vehicle.driver_name"></fui-input>
+            </fui-form-item>
+            <fui-form-item asterisk label="司机电话" :rules="rules[3]" prop="driver_phone">
+                <fui-input :padding="[0]" v-model="new_vehicle.driver_phone"></fui-input>
+            </fui-form-item>
+            <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
+            <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
+        </fui-form>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_add_vt" @close="show_add_vt= false">
         <list-show :fetch_function="get_vt_list" height="70vh" search_key="name" v-model="all_vt_list">
@@ -122,6 +132,26 @@ export default {
                 driver_phone: '',
                 comment: '',
             },
+            rules: [{
+                    name: "main_vehicle_plate",
+                    rule: ["required", "isCarNo"],
+                    msg: ["请输入主车牌", "请输入正确的主车牌"]
+                },
+                {
+                    name: "behind_vehicle_plate",
+                    rule: ["isCarNo"],
+                    msg: ["请输入正确的挂车牌"]
+                },
+                {
+                    name: "driver_name",
+                    rule: ["required", "isChinese"],
+                    msg: ["请输入司机姓名", "请输入正确的司机姓名"]
+                }, {
+                    name: "driver_phone",
+                    rule: ["required", "isMobile"],
+                    msg: ["请输入司机电话", "请输入正确的手机号"]
+                },
+            ],
             show_add_vehicle: false,
             address: [],
             show_plan_time: false,
@@ -151,6 +181,28 @@ export default {
     components: {
         "list-show": ListShow,
         "pick-regions": pickRegions,
+    },
+    watch: {
+        'new_vehicle.main_vehicle_plate': {
+            handler(newValue, oldValue) {
+                // 转换为大写
+                const upperCaseValue = newValue.toUpperCase();
+                this.$nextTick(() => {
+                    this.new_vehicle.main_vehicle_plate = upperCaseValue;
+                });
+            },
+            immediate: true,
+        },
+        'new_vehicle.behind_vehicle_plate': {
+            handler(newValue, oldValue) {
+                // 转换为大写
+                const upperCaseValue = newValue.toUpperCase();
+                this.$nextTick(() => {
+                    this.new_vehicle.behind_vehicle_plate = upperCaseValue;
+                });
+            },
+            immediate: true,
+        }
     },
     methods: {
         choose_vt: async function (vt) {
@@ -211,47 +263,55 @@ export default {
             }
         },
         add_vehicle: async function () {
-            let mv = await this.$send_req(this.type_define.vh_fetch_url, {
-                plate: this.new_vehicle.main_vehicle_plate,
-            });
-            let bv = await this.$send_req(this.type_define.vh_fetch_url, {
-                plate: this.new_vehicle.behind_vehicle_plate,
-            });
-            let dr = await this.$send_req(this.type_define.dr_fetch_url, {
-                phone: this.new_vehicle.driver_phone,
-                name: this.new_vehicle.driver_name,
-            });
-            this.vehicles.unshift({
-                main_vehicle: {
-                    id: mv.id,
-                    plate: this.new_vehicle.main_vehicle_plate,
-                },
-                behind_vehicle: {
-                    id: bv.id,
-                    plate: this.new_vehicle.behind_vehicle_plate,
-                },
-                driver: {
-                    id: dr.id,
-                    name: this.new_vehicle.driver_name,
-                    phone: this.new_vehicle.driver_phone,
-                },
-                comment: this.new_vehicle.comment,
-            });
-            this.new_vehicle = {
-                main_vehicle_plate: '',
-                behind_vehicle_plate: '',
-                driver_name: '',
-                driver_phone: '',
-                comment: '',
-            };
-            this.show_add_vehicle = false;
+            this.$refs.new_vehicle_form.validator(null, null, true).then(async res => {
+                if (res.isPassed) {
+                    let mv = await this.$send_req(this.type_define.vh_fetch_url, {
+                        plate: this.new_vehicle.main_vehicle_plate,
+                    });
+                    let bv = await this.$send_req(this.type_define.vh_fetch_url, {
+                        plate: this.new_vehicle.behind_vehicle_plate,
+                    });
+                    let dr = await this.$send_req(this.type_define.dr_fetch_url, {
+                        phone: this.new_vehicle.driver_phone,
+                        name: this.new_vehicle.driver_name,
+                    });
+                    this.vehicles.unshift({
+                        main_vehicle: {
+                            id: mv.id,
+                            plate: this.new_vehicle.main_vehicle_plate,
+                        },
+                        behind_vehicle: {
+                            id: bv.id,
+                            plate: this.new_vehicle.behind_vehicle_plate,
+                        },
+                        driver: {
+                            id: dr.id,
+                            name: this.new_vehicle.driver_name,
+                            phone: this.new_vehicle.driver_phone,
+                        },
+                        comment: this.new_vehicle.comment,
+                    });
+                    this.new_vehicle = {
+                        main_vehicle_plate: '',
+                        behind_vehicle_plate: '',
+                        driver_name: '',
+                        driver_phone: '',
+                        comment: '',
+                    };
+                    this.show_add_vehicle = false;
+                }
+            }).catch(err => {
+                console.log(err)
+            })
+
         },
         get_vehicles: async function (pageNo, [pair_get_url]) {
             let res = await this.$send_req(pair_get_url, {
                 pageNo: pageNo,
             });
             res.pairs.forEach(ele => {
-                ele.search_cond = ele.main_vehicle_plate + ele.behind_vehicle_plate + ele.driver_name + ele.driver_phone;
+                ele.search_cond = ele.main_vehicle_plate + ele.behind_vehicle_plate + ele.driver_name +
+                    ele.driver_phone;
             });
 
             return res.pairs;
