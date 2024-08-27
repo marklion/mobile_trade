@@ -79,6 +79,7 @@ module.exports = {
                             type: Object, mean: '销售公司', explain: {
                                 id: { type: Number, mean: '公司ID', example: 1 },
                                 name: { type: String, mean: '公司名称', example: '公司名称' },
+                                attachment: { type: String, mean: '附件', example: '附件' },
                             }
                         },
                         stuff: {

@@ -23,6 +23,7 @@
                         <fui-tag v-if="cur_urls.need_su" :scaleRatio="0.8" originLeft type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
                     </view>
                 </module-filter>
+                <fui-tag text="查看资质" :scaleRatio="0.8" originLeft type="primary" @click="show_attach_pic(item)"></fui-tag>
                 <view>
                     <view v-if="item.begin_time && item.end_time" style="color: blue;">
                         {{item.begin_time}}至{{item.end_time}}
@@ -47,6 +48,8 @@
             <fui-white-space size="large"></fui-white-space>
         </fui-card>
     </list-show>
+
+    <fui-gallery :urls="attach_url" v-if="show_attach" :show="show_attach" @hide="show_attach = false"></fui-gallery>
     <fui-button v-if="cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
     <fui-modal width="600" :show="show_update_contract" @click="update_contract" v-if="show_update_contract">
         <fui-form ref="update_contract" top="100">
@@ -124,6 +127,8 @@ export default {
     name: 'Contract',
     data: function () {
         return {
+            show_attach: false,
+            attach_url: [],
             seg: [],
             histories_data2show: [],
             stuff_data2show: [],
@@ -175,6 +180,14 @@ export default {
         "module-filter": ModuleFilter
     },
     methods: {
+        show_attach_pic: function (item) {
+            this.show_attach = true;
+            if (item.company.attachment) {
+                this.attach_url = [item.company.attachment];
+            } else {
+                this.attach_url = ['/static/no_att.jpg'];
+            }
+        },
         change_seg: function (e) {
             this.cur_urls.get_url = e.get_url;
             this.cur_urls.make_url = e.make_url;
