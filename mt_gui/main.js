@@ -84,8 +84,26 @@ Vue.prototype.$get_login_code = function () {
     });
   });
 };
+Vue.prototype.$regExp = function validate(type, value) {
+  const patterns = {
+    licensePlate: {
+      regular: /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-Z0-9]{4}[A-Z0-9挂学警港澳]{1}$/,
+    },
+    chineseName: /^[\u4e00-\u9fa5·]{2,10}$/,
+    phoneNumber: /^1[3-9]\d{9}$/
+  };
 
-
+  switch (type) {
+    case 'plate':
+      return patterns.licensePlate.regular.test(value);
+    case 'name':
+      return patterns.chineseName.test(value);
+    case 'phone':
+      return patterns.phoneNumber.test(value);
+    default:
+      throw new Error('Unsupported validation type');
+  }
+}
 App.mpType = 'app'
 const app = new Vue({
   ...App
