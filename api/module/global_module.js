@@ -9,6 +9,7 @@ const captureWebsite = require('capture-website');
 const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
+const clean_driver = require('../lib/clean_driver')
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -1264,22 +1265,51 @@ module.exports = {
                 return ret;
             }
         },
-        get_company_attach: {
-            name: '获取公司附件',
-            description: '获取公司附件',
-            need_rbac: false,
-            is_write: false,
+        clean_table_data: {
+            name: '清除冗余数据',
+            description: '清除冗余数据',
+            is_write: true,
             is_get_api: false,
-            params: {
-            },
+            params: {},
             result: {
-                attach: { type: String, mean: '附件', example: 'https://www.baidu.com' }
+                msg: { type: String, mean: '结果' },
             },
-            func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                return { attach: company.attachment };
-            }
+            func: async function (body) {
+                try {
+                    // 清除driver表脏数据
+                    if (body.table == "driver") {
+                        await clean_driver.cleanDriverData();
+                        return { msg: '清除成功' };
+                    }
+                    else if (body.table == "vehicle") {
+                        await clean_driver.cleanVehicleData();
+                        return { msg: '清除成功' };
+                    }
+                    else{
+                        return { msg: '参数错误' };
+                    }
+
+                } catch (error) {
+                    return { msg: `清除失败${error}` };
+                }
+            },  
+    },
+    get_company_attach: {
+        name: '获取公司附件',
+        description: '获取公司附件',
+        need_rbac: false,
+        is_write: false,
+        is_get_api: false,
+        params: {
         },
+        result: {
+            attach: { type: String, mean: '附件', example: 'https://www.baidu.com' }
+        },
+        func: async function (body, token) {
+            let company = await rbac_lib.get_company_by_token(token);
+            return { attach: company.attachment };
+        }
+    },
         set_company_attach: {
             name: '设置公司附件',
             description: '设置公司附件',
