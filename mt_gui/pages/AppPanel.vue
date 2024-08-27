@@ -21,7 +21,8 @@ export default {
                     name: '物料管理',
                     icon: 'list',
                     path: 'Stuff',
-                    require_module: 'stuff'
+                    require_module: 'stuff',
+                    sub_page_name: 'subPage1'
                 }, {
                     name: '竞价管理',
                     icon: 'bankcard',

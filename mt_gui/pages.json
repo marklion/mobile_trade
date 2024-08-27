@@ -7,7 +7,7 @@
 			}
 		},
 		{
-			"path":"pages/Export",
+			"path": "pages/Export",
 			"style": {
 				"enablePullDownRefresh": true
 			}
@@ -23,12 +23,6 @@
 		},
 		{
 			"path": "pages/AppPanel"
-		},
-		{
-			"path": "pages/Stuff",
-			"style": {
-				"enablePullDownRefresh": true
-			}
 		},
 		{
 			"path": "pages/Contract",
@@ -57,12 +51,12 @@
 		{
 			"path": "pages/Driver",
 			"style": {
-				"navigationStyle":"custom",
-				"app-plus":{
+				"navigationStyle": "custom",
+				"app-plus": {
 					"popGesture": "none",
-					"titleNView" :{
-						"titleSize":"18px",
-						"autoBackButton":false
+					"titleNView": {
+						"titleSize": "18px",
+						"autoBackButton": false
 					}
 				},
 				"disableSwipeBack": true,
@@ -88,12 +82,8 @@
 			}
 		},
 		{
-			"path": "pages/OrderCreate"
-		},
-		{
 			"path": "pages/DevPage"
 		},
-
 		{
 			"path": "pages/Ticket"
 		},
@@ -131,6 +121,15 @@
 				},
 				{
 					"path": "CompanyAttach"
+				},
+				{
+					"path": "OrderCreate"
+				},
+				{
+					"path": "Stuff",
+					"style": {
+						"enablePullDownRefresh": true
+					}
 				},
 				{
 					"path": "PlanExam",

@@ -218,7 +218,7 @@ export default {
                 is_buy = 'true'
             }
             uni.navigateTo({
-                url: '/pages/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name + '&is_buy=' + is_buy + "&company_id=" + item.company.id,
+                url: '/subPage1/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name + '&is_buy=' + is_buy + "&company_id=" + item.company.id,
             });
         },
         get_stuff2buy: async function (pageNo) {
