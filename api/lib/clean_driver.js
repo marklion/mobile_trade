@@ -3,6 +3,9 @@ const db_opt = require('../db_opt');
 function isLicensePlate(str) {
     return /^(([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z](([0-9]{5}[DF])|([DF]([A-HJ-NP-Z0-9])[0-9]{4})))|([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领][A-Z][A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳使领]))$/.test(str);
 }
+function isPhone(str) {
+    return /^1[3-9]\d{9}$/.test(str);
+}
 const regStr = /[\t\s]/;
 const regStrReplace = /[\t\s]/g;
 module.exports = {
@@ -15,20 +18,16 @@ module.exports = {
 
             await Promise.all(drivers.map(async (driver) => {
                 // 匹配tab制表符与空格符
-                if (regStr.test(driver.name) || regStr.test(driver.phone) || regStr.test(driver.id_card)) {
-                    const cleanedName = driver.name.replaceAll(regStrReplace, '');
-                    const cleanedIdCard = driver.id_card.replaceAll(regStrReplace, '');
-                    const cleanedPhone = driver.phone.replaceAll(regStrReplace, '');
+                if (regStr.test(driver.name) || regStr.test(driver.phone) || regStr.test(driver.id_card) || isPhone(driver.phone)==false) {
+                    const cleanedName = driver.name+''.replaceAll(regStrReplace, '');
+                    const cleanedIdCard = driver.id_card+''.replaceAll(regStrReplace, '');
+                    const cleanedPhone = driver.phone+''.replaceAll(regStrReplace, '');
 
                     // 检查是否存在重复记录
                     const duplicate = await sq.models.driver.findOne({
                         where: {
                             id: { [db_opt.Op.ne]: driver.id },
-                            [db_opt.Op.or]:{
-                                name: cleanedName,
-                                id_card: cleanedIdCard + '',
-                                phone: cleanedPhone,
-                            }
+                            phone: cleanedPhone
                         },
                         transaction
                     });
@@ -49,15 +48,22 @@ module.exports = {
                         await driver.destroy({ transaction })
                     }
                     else {
-                        // 去空格、制表符、转大写
-                        await sq.query(
-                            'UPDATE OR IGNORE driver SET name = :name AND phone = :phone AND id_card = :id_card WHERE id = :id',
-                            {
-                                replacements: { name: cleanedName, phone: cleanedPhone, id_card: cleanedIdCard, id: driver.id },
-                                type: sq.QueryTypes.UPDATE,
-                                transaction
-                            }
-                        );
+                        if(isPhone(driver.phone)==false){
+                            // 删除非电话号数据
+                            await driver.destroy({ transaction })
+                        }
+                        else{
+                            // 去空格、制表符、转大写
+                            await sq.query(
+                                'UPDATE OR IGNORE driver SET name = :name AND phone = :phone AND id_card = :id_card WHERE id = :id',
+                                {
+                                    replacements: { name: cleanedName, phone: cleanedPhone, id_card: cleanedIdCard, id: driver.id },
+                                    type: sq.QueryTypes.UPDATE,
+                                    transaction
+                                }
+                            );
+                        }
+                        
                     }
 
                 }
@@ -68,7 +74,9 @@ module.exports = {
         } catch (error) {
             // 回滚事务
             await transaction.rollback();
+            console.log(error)
             throw new Error('driver数据清理过程中发生错误');
+            
         }
     },
     cleanVehicleData: async function () {
