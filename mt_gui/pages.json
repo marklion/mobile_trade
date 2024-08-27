@@ -130,6 +130,9 @@
 					"path": "RoleConfig"
 				},
 				{
+					"path": "CompanyAttach"
+				},
+				{
 					"path": "PlanExam",
 					"style": {
 						"enablePullDownRefresh": true

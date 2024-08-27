@@ -21,7 +21,6 @@
                         <fui-text :text="self_info.phone"></fui-text>
                     </fui-col>
                 </fui-row>
-
             </fui-col>
         </fui-row>
     </view>
@@ -38,6 +37,7 @@
         <fui-list-cell arrow @click="rebind">
             重新绑定信息
         </fui-list-cell>
+        <u-cell title="公司资质" isLink url="/subPage1/CompanyAttach"></u-cell>
         <module-filter require_module="rbac">
             <fui-list-cell arrow @click="config_role">
                 角色配置
@@ -107,7 +107,7 @@ export default {
                 lat: '',
                 lon: '',
                 distance_limit: '',
-                check_in_stay_minutes:''
+                check_in_stay_minutes: ''
             },
         };
     },
@@ -164,7 +164,7 @@ export default {
                     name: 'distance_limit',
                     rule: ['required', 'isAmount'],
                     msg: ['请输入距离', '距离请填写数字']
-                },{
+                }, {
                     name: 'check_in_stay_minutes',
                     rule: ['isAmount'],
                     msg: ['间隔请填写数字']
