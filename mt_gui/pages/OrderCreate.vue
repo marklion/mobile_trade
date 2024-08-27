@@ -100,7 +100,7 @@
         </fui-list>
     </fui-bottom-popup>
     <fui-modal :show="notice_show" v-if="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
-    <fui-actionsheet :show="show_import" :tips="tips" :itemList="import_sheet" @cancel="show_import=false" @click="driver_import"></fui-actionsheet>
+    <fui-actionsheet v-if="show_import" :show="show_import" :tips="tips" :itemList="import_sheet" @cancel="show_import=false" @click="driver_import"></fui-actionsheet>
     <fui-message ref="msg"></fui-message>
 </view>
 </template>
@@ -325,10 +325,10 @@ export default {
             ws.eachRow(function (row, rowNumber) {
                 if (rowNumber != 1) {
                     ret.push({
-                        main_vehicle: row.getCell(1).text.toUpperCase().replaceAll(regStrReplace,''),
-                        behind_vehicle: row.getCell(2).text.toUpperCase().replaceAll(regStrReplace,''),
-                        driver_name: row.getCell(3).text.toUpperCase().replaceAll(regStrReplace,''),
-                        driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace,'')
+                        main_vehicle: row.getCell(1).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        behind_vehicle: row.getCell(2).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        driver_name: row.getCell(3).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace, '')
                     })
                 }
             });

@@ -22,32 +22,48 @@
                 <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
             </view>
             <fui-white-space size="large"></fui-white-space>
-            <fui-row style="padding: 0 13rpx;">
+            <fui-row>
                 <fui-col :span="12">
-                    <fui-label full style="display: flex;align-items: center;">
-                        <text>需要安检</text>
-                        <fui-switch :scaleRatio="0.8" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
+                    <fui-label>
+                        <fui-list-cell>
+                            <view class="fui-list__cell">
+                                <fui-text size="28" text="需要安检"></fui-text>
+                                <fui-switch :scaleRatio="0.7" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
+                            </view>
+                        </fui-list-cell>
                     </fui-label>
                 </fui-col>
                 <fui-col :span="12">
-                    <fui-label full style="display: flex;align-items: center;">
-                        <text>需要进厂前重量</text>
-                        <fui-switch :scaleRatio="0.8" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
+                    <fui-label>
+                        <fui-list-cell>
+                            <view class="fui-list__cell">
+                                <fui-text size="28" text="需要进厂前重量"></fui-text>
+                                <fui-switch :scaleRatio="0.7" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
+                            </view>
+                        </fui-list-cell>
                     </fui-label>
                 </fui-col>
             </fui-row>
             <fui-white-space size="large"></fui-white-space>
-            <fui-row style="padding: 0 13rpx;">
+            <fui-row>
                 <fui-col :span="12">
-                    <fui-label full style="display: flex;align-items: center;">
-                        <text>需要考试</text>
-                        <fui-switch :scaleRatio="0.8" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
+                    <fui-label>
+                        <fui-list-cell>
+                            <view class="fui-list__cell">
+                                <fui-text size="28" text="需要考试"></fui-text>
+                                <fui-switch :scaleRatio="0.7" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
+                            </view>
+                        </fui-list-cell>
                     </fui-label>
                 </fui-col>
                 <fui-col :span="12">
-                    <fui-label full style="display: flex;align-items: center;">
-                        <text>不用排号</text>
-                        <fui-switch :scaleRatio="0.8" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
+                    <fui-label>
+                        <fui-list-cell>
+                            <view class="fui-list__cell">
+                                <fui-text size="28" text="不用排号"></fui-text>
+                                <fui-switch :scaleRatio="0.7" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
+                            </view>
+                        </fui-list-cell>
                     </fui-label>
                 </fui-col>
             </fui-row>
@@ -378,4 +394,11 @@ export default {
 }
 </script>
 
-<style></style>
+<style scoped>
+.fui-list__cell {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+</style>

@@ -18,6 +18,7 @@
             </view>
         </view>
         <module-filter style="margin-top: 60rpx;" require_module="sale_management">
+            <fui-white-space size="large"></fui-white-space>
             <u-row style="margin: 20rpx 20rpx;">
                 <u-col span="10">
                     <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
