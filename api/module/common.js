@@ -102,6 +102,33 @@ module.exports = {
             return { result: true };
         },
     },
+    contract_update: {
+        name: '更新合同',
+        description: '更新合同',
+        is_write: true,
+        is_get_api: false,
+        params: {
+            contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+            begin_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01 12:00:00' },
+            end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01 12:00:00' },
+            number: { type: String, have_to: false, mean: '合同号', example: 1 },
+            customer_code: { type: String, have_to: false, mean: '客户合同号', example: 1 },
+        },
+        result: {
+            result: { type: Boolean, mean: '结果', example: true }
+        },
+        func: async function (body, token) {
+            let company = await rbac_lib.get_company_by_token(token);
+            let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
+            if (await company.hasBuy_contract(contract) || await company.hasSale_contract(contract)) {
+                await plan_lib.update_contract(body.contract_id, body.begin_time, body.end_time, body.number, body.customer_code);
+            }
+            else {
+                throw { err_msg: '无权限' };
+            }
+            return { result: true };
+        },
+    },
     get_vehicle_pair: {
         name: '获取车辆历史数据',
         description: '获取车辆历史数据',
