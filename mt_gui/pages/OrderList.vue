@@ -20,15 +20,15 @@
             </fui-tag>
         </module-filter>
 
-        <view style="padding: 0 20rpx;">
-            <fui-row>
-                <fui-col style="display: flex;">
+        <view style="padding-top: 10rpx;">
+            <fui-row :gutter="20">
+                <fui-col :span="7" v-if="!select_active">
                     显示取消计划
+                </fui-col>
+                <fui-col :span="4" v-if="!select_active">
                     <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
                 </fui-col>
-            </fui-row>
-            <fui-row>
-                <fui-col>
+                <fui-col :span="13">
                     <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
                     </fui-tag>
                     <view v-else style="display:flex; align-items: center;">
@@ -43,7 +43,6 @@
                     </view>
                 </fui-col>
             </fui-row>
-
         </view>
     </view>
     <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
