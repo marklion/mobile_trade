@@ -31,9 +31,10 @@
             <fui-input placeholder="请输入承运公司" v-model="plan.trans_company_name"></fui-input>
         </fui-form-item>
         <view style="display:flex; justify-content: center;">
-            <fui-button text="新增车辆" btnSize="small" type="success" @click="show_add_vehicle = true"></fui-button>
-            <fui-button text="选择车队" btnSize="small" type="warning" @click="show_add_vt = true"></fui-button>
-            <fui-button v-if="!type_define.is_sale" text="我要代提" btnSize="small" type="primary" @click="prepare_proxy_buy"></fui-button>
+            <fui-button text="新增车辆" btnSize="mini" radius="0" type="success" @click="show_add_vehicle = true"></fui-button>
+            <fui-button text="选择车队" btnSize="mini" radius="0" type="warning" @click="show_add_vt = true"></fui-button>
+            <fui-button v-if="!type_define.is_sale" text="我要代提" btnSize="mini" radius="0" type="primary" @click="prepare_proxy_buy"></fui-button>
+            <fui-button text="导入" btnSize="mini" radius="0" type="purple" @click="show_import=true"></fui-button>
         </view>
         <fui-grid :columns="2" :square="false">
             <fui-grid-item v-for="(single_v, index) in vehicles" :key="index">
@@ -54,14 +55,24 @@
         </fui-list>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_add_vehicle" @close="show_add_vehicle= false">
-        <fui-input label="主车牌" v-model="new_vehicle.main_vehicle_plate">
-            <fui-button btnSize="mini" type="purple" text="选择" @click="show_pick_vehicles = true"></fui-button>
-        </fui-input>
-        <fui-input label="挂车牌" v-model="new_vehicle.behind_vehicle_plate"></fui-input>
-        <fui-input label="司机姓名" v-model="new_vehicle.driver_name"></fui-input>
-        <fui-input label="司机电话" v-model="new_vehicle.driver_phone"></fui-input>
-        <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
-        <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
+        <fui-form ref="new_vehicle_form" :show="false" :model="new_vehicle">
+            <fui-form-item asterisk label="主车牌" :rules="rules[0]" prop="main_vehicle_plate">
+                <fui-input :padding="[0]" v-model="new_vehicle.main_vehicle_plate">
+                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_pick_vehicles = true"></fui-button>
+                </fui-input>
+            </fui-form-item>
+            <fui-form-item label="挂车牌" :rules="rules[1]" prop="behind_vehicle_plate">
+                <fui-input :padding="[0]" v-model="new_vehicle.behind_vehicle_plate"></fui-input>
+            </fui-form-item>
+            <fui-form-item asterisk label="司机姓名" :rules="rules[2]" prop="driver_name">
+                <fui-input :padding="[0]" v-model="new_vehicle.driver_name"></fui-input>
+            </fui-form-item>
+            <fui-form-item asterisk label="司机电话" :rules="rules[3]" prop="driver_phone">
+                <fui-input :padding="[0]" v-model="new_vehicle.driver_phone"></fui-input>
+            </fui-form-item>
+            <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
+            <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
+        </fui-form>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_add_vt" @close="show_add_vt= false">
         <list-show :fetch_function="get_vt_list" height="70vh" search_key="name" v-model="all_vt_list">
@@ -89,6 +100,8 @@
         </fui-list>
     </fui-bottom-popup>
     <fui-modal :show="notice_show" v-if="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
+    <fui-actionsheet :show="show_import" :tips="tips" :itemList="import_sheet" @cancel="show_import=false" @click="driver_import"></fui-actionsheet>
+    <fui-message ref="msg"></fui-message>
 </view>
 </template>
 
@@ -100,6 +113,13 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            show_import: false,
+            import_sheet: [{
+                text: '选择文件',
+                color: '#0000FF'
+            }, {
+                text: '下载模板',
+            }],
             all_vt_list: [],
             show_add_vt: false,
             notice_show: false,
@@ -122,6 +142,26 @@ export default {
                 driver_phone: '',
                 comment: '',
             },
+            rules: [{
+                    name: "main_vehicle_plate",
+                    rule: ["required", "isCarNo"],
+                    msg: ["请输入主车牌", "请输入正确的主车牌"]
+                },
+                {
+                    name: "behind_vehicle_plate",
+                    rule: ["isCarNo"],
+                    msg: ["请输入正确的挂车牌"]
+                },
+                {
+                    name: "driver_name",
+                    rule: ["required", "isChinese"],
+                    msg: ["请输入司机姓名", "请输入正确的司机姓名"]
+                }, {
+                    name: "driver_phone",
+                    rule: ["required", "isMobile"],
+                    msg: ["请输入司机电话", "请输入正确的手机号"]
+                },
+            ],
             show_add_vehicle: false,
             address: [],
             show_plan_time: false,
@@ -151,6 +191,28 @@ export default {
     components: {
         "list-show": ListShow,
         "pick-regions": pickRegions,
+    },
+    watch: {
+        'new_vehicle.main_vehicle_plate': {
+            handler(newValue, oldValue) {
+                // 转换为大写
+                const upperCaseValue = newValue.toUpperCase();
+                this.$nextTick(() => {
+                    this.new_vehicle.main_vehicle_plate = upperCaseValue;
+                });
+            },
+            immediate: true,
+        },
+        'new_vehicle.behind_vehicle_plate': {
+            handler(newValue, oldValue) {
+                // 转换为大写
+                const upperCaseValue = newValue.toUpperCase();
+                this.$nextTick(() => {
+                    this.new_vehicle.behind_vehicle_plate = upperCaseValue;
+                });
+            },
+            immediate: true,
+        }
     },
     methods: {
         choose_vt: async function (vt) {
@@ -211,47 +273,187 @@ export default {
             }
         },
         add_vehicle: async function () {
-            let mv = await this.$send_req(this.type_define.vh_fetch_url, {
-                plate: this.new_vehicle.main_vehicle_plate,
+            this.$refs.new_vehicle_form.validator(null, null, true).then(async res => {
+                if (res.isPassed) {
+                    let mv = await this.$send_req(this.type_define.vh_fetch_url, {
+                        plate: this.new_vehicle.main_vehicle_plate,
+                    });
+                    let bv = await this.$send_req(this.type_define.vh_fetch_url, {
+                        plate: this.new_vehicle.behind_vehicle_plate,
+                    });
+                    let dr = await this.$send_req(this.type_define.dr_fetch_url, {
+                        phone: this.new_vehicle.driver_phone,
+                        name: this.new_vehicle.driver_name,
+                    });
+                    this.vehicles.unshift({
+                        main_vehicle: {
+                            id: mv.id,
+                            plate: this.new_vehicle.main_vehicle_plate,
+                        },
+                        behind_vehicle: {
+                            id: bv.id,
+                            plate: this.new_vehicle.behind_vehicle_plate,
+                        },
+                        driver: {
+                            id: dr.id,
+                            name: this.new_vehicle.driver_name,
+                            phone: this.new_vehicle.driver_phone,
+                        },
+                        comment: this.new_vehicle.comment,
+                    });
+                    this.new_vehicle = {
+                        main_vehicle_plate: '',
+                        behind_vehicle_plate: '',
+                        driver_name: '',
+                        driver_phone: '',
+                        comment: '',
+                    };
+                    this.show_add_vehicle = false;
+                }
+            }).catch(err => {
+                console.log(err)
+            })
+
+        },
+        convert_excel2array: async function (file_content) {
+            const Excel = require('exceljs');
+            let wb = new Excel.Workbook();
+            let workbook = await wb.xlsx.load(file_content)
+            let ws = workbook.getWorksheet(1);
+            let ret = [];
+            const regStrReplace = /[\t\s]/g;
+            ws.eachRow(function (row, rowNumber) {
+                if (rowNumber != 1) {
+                    ret.push({
+                        main_vehicle: row.getCell(1).text.toUpperCase().replaceAll(regStrReplace,''),
+                        behind_vehicle: row.getCell(2).text.toUpperCase().replaceAll(regStrReplace,''),
+                        driver_name: row.getCell(3).text.toUpperCase().replaceAll(regStrReplace,''),
+                        driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace,'')
+                    })
+                }
             });
-            let bv = await this.$send_req(this.type_define.vh_fetch_url, {
-                plate: this.new_vehicle.behind_vehicle_plate,
-            });
-            let dr = await this.$send_req(this.type_define.dr_fetch_url, {
-                phone: this.new_vehicle.driver_phone,
-                name: this.new_vehicle.driver_name,
-            });
-            this.vehicles.unshift({
-                main_vehicle: {
-                    id: mv.id,
-                    plate: this.new_vehicle.main_vehicle_plate,
+            return ret;
+        },
+        driver_import: function (event) {
+            if (event.index == 0) {
+                this.import_vehicle();
+            }
+            if (event.index == 1) {
+                this.download_temple();
+            }
+        },
+        download_temple: async function () {
+            uni.downloadFile({
+                url: this.$convert_attach_url('/uploads/模板.xlsx'),
+                success: (res) => {
+                    const filePath = res.tempFilePath
+                    uni.openDocument({
+                        filePath: filePath,
+                        showMenu: true,
+                    })
                 },
-                behind_vehicle: {
-                    id: bv.id,
-                    plate: this.new_vehicle.behind_vehicle_plate,
-                },
-                driver: {
-                    id: dr.id,
-                    name: this.new_vehicle.driver_name,
-                    phone: this.new_vehicle.driver_phone,
-                },
-                comment: this.new_vehicle.comment,
-            });
-            this.new_vehicle = {
-                main_vehicle_plate: '',
-                behind_vehicle_plate: '',
-                driver_name: '',
-                driver_phone: '',
-                comment: '',
-            };
-            this.show_add_vehicle = false;
+                fail: (res) => {
+                    console.log(res);
+                }
+            })
+        },
+        import_vehicle: async function () {
+            try {
+                // 选择文件
+                let res = await wx.chooseMessageFile({
+                    count: 1,
+                    type: 'file',
+                    extension: ['xlsx'],
+                });
+
+                // 读取文件
+                let file_path = res.tempFiles[0].path;
+                let fsm = wx.getFileSystemManager();
+                let file_buffer = fsm.readFileSync(file_path, 'binary');
+
+                // 转换Excel到数组
+                let ar = await this.convert_excel2array(file_buffer);
+
+                let importInfo = {
+                    successCount: 0,
+                    errorCount: 0,
+                    totalCount: ar.length
+                };
+
+                // 数据验证函数
+                const isValidData = (element) => {
+                    return (this.$regExp('plate', element.main_vehicle) || this.$regExp('plate', element.behind_vehicle)) &&
+                        (this.$regExp('name', element.driver_name) && this.$regExp('phone', element.driver_phone));
+                };
+
+                // 处理数据
+                const processedData = await Promise.all(ar.map(async (element) => {
+                    if (isValidData(element)) {
+                        try {
+                            const [mv, bv, dr] = await Promise.all([
+                                this.$send_req(this.type_define.vh_fetch_url, {
+                                    plate: element.main_vehicle
+                                }),
+                                this.$send_req(this.type_define.vh_fetch_url, {
+                                    plate: element.behind_vehicle
+                                }),
+                                this.$send_req(this.type_define.dr_fetch_url, {
+                                    phone: element.driver_phone,
+                                    name: element.driver_name
+                                })
+                            ]);
+
+                            importInfo.successCount++;
+                            return {
+                                main_vehicle: {
+                                    id: mv.id,
+                                    plate: element.main_vehicle
+                                },
+                                behind_vehicle: {
+                                    id: bv.id,
+                                    plate: element.behind_vehicle
+                                },
+                                driver: {
+                                    id: dr.id,
+                                    name: element.driver_name,
+                                    phone: element.driver_phone
+                                },
+                                comment: '文件导入'
+                            };
+                        } catch (error) {
+                            console.error('error:', error);
+                            importInfo.errorCount++;
+                            return null;
+                        }
+                    } else {
+                        importInfo.errorCount++;
+                        return null;
+                    }
+                }));
+
+                // 添加有效数据到 vehicles 数组
+                this.vehicles.unshift(...processedData.filter(item => item !== null));
+
+                this.show_import = false;
+                this.$refs.msg.show({
+                    text: `成功导入${importInfo.successCount}条,失败${importInfo.errorCount}条`,
+                    duration: 3000
+                });
+            } catch (error) {
+                console.error('Import failed:', error);
+                this.$refs.msg.show({
+                    text: '导入失败，请重试',
+                    duration: 3000
+                });
+            }
         },
         get_vehicles: async function (pageNo, [pair_get_url]) {
             let res = await this.$send_req(pair_get_url, {
                 pageNo: pageNo,
             });
             res.pairs.forEach(ele => {
-                ele.search_cond = ele.main_vehicle_plate + ele.behind_vehicle_plate + ele.driver_name + ele.driver_phone;
+                ele.search_cond = ele.main_vehicle_plate + ele.behind_vehicle_plate + ele.driver_name +
+                    ele.driver_phone;
             });
 
             return res.pairs;

@@ -1,6 +1,8 @@
 const express = require('express');
 const json2md = require('json2md');
 const moment = require('moment');
+const mergeImg = require('merge-img');
+const jimp = require('jimp').default;
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -92,6 +94,40 @@ app.post('/api/v1/upload_file', upload.single('file'), (req, res) => {
         fs.writeFileSync('/database' + filePath, decodedData);
         res.send(filePath);
     });
+});
+app.post('/api/v1/merge_pics', async (req, res) => {
+    let body = req.body;
+    let pic_list = body.pic_list;
+    const targetWidth = 800; // 设定目标宽度
+    const targetFileSize = 100 * 1024; // 设定目标文件大小，单位为字节（例如500KB）
+    const resizedImages = await Promise.all(
+        pic_list.map(async (file) => {
+            const image = await jimp.read('/database' + file);
+            image.resize(targetWidth, jimp.AUTO);
+            let quality = 100;
+            let buffer = await image.getBufferAsync(jimp.MIME_JPEG);
+            let zip_count = 0;
+            while (buffer.byteLength > targetFileSize && quality > 0) {
+                quality -= 5;
+                image.quality(quality);
+                buffer = await image.getBufferAsync(jimp.MIME_JPEG);
+                zip_count++;
+            }
+            console.log('zip_count:', zip_count, 'quality:', quality, 'buffer.byteLength:', buffer.byteLength);
+
+            return image.getBufferAsync(jimp.MIME_PNG);
+        })
+    );
+
+    const mergedImage = await mergeImg(resizedImages, {
+        direction: true
+    });
+
+    const uuid = require('uuid');
+    real_file_name = uuid.v4();
+    const filePath = '/uploads/' + real_file_name + '.jpg';
+    await mergedImage.write('/database' + filePath);
+    res.send({ result: filePath, err_msg: '' });
 });
 app.get('/api/v1/download_ticket', async (req, res) => {
     let id = req.query.id;
@@ -221,7 +257,7 @@ add_min_timer(1, async () => {
 add_min_timer(2, async () => {
     console.log('2 min timer');
 });
-add_min_timer(5, async ()=>{
+add_min_timer(5, async () => {
     console.log('5 min timer');
     old_zczh.proc_timeout_5min();
 });
