@@ -1,76 +1,87 @@
 <template>
 <view>
-    <list-show style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
-        <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name" :tag="item.price + ''" v-for="(item, index) in data2show2" :key="index">
-            <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
-                <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
-                <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
-                <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" originLeft :scaleRatio="0.8" type="warning"></fui-tag>
-                <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
-                <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
-                <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
-                <fui-tag v-else text="用于销售" theme="plain" originLeft :scaleRatio="0.8" type="success"></fui-tag>
-                <fui-tag v-if="item.concern_fapiao" text="关注发票" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
-            </view>
-            <fui-white-space size="large"></fui-white-space>
-            <view style="display:flex;justify-content: space-around;">
-                <fui-button text="修改" btnSize="mini" radius="0" @click="prepare_update(item)"></fui-button>
-                <fui-button text="删除" type="danger" radius="0" btnSize="mini" @click="prepare_delete(item)"></fui-button>
-                <fui-button text="调价" type="warning" radius="0" btnSize="mini" @click="prepare_change_price(item)"></fui-button>
-                <fui-button text="调价历史" type="purple" radius="0" btnSize="mini" @click="prepare_history(item)"></fui-button>
-                <fui-button v-if="!item.change_last_minutes" text="定时调价" type="success" radius="0" btnSize="mini" @click="prepare_next_price(item)"></fui-button>
-                <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
-            </view>
-            <fui-white-space size="large"></fui-white-space>
-            <fui-row>
-                <fui-col :span="12">
-                    <fui-label>
-                        <fui-list-cell>
-                            <view class="fui-list__cell">
-                                <fui-text size="28" text="需要安检"></fui-text>
-                                <fui-switch :scaleRatio="0.7" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
-                            </view>
-                        </fui-list-cell>
-                    </fui-label>
-                </fui-col>
-                <fui-col :span="12">
-                    <fui-label>
-                        <fui-list-cell>
-                            <view class="fui-list__cell">
-                                <fui-text size="28" text="需要进厂前重量"></fui-text>
-                                <fui-switch :scaleRatio="0.7" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
-                            </view>
-                        </fui-list-cell>
-                    </fui-label>
-                </fui-col>
-            </fui-row>
-            <fui-white-space size="large"></fui-white-space>
-            <fui-row>
-                <fui-col :span="12">
-                    <fui-label>
-                        <fui-list-cell>
-                            <view class="fui-list__cell">
-                                <fui-text size="28" text="需要考试"></fui-text>
-                                <fui-switch :scaleRatio="0.7" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
-                            </view>
-                        </fui-list-cell>
-                    </fui-label>
-                </fui-col>
-                <fui-col :span="12">
-                    <fui-label>
-                        <fui-list-cell>
-                            <view class="fui-list__cell">
-                                <fui-text size="28" text="不用排号"></fui-text>
-                                <fui-switch :scaleRatio="0.7" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
-                            </view>
-                        </fui-list-cell>
-                    </fui-label>
-                </fui-col>
-            </fui-row>
-            <fui-white-space size="large"></fui-white-space>
-        </fui-card>
-    </list-show>
-    <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
+    <u-subsection :list="seg_list" :current="cur_seg" @change="seg_change"></u-subsection>
+    <view v-if="cur_seg == 0">
+        <list-show style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
+            <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name" :tag="item.price + ''" v-for="(item, index) in data2show2" :key="index">
+                <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
+                    <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
+                    <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" originLeft :scaleRatio="0.8" type="warning"></fui-tag>
+                    <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
+                    <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
+                    <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
+                    <fui-tag v-else text="用于销售" theme="plain" originLeft :scaleRatio="0.8" type="success"></fui-tag>
+                    <fui-tag v-if="item.concern_fapiao" text="关注发票" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
+                </view>
+                <fui-white-space size="large"></fui-white-space>
+                <view style="display:flex;justify-content: space-around;">
+                    <fui-button text="修改" btnSize="mini" radius="0" @click="prepare_update(item)"></fui-button>
+                    <fui-button text="删除" type="danger" radius="0" btnSize="mini" @click="prepare_delete(item)"></fui-button>
+                    <fui-button text="调价" type="warning" radius="0" btnSize="mini" @click="prepare_change_price(item)"></fui-button>
+                    <fui-button text="调价历史" type="purple" radius="0" btnSize="mini" @click="prepare_history(item)"></fui-button>
+                    <fui-button v-if="!item.change_last_minutes" text="定时调价" type="success" radius="0" btnSize="mini" @click="prepare_next_price(item)"></fui-button>
+                    <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
+                </view>
+                <fui-white-space size="large"></fui-white-space>
+                <fui-row>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="需要安检"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="需要进厂前重量"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
+                </fui-row>
+                <fui-white-space size="large"></fui-white-space>
+                <fui-row>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="需要考试"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="不用排号"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
+                </fui-row>
+                <fui-white-space size="large"></fui-white-space>
+            </fui-card>
+        </list-show>
+        <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
+    </view>
+    <view v-else-if="cur_seg == 1">
+        <u-cell title="默认调价影响计划">
+            <u-switch slot="value" v-model="price_profile.default_impact_plan" @change="update_price_profile"></u-switch>
+        </u-cell>
+        <u-cell title="隐藏调价影响计划开关">
+            <u-switch slot="value" v-model="price_profile.hide_impact_selector" @change="update_price_profile"></u-switch>
+        </u-cell>
+    </view>
     <fui-modal width="600" :show="show_stuff_fetch" v-if="show_stuff_fetch" @click="fetch_stuff">
         <fui-form ref="form" top="100">
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
@@ -97,7 +108,7 @@
         <fui-form ref="change_price_form" top="100">
             <fui-input required label="新价格" borderTop placeholder="请输入新价格" v-model="stuff2change_price.price"></fui-input>
             <fui-input required label="备注" borderTop placeholder="请输入备注" v-model="stuff2change_price.comment"></fui-input>
-            <fui-form-item label="影响计划？" asterisk>
+            <fui-form-item label="影响计划？" asterisk v-if="!price_profile.hide_impact_selector">
                 <u-switch v-model="stuff2change_price.to_plan"></u-switch>
             </fui-form-item>
         </fui-form>
@@ -138,6 +149,12 @@ export default {
     },
     data: function () {
         return {
+            price_profile: {
+                default_impact_plan: false,
+                hide_impact_selector: false,
+            },
+            cur_seg: 0,
+            seg_list: ['物料配置', '调价策略'],
             show_cancel_next_price: false,
             cancel_next_stuff_id: 0,
             show_next_date: false,
@@ -187,6 +204,17 @@ export default {
         }
     },
     methods: {
+        init_price_profile: async function () {
+            let resp = await this.$send_req('/sale_management/get_price_change_profile', {});
+            this.price_profile = resp;
+        },
+        update_price_profile: async function () {
+            await this.$send_req('/sale_management/set_price_change_profile', this.price_profile);
+            await this.init_price_profile();
+        },
+        seg_change: function (e) {
+            this.cur_seg = e;
+        },
         set_next_date: function (e) {
             this.next_price_req.next_time = e.result;
             this.show_next_date = false;
@@ -315,7 +343,7 @@ export default {
             this.stuff2change_price = {
                 price: item.price,
                 comment: '',
-                to_plan: false,
+                to_plan: this.price_profile.default_impact_plan,
                 stuff_id: item.id
             }
             this.show_change_price = true;
@@ -391,6 +419,9 @@ export default {
         }
         uni.stopPullDownRefresh();
     },
+    onLoad: function () {
+        this.init_price_profile();
+    }
 }
 </script>
 

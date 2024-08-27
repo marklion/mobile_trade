@@ -121,7 +121,7 @@ module.exports = {
         await contract.removeStuff();
         await contract.destroy();
     },
-    update_contract:async function (contract_id, being_time, end_time, number, customer_code) {
+    update_contract: async function (contract_id, being_time, end_time, number, customer_code) {
         let sq = db_opt.get_sq();
         let contract = await sq.models.contract.findByPk(contract_id);
         contract.begin_time = being_time;
@@ -688,8 +688,8 @@ module.exports = {
         }
 
     },
-    record_plan_history: async function (_plan, _operator, _action_type,_transation) {
-        await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type },_transation);
+    record_plan_history: async function (_plan, _operator, _action_type, _transation) {
+        await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type }, _transation);
     },
     rp_history_create: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '创建');
@@ -1403,7 +1403,8 @@ module.exports = {
             const element = stuff[index];
             element.change_last_minutes--;
             if (element.change_last_minutes <= 0) {
-                await this.pri_change_stuff_price(element, element.next_price, '定时调价:' + element.next_comment, element.next_operator, false);
+                let company = await element.getCompany();
+                await this.pri_change_stuff_price(element, element.next_price, '定时调价:' + element.next_comment, element.next_operator, company.price_impact_plan);
                 element.next_price = 0;
                 element.next_comment = '';
                 element.next_operator = '';

@@ -75,6 +75,8 @@ let db_opt = {
             zc_phone: { type: DataTypes.STRING },
             check_in_stay_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
             logo: { type: DataTypes.STRING },
+            price_impact_plan: { type: DataTypes.BOOLEAN, defaultValue: false },
+            hide_impact_selector: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
