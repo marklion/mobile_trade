@@ -1292,22 +1292,24 @@ module.exports = {
                 } catch (error) {
                     return { msg: `清除失败${error}` };
                 }
-        get_company_attach: {
-            name: '获取公司附件',
-            description: '获取公司附件',
-            need_rbac: false,
-            is_write: false,
-            is_get_api: false,
-            params: {
-            },
-            result: {
-                attach: { type: String, mean: '附件', example: 'https://www.baidu.com' }
-            },
-            func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                return { attach: company.attachment };
-            }
+            },  
+    },
+    get_company_attach: {
+        name: '获取公司附件',
+        description: '获取公司附件',
+        need_rbac: false,
+        is_write: false,
+        is_get_api: false,
+        params: {
         },
+        result: {
+            attach: { type: String, mean: '附件', example: 'https://www.baidu.com' }
+        },
+        func: async function (body, token) {
+            let company = await rbac_lib.get_company_by_token(token);
+            return { attach: company.attachment };
+        }
+    },
         set_company_attach: {
             name: '设置公司附件',
             description: '设置公司附件',
