@@ -520,5 +520,43 @@ module.exports = {
                 await plan_lib.set_fapiao_delivered(body.plan_id, token, body.delivered);
             }
         },
+        set_price_change_profile: {
+            name: '设置价格变动偏好',
+            description: '设置价格变动偏好',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                default_impact_plan: { type: Boolean, have_to: true, mean: '默认影响计划', example: true },
+                hide_impact_selector: { type: Boolean, have_to: true, mean: '隐藏影响选择器', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                company.price_impact_plan = body.default_impact_plan;
+                company.hide_impact_selector = body.hide_impact_selector;
+                await company.save();
+                return { result: true };
+            }
+        },
+        get_price_change_profile: {
+            name: '获取价格变动偏好',
+            description: '获取价格变动偏好',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                default_impact_plan: { type: Boolean, mean: '默认影响计划', example: true },
+                hide_impact_selector: { type: Boolean, mean: '隐藏影响选择器', example: true },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return {
+                    default_impact_plan: company.price_impact_plan,
+                    hide_impact_selector: company.hide_impact_selector,
+                }
+            }
+        },
     },
 }
