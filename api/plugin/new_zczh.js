@@ -55,7 +55,7 @@ module.exports = {
             driver_id: plan.driver.id_card,
             driver_name: plan.driver.name,
             driver_phone: plan.driver.phone,
-            is_sale: true,
+            is_sale: !plan.is_buy,
             plate_number: plan.main_vehicle.plate,
             stuff_name: plan.stuff.name,
         }, make_url('/api/order/add', plan), make_token(plan));
