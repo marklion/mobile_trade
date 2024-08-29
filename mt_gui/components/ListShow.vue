@@ -3,7 +3,7 @@
     <scroll-view ref="container" :style="'height: ' + height + ';'" @scrolltolower="scrollToLower" show-scrollbar scroll-y>
         <view ref="content">
             <fui-sticky v-if="search_key" z-index="20">
-                <fui-search-bar @search="search" @cancel="cancel"></fui-search-bar>
+                <fui-search-bar ref="searchBar" @search="search" @clear="cancel" @cancel="cancel"></fui-search-bar>
             </fui-sticky>
             <slot>
             </slot>
@@ -82,6 +82,7 @@ export default {
     methods: {
         cancel: function () {
             this.search_condition = '';
+            this.$refs.searchBar.reset()
         },
         search: async function (e) {
             this.search_condition = e.detail.value;
