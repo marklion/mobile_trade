@@ -1,7 +1,7 @@
 <template>
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
-    <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
+    <fui-tabs :current="tab_current" :tabs="tabs" @change="change_tab"></fui-tabs>
     <view style="padding: 10rpx;">
         <module-filter :rm_array="['sale_management', 'buy_management']">
             <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
@@ -413,6 +413,7 @@ export default {
     },
     data: function () {
         return {
+            tab_current:0,
             show_attach: false,
             new_stuff_price: {
                 show: false,
@@ -1286,6 +1287,7 @@ export default {
                 this.focus_status = undefined;
             }
             this.refresh_plans();
+            this.tab_current = index;
         },
         make_plan_get_url: function () {
             return this.cur_get_url;
