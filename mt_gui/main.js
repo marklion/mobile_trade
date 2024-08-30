@@ -72,6 +72,42 @@ Vue.prototype.$convert_attach_url = function (url) {
   let ret = Vue.prototype.$remote_url() + url;
   return ret;
 };
+Vue.prototype.$download_file = function(uri) {
+  uni.downloadFile({
+    url: uri,
+    success: (res) => {
+        if (res.statusCode === 200) {
+            // 下载成功，保存到本地
+            uni.saveImageToPhotosAlbum({
+                filePath: res.tempFilePath,
+                success: () => {
+                    uni.showToast({
+                        title: '下载成功',
+                        icon: 'success'
+                    });
+                },
+                fail: () => {
+                    uni.showToast({
+                        title: '保存失败',
+                        icon: 'none'
+                    });
+                }
+            });
+        }else{
+          uni.showToast({
+            title: '下载失败',
+            icon: 'none'
+          });
+        }
+    },
+    fail: () => {
+        uni.showToast({
+            title: '下载失败',
+            icon: 'none'
+        });
+    }
+});
+};
 Vue.prototype.$get_login_code = function () {
   return new Promise((resolve, reject) => {
     uni.login({

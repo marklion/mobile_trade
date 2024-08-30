@@ -388,7 +388,8 @@
     </fui-modal>
     <fui-message ref="po_msg"></fui-message>
     <fui-toast ref="toast"></fui-toast>
-    <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false"></fui-gallery>
+    <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
+    <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
 </view>
 </template>
 
@@ -617,6 +618,7 @@ export default {
             deliver_time_type: '',
             tabs: [],
             show_batch_copy: false,
+            gallery_index:0
         }
     },
     computed: {
@@ -700,6 +702,13 @@ export default {
         },
     },
     methods: {
+        change_index:function(e){
+            this.gallery_index = e.index
+        },
+        download_img: function () {
+            const imgs = [this.focus_plan.company.attachment,this.focus_plan.stuff.company.attachment]
+            this.$download_file(this.$convert_attach_url(imgs[this.gallery_index]))
+        },
         open_attach_pics: function () {
             this.show_attach = true;
         },
@@ -1466,5 +1475,11 @@ export default {
     width: 50%;
     height: 100vh;
     margin: 0 40rpx;
+}
+.downloadBtn {
+    position:absolute;
+    z-index: 2000;
+    top: 20rpx;
+    right: 20rpx;
 }
 </style>
