@@ -1303,7 +1303,8 @@ export default {
             for (let i = 0; i < max_status; i++) {
                 let res = await this.$send_req(this.make_plan_get_url(), {
                     ...this.plan_filter,
-                    status: i
+                    status: i,
+                    only_count:true
                 });
                 this.tabs[i + 1].badge = res.total;
             }
