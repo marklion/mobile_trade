@@ -251,6 +251,12 @@ module.exports = {
         sc_info: {
             type: Array, mean: '安检信息', explain: sc_req_detail
         },
+        duplicateInfo:{
+            type: Object, mean: '重复信息', explain: {
+                isDuplicate: { type: Boolean, mean: '是否重复', example: false },
+                message: { type: String, mean: '重复信息', example: '计划重复....' },
+            }
+        }
     },
 
     bidding_items: {

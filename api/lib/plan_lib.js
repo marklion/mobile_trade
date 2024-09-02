@@ -233,6 +233,46 @@ module.exports = {
 
         return ret;
     },
+    checkDuplicatePlans: async function(current_plan) {
+        try {
+            let sq = db_opt.get_sq();
+            
+            // 查找 plan 表中除了当前 planId 以外的未关闭状态的重复计划
+            const duplicatePlan = await sq.models.plan.findOne({
+                where: {
+                    id: { [db_opt.Op.ne]: current_plan.id },
+                    status: { [db_opt.Op.ne]: 3 },
+                    [db_opt.Op.or]: [
+                        { mainVehicleId: current_plan.main_vehicle.id },
+                        { behindVehicleId: current_plan.behind_vehicle.id },
+                        { driverId: current_plan.driver.id }
+                    ]
+                },
+                include: util_lib.plan_detail_include()
+            });
+    
+            if (duplicatePlan) {
+                // 构建重复提示信息
+                let duplicateInfo = '';
+                if (duplicatePlan.mainVehicleId === current_plan.main_vehicle.id) {
+                    duplicateInfo = `此计划中的主车号 ${current_plan.main_vehicle.plate} 与 ${duplicatePlan.plan_time} 的其他计划重复`;
+                } else if (duplicatePlan.behindVehicleId === current_plan.behindVehicleId) {
+                    duplicateInfo = `此计划中的挂车号 ${current_plan.behind_vehicle.plate} 与 ${duplicatePlan.plan_time} 的其他计划重复`;
+                } else {
+                    duplicateInfo = `此计划中的司机手机号 ${current_plan.driver.phone} 与 ${duplicatePlan.plan_time} 的其他计划重复`;
+                }
+                return {
+                    isDuplicate: true,
+                    message: `${duplicateInfo},下单方是${duplicatePlan.company.name},接单方是${duplicatePlan.stuff.company.name}。请核对信息!`
+                };
+            }
+    
+            return { isDuplicate: false, message: '' };
+        } catch (error) {
+            console.error('检查重复计划时发生错误:', error);
+            return { isDuplicate: false, message: '' };
+        }
+    },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
@@ -247,9 +287,12 @@ module.exports = {
         let count = await user.countPlans({ where: where_condition });
         if (!_condition.only_count) {
             let bought_plans = await user.getPlans(search_condition);
+            
             for (let index = 0; index < bought_plans.length; index++) {
                 const element = bought_plans[index];
                 let arc_p = await this.replace_plan2archive(element);
+                let dup_p = await this.checkDuplicatePlans(element);
+                element.duplicateInfo = dup_p;
                 if (arc_p) {
                     result.push(arc_p);
                 }
@@ -259,6 +302,7 @@ module.exports = {
                     }
                     result.push(element);
                 }
+                
             }
         }
 
@@ -291,6 +335,8 @@ module.exports = {
             for (let index = 0; index < sold_plans.length; index++) {
                 const element = sold_plans[index];
                 let arc_p = await this.replace_plan2archive(element);
+                let dup_p = await this.checkDuplicatePlans(element);
+                element.duplicateInfo = dup_p;
                 if (arc_p) {
                     result.push(arc_p);
                 }

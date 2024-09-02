@@ -79,8 +79,8 @@
                             <fui-text size="22" :type="item.fapiao_delivered?'primary':'danger'" v-if="item.stuff.concern_fapiao" :text="' 发票' + (item.fapiao_delivered?'已开':'未开')">
                             </fui-text>
                         </view>
-                        <view v-if="item.duplicate_description">
-                            <fui-text size="22" type="danger" :text="item.duplicate_description"></fui-text>
+                        <view v-if="item.duplicateInfo&&item.duplicateInfo.isDuplicate">
+                            <fui-text size="22" type="danger" :text="item.duplicateInfo.message"></fui-text>
                         </view>
                     </template>
                 </u-cell>
@@ -1290,73 +1290,22 @@ export default {
         make_plan_get_url: function () {
             return this.cur_get_url;
         },
-        // 处理重复计划
-        processAccumulatedPlans(plans) {
-            plans.map(plan => {
-                if (plan.status !== 3) {
-                    const duplicate = plans.find(accPlan =>
-                        plan.id !== accPlan.id && (
-                            plan.main_vehicle.plate === accPlan.main_vehicle.plate ||
-                            plan.behind_vehicle.plate === accPlan.behind_vehicle.plate ||
-                            plan.driver.phone === accPlan.driver.phone
-                        )
-                    );
-
-                    if (duplicate) {
-                        const duplicateReason = plan.main_vehicle.plate === duplicate.main_vehicle.plate ?
-                            `主车号` :
-                            plan.behind_vehicle.plate === duplicate.behind_vehicle.plate ?
-                            `挂车号` :
-                            `司机手机号`;
-
-                        plan.duplicate_description = `此计划中的(${duplicateReason})与(${duplicate.plan_time}${duplicate.id})的计划重复，` +
-                            `下单方是${duplicate.company.name}，接单方是${duplicate.stuff.company.name}。请核对信息!`;
-                    }
-                }
-                return plan;
-            });
-        },
         get_sold_plans: async function (pageNo, [plan_filter, cur_get_url, cur_is_motion]) {
-            let allPlans = [];
-            let totalPages = 0;
-            let pageSize = 20;
-            try {
-                // 获取总数total
-                const firstPageRes = await this.$send_req(cur_get_url, {
-                    ...plan_filter,
-                    pageNo: pageNo,
-                });
-                totalPages = Math.floor(firstPageRes.total / pageSize);
-
-                const processFirstPage = firstPageRes.plans.map(element => ({
-                    ...element,
-                    search_cond: `${element.main_vehicle.plate || ''}${element.behind_vehicle.plate || ''}`,
-                    company_show: cur_is_motion ? element.stuff.company.name : element.company.name
-                }));
-
-                allPlans = processFirstPage;
-                // 获取剩余页面的数据
-                for (let curPageNo = 1; curPageNo < totalPages; curPageNo++) {
-                    const res = await this.$send_req(cur_get_url, {
-                        ...plan_filter,
-                        pageNo: curPageNo
-                    });
-
-                    const processedPlans = res.plans.map(element => ({
-                        ...element,
-                        search_cond: `${element.main_vehicle.plate || ''}${element.behind_vehicle.plate || ''}`,
-                        company_show: cur_is_motion ? element.stuff.company.name : element.company.name
-                    }));
-
-                    allPlans.push(...processedPlans);
+            let res = await this.$send_req(cur_get_url, {
+                ...plan_filter,
+                pageNo: pageNo,
+            });
+            let ret = [];
+            res.plans.forEach(element => {
+                element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
+                if (cur_is_motion) {
+                    element.company_show = element.stuff.company.name;
+                } else {
+                    element.company_show = element.company.name;
                 }
-                this.processAccumulatedPlans(allPlans);
-
-                return allPlans;
-            } catch (error) {
-                console.error('Error fetching all plans:', error);
-                return [];
-            }
+                ret.push(element)
+            });
+            return ret;
         },
         init_number_of_sold_plan: async function () {
             let max_status = 3;
@@ -1385,7 +1334,6 @@ export default {
                 return [];
             }
         },
-
         get_customers: async function (pageNo) {
             let mods = uni.getStorageSync('self_info').modules.map(ele => {
                 return ele.name
