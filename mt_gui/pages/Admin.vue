@@ -3,9 +3,11 @@
     <list-show v-model="data2show" ref="cp_ref" height="95vh" :fetch_function="get_company" search_key="head">
         <fui-panel v-for="item in data2show" :key="item.id" :panelData="item">
             <view style="display: flex;">
-                <fui-button btn-size="mini" text="管理员配置" style="margin-right: 10px;" @click="show_admin_config = true;focus_company=item.id"></fui-button>
-                <fui-button btn-size="mini" text="模块配置" style="margin-right: 10px;" @click="open_module_config(item)"></fui-button>
-                <fui-button btn-size="mini" text="设置logo" style="margin-right: 10px;" @click="show_logo_set = true;focus_company=item.id;has_logo=item.src"></fui-button>
+                <fui-button btn-size="mini" radius="0" text="管理员配置" class="btn_config" @click="show_admin_config = true;focus_company=item.id"></fui-button>
+                <fui-button btn-size="mini" radius="0" text="模块配置" class="btn_config" @click="open_module_config(item)"></fui-button>
+                <fui-button btn-size="mini" radius="0" text="设置logo" class="btn_config" @click="show_logo_set = true;focus_company=item.id;has_logo=item.src"></fui-button>
+                <fui-button btn-size="mini" radius="0" :text="`泄压配置:${item.pressure_config?'开':'关'}`" class="btn_config" :type="`${item.pressure_config?'success':'primary'}`"  @click="change_pressure_config(item)"></fui-button>
+
             </view>
         </fui-panel>
     </list-show>
@@ -64,6 +66,15 @@ export default {
         }
     },
     methods: {
+        change_pressure_config: async function (company) {
+            company.pressure_config = !company.pressure_config
+            this.config_loding = true;
+            await this.$send_req('/global/company_pressure_config', {
+                id: company.id,
+                pressure_config: company.pressure_config,
+            });
+            this.config_loding = false;
+        },
         delete_logo: async function () {
             await this.$send_req('/global/company_set_logo', {
                 id: this.focus_company,
@@ -147,6 +158,7 @@ export default {
                     desc: module_array.join('|'),
                     source: config_users.join('\n'),
                     id: ele.id,
+                    pressure_config: ele.pressure_config,
                     bound_modules: ele.bound_modules
                 };
                 if (ele.logo) {
@@ -175,5 +187,7 @@ export default {
 </script>
 
 <style>
-
+.btn_config{
+    padding: 10rpx 10rpx;
+}
 </style>
