@@ -448,14 +448,31 @@ export default {
             }
         },
         get_vehicles: async function (pageNo, [pair_get_url]) {
+            
             let res = await this.$send_req(pair_get_url, {
                 pageNo: pageNo,
             });
+            let vt = await this.$send_req('/global/get_vehicle_team', {
+                pageNo: pageNo
+            });
+            const vehicles = vt.vehicle_teams.flatMap(team =>
+                team.vehicle_sets.map(set => ({
+                    behind_vehicle_plate: set.behind_vehicle.plate,
+                    driver_name: set.driver.name,
+                    driver_phone: set.driver.phone,
+                    main_vehicle_plate: set.main_vehicle.plate
+                }))
+            );
+            let mergedPairs = [...res.pairs,...vehicles];
+
+            const uniquePairs = Array.from(new Set(mergedPairs.map(JSON.stringify))).map(JSON.parse);
+
+            res.pairs = mergedPairs
+
             res.pairs.forEach(ele => {
                 ele.search_cond = ele.main_vehicle_plate + ele.behind_vehicle_plate + ele.driver_name +
                     ele.driver_phone;
             });
-
             return res.pairs;
         },
         choose_vehicles: function (item) {
