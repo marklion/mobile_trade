@@ -33,7 +33,7 @@
         </list-show>
     </view>
     <view v-else-if="cur_page == 1">
-        <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :cur_weight="single_dev.cur_weight" :enter_gate="single_dev.enter_gate" :exit_gate="single_dev.exit_gate" :name="single_dev.name" :scale_status="single_dev.scale_status" @refresh="dev_refresh"></dev-opt>
+        <dev-opt  v-for="(single_dev,index) in all_dev" :key="index" :device="single_dev" @refresh="dev_refresh"></dev-opt>
     </view>
     <view v-else-if="cur_page == 2">
         <view v-if="stamp_pic">
@@ -88,14 +88,16 @@ export default {
     },
     methods: {
         init_dev: async function () {
-            this.all_dev = [];
             let resp = await this.$send_req('/scale/get_device_status', {});
-            resp.devices.forEach((ele, index) => {
-                this.$set(this.all_dev, index, ele);
-            });
+            this.$set(this, 'all_dev', resp.devices);
         },
         dev_refresh: async function () {
-            await this.init_dev();
+            uni.showLoading()
+            setTimeout(async () => {
+                this.init_dev()
+                uni.hideLoading()
+            }, 2000);
+            
         },
         delete_stamp_pic: async function () {
             await this.$send_req('/scale/set_stamp_pic', {

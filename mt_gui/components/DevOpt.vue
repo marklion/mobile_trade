@@ -1,6 +1,6 @@
 <template>
 <view>
-    <u-cell-group :title="name + '-' + scale_status">
+    <u-cell-group :title="device.name + '-' + device.scale_status">
         <u-cell>
             <view slot="label">
                 <u-row gutter="10" justify="space-between">
@@ -21,14 +21,14 @@
             <view slot="title">
                 <u-row gutter="10" justify="space-between">
                     <u-col :span="4">
-                        重量：{{cur_weight}}
+                        重量：{{device.cur_weight}}
                     </u-col>
                     <u-col :span="4">
-                        <u-tag text="前门已关" v-if="enter_gate" plain shape="circle" size="mini" type="success"></u-tag>
+                        <u-tag text="前门已关" v-if="device.enter_gate" plain shape="circle" size="mini" type="success"></u-tag>
                         <u-tag text="前门未关" v-else plain shape="circle" size="mini" type="error"></u-tag>
                     </u-col>
                     <u-col :span="4">
-                        <u-tag text="后门已关" v-if="exit_gate" plain shape="circle" size="mini" type="success"></u-tag>
+                        <u-tag text="后门已关" v-if="device.exit_gate" plain shape="circle" size="mini" type="success"></u-tag>
                         <u-tag text="后门未关" v-else plain shape="circle" size="mini" type="error"></u-tag>
                     </u-col>
                 </u-row>
@@ -80,61 +80,63 @@ export default {
     data: function () {
         return {
             pic_path: '',
-            show_scale_confirm:false,
-            show_scale_reset:false,
-            show_cap:false,
-            focus_plate:'',
-            cap_enter:false,
+            show_scale_confirm: false,
+            show_scale_reset: false,
+            show_cap: false,
+            focus_plate: '',
+            cap_enter: false,
+
         };
     },
     props: {
-        name: String,
-        enter_gate: Boolean,
-        exit_gate: Boolean,
-        scale_status: String,
-        cur_weight: String,
+        device: {
+            name: String,
+            enter_gate: Boolean,
+            exit_gate: Boolean,
+            saler_name: String,
+        },
     },
     methods: {
-        prepare_cap:function(is_enter) {
+        prepare_cap: function (is_enter) {
             this.show_cap = true;
             this.cap_enter = is_enter;
         },
-        pop_event:function() {
+        pop_event: function () {
             this.$emit('refresh');
         },
         gate_ctrl: async function (is_enter, _is_open) {
             await this.$send_req('/scale/gate_ctrl', {
                 is_enter: is_enter,
                 is_open: _is_open,
-                name:this.name,
+                name: this.device.name,
             });
             this.pop_event();
         },
         take_pic: async function (is_enter) {
             let resp = await this.$send_req('/scale/take_pic', {
                 is_enter: is_enter,
-                name:this.name,
+                name: this.device.name,
             });
             this.pic_path = resp.pic;
         },
         reset_scale: async function () {
             await this.$send_req('/scale/reset_scale', {
-                name:this.name,
+                name: this.device.name,
             });
             this.show_scale_reset = false;
             this.pop_event();
         },
-        manual_scale:async function () {
+        manual_scale: async function () {
             await this.$send_req('/scale/confirm_scale', {
-                name:this.name
+                name: this.device.name
             });
             this.pop_event();
         },
         trigger_cap: async function (is_enter) {
             await this.$send_req('/scale/trigger_cap', {
-                name:this.name,
-                vehicle_number:this.focus_plate,
-                is_enter:is_enter
+                name: this.device.name,
+                vehicle_number: this.focus_plate,
+                is_enter: is_enter
             });
             this.pop_event();
         },
