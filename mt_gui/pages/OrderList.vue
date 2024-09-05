@@ -79,6 +79,9 @@
                             <fui-text size="22" :type="item.fapiao_delivered?'primary':'danger'" v-if="item.stuff.concern_fapiao" :text="' 发票' + (item.fapiao_delivered?'已开':'未开')">
                             </fui-text>
                         </view>
+                        <view v-if="item.duplicateInfo&&item.duplicateInfo.isDuplicate">
+                            <fui-text size="22" type="danger" :text="item.duplicateInfo.message"></fui-text>
+                        </view>
                     </template>
                 </u-cell>
             </view>
