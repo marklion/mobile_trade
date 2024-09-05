@@ -9,7 +9,7 @@ const captureWebsite = require('capture-website');
 const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
-const clean_driver = require('../lib/clean_driver')
+const clean_driver = require('../lib/clean_driver');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -1285,31 +1285,31 @@ module.exports = {
                         await clean_driver.cleanVehicleData();
                         return { msg: '清除成功' };
                     }
-                    else{
+                    else {
                         return { msg: '参数错误' };
                     }
 
                 } catch (error) {
                     return { msg: `清除失败${error}` };
                 }
-            },  
-    },
-    get_company_attach: {
-        name: '获取公司附件',
-        description: '获取公司附件',
-        need_rbac: false,
-        is_write: false,
-        is_get_api: false,
-        params: {
+            },
         },
-        result: {
-            attach: { type: String, mean: '附件', example: 'https://www.baidu.com' }
+        get_company_attach: {
+            name: '获取公司附件',
+            description: '获取公司附件',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+            },
+            result: {
+                attach: { type: String, mean: '附件', example: 'https://www.baidu.com' }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { attach: company.attachment };
+            }
         },
-        func: async function (body, token) {
-            let company = await rbac_lib.get_company_by_token(token);
-            return { attach: company.attachment };
-        }
-    },
         set_company_attach: {
             name: '设置公司附件',
             description: '设置公司附件',
@@ -1327,6 +1327,61 @@ module.exports = {
                 company.attachment = body.attach;
                 await company.save();
                 return { result: true };
+            }
+        },
+        search_valid_plan_by_plate_id: {
+            name: '根据车牌号或身份证查询有效计划',
+            description: '根据车牌号或身份证查询有效计划',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                plate: { type: String, have_to: false, mean: '车牌号', example: '粤B12345' },
+                id_card: { type: String, have_to: false, mean: '身份证', example: '123456789' }
+            },
+            result: {
+                result: { type: Boolean, mean: '查询结果', example: true },
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let ret = { result: false };
+                let plate = body.plate;
+                let id_card = body.id_card;
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await company.getStuff();
+                let meta_search = { mainVehicleId: -1 };
+                if (plate) {
+                    let mv = await sq.models.vehicle.findOne({ where: { plate: plate } });
+                    if (mv) {
+                        meta_search = { mainVehicleId: mv.id };
+                    }
+                }
+                else if (id_card) {
+                    let driver = await sq.models.driver.findOne({ where: { id_card: id_card } });
+                    if (driver) {
+                        meta_search = { driverId: driver.id };
+                    }
+                }
+                meta_search[db_opt.Op.or] = [
+                    {
+                        is_buy: true,
+                        status: 1,
+                    },
+                    {
+                        is_buy: false,
+                        status: 2,
+                    }
+                ];
+                meta_search.plan_time = moment().format('YYYY-MM-DD');
+                meta_search.stuffId = { [db_opt.Op.in]: stuff.map(item => item.id) };
+
+                let plan = await sq.models.plan.findOne({
+                    where: meta_search
+                });
+                if (plan) {
+                    ret.result = true;
+                }
+                return ret;
             }
         },
     },
