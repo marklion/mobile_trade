@@ -10,6 +10,7 @@ Order Create and Check
     ${dv}  Search Driver by Index  0
     ${order}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Search And Verify Order   ${mv}  ${bv}  ${dv}  ${order}[id]  0
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${False}
 Plan Create and Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -17,6 +18,7 @@ Plan Create and Check
     ${dv}  Search Driver by Index  0
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  0
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${False}
 Order Confirm
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -25,6 +27,7 @@ Order Confirm
     ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Order  ${plan}
     Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
 Plan Confirm with No Cash and Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -33,6 +36,7 @@ Plan Confirm with No Cash and Check
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${False}
 Plan Confirm with Enough Cash and Check
     [Teardown]  Plan Reset
     ${unit_price}  Set Variable  ${test_stuff}[price]
@@ -44,6 +48,7 @@ Plan Confirm with Enough Cash and Check
     Confirm A Plan  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2
     Charge To A Company  ${buy_company1}[id]  ${unit_price * -22}
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
 Plan Confirm with No User Authorized
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -467,5 +472,12 @@ Search And Verify Plan
     END
     Verify Plan Detail  ${plan}  ${mv}  ${bv}  ${dv}  ${test_stuff}[price]  ${status}  ${test_stuff}[name]  ${check_in_time}  ${enter_check}
 
-
+Search By Plate Or Id
+    [Arguments]  ${token}  ${plate}  ${id_card}  ${expect_result}=${True}
+    ${p_req}  Create Dictionary  plate=${plate}
+    ${p_resp}  Req to Server  /global/search_valid_plan_by_plate_id  ${token}  ${p_req}
+    ${i_req}  Create Dictionary  id_card=${id_card}
+    ${i_resp}  Req to Server  /global/search_valid_plan_by_plate_id  ${token}  ${i_req}
+    Should Be Equal    ${p_resp}[result]    ${i_resp}[result]
+    Should Be Equal  ${p_resp}[result]  ${expect_result}
 
