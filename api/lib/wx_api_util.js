@@ -529,4 +529,13 @@ module.exports = {
             send_wx_msg({ ...req });
         });
     },
+    send_sc_check_msg: async function (msg,openId) {
+        send_wx_msg({
+            touser:openId,
+            template_id: 'qn42DMtvKzNMpOw1wz0DHTqAOPO9PiYDBzI3vz6Laxg',
+            data: {
+                thing3: { value: msg },
+            },
+        });
+    },
 }
