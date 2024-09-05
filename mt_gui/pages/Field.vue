@@ -50,7 +50,7 @@
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
         <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
-            <slot name="default">
+            <slot v-if="focus_company.pressure_config" name="default">
                 <fui-button type="success" btnSize="mini" @click="confirmSealNo">确认泄压</fui-button>
             </slot>
         </fui-input>
@@ -84,6 +84,7 @@ export default {
             stamp_pic: '',
             all_dev: [],
             is_exit_confirm: false,
+            focus_company:{},
         };
     },
     methods: {
@@ -163,6 +164,7 @@ export default {
             this.focus_plan_id = item.id;
             this.tmp_seal_no = item.seal_no;
             this.show_confirm_vehicle = true;
+            this.focus_company = item.stuff.company;
         },
         confirmSealNo: function () {
             this.tmp_seal_no = '正在泄压';

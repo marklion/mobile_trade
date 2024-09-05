@@ -643,6 +643,7 @@ module.exports = {
                         id: { type: Number, mean: '公司id', example: 123 },
                         name: { type: String, mean: '公司名', example: 'company_example' },
                         logo: { type: String, mean: '公司logo', example: 'logo_example' },
+                        pressure_config:{ type: Boolean, mean: '泄压配置', example: false },
                         bound_modules: {
                             type: Array, mean: '绑定模块列表', explain: {
                                 id: { type: Number, mean: '模块id', example: 123 },
@@ -686,6 +687,30 @@ module.exports = {
                 let company = await db_opt.get_sq().models.company.findByPk(body.id);
                 if (company) {
                     company.logo = body.logo;
+                    await company.save();
+                    ret.result = true;
+                }
+                return ret;
+            },
+        },
+        company_pressure_config: {
+            name: '泄压配置',
+            description: '设置公司是否支持泄压配置',
+            need_rbac: true,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '公司id', example: 123 },
+                pressure_config: { type: Boolean, have_to: true, mean: '是否支持泄压配置', example: false },
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true },
+            },
+            func: async function (body, token) {
+                let ret = { result: false };
+                let company = await db_opt.get_sq().models.company.findByPk(body.id);
+                if (company) {
+                    company.pressure_config = body.pressure_config;
                     await company.save();
                     ret.result = true;
                 }
