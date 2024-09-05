@@ -164,7 +164,7 @@ export default {
             this.focus_plan_id = item.id;
             this.tmp_seal_no = item.seal_no;
             this.show_confirm_vehicle = true;
-            this.focus_company = item.company;
+            this.focus_company = item.stuff.company;
         },
         confirmSealNo: function () {
             this.tmp_seal_no = '正在泄压';

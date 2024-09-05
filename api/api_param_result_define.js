@@ -202,6 +202,7 @@ module.exports = {
                         name: { type: String, mean: '公司名称', example: '公司名称' },
                         driver_notice: { type: String, mean: '司机通知', example: '司机通知' },
                         attachment: { type: String, mean: '附件', example: '附件' },
+                        pressure_config: { type: Boolean, mean: '是否支持泄压', example:false },
                     }
                 },
                 need_sc: { type: Boolean, mean: '是否需要安检', example: true },
@@ -217,7 +218,6 @@ module.exports = {
                 name: { type: String, mean: '公司名称', example: '公司名称' },
                 driver_notice: { type: String, mean: '司机通知', example: '司机通知' },
                 attachment: { type: String, mean: '附件', example: '附件' },
-                pressure_config: { type: Boolean, mean: '是否支持泄压', example:false },
             }
         },
         driver: {

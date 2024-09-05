@@ -701,7 +701,7 @@ module.exports = {
             is_get_api: false,
             params: {
                 id: { type: Number, have_to: true, mean: '公司id', example: 123 },
-                pressure_config: { type: Boolean, have_to: true, mean: '是否支持泄压配置', example: 'true' },
+                pressure_config: { type: Boolean, have_to: true, mean: '是否支持泄压配置', example: false },
             },
             result: {
                 result: { type: Boolean, mean: '设置结果', example: true },
