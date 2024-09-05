@@ -2,6 +2,7 @@ const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const util_lib = require('./util_lib');
+const wx_api_util = require('./wx_api_util');
 module.exports = {
     sc_req_detail: {
         id: { type: Number, have_to: true, mean: 'ID', example: 1 },
@@ -272,17 +273,22 @@ module.exports = {
         let company = await rbac_lib.get_company_by_token(_token);
         let user = await rbac_lib.get_user_by_token(_token);
         if (user && company && content && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
+            let sc_msg = ''
             if (!_comment) {
                 content.passed = true;
                 content.comment = '';
+                sc_msg = `安检审核已通过`
             }
             else {
                 content.passed = false;
                 content.comment = _comment;
+                sc_msg = `安检审核未通过:${content.comment}`
             }
             content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
             content.checker = user.name;
             await content.save();
+            if(content.sc_req.driver && content.sc_req.driver.open_id)
+                wx_api_util.send_sc_check_msg(sc_msg,content.sc_req.driver.open_id)
         }
         else {
             throw { err_msg: '无权限' };
