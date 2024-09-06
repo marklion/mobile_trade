@@ -37,6 +37,9 @@ async function get_vo(plan) {
 async function find_device2exec(find_func, exec_func, company, name) {
     let ut = get_url_token_by_company(company, '/api/get_scale_sm_info');
     let resp = await push_req2zc({}, ut.url, ut.token);
+    ut = get_url_token_by_company(company, '/api/get_gate_sm_info');
+    let gate_resp = await push_req2zc({}, ut.url, ut.token);
+    resp.result = resp.result.concat(gate_resp.result);
     for (let index = 0; index < resp.result.length; index++) {
         const element = resp.result[index];
         if (element.set_info.name == name) {
@@ -99,6 +102,16 @@ module.exports = {
                 cur_weight: element.cur_weight.toFixed(2),
             });
         }
+        ut = get_url_token_by_company(company, '/api/get_gate_sm_info');
+        resp = await push_req2zc({}, ut.url, ut.token);
+        for (let index = 0; index < resp.result.length; index++) {
+            const element = resp.result[index];
+            ret.push({
+                name: element.set_info.name,
+                scale_status: '',
+            });
+        }
+
         return ret;
     },
     gate_ctrl: async function (company, name, is_enter, is_open) {
