@@ -38,6 +38,7 @@ export default {
                     icon: 'transport',
                     require_module: 'scale',
                     path: 'Field',
+                    sub_page_name: 'subPage1'
                 }, {
                     name: '合同管理',
                     icon: 'pullup',
