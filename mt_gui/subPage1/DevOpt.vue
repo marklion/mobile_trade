@@ -18,8 +18,8 @@
                     </u-col>
                 </u-row>
             </view>
-            <view slot="title" v-if="device.scale_status">
-                <u-row gutter="10" justify="space-between">
+            <view slot="title">
+                <u-row gutter="10" justify="space-between" v-if="device.scale_status">
                     <u-col :span="4">
                         重量：{{device.cur_weight}}
                     </u-col>
@@ -97,12 +97,11 @@ export default {
             scale_status: String,
         },
     },
-    computed:{
-        gate_name:function() {
+    computed: {
+        gate_name: function () {
             let fg = '前门';
             let bg = '后门';
-            if (this.device.scale_status == '')
-            {
+            if (this.device.scale_status == '') {
                 fg = '入口';
                 bg = '出口';
             }
