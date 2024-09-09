@@ -50,7 +50,9 @@
     </list-show>
 
     <fui-gallery :urls="attach_url" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
-    <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
+    <view v-if="show_attach" class="download-button-container">
+        <fui-text color="#fff" text="下载" @click="download_img"></fui-text>
+    </view>
     <fui-button v-if="cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
     <fui-modal width="600" :show="show_update_contract" @click="update_contract" v-if="show_update_contract">
         <fui-form ref="update_contract" top="100">
@@ -174,7 +176,7 @@ export default {
                 buy_setting: false,
             },
             show_update_contract: false,
-            gallery_index:0
+            gallery_index: 0
         };
     },
     components: {
@@ -182,17 +184,17 @@ export default {
         "module-filter": ModuleFilter
     },
     methods: {
-        change_index:function(e){
+        change_index: function (e) {
             this.gallery_index = e.index
         },
         download_img: function () {
-            let uri = this.$convert_attach_url(this.attach_url[this.gallery_index])
+            let uri = this.attach_url[this.gallery_index]
             this.$download_file(uri)
         },
         show_attach_pic: function (item) {
             this.show_attach = true;
             if (item.company.attachment) {
-                this.attach_url = [item.company.attachment];
+                this.attach_url = [this.$convert_attach_url(item.company.attachment)];
             } else {
                 this.attach_url = ['/static/no_att.jpg'];
             }
@@ -513,10 +515,13 @@ export default {
     border-radius: 20%;
 }
 
-.downloadBtn {
-    position:absolute;
+.download-button-container {
+    position: absolute;
+    top: 40rpx;
+    right: 40rpx;
     z-index: 2000;
-    top: 20rpx;
-    right: 20rpx;
+    background: rgba(0, 0, 0, 0.6);
+    padding: 10rpx 20rpx;
+    border-radius: 30rpx;
 }
 </style>
