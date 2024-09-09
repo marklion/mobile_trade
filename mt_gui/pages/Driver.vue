@@ -94,10 +94,13 @@
     <!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
     <fui-backdrop :zIndex="8888" :show="show_one_att">
         <movable-area scale-area class="movable-area">
-            <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
+
             <movable-view class="movable-view" direction="all" inertia scale="true" scale-min="1" scale-max="6" :scale-value="scale">
                 <image lazy-load class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
             </movable-view>
+            <view class="close-button-container">
+                <fui-icon @click="show_one_att=false" name="close" size="80" color="white"></fui-icon>
+            </view>
         </movable-area>
     </fui-backdrop>
     <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
@@ -538,7 +541,7 @@ export default {
                 });
             } else if (e.text == '考试') {
                 uni.navigateTo({
-                    url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id+'&driver_name='+this.driver_self.name,
+                    url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id + '&driver_name=' + this.driver_self.name,
                 });
             }
         },
@@ -690,5 +693,16 @@ export default {
     width: 50%;
     height: 100vh;
     margin: 0 40rpx;
+}
+
+.close-button-container {
+    position: absolute;
+    bottom: 40rpx;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 8889;
 }
 </style>
