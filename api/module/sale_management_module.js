@@ -256,7 +256,6 @@ module.exports = {
                     where: {
                         buyCompanyId: body.customer_id
                     },
-                    paranoid: false,
                     include: db_opt.get_sq().models.rbac_user
                 })
                 if (contracts.length != 1) {
