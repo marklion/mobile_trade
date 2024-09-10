@@ -60,9 +60,9 @@
 </template>
 
 <script>
-import ListShow from '../components/ListShow.vue';
+import ListShow from '@/components/ListShow.vue';
 import $fui from '@/components/firstui/fui-clipboard';
-import DevOpt from '../components/DevOpt.vue';
+import DevOpt from './DevOpt.vue';
 export default {
     name: 'Field',
     components: {
@@ -98,7 +98,7 @@ export default {
                 this.init_dev()
                 uni.hideLoading()
             }, 2000);
-            
+
         },
         delete_stamp_pic: async function () {
             await this.$send_req('/scale/set_stamp_pic', {

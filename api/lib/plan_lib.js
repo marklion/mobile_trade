@@ -233,10 +233,10 @@ module.exports = {
 
         return ret;
     },
-    checkDuplicatePlans: async function(current_plan) {
+    checkDuplicatePlans: async function (current_plan) {
         try {
             let sq = db_opt.get_sq();
-            
+
             // 查找 plan 表中除了当前 planId 以外的未关闭状态的重复计划
             const duplicatePlan = await sq.models.plan.findOne({
                 where: {
@@ -246,11 +246,12 @@ module.exports = {
                         { mainVehicleId: current_plan.main_vehicle.id },
                         { behindVehicleId: current_plan.behind_vehicle.id },
                         { driverId: current_plan.driver.id }
-                    ]
+                    ],
+                    plan_time: current_plan.plan_time
                 },
                 include: util_lib.plan_detail_include()
             });
-    
+
             if (duplicatePlan) {
                 // 构建重复提示信息
                 let duplicateInfo = '';
@@ -266,7 +267,7 @@ module.exports = {
                     message: `${duplicateInfo},下单方是${duplicatePlan.company.name},接单方是${duplicatePlan.stuff.company.name}。请核对信息!`
                 };
             }
-    
+
             return { isDuplicate: false, message: '' };
         } catch (error) {
             console.error('检查重复计划时发生错误:', error);
@@ -287,7 +288,7 @@ module.exports = {
         let count = await user.countPlans({ where: where_condition });
         if (!_condition.only_count) {
             let bought_plans = await user.getPlans(search_condition);
-            
+
             for (let index = 0; index < bought_plans.length; index++) {
                 const element = bought_plans[index];
                 let arc_p = await this.replace_plan2archive(element);
@@ -302,7 +303,7 @@ module.exports = {
                     }
                     result.push(element);
                 }
-                
+
             }
         }
 

@@ -5,21 +5,21 @@
             <view slot="label">
                 <u-row gutter="10" justify="space-between">
                     <u-col :span="3">
-                        <u-button type="primary" size="mini" text="开前门" @click="gate_ctrl(true, true)"></u-button>
+                        <u-button type="primary" size="mini" :text="'开' + gate_name.fg" @click="gate_ctrl(true, true)"></u-button>
                     </u-col>
                     <u-col :span="3">
-                        <u-button type="primary" size="mini" text="开后门" @click="gate_ctrl(false, true)"></u-button>
+                        <u-button type="primary" size="mini" :text="'开' + gate_name.bg" @click="gate_ctrl(false, true)"></u-button>
                     </u-col>
                     <u-col :span="3">
-                        <u-button type="error" size="mini" text="关前门" @click="gate_ctrl(true, false)"></u-button>
+                        <u-button type="error" size="mini" :text="'关' + gate_name.fg" @click="gate_ctrl(true, false)"></u-button>
                     </u-col>
                     <u-col :span="3">
-                        <u-button type="error" size="mini" text="关后门" @click="gate_ctrl(false, false)"></u-button>
+                        <u-button type="error" size="mini" :text="'关' + gate_name.bg" @click="gate_ctrl(false, false)"></u-button>
                     </u-col>
                 </u-row>
             </view>
             <view slot="title">
-                <u-row gutter="10" justify="space-between">
+                <u-row gutter="10" justify="space-between" v-if="device.scale_status">
                     <u-col :span="4">
                         重量：{{device.cur_weight}}
                     </u-col>
@@ -38,22 +38,22 @@
             <view slot="title">
                 <u-grid :col="3">
                     <u-grid-item>
-                        <u-button type="success" size="mini" text="入口拍照" @click="take_pic(true)"></u-button>
+                        <u-button type="success" size="mini" :text="gate_name.fg + '拍照'" @click="take_pic(true)"></u-button>
                     </u-grid-item>
                     <u-grid-item>
-                        <u-button type="primary" size="mini" text="入口识别" @click="prepare_cap(true)"></u-button>
+                        <u-button type="primary" size="mini" :text="gate_name.fg + '识别'" @click="prepare_cap(true)"></u-button>
                     </u-grid-item>
                     <u-grid-item>
-                        <u-button type="warning" size="mini" text="手动称重" @click="manual_scale"></u-button>
+                        <u-button v-if="device.scale_status" type="warning" size="mini" text="手动称重" @click="manual_scale"></u-button>
                     </u-grid-item>
                     <u-grid-item>
-                        <u-button type="success" size="mini" text="出口拍照" @click="take_pic(false)"></u-button>
+                        <u-button type="success" size="mini" :text="gate_name.bg + '拍照'" @click="take_pic(false)"></u-button>
                     </u-grid-item>
                     <u-grid-item>
-                        <u-button type="primary" size="mini" text="出口识别" @click="prepare_cap(false)"></u-button>
+                        <u-button type="primary" size="mini" :text="gate_name.bg + '识别'" @click="prepare_cap(false)"></u-button>
                     </u-grid-item>
                     <u-grid-item>
-                        <u-button type="error" size="mini" text="重置" @click="show_scale_reset = true"></u-button>
+                        <u-button v-if="device.scale_status" type="error" size="mini" text="重置" @click="show_scale_reset = true"></u-button>
                     </u-grid-item>
                 </u-grid>
             </view>
@@ -94,6 +94,21 @@ export default {
             enter_gate: Boolean,
             exit_gate: Boolean,
             saler_name: String,
+            scale_status: String,
+        },
+    },
+    computed: {
+        gate_name: function () {
+            let fg = '前门';
+            let bg = '后门';
+            if (this.device.scale_status == '') {
+                fg = '入口';
+                bg = '出口';
+            }
+            return {
+                fg: fg,
+                bg: bg,
+            }
         },
     },
     methods: {
