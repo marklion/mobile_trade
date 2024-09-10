@@ -268,7 +268,7 @@ module.exports = {
                     model: sq.models.stuff,
                     include: [sq.models.company]
                 }]
-            }]
+            }, { model: sq.models.driver }]
         });
         let company = await rbac_lib.get_company_by_token(_token);
         let user = await rbac_lib.get_user_by_token(_token);
@@ -287,11 +287,32 @@ module.exports = {
             content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
             content.checker = user.name;
             await content.save();
-            if(content.sc_req.driver && content.sc_req.driver.open_id)
-                wx_api_util.send_sc_check_msg(sc_msg,content.sc_req.driver.open_id)
+            await this.fetch_send_sc_check_msg(sc_msg, content);
         }
         else {
             throw { err_msg: '无权限' };
         }
     },
+    fetch_send_sc_check_msg: async function (msg, content) {
+        let carNumber = '蒙ABR088';
+        let checkType = "SC_CHECK";
+        let company = content.sc_req.stuff.company;
+        if (carNumber && company && content.driver.open_id) {
+            // 发送消息到司机端
+            wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company, content.driver.open_id);
+            // 发送消息到安检审核人员
+            let users = await company.getRbac_users();
+            users.forEach(async user => {
+                let roles = await user.getRbac_roles();
+                roles.forEach(async role => {
+                    let modules = await role.getRbac_modules();
+                    // 当前用户是否配置安检管理模块
+                    if (modules.find(({ name }) => name === 'sc') && user.open_id) {
+                        wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company, user.open_id);
+                    }
+                })
+
+            });
+        }
+    }
 };
