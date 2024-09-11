@@ -239,8 +239,8 @@ module.exports = {
                 await content.save();
                 // 发送消息
                 await this.fetch_send_sc_check_msg(
-                    msg = '安检内容上传成功',
-                    company = company,
+                    msg = '安检资料上传成功',
+                    company,
                     driver = plan.driver,
                     carNumber = plan?.main_vehicle?.plate || '蒙AB6666'
                 );
