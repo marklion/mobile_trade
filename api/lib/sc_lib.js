@@ -237,6 +237,13 @@ module.exports = {
                 content.attachment = _attachment;
                 content.expired_time = _expired_time;
                 await content.save();
+                // 发送消息
+                await this.fetch_send_sc_check_msg(
+                    msg = '安检内容上传成功',
+                    company = company,
+                    driver = plan.driver,
+                    carNumber = plan?.main_vehicle?.plate || '蒙AB6666'
+                );
             }
             else {
                 throw { err_msg: '创建安检内容失败' };
@@ -259,7 +266,7 @@ module.exports = {
         }
         return ret;
     },
-    check_sc_content: async function (_content_id, _token, _comment) {
+    check_sc_content: async function (_content_id, _token, _comment, _plan_id) {
         let sq = db_opt.get_sq();
         let content = await sq.models.sc_content.findByPk(_content_id, {
             include: [{
@@ -272,7 +279,7 @@ module.exports = {
         });
         let company = await rbac_lib.get_company_by_token(_token);
         let user = await rbac_lib.get_user_by_token(_token);
-        if (user && company && content && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
+        if (user && company && content  && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
             let sc_msg = ''
             if (!_comment) {
                 content.passed = true;
@@ -287,19 +294,24 @@ module.exports = {
             content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
             content.checker = user.name;
             await content.save();
-            await this.fetch_send_sc_check_msg(sc_msg, content);
+            let plan = await util_lib.get_single_plan_by_id(_plan_id);
+            // 发送消息
+            await this.fetch_send_sc_check_msg(
+                msg = sc_msg,
+                company = content.sc_req.stuff.company,
+                driver = content.driver,
+                carNumber = plan?.main_vehicle?.plate || '蒙AB6666',
+            );
         }
         else {
             throw { err_msg: '无权限' };
         }
     },
-    fetch_send_sc_check_msg: async function (msg, content) {
-        let carNumber = '蒙ABR088';
-        let checkType = "SC_CHECK";
-        let company = content.sc_req.stuff.company;
-        if (carNumber && company && content.driver.open_id) {
+    fetch_send_sc_check_msg: async function (msg = '安检审核', company = null, driver = null, carNumber = '蒙AB6666', checkType = "SC_CHECK") {
+        if (company && driver && driver.open_id) {
+            
             // 发送消息到司机端
-            wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company, content.driver.open_id);
+            wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company.name, driver.open_id);
             // 发送消息到安检审核人员
             let users = await company.getRbac_users();
             users.forEach(async user => {
@@ -308,7 +320,7 @@ module.exports = {
                     let modules = await role.getRbac_modules();
                     // 当前用户是否配置安检管理模块
                     if (modules.find(({ name }) => name === 'sc') && user.open_id) {
-                        wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company, user.open_id);
+                        wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company.name, user.open_id);
                     }
                 })
 

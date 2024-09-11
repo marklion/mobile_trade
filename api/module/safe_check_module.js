@@ -84,12 +84,13 @@ module.exports = {
             params: {
                 content_id: { type: Number, have_to: true, mean: '内容ID', example: 1 },
                 comment: { type: String, have_to: false, mean: '不通过原因', example: '内容错误' },
+                plan_id: { type: Number, have_to: false, mean: '计划ID', example: '123' },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true },
             },
             func: async function (body, token) {
-                await sc_lib.check_sc_content(body.content_id, token, body.comment);
+                await sc_lib.check_sc_content(body.content_id, token, body.comment,body.plan_id);
                 return { result: true };
             },
         },

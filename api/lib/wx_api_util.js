@@ -529,14 +529,14 @@ module.exports = {
             send_wx_msg({ ...req });
         });
     },
-    send_sc_check_msg: async function (msg, carNumber, checkType, company, openId) {
+    send_sc_check_msg: async function (msg, carNumber, checkType, companyName, openId) {
         await send_wx_msg({
             touser: openId,
             template_id: 'qn42DMtvKzNMpOw1wz0DHTqAOPO9PiYDBzI3vz6Laxg',
             data: {
                 car_number6: { value: carNumber },
                 const1: { value: checkType },
-                thing4: { value: company.name },
+                thing4: { value: companyName },
                 thing3: { value: msg },
             },
         });
