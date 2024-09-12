@@ -308,10 +308,12 @@
     <!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
     <fui-backdrop :zIndex="8888" :show="show_one_att">
         <movable-area scale-area class="movable-area">
-            <fui-icon @click="show_one_att=false" style="z-index: 8889; position: absolute;top: 20rpx;right: 20rpx;" name="close" size="80" color="white"></fui-icon>
             <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
                 <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
             </movable-view>
+            <view class="close-button-container">
+                <fui-icon @click="show_one_att=false" name="close" size="80" color="white"></fui-icon>
+            </view>
         </movable-area>
     </fui-backdrop>
     <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
@@ -1486,5 +1488,15 @@ export default {
     z-index: 2000;
     top: 20rpx;
     right: 20rpx;
+}
+.close-button-container {
+    position: absolute;
+    bottom: 40rpx;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 8889;
 }
 </style>
