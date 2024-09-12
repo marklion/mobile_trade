@@ -36,13 +36,21 @@
             <fui-button v-if="!type_define.is_sale" text="我要代提" btnSize="mini" radius="0" type="primary" @click="prepare_proxy_buy"></fui-button>
             <fui-button text="导入" btnSize="mini" radius="0" type="purple" @click="show_import=true"></fui-button>
         </view>
-        <fui-grid :columns="2" :square="false">
-            <fui-grid-item v-for="(single_v, index) in vehicles" :key="index">
-                <view style="border:solid;">
-                    <fui-preview bdSize="26" :isBorder="false" :previewData="make_vc_show(single_v)" @click="remove_vehicle(index)"></fui-preview>
+        <scroll-view class="vehicle-list" scroll-x>
+            <view class="vehicle-container" :class="{ 'single-vehicle': vehicles.length === 1 }">
+                <view v-for="(single_v, index) in vehicles" :key="index" class="vehicle-card" :class="{ 'full-width': vehicles.length === 1 }">
+                    <fui-preview :previewData="make_vc_show(single_v)" @click="remove_vehicle(index)">
+                        <template #footer>
+                            <view class="vehicle-actions">
+                                <fui-button type="danger" size="mini" @click.stop="remove_vehicle(index)">
+                                    删除
+                                </fui-button>
+                            </view>
+                        </template>
+                    </fui-preview>
                 </view>
-            </fui-grid-item>
-        </fui-grid>
+            </view>
+        </scroll-view>
         <fui-divider></fui-divider>
         <fui-button text="提交" bold @click="submit"></fui-button>
     </fui-form>
@@ -448,7 +456,7 @@ export default {
             }
         },
         get_vehicles: async function (pageNo, [pair_get_url]) {
-            
+
             let res = await this.$send_req(pair_get_url, {
                 pageNo: pageNo,
             });
@@ -463,7 +471,7 @@ export default {
                     main_vehicle_plate: set.main_vehicle.plate
                 }))
             );
-            let mergedPairs = [...res.pairs,...vehicles];
+            let mergedPairs = [...res.pairs, ...vehicles];
 
             const uniquePairs = Array.from(new Set(mergedPairs.map(JSON.stringify))).map(JSON.parse);
 
@@ -594,6 +602,36 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+.vehicle-list {
+    width: 100%;
+    white-space: nowrap;
+    padding: 10px 0;
+}
+.vehicle-container {
+    display: inline-flex;
+    padding: 0 10px;
+}
+.vehicle-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-right: 10px;
+    width: 280px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.single-vehicle {
+    display: block;
+    padding: 0;
+}
+.full-width {
+    width: 100%;
+    margin-right: 0;
+}
+.vehicle-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px;
+}
 </style>
