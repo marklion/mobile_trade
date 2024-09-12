@@ -86,7 +86,7 @@
         <fui-form ref="form" top="100">
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
             <fui-input label="备注" borderTop placeholder="请输入备注" v-model="stuff_ready_fetch.comment"></fui-input>
-            <fui-input label="期望单车装载量" borderTop placeholder="请输入期望单车装载量" v-model="stuff_ready_fetch.expect_count"></fui-input>
+            <fui-input required label="期望单车装载量" borderTop placeholder="请输入期望单车装载量" v-model="stuff_ready_fetch.expect_count"></fui-input>
             <fui-input label="允许迟到天数" borderTop placeholder="请输入允许迟到天数" v-model="stuff_ready_fetch.delay_days"></fui-input>
             <fui-input label="自动关闭时间点" borderTop placeholder="选择时间，不填就是不关闭" v-model="stuff_ready_fetch.close_time" disabled @click="show_close_time = true">
                 <fui-button v-if="stuff_ready_fetch.close_time" text="取消自动关闭" @click="stuff_ready_fetch.close_time = ''" btnSize="mini" type="warning"></fui-button>
@@ -376,8 +376,8 @@ export default {
                     msg: ['请输入物料名']
                 }, {
                     name: 'expect_count',
-                    rule: ['isAmount'],
-                    msg: ['预计装货量请填写数字']
+                    rule: ['required','isAmount'],
+                    msg: ['请输入预计单车装货量','预计装货量请填写数字']
                 }, {
                     name: 'delay_days',
                     rule: ['isNumber'],
