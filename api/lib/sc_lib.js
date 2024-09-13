@@ -237,13 +237,21 @@ module.exports = {
                 content.attachment = _attachment;
                 content.expired_time = _expired_time;
                 await content.save();
-                // 发送消息
-                await this.fetch_send_sc_check_msg(
-                    msg = '安检资料上传成功',
-                    company,
-                    driver = plan.driver,
-                    carNumber = plan?.main_vehicle?.plate || '蒙AB6666'
-                );
+
+                // 检查当前司机是否所有所需证件都已上传
+                const allContentsUploaded = await this.get_sc_status_by_plan(plan);
+                const emptyContentsCount = allContentsUploaded.reqs.filter(req => !req.sc_content).length;
+
+                if (emptyContentsCount == 0) {
+                    await this.fetch_send_sc_check_msg(
+                        msg = '司机已上传所有安检资料，请及时审核',
+                        company = plan.stuff.company,
+                        driver = plan.driver,
+                        carNumber = plan?.main_vehicle?.plate || '蒙AB6666',
+                        checkType = "SC_CHECK",
+                        notifyUser = 'CHECKER'
+                    );
+                }
             }
             else {
                 throw { err_msg: '创建安检内容失败' };
@@ -279,39 +287,67 @@ module.exports = {
         });
         let company = await rbac_lib.get_company_by_token(_token);
         let user = await rbac_lib.get_user_by_token(_token);
-        if (user && company && content  && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
-            let sc_msg = ''
+        if (user && company && content && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
             if (!_comment) {
                 content.passed = true;
                 content.comment = '';
-                sc_msg = `安检审核已通过`
             }
             else {
                 content.passed = false;
                 content.comment = _comment;
-                sc_msg = `安检审核未通过:${content.comment}`
             }
             content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
             content.checker = user.name;
             await content.save();
-            let plan = await util_lib.get_single_plan_by_id(_plan_id);
-            // 发送消息
-            await this.fetch_send_sc_check_msg(
-                msg = sc_msg,
-                company = content.sc_req.stuff.company,
-                driver = content.driver,
-                carNumber = plan?.main_vehicle?.plate || '蒙AB6666',
-            );
+            if (_plan_id) {
+                let plan = await util_lib.get_single_plan_by_id(_plan_id);
+                // 未通过的安检资料
+                const allContentsPassed = await sq.models.sc_content.findAll({
+                    where: {
+                        [db_opt.Op.or]: [
+                            { driverId: plan?.driver?.id || 0 },
+                            { vehicleId: plan?.main_vehicle?.id || 0 },
+                            { vehicleId: plan?.behind_vehicle?.id || 0 },
+                        ],
+                        passed: false
+                    }
+                });
+                if (allContentsPassed.length === 0) {
+                    // 所有安检资料都已通过，发送消息给司机
+                    await this.fetch_send_sc_check_msg(
+                        msg = '安检资料已通过审核',
+                        company = plan?.stuff?.company,
+                        driver = plan?.driver,
+                        carNumber = plan?.main_vehicle?.plate || '蒙AB6666',
+                        checkType = "SC_CHECK",
+                        notifyUser = 'DRIVER'
+                    );
+                }
+
+                if (allContentsPassed.length === 1 && !content.passed) {
+                    // 反审安检资料从通过变为不通过，发送消息给司机
+                    await this.fetch_send_sc_check_msg(
+                        msg = '安检资料需要重新审核',
+                        company = plan?.stuff?.company,
+                        driver = plan?.driver,
+                        carNumber = plan?.main_vehicle?.plate || '蒙AB6666',
+                        checkType = "SC_CHECK",
+                        notifyUser = 'DRIVER'
+                    );
+                }
+            }
+
         }
         else {
             throw { err_msg: '无权限' };
         }
     },
-    fetch_send_sc_check_msg: async function (msg = '安检审核', company = null, driver = null, carNumber = '蒙AB6666', checkType = "SC_CHECK") {
-        if (company && driver && driver.open_id) {
-            
+    fetch_send_sc_check_msg: async function (msg = '安检审核', company = null, driver = null, carNumber = '蒙AB6666', checkType = "SC_CHECK", notifyUser) {
+        if (notifyUser == 'DRIVER' && driver && driver.open_id) {
             // 发送消息到司机端
             wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company.name, driver.open_id);
+        }
+        if (notifyUser == 'CHECKER') {
             // 发送消息到安检审核人员
             let users = await company.getRbac_users();
             users.forEach(async user => {
