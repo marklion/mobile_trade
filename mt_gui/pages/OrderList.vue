@@ -135,7 +135,11 @@
                         </view>
                     </u-cell>
                     <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
-
+                    <u-cell v-if="!focus_plan.is_buy" title="合同有效期">
+                        <view slot="value">
+                            <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="28"  :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
+                        </view>
+                    </u-cell>
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
                         <u-cell title="余额" :label="user_authorize">
