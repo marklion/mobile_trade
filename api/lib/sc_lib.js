@@ -343,24 +343,14 @@ module.exports = {
         }
     },
     fetch_send_sc_check_msg: async function (msg, company, driver, carNumber, checkType, notifyUser) {
+        console.log(msg);
         if (notifyUser == 'DRIVER' && driver && driver.open_id) {
             // 发送消息到司机端
-            wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company.name, driver.open_id);
+            wx_api_util.send_sc_check_msg_to_driver(carNumber, checkType, company.name, driver.open_id);
         }
         if (notifyUser == 'CHECKER') {
             // 发送消息到安检审核人员
-            let users = await company.getRbac_users();
-            users.forEach(async user => {
-                let roles = await user.getRbac_roles();
-                roles.forEach(async role => {
-                    let modules = await role.getRbac_modules();
-                    // 当前用户是否配置安检管理模块
-                    if (modules.find(({ name }) => name === 'sc') && user.open_id) {
-                        wx_api_util.send_sc_check_msg(msg, carNumber, checkType, company.name, user.open_id);
-                    }
-                })
-
-            });
+            wx_api_util.send_sc_check_msg_to_checker(carNumber, checkType, company);
         }
     }
 };

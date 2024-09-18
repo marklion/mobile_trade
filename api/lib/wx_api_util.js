@@ -529,16 +529,31 @@ module.exports = {
             send_wx_msg({ ...req });
         });
     },
-    send_sc_check_msg: async function (msg, carNumber, checkType, companyName, openId) {
+    send_sc_check_msg_to_driver: async function (carNumber, checkType, companyName, openId) {
         await send_wx_msg({
             touser: openId,
             template_id: 'qn42DMtvKzNMpOw1wz0DHTqAOPO9PiYDBzI3vz6Laxg',
             data: {
                 car_number6: { value: carNumber },
                 const1: { value: checkType },
-                thing4: { value: companyName },
-                thing3: { value: msg },
+                thing4: { value: companyName }
             },
+        });
+    },
+    send_sc_check_msg_to_checker: async function (carNumber, checkType, company) {
+        let req = {
+            template_id: 'qn42DMtvKzNMpOw1wz0DHTqAOPO9PiYDBzI3vz6Laxg',
+            data: {
+                car_number6: { value: carNumber },
+                const1: { value: checkType },
+                thing4: { value: company.name }
+            },
+        }
+        let users = await company.getRbac_users();
+        let related_users = await filter_related_users('sc', users);
+        related_users.forEach(async item => {
+            req.touser = item;
+            send_wx_msg({ ...req });
         });
     }
     
