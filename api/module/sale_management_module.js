@@ -242,7 +242,6 @@ module.exports = {
                 end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                 number: { type: String, mean: '合同号', example: "abc" },
                 customer_code: { type: String, mean: '客户合同号', example: "sss" },
-                nearlyExpired: { type: Boolean, mean: '是否即将到期(一个月内)', example: false },
                 rbac_users: {
                     type: Array, mean: '授权用户', explain: {
                         id: { type: Number, mean: '用户ID', example: 1 },
@@ -263,16 +262,7 @@ module.exports = {
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
-                let contract = contracts[0];
-                // 合同是否一个月内即将到期
-                const oneMonthFromNow = moment().add(1, 'month');
-                const contractEndDate = moment(contract.end_time);
-                const monthsDifference = contractEndDate.diff(moment(), 'months', true);
-                const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
-                if(diffOneMonth){
-                    contract.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
-                }
-                return contract
+                return contracts[0]
             },
         },
         contract_get: {

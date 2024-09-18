@@ -135,9 +135,9 @@
                         </view>
                     </u-cell>
                     <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
-                    <u-cell v-if="!focus_plan.is_buy" title="合同有效期">
+                    <u-cell title="合同有效期">
                         <view slot="value">
-                            <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="28"  :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
+                            <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="26"  :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
                         </view>
                     </u-cell>
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
@@ -409,6 +409,7 @@ import ModuleFilterVue from '../components/ModuleFilter.vue';
 import $fui from '@/components/firstui/fui-clipboard';
 import ScUpload from '../components/ScUpload.vue';
 import pickRegions from '@/components/pick-regions/pick-regions.vue'
+import moment from 'moment';
 export default {
     name: 'OrderList',
     components: {
@@ -1193,11 +1194,22 @@ export default {
             this.refresh_plans();
         },
         prepare_plan_detail: async function (item) {
-            if (!item.is_buy && this.$has_module('sale_management')) {
-                let resp = await this.$send_req('/sale_management/get_contract_by_customer', {
-                    customer_id: item.company.id,
+            // 获取销售或采购合同信息
+            if (this.$has_module('sale_management') || this.$has_module('buy_management')) {
+                let buyOrSale = item.is_buy ? 'buy' : 'sale';
+                let resp = await this.$send_req(`/${buyOrSale}_management/get_contract_by_customer`, {
+                    customer_id: buyOrSale === 'buy' ? item.stuff.company.id : item.company.id,
                 })
+                // 标注合同是否一个月内即将到期
+                const oneMonthFromNow = moment().add(1, 'month');
+                const contractEndDate = moment(resp.end_time);
+                const monthsDifference = contractEndDate.diff(moment(), 'months', true);
+                const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
+                if(diffOneMonth){
+                    resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
+                }
                 this.cur_contract = resp;
+                
             }
             this.focus_plan = item;
             this.show_plan_detail = true;
