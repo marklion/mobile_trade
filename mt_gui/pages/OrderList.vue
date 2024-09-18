@@ -1196,9 +1196,8 @@ export default {
         prepare_plan_detail: async function (item) {
             // 获取销售或采购合同信息
             if (this.$has_module('sale_management') || this.$has_module('buy_management')) {
-                let buyOrSale = item.is_buy ? 'buy' : 'sale';
-                let resp = await this.$send_req(`/${buyOrSale}_management/get_contract_by_customer`, {
-                    customer_id: buyOrSale === 'buy' ? item.stuff.company.id : item.company.id,
+                let resp = await this.$send_req(`/sale_management/get_contract_by_customer`, {
+                    customer_id: item.company.id,
                 })
                 // 标注合同是否一个月内即将到期
                 const oneMonthFromNow = moment().add(1, 'month');

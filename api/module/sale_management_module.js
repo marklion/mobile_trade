@@ -258,7 +258,6 @@ module.exports = {
                     },
                     include: db_opt.get_sq().models.rbac_user
                 })
-                
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
