@@ -407,5 +407,143 @@ module.exports = {
                 }
             }
         },
+        add_to_blacklist: {
+            name: '添加到黑名单',
+            description: '添加到黑名单',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                type: { type: String, have_to: true, mean: '黑名单类型', example: 'vehicle' },
+                id: { type: Number, have_to: true, mean: '车辆ID或司机ID', example: 1 },
+                reason: { type: String, have_to: true, mean: '加入黑名单原因', example: '违规行为' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                const transaction = await sq.transaction();
+                try {
+                    let company = await rbac_lib.get_company_by_token(token);
+                    if (!company) {
+                        throw new Error('未找到公司');
+                    }
+
+                    let blacklistEntry;
+                    if (body.type === 'vehicle') {
+                        let vehicle = await sq.models.vehicle.findByPk(body.id, { transaction });
+                        if (!vehicle) {
+                            throw new Error('未找到车辆');
+                        }
+                        blacklistEntry = await sq.models.blacklist.create({
+                            companyId: company.id,
+                            vehicleId: vehicle.id,
+                            reason: body.reason
+                        }, { transaction });
+                    } else if (body.type === 'driver') {
+                        let driver = await sq.models.driver.findByPk(body.id, { transaction });
+                        if (!driver) {
+                            throw new Error('未找到司机');
+                        }
+                        blacklistEntry = await sq.models.blacklist.create({
+                            companyId: company.id,
+                            driverId: driver.id,
+                            reason: body.reason
+                        }, { transaction });
+                    } else {
+                        throw new Error('无效的黑名单类型');
+                    }
+
+                    await transaction.commit();
+                    return { result: true };
+                } catch (error) {
+                    await transaction.rollback();
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+        remove_from_blacklist: {
+            name: '从黑名单中移除',
+            description: '从公司黑名单中移除车辆或司机',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                blacklist_id: { type: Number, have_to: true, mean: '黑名单ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                const transaction = await sq.transaction();
+                try {
+                    let company = await rbac_lib.get_company_by_token(token);
+                    if (!company) {
+                        throw new Error('未找到公司');
+                    }
+
+                    const blacklistEntry = await sq.models.blacklist.findOne({
+                        where: {
+                            id: body.blacklist_id,
+                            companyId: company.id
+                        },
+                        transaction
+                    });
+
+                    if (!blacklistEntry) {
+                        throw new Error('未找到指定的黑名单记录');
+                    }
+
+                    await blacklistEntry.destroy({ transaction });
+
+                    await transaction.commit();
+                    return { result: true };
+                } catch (error) {
+                    await transaction.rollback();
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+        get_blacklist: {
+            name: '获取黑名单',
+            description: '分页获取当前公司黑名单',
+            is_write: false,
+            is_get_api: true,
+            params: {},
+            result: {
+                blacklist: {
+                    type: Array, mean: '黑名单列表', explain: {
+                        id: { type: Number, mean: '黑名单ID', example: 1 },
+                        type: { type: String, mean: '黑名单类型', example: 'vehicle' },
+                        reason: { type: String, mean: '加入黑名单原因', example: '违规行为' },
+                        driverId: { type: Number, mean: '司机ID', example: 1 },
+                        vehicleId: { type: Number, mean: '车辆ID', example: 1 },
+                    }
+                },
+                total: { type: Number, mean: '总记录数', example: 100 }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                try {
+                    let company = await rbac_lib.get_company_by_token(token);
+                    if (!company) {
+                        throw new Error('未找到公司');
+                    }
+                    let ret = await sq.models.blacklist.findAndCountAll({
+                        order: [['id', 'DESC']],
+                        where: {
+                            companyId: company.id
+                        },
+                        offset:body.pageNo * 20,
+                        limit: 20
+                    });
+                    return { blacklist: ret.rows, total: ret.count };
+
+                } catch (error) {
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+        
     }
 }
