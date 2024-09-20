@@ -38,6 +38,7 @@
             重新绑定信息
         </fui-list-cell>
         <u-cell title="公司资质" isLink url="/subPage1/CompanyAttach"></u-cell>
+        <u-cell title="系统通知" isLink url="/subPage1/SysNotice"></u-cell>
         <module-filter require_module="rbac">
             <fui-list-cell arrow @click="config_role">
                 角色配置
