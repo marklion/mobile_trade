@@ -1,5 +1,6 @@
 <template>
 <view class="main-warp">
+    <notice-bar ref="noticeBar" />
     <fui-row style="background-color: white;padding: 20rpx 0rpx;" isFlex justify="start">
         <fui-col :span="6" v-if="self_info.company_logo">
             <fui-avatar size="large" shape="square" :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
