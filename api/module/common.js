@@ -25,6 +25,20 @@ async function do_export_later(token, name, func) {
     }, 200);
     return { result: true };
 }
+// 判断是否在黑名单中
+async function is_in_blacklist(driverId, mainVehicleId, behindVehicleId) {
+    console.log(driverId, mainVehicleId, behindVehicleId);
+    let blacklist = await db_opt.get_sq().models.blacklist.findOne({
+        where: {
+            [db_opt.Op.or]: [
+                { driverId: {[db_opt.Op.eq]: driverId } },
+                { vehicleId: { [db_opt.Op.eq]: mainVehicleId } },
+                { vehicleId: { [db_opt.Op.eq]: behindVehicleId } }
+            ]
+        }
+    });
+    return blacklist != null;
+}
 module.exports = {
     fetch_driver: {
         name: '获取或创建司机',
@@ -97,6 +111,10 @@ module.exports = {
             if (body.driver_phone) {
                 let orig_driver = (await util_lib.get_single_plan_by_id(body.plan_id)).driver;
                 driver_id = (await plan_lib.fetch_driver(orig_driver.name, body.driver_phone, orig_driver.id_card)).id;
+            }
+            // 判断是否在黑名单中
+            if (await is_in_blacklist(driver_id, main_vehicle_id, behind_vehicle_id)) {
+                throw { err_msg: '更新计划失败，司机或车辆已被列入黑名单' };
             }
             await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, main_vehicle_id, behind_vehicle_id, driver_id, body.comment, body.use_for, body.drop_address);
             return { result: true };
@@ -178,4 +196,5 @@ module.exports = {
             }
         };
     },
+    is_in_blacklist: is_in_blacklist,
 }

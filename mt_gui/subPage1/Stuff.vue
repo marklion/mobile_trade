@@ -83,7 +83,7 @@
         </u-cell>
     </view>
     <view v-else-if="cur_seg == 2">
-        <BlackList />
+        <BlackList ref="blacklist_ref" />
     </view>
     <fui-modal width="600" :show="show_stuff_fetch" v-if="show_stuff_fetch" @click="fetch_stuff">
         <fui-form ref="form" top="100">
@@ -412,7 +412,8 @@ export default {
         },
     },
     onPullDownRefresh() {
-        this.$refs.stuff_ref.refresh();
+        this.$refs?.stuff_ref?.refresh();
+        this.$refs?.blacklist_ref?.getVehicleList();
         this.stuff_ready_fetch = {
             name: '',
             comment: undefined,

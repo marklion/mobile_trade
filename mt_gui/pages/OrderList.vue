@@ -185,216 +185,236 @@
                         <fui-button type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
                     </view>
                 </u-cell>
-                <u-cell title="主车" :value="focus_plan.main_vehicle.plate">
-                </u-cell>
-                <u-cell title="挂车" :value="focus_plan.behind_vehicle.plate"></u-cell>
-                <u-cell :title="'司机:' + focus_plan.driver.name" :value="focus_plan.driver.phone" clickable @click="copy_text(focus_plan.driver.phone)"></u-cell>
-                <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
-            </view>
-            <view class="group_sep">
-                <u-cell-group title="出入信息">
-                    <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
-                    <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time">
-                    </u-cell>
-                    <module-filter require_module="scale">
-                        <u-cell title="代替司机操作" isLink :url="'/pages/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
-                    </module-filter>
-                </u-cell-group>
-            </view>
-            <view class="group_sep">
-                <u-cell-group v-if="focus_plan.sc_info" title="安检信息">
-                    <view v-if="focus_plan.status == 3 ">
-                        <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
-                            <view slot="value">
-                                <view v-if="sc_node.sc_content">
-                                    <view>
-                                        {{sc_node.sc_content.input}}
-                                    </view>
-                                    <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
-                                </view>
-                            </view>
-                        </u-cell>
+                <u-cell title="主车">
+                    <view slot="value">
+                        <view style="display:flex;justify-content: space-between;">
+                            <fui-text size="26" :text="focus_plan.main_vehicle.plate"></fui-text>
+                            <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.main_vehicle.id, 'vehicle')"></fui-button>
+                        </view>
                     </view>
-                </u-cell-group>
-                <module-filter v-else require_module="sc">
-                    <u-cell title="安检执行">
-                        <fui-button slot="right-icon" btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
-                    </u-cell>
-                </module-filter>
-                <module-filter require_module="exam">
-                    <u-cell title="查看考试结果" isLink :url="'/subPage1/PlanExam?plan_id=' + focus_plan.id"></u-cell>
-                </module-filter>
+                </u-cell>
+                <u-cell title="挂车"">
+                    <view slot="value">
+                    <view style="display:flex;justify-content: space-between;">
+                        <fui-text size="26" :text="focus_plan.behind_vehicle.plate"></fui-text>
+                        <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.behind_vehicle.id, 'vehicle')"></fui-button>
+                    </view>
             </view>
-            <view class="group_sep">
-                <u-cell-group title="装卸信息">
-                    <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
-                    <u-cell title="装车量" :value="focus_plan.count"></u-cell>
-                    <u-cell v-if="focus_plan.p_time" title="皮重" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
-                    <u-cell v-if="focus_plan.m_time" title="毛重" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
-                </u-cell-group>
-            </view>
-            <view class="group_sep">
-                <u-cell-group title="操作历史">
-                    <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
-                </u-cell-group>
-            </view>
+            </u-cell>
+            <u-cell :title="'司机:' + focus_plan.driver.name" clickable @click="copy_text(focus_plan.driver.phone)">
+                <view slot="value">
+                    <view style="display:flex;justify-content: space-between;">
+                        <fui-text size="26" :text="focus_plan.driver.phone"></fui-text>
+                        <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.driver.id, 'driver')"></fui-button>
+                    </view>
+                </view>
+            </u-cell>
+            <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
+</view>
+<view class="group_sep">
+    <u-cell-group title="出入信息">
+        <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
+        <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time">
+        </u-cell>
+        <module-filter require_module="scale">
+            <u-cell title="代替司机操作" isLink :url="'/pages/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
+        </module-filter>
+    </u-cell-group>
+</view>
+<view class="group_sep">
+    <u-cell-group v-if="focus_plan.sc_info" title="安检信息">
+        <view v-if="focus_plan.status == 3 ">
+            <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
+                <view slot="value">
+                    <view v-if="sc_node.sc_content">
+                        <view>
+                            {{sc_node.sc_content.input}}
+                        </view>
+                        <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
+                    </view>
+                </view>
+            </u-cell>
+        </view>
+    </u-cell-group>
+    <module-filter v-else require_module="sc">
+        <u-cell title="安检执行">
+            <fui-button slot="right-icon" btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
+        </u-cell>
+    </module-filter>
+    <module-filter require_module="exam">
+        <u-cell title="查看考试结果" isLink :url="'/subPage1/PlanExam?plan_id=' + focus_plan.id"></u-cell>
+    </module-filter>
+</view>
+<view class="group_sep">
+    <u-cell-group title="装卸信息">
+        <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
+        <u-cell title="装车量" :value="focus_plan.count"></u-cell>
+        <u-cell v-if="focus_plan.p_time" title="皮重" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
+        <u-cell v-if="focus_plan.m_time" title="毛重" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
+    </u-cell-group>
+</view>
+<view class="group_sep">
+    <u-cell-group title="操作历史">
+        <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
+    </u-cell-group>
+</view>
 
-        </scroll-view>
-    </fui-bottom-popup>
-    <fui-gallery :urls="sc_attach_urls" :show="show_sc" @hide="show_sc = false"></fui-gallery>
+</scroll-view>
+</fui-bottom-popup>
+<fui-gallery :urls="sc_attach_urls" :show="show_sc" @hide="show_sc = false"></fui-gallery>
 
-    <fui-bottom-popup :show="choose_company_show" @close="choose_company_show= false" z-index="1002">
+<fui-bottom-popup :show="choose_company_show" @close="choose_company_show= false" z-index="1002">
+    <fui-list>
+        <list-show v-model="supplier_list" :fetch_function="get_buy_contracts" search_key="cond" height="40vh">
+            <fui-list-cell v-for="item in supplier_list" :key="item.id" arrow @click="assign_supplier(item.company.id)">
+                {{item.company.name}}
+            </fui-list-cell>
+        </list-show>
+    </fui-list>
+</fui-bottom-popup>
+<fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
+    <u-cell title="安检结果">
+        <view slot="value">
+            <fui-text v-if="(sc_data2show.length > 0 && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
+            <fui-text v-else type="danger" text="未通过"></fui-text>
+        </view>
+    </u-cell>
+    <list-show ref="sc_confirm" v-model="sc_data2show" :fetch_function="get_plan_sc" height="70vh" :fetch_params="[focus_plan.id]">
+        <view v-for="item in sc_data2show" :key="item.id">
+            <u-cell>
+                <view slot="icon">
+                    <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="代传" @click="prepare_upload_sc(item)"></fui-button>
+                    <fui-button v-else-if="!item.sc_content.passed" type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
+                </view>
+                <view slot="label" style="font-size:14px;color:gray;">
+                    <view v-if="item.sc_content">
+                        <view>
+                            {{item.need_expired?('到期时间：' + item.sc_content.expired_time):'长期有效'}}
+                        </view>
+                        <view v-if="item.sc_content">
+                            <view v-if="item.sc_content.checker">
+                                审批人：{{item.sc_content.checker}}
+                            </view>
+                            <view v-if="item.sc_content.comment">
+                                附言：{{item.sc_content.comment}}
+                            </view>
+                            <view v-if="item.sc_content.check_time">
+                                审批时间：{{item.sc_content.check_time}}
+                            </view>
+                        </view>
+                    </view>
+                </view>
+                <view slot="title">
+                    {{item.name}}
+                    <fui-tag theme="plain" :text="sc_status_string(item.sc_content).text" :scaleRatio="0.8" :type="sc_status_string(item.sc_content).type"></fui-tag>
+                </view>
+                <view slot="value">
+                    <view v-if="item.sc_content">
+                        {{item.sc_content.input}}
+                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
+                    </view>
+                </view>
+                <view slot="right-icon">
+                    <view v-if="item.sc_content">
+                        <fui-button type="success" v-if="!item.sc_content.passed" btnSize="mini" text="通过" @click="pass_sc(item.sc_content.id)"></fui-button>
+                        <fui-button type="danger" v-else btnSize="mini" text="反审" @click="prepare_reject_sc(item)"></fui-button>
+                        <fui-button type="warning" v-if="!item.sc_content.passed" btnSize="mini" text="附言" @click="prepare_reject_sc(item)"></fui-button>
+                    </view>
+                </view>
+            </u-cell>
+        </view>
+    </list-show>
+</fui-bottom-popup>
+<!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
+<fui-backdrop :zIndex="8888" :show="show_one_att">
+    <movable-area scale-area class="movable-area">
+        <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
+            <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
+        </movable-view>
+        <view class="close-button-container">
+            <fui-icon @click="show_one_att=false" name="close" size="80" color="white"></fui-icon>
+        </view>
+    </movable-area>
+</fui-backdrop>
+<fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
+</fui-modal>
+<fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
+    <fui-form ref="rollback_form" top="100">
+        <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
+    </fui-form>
+</fui-modal>
+<fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
+    <fui-form ref="deliver" top="100">
+        <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
+        <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
+        <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
+        <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
+        <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
+            <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
+        </fui-input>
+    </fui-form>
+</fui-modal>
+
+<fui-modal :zIndex="80" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
+    <fui-form ref="plan_form" :model="dup_plan">
+        <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
+            <fui-input placeholder="请输入计划日期" disabled v-model="dup_plan.plan_time"></fui-input>
+        </fui-form-item>
+        <view v-if="!cur_is_buy">
+            <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
+                <fui-input placeholder="请输入用途" disabled v-model="dup_plan.use_for"></fui-input>
+            </fui-form-item>
+            <pick-regions @getRegion="pick_address">
+                <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
+                    <fui-input placeholder="请输入卸车地点" disabled v-model="dup_plan.drop_address"></fui-input>
+                </fui-form-item>
+            </pick-regions>
+        </view>
+        <view v-else>
+            <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
+                <fui-input placeholder="请输入单价" v-model="dup_plan.price"></fui-input>
+            </fui-form-item>
+        </view>
+        <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
+            <fui-input placeholder="请输入承运公司" v-model="dup_plan.trans_company_name"></fui-input>
+        </fui-form-item>
+    </fui-form>
+    <fui-date-picker :show="show_plan_time" type="3" :value="default_time" @change="fill_plan_time" @cancel="show_plan_time = false"></fui-date-picker>
+    <fui-bottom-popup :show="show_use_for" @close="show_use_for = false">
         <fui-list>
-            <list-show v-model="supplier_list" :fetch_function="get_buy_contracts" search_key="cond" height="40vh">
-                <fui-list-cell v-for="item in supplier_list" :key="item.id" arrow @click="assign_supplier(item.company.id)">
-                    {{item.company.name}}
-                </fui-list-cell>
-            </list-show>
+            <fui-list-cell v-for="(single_uf, index) in use_for_array" :key="index" arrow @click="choose_use_for(single_uf)">
+                {{single_uf}}
+            </fui-list-cell>
         </fui-list>
     </fui-bottom-popup>
-    <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
-        <u-cell title="安检结果">
-            <view slot="value">
-                <fui-text v-if="(sc_data2show.length > 0 && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
-                <fui-text v-else type="danger" text="未通过"></fui-text>
-            </view>
-        </u-cell>
-        <list-show ref="sc_confirm" v-model="sc_data2show" :fetch_function="get_plan_sc" height="70vh" :fetch_params="[focus_plan.id]">
-            <view v-for="item in sc_data2show" :key="item.id">
-                <u-cell>
-                    <view slot="icon">
-                        <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="代传" @click="prepare_upload_sc(item)"></fui-button>
-                        <fui-button v-else-if="!item.sc_content.passed" type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
-                    </view>
-                    <view slot="label" style="font-size:14px;color:gray;">
-                        <view v-if="item.sc_content">
-                            <view>
-                                {{item.need_expired?('到期时间：' + item.sc_content.expired_time):'长期有效'}}
-                            </view>
-                            <view v-if="item.sc_content">
-                                <view v-if="item.sc_content.checker">
-                                    审批人：{{item.sc_content.checker}}
-                                </view>
-                                <view v-if="item.sc_content.comment">
-                                    附言：{{item.sc_content.comment}}
-                                </view>
-                                <view v-if="item.sc_content.check_time">
-                                    审批时间：{{item.sc_content.check_time}}
-                                </view>
-                            </view>
-                        </view>
-                    </view>
-                    <view slot="title">
-                        {{item.name}}
-                        <fui-tag theme="plain" :text="sc_status_string(item.sc_content).text" :scaleRatio="0.8" :type="sc_status_string(item.sc_content).type"></fui-tag>
-                    </view>
-                    <view slot="value">
-                        <view v-if="item.sc_content">
-                            {{item.sc_content.input}}
-                            <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
-                        </view>
-                    </view>
-                    <view slot="right-icon">
-                        <view v-if="item.sc_content">
-                            <fui-button type="success" v-if="!item.sc_content.passed" btnSize="mini" text="通过" @click="pass_sc(item.sc_content.id)"></fui-button>
-                            <fui-button type="danger" v-else btnSize="mini" text="反审" @click="prepare_reject_sc(item)"></fui-button>
-                            <fui-button type="warning" v-if="!item.sc_content.passed" btnSize="mini" text="附言" @click="prepare_reject_sc(item)"></fui-button>
-                        </view>
-                    </view>
-                </u-cell>
-            </view>
-        </list-show>
-    </fui-bottom-popup>
-    <!-- <fui-gallery zIndex="1004" :urls="one_att" :show="show_one_att" @hide="show_one_att = false"></fui-gallery> -->
-    <fui-backdrop :zIndex="8888" :show="show_one_att">
-        <movable-area scale-area class="movable-area">
-            <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
-                <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
-            </movable-view>
-            <view class="close-button-container">
-                <fui-icon @click="show_one_att=false" name="close" size="80" color="white"></fui-icon>
-            </view>
-        </movable-area>
-    </fui-backdrop>
-    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
-        <fui-form ref="rollback_form" top="100">
-            <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
-        <fui-form ref="deliver" top="100">
-            <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
-            <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
-            <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
-            <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
-            <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
-                <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
-            </fui-input>
-        </fui-form>
-    </fui-modal>
-
-    <fui-modal :zIndex="80" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
-        <fui-form ref="plan_form" :model="dup_plan">
-            <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
-                <fui-input placeholder="请输入计划日期" disabled v-model="dup_plan.plan_time"></fui-input>
-            </fui-form-item>
-            <view v-if="!cur_is_buy">
-                <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
-                    <fui-input placeholder="请输入用途" disabled v-model="dup_plan.use_for"></fui-input>
-                </fui-form-item>
-                <pick-regions @getRegion="pick_address">
-                    <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
-                        <fui-input placeholder="请输入卸车地点" disabled v-model="dup_plan.drop_address"></fui-input>
-                    </fui-form-item>
-                </pick-regions>
-            </view>
-            <view v-else>
-                <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
-                    <fui-input placeholder="请输入单价" v-model="dup_plan.price"></fui-input>
-                </fui-form-item>
-            </view>
-            <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
-                <fui-input placeholder="请输入承运公司" v-model="dup_plan.trans_company_name"></fui-input>
-            </fui-form-item>
-        </fui-form>
-        <fui-date-picker :show="show_plan_time" type="3" :value="default_time" @change="fill_plan_time" @cancel="show_plan_time = false"></fui-date-picker>
-        <fui-bottom-popup :show="show_use_for" @close="show_use_for = false">
-            <fui-list>
-                <fui-list-cell v-for="(single_uf, index) in use_for_array" :key="index" arrow @click="choose_use_for(single_uf)">
-                    {{single_uf}}
-                </fui-list-cell>
-            </fui-list>
-        </fui-bottom-popup>
-    </fui-modal>
-    <fui-modal :zIndex="1004" width="600" v-if="show_reject_sc" :show="show_reject_sc" @click="reject_sc">
-        <fui-input required label="附言" borderTop placeholder="请输入附言" v-model="reject_sc_comment"></fui-input>
-    </fui-modal>
-    <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
-    <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
-    <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" v-if="show_delete_sc_content" :show="show_delete_sc_content" @click="delete_sc_content">
-    </fui-modal>
-    <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
-    </fui-modal>
-    <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
-        <fui-form ref="plan_update" :model="update_req">
-            <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
-            <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
-            <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
-            <fui-input label="备注" v-model="update_req.comment"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
-        <fui-form ref="new_stuff_price_form" top="100">
-            <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
-            <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-message ref="po_msg"></fui-message>
-    <fui-toast ref="toast"></fui-toast>
-    <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
-    <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
+</fui-modal>
+<fui-modal :zIndex="1004" width="600" v-if="show_reject_sc" :show="show_reject_sc" @click="reject_sc">
+    <fui-input required label="附言" borderTop placeholder="请输入附言" v-model="reject_sc_comment"></fui-input>
+</fui-modal>
+<fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
+<sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
+<fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" v-if="show_delete_sc_content" :show="show_delete_sc_content" @click="delete_sc_content">
+</fui-modal>
+<fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
+</fui-modal>
+<fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
+    <fui-form ref="plan_update" :model="update_req">
+        <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
+        <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
+        <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
+        <fui-input label="备注" v-model="update_req.comment"></fui-input>
+    </fui-form>
+</fui-modal>
+<fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
+    <fui-form ref="new_stuff_price_form" top="100">
+        <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
+        <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
+    </fui-form>
+</fui-modal>
+<fui-message ref="po_msg"></fui-message>
+<fui-toast ref="toast"></fui-toast>
+<fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
+<fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
 </view>
 </template>
 
@@ -415,7 +435,7 @@ export default {
     },
     data: function () {
         return {
-            tab_current:0,
+            tab_current: 0,
             show_attach: false,
             new_stuff_price: {
                 show: false,
@@ -624,7 +644,7 @@ export default {
             deliver_time_type: '',
             tabs: [],
             show_batch_copy: false,
-            gallery_index:0
+            gallery_index: 0
         }
     },
     computed: {
@@ -708,11 +728,11 @@ export default {
         },
     },
     methods: {
-        change_index:function(e){
+        change_index: function (e) {
             this.gallery_index = e.index
         },
         download_img: function () {
-            const imgs = [this.focus_plan.company.attachment,this.focus_plan.stuff.company.attachment]
+            const imgs = [this.focus_plan.company.attachment, this.focus_plan.stuff.company.attachment]
             this.$download_file(this.$convert_attach_url(imgs[this.gallery_index]))
         },
         open_attach_pics: function () {
@@ -1320,7 +1340,7 @@ export default {
                 let res = await this.$send_req(this.make_plan_get_url(), {
                     ...this.plan_filter,
                     status: i,
-                    only_count:true
+                    only_count: true
                 });
                 this.tabs[i + 1].badge = res.total;
             }
@@ -1434,6 +1454,25 @@ export default {
                 this.refresh_plans();
             }
         },
+        add_to_blacklist: async function (id, type) {
+            uni.showModal({
+                title: '提示',
+                content: `确定将${type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`,
+                zIndex: 9999,
+                success: async (res) => {
+                    if (res.confirm) {
+                        await this.$send_req('/stuff/add_to_blacklist', {
+                            type: type,
+                            ids: id.toString(),
+                            reason: `违规${type === 'vehicle' ? '车辆' : '司机'}`
+                        });
+                        this.$refs.toast.show({
+                            text: '添加成功'
+                        });
+                    }
+                }
+            });
+        },
     },
     onPullDownRefresh() {
         this.refresh_plans();
@@ -1483,12 +1522,14 @@ export default {
     height: 100vh;
     margin: 0 40rpx;
 }
+
 .downloadBtn {
-    position:absolute;
+    position: absolute;
     z-index: 2000;
     top: 20rpx;
     right: 20rpx;
 }
+
 .close-button-container {
     position: absolute;
     bottom: 40rpx;
