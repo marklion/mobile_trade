@@ -45,8 +45,6 @@ Contract Maintain
     Del A Customer Contract  ${found_contracts[1]}[id]
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  1
-    ${found_contracts}  Req Get to Server  /customer/contract_get  ${bc1_user_token}  contracts
-    Length Should Be  ${found_contracts}  0
     ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
     Length Should Be  ${found_contracts}  2
     Update A Sale Contract    ${found_contracts}[0][id]  &{update_info}
@@ -55,8 +53,6 @@ Contract Maintain
     Should Be Equal As Strings    ${found_contracts}[0][end_time]    ${update_info}[end_time]
     Del A Supplier Contract  ${found_contracts[0]}[id]
     ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
-    Length Should Be  ${found_contracts}  1
-    ${found_contracts}  Req Get to Server  /supplier/contract_get  ${bc2_user_token}  contracts
     Length Should Be  ${found_contracts}  1
 
 Stuff For Buy

@@ -300,8 +300,8 @@ module.exports = {
                 [db_opt.Op.and]: [{
                     finish: false,
                 },
-                sq.where(sq.fn('datetime', sq.col('end_time')), {
-                    [db_opt.Op.lt]: sq.fn('datetime', moment().format('YYYY-MM-DD HH:mm:ss'))
+                sq.where(sq.fn('TIMESTAMP', sq.col('end_time')), {
+                    [db_opt.Op.lt]: sq.fn('TIMESTAMP', moment().format('YYYY-MM-DD HH:mm:ss'))
                 }),
                 ]
             },

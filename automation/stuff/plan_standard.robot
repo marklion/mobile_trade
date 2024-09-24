@@ -268,14 +268,14 @@ Auto Uncheck In
     #不叫号，检查过三分钟后是否被过号了
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Be Empty    ${plan}[register_time]
-    Sleep  3m
+    Sleep  70s
     ${plan}  Get Plan By Id  ${plan_id}
     Should Contain    ${plan}    register_time
     Call A Plan    ${plan}
     #叫号，然后检查过三分钟后是否被过号了
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Be Empty    ${plan}[register_time]
-    Sleep  3m
+    Sleep  70s
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Contain    ${plan}    register_time
     #关闭自动排号并再次排号
@@ -285,7 +285,7 @@ Auto Uncheck In
     Call A Plan    ${plan}
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Be Empty    ${plan}[register_time]
-    Sleep  3m
+    Sleep  70s
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Be Empty    ${plan}[register_time]
 
