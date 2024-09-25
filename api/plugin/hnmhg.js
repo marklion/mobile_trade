@@ -102,6 +102,9 @@ module.exports = {
             data: req
         });
     },
+    cancel_enter: async function (plan) {
+        throw {err_msg:'不支持撤销'};
+    },
     call_vehicle: async function (plan) {
 
     },

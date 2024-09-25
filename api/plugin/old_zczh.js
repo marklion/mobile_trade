@@ -35,6 +35,9 @@ module.exports = {
             true,
         ])
     },
+    cancel_enter: async function (plan) {
+        throw {err_msg:'不支持撤销'};
+    },
     cancel_check_in: async function (plan) {
         let zc_vo = await push_req2zc({}, make_url('/vehicle_order/get', plan));
         await lag_rpc.requeset_rpc(plan.stuff.company, 'field_queue_pass', [

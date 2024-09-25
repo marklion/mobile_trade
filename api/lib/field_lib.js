@@ -74,6 +74,11 @@ module.exports = {
         }
 
     },
+    handle_cancel_enter: async function (_plan) {
+        await hook_plan('cancel_enter', _plan);
+        _plan.enter_time = '';
+        await _plan.save();
+    },
     handle_driver_check_in: async function (_plan) {
         await hook_plan('check_in', _plan);
         _plan.register_time = moment().format('YYYY-MM-DD HH:mm:ss');
