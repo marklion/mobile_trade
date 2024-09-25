@@ -69,10 +69,7 @@ module.exports = {
             result: api_param_result_define.plan_detail_define,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
-                // 判断是否在黑名单中
-                if (await common.is_in_blacklist(body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
-                    throw { err_msg: '创建计划失败，司机或车辆已被列入黑名单' };
-                }
+                
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
                 let buy_company = undefined;
                 let is_proxy = false;
@@ -84,6 +81,10 @@ module.exports = {
                 }
                 else {
                     buy_company = await rbac_lib.get_company_by_token(token);
+                }
+                // 判断是否在黑名单中
+                if (await common.is_in_blacklist(body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
+                    throw { err_msg: '创建计划失败，司机或车辆已被列入黑名单' };
                 }
                 let driver = await sq.models.driver.findByPk(body.driver_id);
                 let main_vehicle = await sq.models.vehicle.findByPk(body.main_vehicle_id);

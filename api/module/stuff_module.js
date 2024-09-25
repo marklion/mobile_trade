@@ -429,45 +429,29 @@ module.exports = {
                         throw new Error('无权限');
                     }
                     const ids = body.ids.split(',').map(id => parseInt(id, 10));
-                    if (body.type === 'vehicle') {
-                        await Promise.all(ids.map(async (id) => {
-                            const [entry, created] = await sq.models.blacklist.findOrCreate({
-                                where: {
-                                    companyId: company.id,
-                                    vehicleId: id
-                                },
-                                defaults: {
-                                    reason: body.reason
-                                },
-                                transaction
-                            });
-                            if (!created) {
-                                entry.reason = body.reason;
-                                await entry.save({ transaction });
-                            }
-                            return entry;
-                        }));
-                    } else if (body.type === 'driver') {
-                        await Promise.all(ids.map(async (id) => {
-                            const [entry, created] = await sq.models.blacklist.findOrCreate({
-                                where: {
-                                    companyId: company.id,
-                                    driverId: id
-                                },
-                                defaults: {
-                                    reason: body.reason
-                                },
-                                transaction
-                            });
-                            if (!created) {
-                                entry.reason = body.reason;
-                                await entry.save({ transaction });
-                            }
-                            return entry;
-                        }));
-                    } else {
+                    const idField = body.type === 'vehicle' ? 'vehicleId' : 'driverId';
+                    if (!['vehicle', 'driver'].includes(body.type)) {
                         throw new Error('无效的黑名单类型');
                     }
+                    await Promise.all(ids.map(async (id) => {
+                        const [entry, created] = await sq.models.blacklist.findOrCreate({
+                            where: {
+                                companyId: company.id,
+                                [idField]: id
+                            },
+                            defaults: {
+                                reason: body.reason,
+                                companyId: company.id,
+                                [idField]: id
+                            },
+                            transaction
+                        });
+                        if (!created) {
+                            entry.reason = body.reason;
+                            await entry.save({ transaction });
+                        }
+                        return entry;
+                    }));
 
                     await transaction.commit();
                     return { result: true };
@@ -483,7 +467,6 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
-                type: { type: String, have_to: true, mean: '黑名单类型', example: 'vehicle' },
                 ids: { type: String, have_to: true, mean: '黑名单ID列表', example: '1,2,3' },
             },
             result: {
@@ -499,15 +482,16 @@ module.exports = {
                     }
 
                     const ids = body.ids.split(',').map(id => parseInt(id, 10));
-
                     await sq.models.blacklist.destroy({
                         where: {
-                            companyId: company.id,
-                            ...(body.type === 'vehicle' ? { vehicleId: { [sq.Sequelize.Op.in]: ids } } : {}),
-                            ...(body.type === 'driver' ? { driverId: { [sq.Sequelize.Op.in]: ids } } : {})
+                            id: {
+                                [sq.Sequelize.Op.in]: ids
+                            },
+                            companyId: company.id
                         },
                         transaction
                     });
+                    
                     await transaction.commit();
                     return { result: true };
                 } catch (error) {
@@ -528,8 +512,23 @@ module.exports = {
                         id: { type: Number, mean: '黑名单ID', example: 1 },
                         type: { type: String, mean: '黑名单类型', example: 'vehicle' },
                         reason: { type: String, mean: '加入黑名单原因', example: '违规行为' },
-                        driverId: { type: Number, mean: '司机ID', example: 1 },
-                        vehicleId: { type: Number, mean: '车辆ID', example: 1 },
+                        driver: {
+                            type: Object,
+                            mean: '司机信息',
+                            explain: {
+                                id: { type: Number, mean: '司机ID', example: 1 },
+                                name: { type: String, mean: '司机姓名', example: '张三' },
+                                phone: { type: String, mean: '司机电话', example: '13800138000' }
+                            }
+                        },
+                        vehicle: {
+                            type: Object,
+                            mean: '车辆信息',
+                            explain: {
+                                id: { type: Number, mean: '车辆ID', example: 1 },
+                                plate: { type: String, mean: '车牌号', example: '京A12345' },
+                            }
+                        },
                     }
                 }
             },
@@ -545,6 +544,10 @@ module.exports = {
                         where: {
                             companyId: company.id
                         },
+                        include: [
+                            { model: sq.models.driver},
+                            { model: sq.models.vehicle}
+                        ],
                         offset: body.pageNo * 20,
                         limit: 20
                     });

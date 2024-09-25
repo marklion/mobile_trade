@@ -8,17 +8,17 @@ Library  String
 Cleanup Blacklist
     Clear Table  blacklist
 Add To Blacklist
-    [Arguments]  ${ids}  ${type}  ${reason} 
+    [Arguments]  ${ids}  ${type}  ${reason}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  ids=${ids}  type=${type}  reason=${reason}
-    ${resp}  Req to Server  /stuff/add_to_blacklist  ${sc_admin_token}  ${req}
+    ${resp}  Req to Server  /stuff/add_to_blacklist  ${token}  ${req}
     Should Be True  ${resp}[result]
-
 Remove From Blacklist
-    [Arguments]  ${ids}  ${type}
-    ${req}  Create Dictionary  ids=${ids}  type=${type}
-    ${resp}  Req to Server  /stuff/remove_from_blacklist  ${sc_admin_token}  ${req}
+    [Arguments]  ${ids}    ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  ids=${ids}
+    ${resp}  Req to Server  /stuff/remove_from_blacklist  ${token}  ${req}
     Should Be True  ${resp}[result]
 Get Blacklist
-    ${resp}  Req Get to Server  /stuff/get_blacklist  ${sc_admin_token}  blacklist  pageNo=1
+    [Arguments]  ${token}=${sc_admin_token}
+    ${resp}  Req Get to Server  /stuff/get_blacklist  ${token}  blacklist  pageNo=1
     RETURN  ${resp}
 

@@ -269,9 +269,6 @@ let db_opt = {
         },
         blacklist: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            companyId: { type: DataTypes.INTEGER, allowNull: false },
-            vehicleId: { type: DataTypes.INTEGER, allowNull: true },
-            driverId: { type: DataTypes.INTEGER, allowNull: true },
             reason: { type: DataTypes.STRING, allowNull: true },
         },
     },

@@ -72,14 +72,14 @@ export default {
                     team.vehicle_sets.flatMap(set => [{
                             id: set.main_vehicle.id,
                             plate: set.main_vehicle.plate,
-                            isBlacklisted: this.blacklistData.some(item => item.vehicleId === set.main_vehicle.id),
-                            checked: this.blacklistData.some(item => item.vehicleId === set.main_vehicle.id)
+                            isBlacklisted: this.blacklistData.some(item => item.vehicle?.id === set.main_vehicle.id),
+                            checked: this.blacklistData.some(item => item.vehicle?.id === set.main_vehicle.id)
                         },
                         ...(set.behind_vehicle ? [{
                             id: set.behind_vehicle.id,
                             plate: set.behind_vehicle.plate,
-                            isBlacklisted: this.blacklistData.some(item => item.vehicleId === set.behind_vehicle.id),
-                            checked: this.blacklistData.some(item => item.vehicleId === set.behind_vehicle.id)
+                            isBlacklisted: this.blacklistData.some(item => item.vehicle?.id === set.behind_vehicle.id),
+                            checked: this.blacklistData.some(item => item.vehicle?.id === set.behind_vehicle.id)
                         }] : [])
                     ])
                 );
@@ -88,8 +88,8 @@ export default {
                         id: set.driver.id,
                         name: set.driver.name,
                         phone: set.driver.phone,
-                        isBlacklisted: this.blacklistData.some(item => item.driverId === set.driver.id),
-                        checked: this.blacklistData.some(item => item.driverId === set.driver.id)
+                        isBlacklisted: this.blacklistData.some(item => item.driver?.id === set.driver.id),
+                        checked: this.blacklistData.some(item => item.driver?.id === set.driver.id)
                     }))
                 );
             } catch (error) {
@@ -158,14 +158,20 @@ export default {
                     return;
                 }
 
+                const blacklistIdsToRemove = this.blacklistData
+                    .filter(item => 
+                        (this.currentType === 0 && this.selectedIds.includes(item.vehicle?.id)) ||
+                        (this.currentType === 1 && this.selectedIds.includes(item.driver?.id))
+                    )
+                    .map(item => item.id);
+
                 uni.showModal({
                     title: '提示',
                     content: `确定将选中的${this.currentType === 0 ? '车辆' : '司机'}从黑名单中移除吗？`,
                     success: async (res) => {
                         if (res.confirm) {
                             await this.$send_req('/stuff/remove_from_blacklist', {
-                                ids: this.selectedIds.join(','),
-                                type: this.currentType === 0 ? 'vehicle' : 'driver'
+                                ids: blacklistIdsToRemove.join(','),
                             });
                             await this.getVehicleList();
                             this.$refs.toast.show({
@@ -175,9 +181,9 @@ export default {
                     }
                 });
             } catch (error) {
+                console.error('移除失败:', error);
                 this.$refs.toast.show({
-                    text: '移除失败',
-                    icon: 'error'
+                    text: '移除失败'
                 });
             }
         },
