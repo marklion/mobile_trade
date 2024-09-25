@@ -13,3 +13,4 @@ results/
 /automation/log.html
 /automation/report.html
 /automation/output.xml
+.venv/
