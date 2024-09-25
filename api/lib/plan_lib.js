@@ -1160,6 +1160,7 @@ module.exports = {
                 ticket_no: element.ticket_no,
                 drop_address: element.drop_address,
                 fapiao_delivered: element.fapiao_delivered ? '是' : '否',
+                comment: element.comment,
             });
         }
         let columns = [{
@@ -1219,6 +1220,9 @@ module.exports = {
         }, {
             header: '发票已开?',
             key: 'fapiao_delivered',
+        }, {
+            header: '备注',
+            key: 'comment',
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
