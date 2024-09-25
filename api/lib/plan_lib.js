@@ -509,8 +509,7 @@ module.exports = {
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             if (is_exit) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    await plan.save();
+                    await field_lib.handle_cancel_enter(plan);
                     await this.rp_history_exit(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 }
                 else {
@@ -535,8 +534,8 @@ module.exports = {
             }
             if (plan.status == 1) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    rollback_content = '回退进厂';
+                    await this.plan_enter(_plan_id, _token, true);
+                    return;
                 }
                 else {
                     plan.status = 0;
@@ -545,8 +544,8 @@ module.exports = {
             }
             else if (plan.status == 2) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    rollback_content = '回退进厂';
+                    await this.plan_enter(_plan_id, _token, true);
+                    return;
                 }
                 else {
                     plan.status = 1;
