@@ -359,6 +359,9 @@ module.exports = {
         if (!plan || (plan.enter_time && plan.enter_time.length > 0) || (plan.status == 3)) {
             throw { err_msg: '已进厂,无法修改' };
         }
+        if (plan.register_time && plan.register_time.length > 0) {
+            throw { err_msg: '车辆已排号,无法修改,建议操作过号后再修改' };
+        }
         let company = await plan.getCompany();
         let owner_company = (await util_lib.get_single_plan_by_id(_plan_id)).stuff.company;
         let opt_company = await rbac_lib.get_company_by_token(_token);

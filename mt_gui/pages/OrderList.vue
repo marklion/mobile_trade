@@ -141,7 +141,7 @@
                         <u-cell title="余额" :label="user_authorize">
                             <view slot="value">
                                 <module-filter require_module="cash">
-                                    {{cur_contract.balance}}
+                                    {{cur_contract.balance.toFixed(2)}}
                                 </module-filter>
                             </view>
                             <view slot="right-icon">
@@ -182,7 +182,7 @@
             <view class="group_sep">
                 <u-cell title="车辆信息">
                     <view slot="right-icon">
-                        <fui-button type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
+                        <fui-button v-if="focus_plan.status != 3" type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
                     </view>
                 </u-cell>
                 <u-cell title="主车" :value="focus_plan.main_vehicle.plate">
@@ -415,7 +415,7 @@ export default {
     },
     data: function () {
         return {
-            tab_current:0,
+            tab_current: 0,
             show_attach: false,
             new_stuff_price: {
                 show: false,
@@ -624,7 +624,7 @@ export default {
             deliver_time_type: '',
             tabs: [],
             show_batch_copy: false,
-            gallery_index:0
+            gallery_index: 0
         }
     },
     computed: {
@@ -708,11 +708,11 @@ export default {
         },
     },
     methods: {
-        change_index:function(e){
+        change_index: function (e) {
             this.gallery_index = e.index
         },
         download_img: function () {
-            const imgs = [this.focus_plan.company.attachment,this.focus_plan.stuff.company.attachment]
+            const imgs = [this.focus_plan.company.attachment, this.focus_plan.stuff.company.attachment]
             this.$download_file(this.$convert_attach_url(imgs[this.gallery_index]))
         },
         open_attach_pics: function () {
@@ -1320,7 +1320,7 @@ export default {
                 let res = await this.$send_req(this.make_plan_get_url(), {
                     ...this.plan_filter,
                     status: i,
-                    only_count:true
+                    only_count: true
                 });
                 this.tabs[i + 1].badge = res.total;
             }
@@ -1483,12 +1483,14 @@ export default {
     height: 100vh;
     margin: 0 40rpx;
 }
+
 .downloadBtn {
-    position:absolute;
+    position: absolute;
     z-index: 2000;
     top: 20rpx;
     right: 20rpx;
 }
+
 .close-button-container {
     position: absolute;
     bottom: 40rpx;
