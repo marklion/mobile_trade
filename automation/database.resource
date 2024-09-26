@@ -1,9 +1,16 @@
 *** Settings ***
 Library  DatabaseLibrary
 Resource  var.resource
+Library  OperatingSystem
+Library  DateTime
+Library  custom_library.py
+Library  String
+Library  Collections
 
 *** Variables ***
+${WX_API_RECORD_FILE}  /database/wx_api_log.txt
 ${DB_PATH}  ../build/mt.db
+@{WX_MSG_CATCHED}
 
 *** Keywords ***
 Get DB Path
@@ -75,9 +82,39 @@ Change SC Content Expired Date
     Execute Sql String  update sc_content set expired_time = '${expired_date}' where id = ${sc_id};
     Disconnect From All Databases
 
+Update User OpenId
+    [Arguments]  ${phone}  ${open_id}
+    ${db_p}  Get DB Path
+    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    Execute Sql String  update rbac_user set open_id = '${open_id}' where phone = '${phone}';
+    Disconnect From All Databases
+
 Exam Reset
     Clear Table  option_answer
     Clear Table  question
     Clear Table  exam_paper
     Clear Table  exam
     Clear Table  exam_answer
+
+WxMsg Catch
+    Sleep    2s
+    ${records}  Get File  ${WX_API_RECORD_FILE}
+    @{lines}  Split String    ${records}  \n
+    ${time_begin}  Get Current Date  increment=-4seconds  result_format=%Y-%m-%d %H:%M:%S
+    ${lines_after_filter}  filter_lines_by_time  ${lines}  ${time_begin}
+    Log    ${lines_after_filter}
+    ${WX_MSG_CATCHED}  Create List
+    Append To List    ${WX_MSG_CATCHED}  @{lines_after_filter}
+    Set Suite Variable  ${WX_MSG_CATCHED}
+WxMsg was recieved
+    [Arguments]  ${open_id}  ${msg_id}
+    ${found}  Set Variable  ${False}
+    Log  ${open_id}
+    Log  ${msg_id}
+    FOR    ${element}    IN    @{WX_MSG_CATCHED}
+        IF  $open_id in $element and $msg_id in $element
+            ${found}  Set Variable  ${True}
+            Exit For Loop
+        END
+    END
+    Should Be True    ${found}
