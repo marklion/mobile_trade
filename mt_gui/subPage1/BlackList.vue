@@ -1,8 +1,48 @@
 <template>
 <view class="blacklist-container">
     <view class="add-blacklist-section">
+        <fui-tabs :tabs="['车辆', '司机']" :short="false" height="60" size="24" isSticky center :current="currentType" @change="onTypeChange"></fui-tabs>
+        <view v-if="currentType === 0">
+            <list-show ref="blacklist" :fetch_function="getBlacklist" height="80vh" search_key="search_cond" v-model="blacklistData">
+                <fui-checkbox-group>
+                    <fui-label v-if="item.vehicle" v-for="item in blacklistData" :key="item.id">
+                        <fui-list-cell>
+                            <view class="fui-list__cell">
+                                <text class="fui-text">{{ item.vehicle.plate }}</text>
+                                <view style="display: flex;justify-content: center;align-items:center">
+                                    <fui-checkbox borderColor="#B2B2B2" borderRadius="8rpx" :scaleRatio="0.8" @change="onBlacklistSelect" :checked="item.checked" :value="item.id">
+                                    </fui-checkbox>
+                                </view>
+                            </view>
+                        </fui-list-cell>
+                    </fui-label>
+                </fui-checkbox-group>
+            </list-show>
+        </view>
+        <view v-else>
+            <list-show ref="blacklist" :fetch_function="getBlacklist" height="80vh" search_key="search_cond" v-model="blacklistData">
+                <fui-checkbox-group>
+                    <fui-label v-if="item.driver" v-for="item in blacklistData" :key="item.id">
+                        <fui-list-cell>
+                            <view class="fui-list__cell">
+                                <text class="fui-text">{{ item.driver.name }} {{ item.driver.phone }}</text>
+                                <view style="display: flex;justify-content: center;align-items:center">
+                                    <fui-checkbox borderColor="#B2B2B2" borderRadius="8rpx" :scaleRatio="0.8" @change="onBlacklistSelect" :checked="item.checked" :value="item.id">
+                                    </fui-checkbox>
+                                </view>
+                            </view>
+                        </fui-list-cell>
+                    </fui-label>
+                </fui-checkbox-group>
+            </list-show>
+        </view>
+        <view class="submit-button-section">
+            <fui-button type="primary" radius="0" size="26" @click="show_popup=true">添加{{ currentType === 0 ? '车辆' :'司机' }}到黑名单</fui-button>
+            <fui-button type="danger"  radius="0" size="26" @click="removeFromBlacklist">从黑名单移出{{ currentType === 0 ?'车辆' : '司机' }}</fui-button>
+        </view>
+    </view>
 
-        <fui-tabs :tabs="['车辆', '司机']" :short="false"  height="60" size="24"  isSticky center :current="currentType"  @change="onTypeChange"></fui-tabs>
+    <fui-bottom-popup :show="show_popup" @close="show_popup=false">
         <view v-if="currentType === 0">
             <fui-checkbox-group>
                 <fui-label v-for="item in vehicleList" :key="item.id">
@@ -10,7 +50,6 @@
                         <view class="fui-list__cell">
                             <text class="fui-text">{{item.plate}}</text>
                             <view style="display: flex;justify-content: center;align-items:center">
-                                <text class="fui-text" :style="{color: item.isBlacklisted ? 'green' : 'gray'}">{{item.isBlacklisted ? '已加入黑名单' : '未加入黑名单'}}</text>
                                 <fui-checkbox borderColor="#B2B2B2" borderRadius="8rpx" :scaleRatio="0.8" @change="onVehicleSelect" :checked="item.checked" :value="item.id">
                                 </fui-checkbox>
                             </view>
@@ -26,8 +65,7 @@
                         <view class="fui-list__cell">
                             <text class="fui-text">{{item.name}} {{item.phone }}</text>
                             <view style="display: flex;justify-content: center;align-items:center">
-                                <text class="fui-text" :style="{color: item.isBlacklisted ? 'green' : 'gray'}">{{item.isBlacklisted ? '已加入黑名单' : '未加入黑名单'}}</text>
-                                <fui-checkbox  borderColor="#B2B2B2" borderRadius="8rpx" :scaleRatio="0.8" @change="onDriverSelect" :checked="item.checked" :value="item.id">
+                                <fui-checkbox borderColor="#B2B2B2" borderRadius="8rpx" :scaleRatio="0.8" @change="onDriverSelect" :checked="item.checked" :value="item.id">
                                 </fui-checkbox>
                             </view>
                         </view>
@@ -35,26 +73,31 @@
                 </fui-label>
             </fui-checkbox-group>
         </view>
-        <view class="submit-button-section">
-            <fui-button type="primary" radius="0" size="26" @click="addToBlacklist">添加{{ currentType === 0 ? '车辆' : '司机' }}到黑名单</fui-button>
-            <fui-button type="danger" radius="0" size="26" @click="removeFromBlacklist">移除{{ currentType === 0 ? '车辆' : '司机' }}黑名单</fui-button>
+        <view>
+            <fui-button type="primary" radius="0" size="26" @click="addToBlacklist">添加</fui-button>
         </view>
-    </view>
+    </fui-bottom-popup>
 
     <fui-toast ref="toast"></fui-toast>
 </view>
 </template>
 
 <script>
+import ListShow from '../components/ListShow.vue';
 export default {
     name: 'BlackList',
+    components: {
+        "list-show": ListShow
+    },
     data() {
         return {
             currentType: 0,
             blacklistData: [],
             vehicleList: [],
             driverList: [],
-            selectedIds: []
+            selectedIds: [],
+            pageNo: 0,
+            show_popup: false,
         }
     },
     mounted() {
@@ -64,42 +107,17 @@ export default {
         onTypeChange(e) {
             this.currentType = e.index;
         },
-        async getVehicleList() {
+        async getBlacklist(_pageNo) {
             try {
-                await this.getBlacklist();
-                const response = await this.$send_req('/global/get_vehicle_team');
-                this.vehicleList = response.vehicle_teams.flatMap(team =>
-                    team.vehicle_sets.flatMap(set => [{
-                            id: set.main_vehicle.id,
-                            plate: set.main_vehicle.plate,
-                            isBlacklisted: this.blacklistData.some(item => item.vehicle?.id === set.main_vehicle.id),
-                            checked: this.blacklistData.some(item => item.vehicle?.id === set.main_vehicle.id)
-                        },
-                        ...(set.behind_vehicle ? [{
-                            id: set.behind_vehicle.id,
-                            plate: set.behind_vehicle.plate,
-                            isBlacklisted: this.blacklistData.some(item => item.vehicle?.id === set.behind_vehicle.id),
-                            checked: this.blacklistData.some(item => item.vehicle?.id === set.behind_vehicle.id)
-                        }] : [])
-                    ])
-                );
-                this.driverList = response.vehicle_teams.flatMap(team =>
-                    team.vehicle_sets.map(set => ({
-                        id: set.driver.id,
-                        name: set.driver.name,
-                        phone: set.driver.phone,
-                        isBlacklisted: this.blacklistData.some(item => item.driver?.id === set.driver.id),
-                        checked: this.blacklistData.some(item => item.driver?.id === set.driver.id)
-                    }))
-                );
-            } catch (error) {
-                console.error('获取车辆列表失败:', error);
-            }
-        },
-        async getBlacklist() {
-            try {
-                const res = await this.$send_req('/stuff/get_blacklist');
-                this.blacklistData = res.blacklist;
+                const res = await this.$send_req('/stuff/get_blacklist', {
+                    pageNo: _pageNo
+                });
+                return res.blacklist.map(item => {
+                    item.checked = false;
+                    item.search_cond = (item.vehicle && item.vehicle.plate) ||
+                        (item.driver && item.driver.phone);
+                    return item;
+                });
 
             } catch (error) {
                 console.error('获取黑名单失败:', error);
@@ -129,11 +147,11 @@ export default {
                                 ids: this.selectedIds.join(','),
                                 reason: `违规${this.currentType === 0 ? '车辆' : '司机'}`
                             });
-                            await this.getVehicleList();
                             this.$refs.toast.show({
                                 text: '添加成功'
                             });
-
+                            this.$refs.blacklist.refresh();
+                            this.show_popup = false;
                         }
                     }
                 });
@@ -142,41 +160,30 @@ export default {
                 this.$refs.toast.show({
                     text: '添加失败',
                 });
+                this.show_popup = false;
             }
         },
         async removeFromBlacklist() {
             try {
-                if (this.currentType === 0) {
-                    this.selectedIds = this.vehicleList.filter(item => item.checked).map(item => item.id);
-                } else {
-                    this.selectedIds = this.driverList.filter(item => item.checked).map(item => item.id);
-                }
+                this.selectedIds = this.blacklistData.filter(item => item.checked).map(item => item.id);
                 if (this.selectedIds.length === 0) {
                     this.$refs.toast.show({
                         text: `请选择${this.currentType === 0 ? '车辆' : '司机'}`,
                     });
                     return;
                 }
-
-                const blacklistIdsToRemove = this.blacklistData
-                    .filter(item => 
-                        (this.currentType === 0 && this.selectedIds.includes(item.vehicle?.id)) ||
-                        (this.currentType === 1 && this.selectedIds.includes(item.driver?.id))
-                    )
-                    .map(item => item.id);
-
                 uni.showModal({
                     title: '提示',
                     content: `确定将选中的${this.currentType === 0 ? '车辆' : '司机'}从黑名单中移除吗？`,
                     success: async (res) => {
                         if (res.confirm) {
                             await this.$send_req('/stuff/remove_from_blacklist', {
-                                ids: blacklistIdsToRemove.join(','),
+                                ids: this.selectedIds.join(','),
                             });
-                            await this.getVehicleList();
                             this.$refs.toast.show({
                                 text: '移除成功'
                             });
+                            this.$refs.blacklist.refresh();
                         }
                     }
                 });
@@ -187,12 +194,42 @@ export default {
                 });
             }
         },
+        onBlacklistSelect(e) {
+            this.blacklistData.find(item => item.id === e.value).checked = e.checked;
+        },
         onVehicleSelect(e) {
             this.vehicleList.find(item => item.id === e.value).checked = e.checked;
-
         },
         onDriverSelect(e) {
             this.driverList.find(item => item.id === e.value).checked = e.checked;
+        },
+        async getVehicleList() {
+            try {
+                const response = await this.$send_req('/global/get_vehicle_team');
+                this.vehicleList = response.vehicle_teams.flatMap(team =>
+                    team.vehicle_sets.flatMap(set => [{
+                            id: set.main_vehicle.id,
+                            plate: set.main_vehicle.plate,
+                            checked: this.blacklistData.some(item => item.vehicle?.id === set.main_vehicle.id)
+                        },
+                        ...(set.behind_vehicle ? [{
+                            id: set.behind_vehicle.id,
+                            plate: set.behind_vehicle.plate,
+                            checked: this.blacklistData.some(item => item.vehicle?.id === set.behind_vehicle.id)
+                        }] : [])
+                    ])
+                );
+                this.driverList = response.vehicle_teams.flatMap(team =>
+                    team.vehicle_sets.map(set => ({
+                        id: set.driver.id,
+                        name: set.driver.name,
+                        phone: set.driver.phone,
+                        checked: this.blacklistData.some(item => item.driver?.id === set.driver.id)
+                    }))
+                );
+            } catch (error) {
+                console.error('获取车辆列表失败:', error);
+            }
         },
     }
 }

@@ -413,7 +413,7 @@ export default {
     },
     onPullDownRefresh() {
         this.$refs?.stuff_ref?.refresh();
-        this.$refs?.blacklist_ref?.getVehicleList();
+        this.$refs?.blacklist_ref?.getBlacklist();
         this.stuff_ready_fetch = {
             name: '',
             comment: undefined,

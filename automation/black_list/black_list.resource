@@ -19,6 +19,6 @@ Remove From Blacklist
     Should Be True  ${resp}[result]
 Get Blacklist
     [Arguments]  ${token}=${sc_admin_token}
-    ${resp}  Req Get to Server  /stuff/get_blacklist  ${token}  blacklist  pageNo=1
+    ${resp}  Req Get to Server  /stuff/get_blacklist  ${token}  blacklist  pageNo=0
     RETURN  ${resp}
 

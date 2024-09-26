@@ -1,6 +1,7 @@
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const sq = db_opt.get_sq();
 module.exports = {
     name: 'stuff',
     description: '物料管理',
@@ -421,7 +422,6 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
                 const transaction = await sq.transaction();
                 try {
                     let company = await rbac_lib.get_company_by_token(token);
@@ -473,7 +473,6 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
                 const transaction = await sq.transaction();
                 try {
                     let company = await rbac_lib.get_company_by_token(token);
@@ -533,16 +532,15 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
                 try {
-                    let company = await rbac_lib.get_company_by_token(token);
-                    if (!company) {
+                    let comp = await rbac_lib.get_company_by_token(token);
+                    if (!comp) {
                         throw new Error('无权限');
                     }
-                    let ret = await sq.models.blacklist.findAll({
+                    let ret = await sq.models.blacklist.findAndCountAll({
                         order: [['id', 'DESC']],
                         where: {
-                            companyId: company.id
+                            companyId: comp.id
                         },
                         include: [
                             { model: sq.models.driver},
@@ -551,7 +549,7 @@ module.exports = {
                         offset: body.pageNo * 20,
                         limit: 20
                     });
-                    return { blacklist: ret };
+                    return { blacklist: ret.rows ,total:ret.count};
 
                 } catch (error) {
                     throw { err_msg: error.message };

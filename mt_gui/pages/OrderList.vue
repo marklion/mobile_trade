@@ -421,6 +421,7 @@
     <fui-toast ref="toast"></fui-toast>
     <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
+    <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
 </view>
 </template>
 
@@ -441,6 +442,11 @@ export default {
     },
     data: function () {
         return {
+            show_blackList_confirm: false,
+            focus_blackList: {
+                type: '',
+                id: 0,
+            },
             tab_current: 0,
             show_attach: false,
             new_stuff_price: {
@@ -1461,24 +1467,26 @@ export default {
             }
         },
         add_to_blacklist: async function (id, type) {
-            uni.showModal({
-                title: '提示',
-                content: `确定将${type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`,
-                zIndex: 9999,
-                success: async (res) => {
-                    if (res.confirm) {
-                        await this.$send_req('/stuff/add_to_blacklist', {
-                            type: type,
-                            ids: id.toString(),
-                            reason: `违规${type === 'vehicle' ? '车辆' : '司机'}`
-                        });
-                        this.$refs.toast.show({
-                            text: '添加成功'
-                        });
-                    }
-                }
-            });
+            this.focus_blackList = {
+                type: type,
+                id: id,
+            }
+            this.show_blackList_confirm = true;
+            
         },
+        confirm_add_to_blacklist: async function (e) {
+            if(e.index==1){
+                await this.$send_req('/stuff/add_to_blacklist', {
+                    type: this.focus_blackList.type,
+                    ids: this.focus_blackList.id.toString(),
+                    reason: `违规${this.focus_blackList.type === 'vehicle' ? '车辆' : '司机'}`
+                });
+                this.$refs.toast.show({
+                    text: '添加成功'
+                });
+            }
+            this.show_blackList_confirm = false;
+        }
     },
     onPullDownRefresh() {
         this.refresh_plans();
@@ -1546,4 +1554,5 @@ export default {
     align-items: center;
     z-index: 8889;
 }
+
 </style>
