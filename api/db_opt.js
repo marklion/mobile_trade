@@ -270,6 +270,7 @@ let db_opt = {
         blacklist: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             reason: { type: DataTypes.STRING, allowNull: true },
+        },
         sys_notice: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             message: { type: DataTypes.STRING },
