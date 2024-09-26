@@ -38,7 +38,6 @@
             重新绑定信息
         </fui-list-cell>
         <u-cell title="公司资质" isLink url="/subPage1/CompanyAttach"></u-cell>
-        <u-cell title="系统通知" isLink url="/subPage1/SysNotice"></u-cell>
         <module-filter require_module="rbac">
             <fui-list-cell arrow @click="config_role">
                 角色配置
@@ -46,6 +45,7 @@
         </module-filter>
         <module-filter require_module="global">
             <u-cell title="超级管理员" isLink url="/pages/Admin"></u-cell>
+            <u-cell title="系统通知" isLink url="/subPage1/SysNotice"></u-cell>
         </module-filter>
         <module-filter require_module="sale_management">
             <fui-list-cell arrow @click="show_checkin_config = true">

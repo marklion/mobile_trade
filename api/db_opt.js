@@ -267,6 +267,12 @@ let db_opt = {
         exam_answer: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
         },
+        sys_notice: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            message: { type: DataTypes.STRING },
+            creator_name: { type: DataTypes.STRING },
+            is_published: { type: DataTypes.BOOLEAN, defaultValue: false },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });

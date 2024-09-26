@@ -1413,7 +1413,7 @@ module.exports = {
             name: '获取全部系统通知',
             description: '获取全部系统通知',
             is_write: false,
-            is_get_api: true,
+            is_get_api: false,
             params: {},
             result: {
                 notices: {
@@ -1441,8 +1441,9 @@ module.exports = {
         get_published_notice: {
             name: '获取已发布的最新通知',
             description: '获取已发布的最新通知',
+            need_rbac: false,
             is_write: false,
-            is_get_api: true,
+            is_get_api: false,
             params: {},
             result: {
                 notice: {
@@ -1475,7 +1476,7 @@ module.exports = {
             description: '设置系统通知',
             is_write: true,
             is_get_api: false,
-            need_rbac: false,
+            need_rbac: true,
             params: {
                 message: { type: String, have_to: true, mean: '通知内容', example: '系统维护通知' },
                 creator_name: { type: String, have_to: true, mean: '添加人姓名', example: '管理员' },
@@ -1486,8 +1487,8 @@ module.exports = {
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
-                let notice = await sq.models.sys_notice.create({ 
-                    message: body.message, 
+                let notice = await sq.models.sys_notice.create({
+                    message: body.message,
                     creator_name: body.creator_name,
                     is_published: body.is_published
                 });
@@ -1503,7 +1504,7 @@ module.exports = {
             description: '删除系统通知',
             is_write: true,
             is_get_api: false,
-            need_rbac: false,
+            need_rbac: true,
             params: {
                 notice_id: { type: Number, have_to: true, mean: '通知ID', example: 1 }
             },

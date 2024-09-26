@@ -80,11 +80,13 @@
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilter from '../components/ModuleFilter.vue';
+import NoticeBar from '../components/NoticeBar.vue';
 export default {
     name: 'Home',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilter,
+        "notice-bar": NoticeBar,
     },
     data() {
         return {
@@ -285,7 +287,7 @@ export default {
                             },
                             {
                                 name: '已完成',
-                                            color:'#1890ff',
+                                color: '#1890ff',
                                 data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
                             }
                         ],
@@ -331,6 +333,7 @@ export default {
         await this.init_brief_info();
         await this.init_statistic();
         uni.stopPullDownRefresh();
+        this.$refs.noticeBar.getNoticeData();
     },
     onLoad: async function () {
 
