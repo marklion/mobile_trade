@@ -30,7 +30,7 @@ module.exports = {
             is_write: false,
             is_get_api: true,
             params: {
-                contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
             },
             result: {
                 histories: {

@@ -1,5 +1,6 @@
 *** Settings ***
 Resource  ../api_base.resource
+Resource  ../database.resource
 
 *** Keywords ***
 Get All Company
@@ -34,6 +35,7 @@ User Login With Phone
 Login As Admin Of Company
     [Arguments]  ${company_id}  ${phone}=12345678901  ${name}=company_admin
     ${admin}  Reg Company Admin  ${company_id}  ${phone}  ${name}
+    Update User OpenId    ${phone}    opid${phone}
     ${token}  User Login With Phone  ${phone}
     RETURN  ${token}
 Create Several Company And Pick One
