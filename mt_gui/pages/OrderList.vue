@@ -141,7 +141,7 @@
                         <u-cell title="余额" :label="user_authorize">
                             <view slot="value">
                                 <module-filter require_module="cash">
-                                    {{cur_contract.balance}}
+                                    {{cur_contract.balance.toFixed(2)}}
                                 </module-filter>
                             </view>
                             <view slot="right-icon">
@@ -182,7 +182,7 @@
             <view class="group_sep">
                 <u-cell title="车辆信息">
                     <view slot="right-icon">
-                        <fui-button type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
+                        <fui-button v-if="focus_plan.status != 3" type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
                     </view>
                 </u-cell>
                 <u-cell title="主车">

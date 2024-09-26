@@ -45,6 +45,7 @@
         </module-filter>
         <module-filter require_module="global">
             <u-cell title="超级管理员" isLink url="/pages/Admin"></u-cell>
+            <u-cell title="系统通知" isLink url="/subPage1/SysNotice"></u-cell>
         </module-filter>
         <module-filter require_module="sale_management">
             <fui-list-cell arrow @click="show_checkin_config = true">

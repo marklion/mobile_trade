@@ -359,6 +359,9 @@ module.exports = {
         if (!plan || (plan.enter_time && plan.enter_time.length > 0) || (plan.status == 3)) {
             throw { err_msg: '已进厂,无法修改' };
         }
+        if (plan.register_time && plan.register_time.length > 0) {
+            throw { err_msg: '车辆已排号,无法修改,建议操作过号后再修改' };
+        }
         let company = await plan.getCompany();
         let owner_company = (await util_lib.get_single_plan_by_id(_plan_id)).stuff.company;
         let opt_company = await rbac_lib.get_company_by_token(_token);
@@ -509,8 +512,7 @@ module.exports = {
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             if (is_exit) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    await plan.save();
+                    await field_lib.handle_cancel_enter(plan);
                     await this.rp_history_exit(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 }
                 else {
@@ -535,8 +537,8 @@ module.exports = {
             }
             if (plan.status == 1) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    rollback_content = '回退进厂';
+                    await this.plan_enter(_plan_id, _token, true);
+                    return;
                 }
                 else {
                     plan.status = 0;
@@ -545,8 +547,8 @@ module.exports = {
             }
             else if (plan.status == 2) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    rollback_content = '回退进厂';
+                    await this.plan_enter(_plan_id, _token, true);
+                    return;
                 }
                 else {
                     plan.status = 1;
@@ -1157,6 +1159,7 @@ module.exports = {
                 ticket_no: element.ticket_no,
                 drop_address: element.drop_address,
                 fapiao_delivered: element.fapiao_delivered ? '是' : '否',
+                comment: element.comment,
             });
         }
         let columns = [{
@@ -1216,6 +1219,9 @@ module.exports = {
         }, {
             header: '发票已开?',
             key: 'fapiao_delivered',
+        }, {
+            header: '备注',
+            key: 'comment',
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');

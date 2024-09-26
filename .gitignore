@@ -13,3 +13,8 @@ results/
 /automation/log.html
 /automation/report.html
 /automation/output.xml
+.venv/
+log.html
+report.html
+output.xml
+/automation/__pycache__/

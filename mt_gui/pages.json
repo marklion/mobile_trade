@@ -123,6 +123,9 @@
 					"path": "CompanyAttach"
 				},
 				{
+					"path": "SysNotice"
+				},
+				{
 					"path": "OrderCreate"
 				},
 				{

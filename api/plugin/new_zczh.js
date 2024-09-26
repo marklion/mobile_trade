@@ -80,6 +80,12 @@ module.exports = {
             order_number: vo,
         }, make_url('/api/order/del', plan), make_token(plan));
     },
+    cancel_enter: async function (plan) {
+        let vo = await get_vo(plan);
+        await push_req2zc({
+            order_number: vo,
+        }, make_url('/api/order/rollback', plan), make_token(plan));
+    },
     confirm_vehicle: async function (plan) {
         let vo = await get_vo(plan);
         await push_req2zc({

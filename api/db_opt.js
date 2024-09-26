@@ -270,6 +270,11 @@ let db_opt = {
         blacklist: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             reason: { type: DataTypes.STRING, allowNull: true },
+        sys_notice: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            message: { type: DataTypes.STRING },
+            creator_name: { type: DataTypes.STRING },
+            is_published: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
     },
     make_associate: function (_sq) {

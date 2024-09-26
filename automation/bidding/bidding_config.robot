@@ -120,3 +120,23 @@ Continue Complate Bidding
     Should Be Equal As Numbers  ${resp}[0][bidding_turns][0][bidding_items][0][price]  300
     Should Be True  ${resp}[0][bidding_turns][0][finish]
     Should Be Equal As Integers  ${resp}[0][status]  1
+
+Bidding Msg Verify
+    [Teardown]  Bidding Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  ${1}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    WxMsg Catch
+    WxMsg was recieved    ${joiners}[1][open_id]    竞价开始
+    WxMsg was recieved    ${joiners}[2][open_id]    竞价开始
+    WxMsg was recieved    ${joiners}[3][open_id]    竞价开始
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${100}
+    Customer Price Out  ${joiners}[2][user_token]  ${200}
+    Customer Price Out  ${joiners}[3][user_token]  ${50}
+    WxMsg Catch
+    WxMsg was recieved    ${joiners}[2][open_id]    中标
+    WxMsg was recieved    opid1234    出价
