@@ -86,7 +86,7 @@ Update User OpenId
     [Arguments]  ${phone}  ${open_id}
     ${db_p}  Get DB Path
     Connect To Database Using Custom Params  sqlite3  database="${db_p}"
-    Execute Sql String  update rbac_user set open_id = '${open_id}' where phone = ${phone};
+    Execute Sql String  update rbac_user set open_id = '${open_id}' where phone = '${phone}';
     Disconnect From All Databases
 
 Exam Reset
