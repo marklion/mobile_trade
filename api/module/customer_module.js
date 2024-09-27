@@ -141,7 +141,7 @@ module.exports = {
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
                 let sale_company = await stuff.getCompany();
                 // 判断是否在黑名单中
-                if (await common.is_in_blacklist(sale_company.id,body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
+                if (await plan_lib.is_in_blacklist(sale_company.id,body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
                     throw { err_msg: '创建计划失败，司机或车辆已被列入黑名单' };
                 }
                 let driver = await sq.models.driver.findByPk(body.driver_id);

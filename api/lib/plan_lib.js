@@ -8,20 +8,6 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
-// 判断是否在黑名单中
-async function is_in_blacklist(companyId,driverId, mainVehicleId, behindVehicleId) {
-    let blacklist = await db_opt.get_sq().models.blacklist.findOne({
-        where: {
-            companyId: companyId,
-            [db_opt.Op.or]: [
-                { driverId: {[db_opt.Op.eq]: driverId } },
-                { vehicleId: { [db_opt.Op.eq]: mainVehicleId } },
-                { vehicleId: { [db_opt.Op.eq]: behindVehicleId } }
-            ]
-        }
-    });
-    return blacklist != null;
-}
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
         let sq = db_opt.get_sq();
@@ -378,7 +364,7 @@ module.exports = {
         let company = await plan.getCompany();
         let owner_company = (await util_lib.get_single_plan_by_id(_plan_id)).stuff.company;
         // 判断是否在黑名单中
-        if (await is_in_blacklist(company.id, _driver_id, _main_vehicle_id, _behind_vehicle_id)) {
+        if (await this.is_in_blacklist(owner_company.id, _driver_id, _main_vehicle_id, _behind_vehicle_id)) {
             throw { err_msg: '更新计划失败，司机或车辆已被列入黑名单' };
         }
         let opt_company = await rbac_lib.get_company_by_token(_token);
@@ -1493,4 +1479,17 @@ module.exports = {
             await this.record_plan_history()
         });
     },
+    is_in_blacklist: async function (companyId, driverId, mainVehicleId, behindVehicleId) {
+        let blacklist = await db_opt.get_sq().models.blacklist.findOne({
+            where: {
+                companyId: companyId,
+                [db_opt.Op.or]: [
+                    { driverId: {[db_opt.Op.eq]: driverId } },
+                    { vehicleId: { [db_opt.Op.eq]: mainVehicleId } },
+                    { vehicleId: { [db_opt.Op.eq]: behindVehicleId } }
+                ]
+            }
+        });
+        return blacklist != null;
+    }
 };
