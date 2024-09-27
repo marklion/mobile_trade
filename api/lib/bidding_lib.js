@@ -213,6 +213,25 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
+    confirm_bidding: async function (token, bc_id) {
+        let ret = { result: false };
+        let user = await rbac_lib.get_user_by_token(token);
+        let time = moment().format('YYYY-MM-DD HH:mm:ss');
+        let bc = await db_opt.get_sq().models.bidding_config.findByPk(bc_id, {
+            include: this.bidding_order_cond().include,
+            order: this.bidding_order_cond().order,
+        });
+        if (bc && bc.status == 1 && user && bc.bidding_turns[0].bidding_items[0].rbac_user.id == user.id) {
+            bc.customer_confirm_time = time;
+            bc.confirm_opt_name = user.name;
+            await bc.save();
+            ret.result = true;
+        }
+        else {
+            throw { err_msg: '无权限' };
+        }
+        return ret;
+    },
     try_finish_bidding: async function (bt, expect_status) {
         bt.finish = true;
         await bt.save();
@@ -226,6 +245,8 @@ module.exports = {
                 await bc.save();
                 wx_api_util.bidding_finish_msg(bc);
                 if (bc.bidding_turns.length > 0 && bc.bidding_turns[0].bidding_items.length > 0) {
+                    bc.bidding_turns[0].bidding_items[0].win = true;
+                    await bc.bidding_turns[0].bidding_items[0].save();
                     wx_api_util.bidding_success_msg(bc);
                 }
             }

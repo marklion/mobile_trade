@@ -121,6 +121,44 @@ Continue Complate Bidding
     Should Be True  ${resp}[0][bidding_turns][0][finish]
     Should Be Equal As Integers  ${resp}[0][status]  1
 
+Confirm Bidding When Two Turn Finished
+    [Teardown]  Bidding Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  ${2}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${199}
+    Customer Price Out  ${joiners}[2][user_token]  ${200}
+    Customer Price Out  ${joiners}[3][user_token]  ${50}
+    Go Next Turn  ${added_one}[id]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${300}
+    Customer Price Out  ${joiners}[2][user_token]  ${280}
+    Confirm One Bidding    ${added_one}[id]  ${joiners}[1][user_token]
+    ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
+    Should Be Equal  ${resp}[0][confirm_opt_name]  ${joiners}[1][name]
+    Should Not Be Empty    ${resp}[0][customer_confirm_time]
+Confirm Bidding When One Turn Finished
+    [Teardown]  Bidding Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  ${1}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${199}
+    Customer Price Out  ${joiners}[2][user_token]  ${200}
+    Customer Price Out  ${joiners}[3][user_token]  ${50}
+    Confirm One Bidding    ${added_one}[id]  ${joiners}[2][user_token]
+    ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
+    Should Be Equal  ${resp}[0][confirm_opt_name]  ${joiners}[2][name]
+    Should Not Be Empty    ${resp}[0][customer_confirm_time]
+
+
 Bidding Msg Verify
     [Teardown]  Bidding Reset
     ${added_one}  Create A Bidding  ${test_stuff}  ${1}

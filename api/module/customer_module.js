@@ -239,6 +239,21 @@ module.exports = {
                 return { result: true };
             },
         },
+        bidding_confirm:{
+            name:'竞价结果确认',
+            description:'竞价结果确认',
+            is_write:true,
+            is_get_api:false,
+            params:{
+                bidding_id:{type:Number,have_to:true,mean:'竞价ID',example:1},
+            },
+            result:{
+                result:{type:Boolean,mean:'结果',example:true},
+            },
+            func:async function(body, token){
+                return await bidding_lib.confirm_bidding(token, body.bidding_id);
+            }
+        },
         bidding_price: {
             name: '出价',
             description: '出价',
