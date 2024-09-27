@@ -202,6 +202,8 @@ let db_opt = {
             total_turn: { type: DataTypes.INTEGER, defaultValue: 0 },
             pay_first: { type: DataTypes.FLOAT, defaultValue: 0 },
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
+            customer_confirm_time: { type: DataTypes.STRING},
+            confirm_opt_name: { type: DataTypes.STRING },
         },
         bidding_turn: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -215,6 +217,7 @@ let db_opt = {
             price: { type: DataTypes.FLOAT, defaultValue: 0 },
             time: { type: DataTypes.STRING },
             accept: { type: DataTypes.BOOLEAN, defaultValue: false },
+            win: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         hd_base_info: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

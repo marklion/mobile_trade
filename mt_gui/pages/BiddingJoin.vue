@@ -4,10 +4,17 @@
         <view v-for="sbi in bi_list" :key="sbi.id" class="bd_show">
             <u-cell :title="sbi.bidding_turn.bidding_config.comment + '(' + (sbi.accept?'已接受':'未接受') +')'" :label="sbi.bidding_turn.bidding_config.stuff.name + '->第' + (sbi.bidding_turn.turn + 1) + '轮，共' + sbi.bidding_turn.bidding_config.total_turn + '轮'" :value="sbi.time?(sbi.time + '出价' + sbi.price):'未出价'"></u-cell>
             <fui-row>
-                <fui-col :span="4">
+                <fui-col :span="10">
                     <fui-text v-if="sbi.bidding_turn.finish" text="已结束" type="danger"></fui-text>
                     <fui-text v-else text="正在进行" type="primary"></fui-text>
+                    <fui-text v-if="sbi.win" text="恭喜，中标了" type="success"></fui-text>
                 </fui-col>
+                <view v-if="sbi.win">
+                    <fui-col :span="8">
+                        <fui-button v-if="!sbi.bidding_turn.bidding_config.customer_confirm_time" text="中标价确认" type="primary" btnSize="mini" @click="prepare_confirm(sbi)"></fui-button>
+                        <fui-button v-else text="查看确认单" type="success" btnSize="mini" @click="prepare_confirm(sbi)"></fui-button>
+                    </fui-col>
+                </view>
                 <view v-if="!sbi.bidding_turn.finish">
                     <fui-col :span="4" v-if="could_accept(sbi)">
                         <fui-button text="接受" type="purple" btnSize="mini" @click="accept_bid(sbi)"></fui-button>
@@ -35,6 +42,9 @@
             <fui-input label="出价" borderTop placeholder="请输入价格" v-model="price_req.price"></fui-input>
         </fui-form>
     </fui-modal>
+    <fui-modal width="600" :show="show_price_confirm" @click="confirm_price" :buttons="price_confirm_button" v-if="show_price_confirm">
+        <fui-preview :previewData="confirm_file"></fui-preview>
+    </fui-modal>
 </view>
 </template>
 
@@ -58,6 +68,8 @@ export default {
         }
 
         return {
+            price_confirm_item: null,
+            show_price_confirm: false,
             show_price: false,
             focus_bi: {},
             bi_list: [],
@@ -94,7 +106,73 @@ export default {
             },
         };
     },
+    computed: {
+        price_confirm_button: function () {
+            let ret = [{
+                text: '关闭',
+                plain: true,
+            }];
+            if (this.price_confirm_item && !this.price_confirm_item.bidding_turn.bidding_config.customer_confirm_time) {
+                ret.push({
+                    text: '价格确认',
+                });
+            }
+            return ret;
+        },
+        confirm_file: function () {
+            let ret = {};
+            if (this.price_confirm_item) {
+                ret = {
+                    label: '中标价确认',
+                    value: '确认后不可撤销',
+                    valueColor: 'red',
+                    list: [{
+                            label: '竞价名称',
+                            value: this.price_confirm_item.bidding_turn.bidding_config.comment,
+                        },
+                        {
+                            label: '物料',
+                            value: this.price_confirm_item.bidding_turn.bidding_config.stuff.name,
+                        },
+                        {
+                            label: '中标价',
+                            value: this.price_confirm_item.price,
+                        },
+                        {
+                            label: '中标时间',
+                            value: this.price_confirm_item.bidding_turn.end_time,
+                        },
+                    ],
+                };
+                if (this.price_confirm_item.bidding_turn.bidding_config.customer_confirm_time) {
+                    ret.list.push({
+                        label: '价格确认时间',
+                        value: this.price_confirm_item.bidding_turn.bidding_config.customer_confirm_time,
+                    });
+                    ret.list.push({
+                        label: '价格确认人',
+                        value: this.price_confirm_item.bidding_turn.bidding_config.confirm_opt_name,
+                    });
+                    ret.value = '已确认';
+                }
+            }
+            return ret;
+        }
+    },
     methods: {
+        confirm_price: async function (e) {
+            if (e.index == 1) {
+                await this.$send_req('/customer/bidding_confirm', {
+                    bidding_id: this.price_confirm_item.bidding_turn.bidding_config.id,
+                });
+                uni.startPullDownRefresh();
+            }
+            this.show_price_confirm = false;
+        },
+        prepare_confirm: function (sbi) {
+            this.price_confirm_item = sbi;
+            this.show_price_confirm = true;
+        },
         price: async function (detail) {
             if (detail.index == 1) {
                 let rules = [{

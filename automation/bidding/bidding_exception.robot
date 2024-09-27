@@ -36,3 +36,40 @@ Cancle Bidding Turn
     ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${12}
     Req to Server  /customer/bidding_price  ${joiners}[3][user_token]  ${req}  ${True}
 
+Confirm Bidding While Lose
+    [Teardown]  Bidding Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  ${2}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${199}
+    Customer Price Out  ${joiners}[2][user_token]  ${200}
+    Customer Price Out  ${joiners}[3][user_token]  ${50}
+    Go Next Turn  ${added_one}[id]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${300}
+    Customer Price Out  ${joiners}[2][user_token]  ${280}
+    Confirm One Bidding    ${added_one}[id]  ${joiners}[2][user_token]  ${True}
+
+Confirm Bidding While Not Finished
+    [Teardown]  Bidding Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  ${2}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${199}
+    Confirm One Bidding    ${added_one}[id]  ${joiners}[2][user_token]  ${True}
+    Customer Price Out  ${joiners}[2][user_token]  ${200}
+    Customer Price Out  ${joiners}[3][user_token]  ${50}
+    Confirm One Bidding    ${added_one}[id]  ${joiners}[2][user_token]  ${True}
+    Go Next Turn  ${added_one}[id]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${300}
+    Confirm One Bidding    ${added_one}[id]  ${joiners}[1][user_token]  ${True}
+
