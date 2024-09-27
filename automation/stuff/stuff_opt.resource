@@ -1,6 +1,7 @@
 *** Settings ***
 Resource  ../rbac/rbac_curd.resource
 Resource  ../database.resource
+Resource  ../black_list/black_list.resource
 Library  DateTime
 
 
@@ -247,7 +248,7 @@ Clean Up Sale and Buy
     Clean Up Companies And Users
 
 Create A Order
-    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${order_stuff}[id]
+    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${order_stuff}[id]  ${exception}=${False}
     ${cur_date}  Set Variable  ${plan_time}
     IF  $plan_time == 'today'
         ${cur_date}  Get Current Date  result_format=%Y-%m-%d
@@ -261,11 +262,11 @@ Create A Order
     ...    plan_time=${cur_date}
     ...    stuff_id=${stuff_id}
     ...    price=${23}
-    ${resp}  Req to Server  /supplier/order_sale_create  ${token}  ${req}
+    ${resp}  Req to Server  /supplier/order_sale_create  ${token}  ${req}  ${exception}
     RETURN  ${resp}
 
 Create A Plan
-    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${test_stuff}[id]
+    [Arguments]  ${bv_id}  ${mv_id}  ${dv_id}  ${token}=${bc1_user_token}  ${plan_time}=today  ${comment}=测试备注  ${drop_address}=测试地点  ${use_for}=测试用途  ${stuff_id}=${test_stuff}[id]  ${exception}=${False}
     ${cur_date}  Set Variable  ${plan_time}
     IF  $plan_time == 'today'
         ${cur_date}  Get Current Date  result_format=%Y-%m-%d
@@ -279,7 +280,7 @@ Create A Plan
     ...    plan_time=${cur_date}
     ...    stuff_id=${stuff_id}
     ...    use_for=${use_for}
-    ${resp}  Req to Server  /customer/order_buy_create  ${token}  ${req}
+    ${resp}  Req to Server  /customer/order_buy_create  ${token}  ${req}  ${exception}
     RETURN  ${resp}
 Confirm A Order
     [Arguments]  ${plan}  ${token}=${sc_admin_token}
@@ -395,9 +396,8 @@ Update Plan by Creator
 
 Update Plan by Owner
     [Arguments]  ${plan_id}  &{update_info}
-    Set To Dictionary  ${update_info}  plan_id=${plan_id}
+    Set To Dictionary  ${update_info}  plan_id=${plan_id} 
     Req to Server  /sale_management/order_update  ${sc_admin_token}  ${update_info}
-
 Update Order by Creator
     [Arguments]  ${plan_id}  &{update_info}
     Set To Dictionary  ${update_info}  plan_id=${plan_id}

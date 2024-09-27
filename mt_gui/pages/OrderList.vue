@@ -185,10 +185,36 @@
                         <fui-button v-if="focus_plan.status != 3" type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
                     </view>
                 </u-cell>
-                <u-cell title="主车" :value="focus_plan.main_vehicle.plate">
+                <u-cell title="主车">
+                    <view slot="value">
+                        <view style="display:flex;justify-content: space-between;">
+                            <fui-text size="26" :text="focus_plan.main_vehicle.plate"></fui-text>
+                            <module-filter require_module="stuff">
+                                <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.main_vehicle.id, 'vehicle')"></fui-button>
+                            </module-filter>
+                        </view>
+                    </view>
                 </u-cell>
-                <u-cell title="挂车" :value="focus_plan.behind_vehicle.plate"></u-cell>
-                <u-cell :title="'司机:' + focus_plan.driver.name" :value="focus_plan.driver.phone" clickable @click="copy_text(focus_plan.driver.phone)"></u-cell>
+                <u-cell title="挂车">
+                    <view slot="value">
+                        <view style="display:flex;justify-content: space-between;">
+                            <fui-text size="26" :text="focus_plan.behind_vehicle.plate"></fui-text>
+                            <module-filter require_module="stuff">
+                                <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.behind_vehicle.id, 'vehicle')"></fui-button>
+                            </module-filter>
+                        </view>
+                    </view>
+                </u-cell>
+                <u-cell :title="'司机:' + focus_plan.driver.name" clickable @click="copy_text(focus_plan.driver.phone)">
+                    <view slot="value">
+                        <view style="display:flex;justify-content: space-between;">
+                            <fui-text size="26" :text="focus_plan.driver.phone"></fui-text>
+                            <module-filter require_module="stuff">
+                                <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.driver.id, 'driver')"></fui-button>
+                            </module-filter>
+                        </view>
+                    </view>
+                </u-cell>
                 <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
             </view>
             <view class="group_sep">
@@ -395,6 +421,7 @@
     <fui-toast ref="toast"></fui-toast>
     <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
+    <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
 </view>
 </template>
 
@@ -415,6 +442,11 @@ export default {
     },
     data: function () {
         return {
+            show_blackList_confirm: false,
+            focus_blackList: {
+                type: '',
+                id: 0,
+            },
             tab_current: 0,
             show_attach: false,
             new_stuff_price: {
@@ -1434,6 +1466,27 @@ export default {
                 this.refresh_plans();
             }
         },
+        add_to_blacklist: async function (id, type) {
+            this.focus_blackList = {
+                type: type,
+                id: id,
+            }
+            this.show_blackList_confirm = true;
+            
+        },
+        confirm_add_to_blacklist: async function (e) {
+            if(e.index==1){
+                await this.$send_req('/stuff/add_to_blacklist', {
+                    type: this.focus_blackList.type,
+                    ids: this.focus_blackList.id.toString(),
+                    reason: `违规${this.focus_blackList.type === 'vehicle' ? '车辆' : '司机'}`
+                });
+                this.$refs.toast.show({
+                    text: '添加成功'
+                });
+            }
+            this.show_blackList_confirm = false;
+        }
     },
     onPullDownRefresh() {
         this.refresh_plans();
@@ -1501,4 +1554,5 @@ export default {
     align-items: center;
     z-index: 8889;
 }
+
 </style>

@@ -1,6 +1,7 @@
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const sq = db_opt.get_sq();
 module.exports = {
     name: 'stuff',
     description: '物料管理',
@@ -387,25 +388,231 @@ module.exports = {
                         if (isNaN(unitPrice)) {
                             throw new Error('Invalid unit price');
                         }
-                        if(plan && plan.status!=3){
+                        if (plan && plan.status != 3) {
                             let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
-                            await plan_lib.record_plan_history(plan,(await rbac_lib.get_user_by_token(token)).name,comment,{transaction})
+                            await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, { transaction })
                             // 更新价格
                             plan.unit_price = unitPrice;
                             await plan.save({ transaction });
-                        }else{
+                        } else {
                             throw new Error('计划已关闭');
                         }
-                        
+
                     }));
                     await transaction.commit();
                     return { result: true };
 
                 } catch (error) {
                     await transaction.rollback();
-                    throw {err_msg:error.message}
+                    throw { err_msg: error.message }
                 }
             }
         },
+        add_to_blacklist: {
+            name: '添加到黑名单',
+            description: '添加到黑名单',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                type: { type: String, have_to: true, mean: '黑名单类型', example: 'vehicle' },
+                ids: { type: String, have_to: true, mean: '车辆ID或司机ID列表', example: '1,2,3' },
+                reason: { type: String, have_to: true, mean: '加入黑名单原因', example: '违规行为' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                const transaction = await sq.transaction();
+                try {
+                    let company = await rbac_lib.get_company_by_token(token);
+                    if (!company) {
+                        throw new Error('无权限');
+                    }
+                    const ids = body.ids.split(',').map(id => parseInt(id, 10));
+                    const idField = body.type === 'vehicle' ? 'vehicleId' : 'driverId';
+                    if (!['vehicle', 'driver'].includes(body.type)) {
+                        throw new Error('无效的黑名单类型');
+                    }
+                    await Promise.all(ids.map(async (id) => {
+                        const [entry, created] = await sq.models.blacklist.findOrCreate({
+                            where: {
+                                companyId: company.id,
+                                [idField]: id
+                            },
+                            defaults: {
+                                reason: body.reason,
+                                companyId: company.id,
+                                [idField]: id
+                            },
+                            transaction
+                        });
+                        if (!created) {
+                            entry.reason = body.reason;
+                            await entry.save({ transaction });
+                        }
+                        return entry;
+                    }));
+
+                    await transaction.commit();
+                    return { result: true };
+                } catch (error) {
+                    await transaction.rollback();
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+        remove_from_blacklist: {
+            name: '从黑名单中移除',
+            description: '从公司黑名单中移除车辆或司机',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                ids: { type: String, have_to: true, mean: '黑名单ID列表', example: '1,2,3' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                const transaction = await sq.transaction();
+                try {
+                    let company = await rbac_lib.get_company_by_token(token);
+                    if (!company) {
+                        throw new Error('无权限');
+                    }
+
+                    const ids = body.ids.split(',').map(id => parseInt(id, 10));
+                    await sq.models.blacklist.destroy({
+                        where: {
+                            id: {
+                                [sq.Sequelize.Op.in]: ids
+                            },
+                            companyId: company.id
+                        },
+                        transaction
+                    });
+
+                    await transaction.commit();
+                    return { result: true };
+                } catch (error) {
+                    await transaction.rollback();
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+        get_blacklist: {
+            name: '获取当前公司黑名单',
+            description: '获取当前公司黑名单',
+            is_write: false,
+            is_get_api: true,
+            params: {},
+            result: {
+                blacklist: {
+                    type: Array, mean: '黑名单列表', explain: {
+                        id: { type: Number, mean: '黑名单ID', example: 1 },
+                        type: { type: String, mean: '黑名单类型', example: 'vehicle' },
+                        reason: { type: String, mean: '加入黑名单原因', example: '违规行为' },
+                        driver: {
+                            type: Object,
+                            mean: '司机信息',
+                            explain: {
+                                id: { type: Number, mean: '司机ID', example: 1 },
+                                name: { type: String, mean: '司机姓名', example: '张三' },
+                                phone: { type: String, mean: '司机电话', example: '13800138000' }
+                            }
+                        },
+                        vehicle: {
+                            type: Object,
+                            mean: '车辆信息',
+                            explain: {
+                                id: { type: Number, mean: '车辆ID', example: 1 },
+                                plate: { type: String, mean: '车牌号', example: '京A12345' },
+                            }
+                        },
+                    }
+                }
+            },
+            func: async function (body, token) {
+                try {
+                    let comp = await rbac_lib.get_company_by_token(token);
+                    if (!comp) {
+                        throw new Error('无权限');
+                    }
+                    let ret = await sq.models.blacklist.findAndCountAll({
+                        order: [['id', 'DESC']],
+                        where: {
+                            companyId: comp.id
+                        },
+                        include: [
+                            { model: sq.models.driver },
+                            { model: sq.models.vehicle }
+                        ],
+                        offset: body.pageNo * 20,
+                        limit: 20
+                    });
+                    return { blacklist: ret.rows, total: ret.count };
+
+                } catch (error) {
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+        search_vehicle_or_driver: {
+            name: '查询车辆或司机',
+            description: '查询车辆或司机',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                type: { type: String, have_to: true, mean: '查询类型', example: 'vehicle' },
+                value: { type: String, have_to: true, mean: '查询值', example: '京A12345' }
+            },
+            result: {
+                item: {
+                    type: Object,
+                    mean: '查询结果',
+                    explain: {
+                        id: { type: Number, mean: 'ID', example: 1 },
+                        name: { type: String, mean: '名称', example: '张三' },
+                        phone: { type: String, mean: '电话', example: '13800138000' },
+                        plate: { type: String, mean: '车牌号', example: '京A12345' }
+                    }
+                }
+            },
+            func: async function (body) {
+                try {
+                    let item;
+                    if (body.type === 'vehicle') {
+                        item = await sq.models.vehicle.findOne({
+                            where: {
+                                plate: body.value
+                            }
+                        });
+                    } else if (body.type === 'driver') {
+                        item = await sq.models.driver.findOne({
+                            where: {
+                                phone: body.value
+                            }
+                        });
+                    } else {
+                        throw new Error('无效的查询类型');
+                    }
+
+                    if (!item) {
+                        throw new Error('未找到相关信息');
+                    }
+                    return {
+                        item: {
+                            id: item.id,
+                            name: item.name || null,
+                            phone: item.phone || null,
+                            plate: item.plate || null
+                        }
+                    };
+
+                } catch (error) {
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+
     }
 }

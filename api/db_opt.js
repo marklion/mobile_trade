@@ -270,6 +270,10 @@ let db_opt = {
         exam_answer: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
         },
+        blacklist: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            reason: { type: DataTypes.STRING, allowNull: true },
+        },
         sys_notice: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             message: { type: DataTypes.STRING },
@@ -378,6 +382,12 @@ let db_opt = {
         _sq.models.option_answer.hasMany(_sq.models.exam_answer);
         _sq.models.exam_answer.belongsTo(_sq.models.exam);
         _sq.models.exam.hasMany(_sq.models.exam_answer);
+        _sq.models.blacklist.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.blacklist);
+        _sq.models.blacklist.belongsTo(_sq.models.vehicle);
+        _sq.models.vehicle.hasMany(_sq.models.blacklist);
+        _sq.models.blacklist.belongsTo(_sq.models.driver);
+        _sq.models.driver.hasMany(_sq.models.blacklist);
     },
     install: async function () {
         console.log('run install');
