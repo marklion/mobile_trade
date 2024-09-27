@@ -27,7 +27,6 @@ async function do_export_later(token, name, func) {
 }
 // 判断是否在黑名单中
 async function is_in_blacklist(companyId,driverId, mainVehicleId, behindVehicleId) {
-    console.log(companyId,driverId, mainVehicleId, behindVehicleId);
     let blacklist = await db_opt.get_sq().models.blacklist.findOne({
         where: {
             companyId: companyId,

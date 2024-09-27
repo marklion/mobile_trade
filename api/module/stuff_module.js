@@ -388,23 +388,23 @@ module.exports = {
                         if (isNaN(unitPrice)) {
                             throw new Error('Invalid unit price');
                         }
-                        if(plan && plan.status!=3){
+                        if (plan && plan.status != 3) {
                             let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
-                            await plan_lib.record_plan_history(plan,(await rbac_lib.get_user_by_token(token)).name,comment,{transaction})
+                            await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, { transaction })
                             // 更新价格
                             plan.unit_price = unitPrice;
                             await plan.save({ transaction });
-                        }else{
+                        } else {
                             throw new Error('计划已关闭');
                         }
-                        
+
                     }));
                     await transaction.commit();
                     return { result: true };
 
                 } catch (error) {
                     await transaction.rollback();
-                    throw {err_msg:error.message}
+                    throw { err_msg: error.message }
                 }
             }
         },
@@ -490,7 +490,7 @@ module.exports = {
                         },
                         transaction
                     });
-                    
+
                     await transaction.commit();
                     return { result: true };
                 } catch (error) {
@@ -543,19 +543,76 @@ module.exports = {
                             companyId: comp.id
                         },
                         include: [
-                            { model: sq.models.driver},
-                            { model: sq.models.vehicle}
+                            { model: sq.models.driver },
+                            { model: sq.models.vehicle }
                         ],
                         offset: body.pageNo * 20,
                         limit: 20
                     });
-                    return { blacklist: ret.rows ,total:ret.count};
+                    return { blacklist: ret.rows, total: ret.count };
 
                 } catch (error) {
                     throw { err_msg: error.message };
                 }
             }
         },
-        
+        search_vehicle_or_driver: {
+            name: '查询车辆或司机',
+            description: '查询车辆或司机',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                type: { type: String, have_to: true, mean: '查询类型', example: 'vehicle' },
+                value: { type: String, have_to: true, mean: '查询值', example: '京A12345' }
+            },
+            result: {
+                item: {
+                    type: Object,
+                    mean: '查询结果',
+                    explain: {
+                        id: { type: Number, mean: 'ID', example: 1 },
+                        name: { type: String, mean: '名称', example: '张三' },
+                        phone: { type: String, mean: '电话', example: '13800138000' },
+                        plate: { type: String, mean: '车牌号', example: '京A12345' }
+                    }
+                }
+            },
+            func: async function (body) {
+                try {
+                    let item;
+                    if (body.type === 'vehicle') {
+                        item = await sq.models.vehicle.findOne({
+                            where: {
+                                plate: body.value
+                            }
+                        });
+                    } else if (body.type === 'driver') {
+                        item = await sq.models.driver.findOne({
+                            where: {
+                                phone: body.value
+                            }
+                        });
+                    } else {
+                        throw new Error('无效的查询类型');
+                    }
+
+                    if (!item) {
+                        throw new Error('未找到相关信息');
+                    }
+                    return {
+                        item: {
+                            id: item.id,
+                            name: item.name || null,
+                            phone: item.phone || null,
+                            plate: item.plate || null
+                        }
+                    };
+
+                } catch (error) {
+                    throw { err_msg: error.message };
+                }
+            }
+        },
+
     }
 }

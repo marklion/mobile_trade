@@ -413,7 +413,7 @@ export default {
     },
     onPullDownRefresh() {
         this.$refs?.stuff_ref?.refresh();
-        this.$refs?.blacklist_ref?.getBlacklist();
+        this.$refs?.blacklist_ref?.refresh();
         this.stuff_ready_fetch = {
             name: '',
             comment: undefined,
