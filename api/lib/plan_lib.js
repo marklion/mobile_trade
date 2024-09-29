@@ -147,14 +147,14 @@ module.exports = {
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         let conditions = {
-            order: [['updatedAt', 'DESC'], ['id', 'ASC']],
+            order: [['updatedAt', 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             include: [
                 { model: sq.models.company, as: 'buy_company' },
                 { model: sq.models.stuff, },
                 { model: sq.models.rbac_user, }
-            ]
+            ],
         };
         if (stuff_id != undefined) {
             conditions.include[1].where = { id: stuff_id };
