@@ -37,14 +37,9 @@ if [ -z "$SQLITE_DB_FILE" ] || [ -z "$MYSQL_USER" ] || [ -z "$MYSQL_PASS" ] || [
     exit 1
 fi
 
-data_move() {
-    echo "data_move"
-    sqlite3mysql -f ${SQLITE_DB_FILE} -d  ${MYSQL_DB}  -u ${MYSQL_USER}  --mysql-password ${MYSQL_PASS} -h ${MYSQL_HOST} -E -K -c 1000 -S
-}
-data_move
 
 cp /mnt/data/mobile_trade/mt.db ./mt_old.db
-sqlite3mysql -f ./mt_old.db -d product  -u sysadmin  --mysql-password P@ssw0rd -h rm-2ze6222dda7fe8427eo.mysql.rds.aliyuncs.com -E -K -c 1000 -S
+sqlite3mysql -f ./mt_old.db -d product  -u "${MYSQL_USER}"  --mysql-password "${MYSQL_PASS}" -h rm-2ze6222dda7fe8427eo.mysql.rds.aliyuncs.com -E -K -c 1000 -S
 cp /mnt/data/mobile_trade/mt.db ./mt_new.db
 sqldiff mt_old.db mt_new.db > mt_diff.sql
 cat mt_diff.sql | grep -v 'sqlite_seq' | sed 's/rowid,[0-9]*,//g' | sed 's/"plan"/plan/g' | sed 's/\\n/\\\\n/g' | sed 's/ +00:00//g' > filtered_mt_diff.sql
@@ -53,7 +48,7 @@ function push_sql() {
     rm -f next.sql
     cat $1 | while read -r line
     do
-        mysql -h rm-2ze6222dda7fe8427.mysql.rds.aliyuncs.com -u sysadmin --password=P@ssw0rd -e "${line}" product > /dev/null 2>&1
+        mysql -h rm-2ze6222dda7fe8427.mysql.rds.aliyuncs.com -u "${MYSQL_USER}" --password=${MYSQL_PASS}} -e "${line}" product > /dev/null 2>&1
         if  [ $? -ne 0 ]; then
             echo "$line" >> next.sql
         fi
