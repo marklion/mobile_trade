@@ -241,15 +241,13 @@ module.exports = {
                 // 检查当前司机是否所有所需证件都已上传
                 const allContentsUploaded = await this.get_sc_status_by_plan(plan);
                 const emptyContentsCount = allContentsUploaded.reqs.filter(req => !req.sc_content).length;
-
                 if (emptyContentsCount == 0) {
                     await this.fetch_send_sc_check_msg(
-                        '司机已上传所有安检资料，请及时审核',
-                        plan.stuff.company,
-                        plan.driver,
-                        plan?.main_vehicle?.plate || '蒙AB6666',
-                        'SC_CHECK',
-                        'CHECKER'
+                        msg='司机已上传所有安检资料，请及时审核',
+                        order_id=plan?.id,
+                        open_id=null,
+                        _company=company,
+                        notifyTo='CHECKER'
                     );
                 }
             }
@@ -315,12 +313,11 @@ module.exports = {
                 if (allContentsPassed.length === 0) {
                     // 所有安检资料都已通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
-                        '安检资料已通过审核',
-                        plan?.stuff?.company,
-                        plan?.driver,
-                        plan?.main_vehicle?.plate || '蒙AB6666',
-                        'SC_CHECK',
-                        'DRIVER'
+                        msg='安检资料已通过审核',
+                        order_id=plan?.id,
+                        open_id=plan?.driver?.open_id,
+                        null,
+                        notifyTo='DRIVER'
                     );
                 }
 
@@ -328,11 +325,10 @@ module.exports = {
                     // 反审安检资料从通过变为不通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
                         '安检资料未通过审核，请重新上传',
-                        plan?.stuff?.company,
-                        plan?.driver,
-                        plan?.main_vehicle?.plate || '蒙AB6666',
-                        'SC_CHECK',
-                        'DRIVER'
+                        order_id=plan?.id,
+                        open_id=plan?.driver?.open_id,
+                        null,
+                        notifyTo='DRIVER'
                     );
                 }
             }
@@ -342,15 +338,14 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
-    fetch_send_sc_check_msg: async function (msg, company, driver, carNumber, checkType, notifyUser) {
-        console.log(msg);
-        if (notifyUser == 'DRIVER' && driver && driver.open_id) {
+    fetch_send_sc_check_msg: async function (msg, order_id, open_id,_company, notifyTo) {
+        if (notifyTo == 'DRIVER' && open_id) {
             // 发送消息到司机端
-            wx_api_util.send_sc_check_msg_to_driver(carNumber, checkType, company.name, driver.open_id);
+            wx_api_util.send_sc_check_msg_to_driver(msg, order_id, open_id);
         }
-        if (notifyUser == 'CHECKER') {
+        if (notifyTo == 'CHECKER') {
             // 发送消息到安检审核人员
-            wx_api_util.send_sc_check_msg_to_checker(carNumber, checkType, company);
+            wx_api_util.send_sc_check_msg_to_checker(msg, order_id,_company);
         }
     }
 };
