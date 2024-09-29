@@ -43,3 +43,37 @@ data_move() {
 }
 data_move
 
+cp /mnt/data/mobile_trade/mt.db ./mt_old.db
+sqlite3mysql -f ./mt_old.db -d product  -u sysadmin  --mysql-password P@ssw0rd -h rm-2ze6222dda7fe8427eo.mysql.rds.aliyuncs.com -E -K -c 1000 -S
+cp /mnt/data/mobile_trade/mt.db ./mt_new.db
+sqldiff mt_old.db mt_new.db > mt_diff.sql
+cat mt_diff.sql | grep -v 'sqlite_seq' | sed 's/rowid,[0-9]*,//g' | sed 's/"plan"/plan/g' | sed 's/\\n/\\\\n/g' | sed 's/ +00:00//g' > filtered_mt_diff.sql
+cp filtered_mt_diff.sql current.sql
+function push_sql() {
+    rm -f next.sql
+    cat $1 | while read -r line
+    do
+        mysql -h rm-2ze6222dda7fe8427.mysql.rds.aliyuncs.com -u sysadmin --password=P@ssw0rd -e "${line}" product > /dev/null 2>&1
+        if  [ $? -ne 0 ]; then
+            echo "$line" >> next.sql
+        fi
+    done
+    echo ++++
+    cat next.sql
+    input_lines=`cat $1 | wc -l`
+    last_lines="0"
+    if [ -f next.sql ]
+    then
+        last_lines=`cat next.sql | wc -l`
+    fi
+    echo ++++
+    echo "input_lines=$input_lines, last_lines=$last_lines"
+    if [ "${last_lines}" == "0" ] || [ ${input_lines} == ${last_lines} ]
+    then
+        echo "done"
+    else
+        cp next.sql $1
+        push_sql $1
+    fi
+}
+push_sql current.sql

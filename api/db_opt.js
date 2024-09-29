@@ -12,17 +12,33 @@ function get_db_handle() {
             charset: 'utf8mb4'
         },
         logging: function (sql, time) {
-            if (time > 200) {
+            if (time > 100) {
                 console.log(time + '->' + sql);
             }
         },
         benchmark: true,
-        pool:{
+        pool: {
             max: 10,
             min: 0,
-            acquire: 30000,
+            acquire: 2000,
             idle: 10000
         },
+        retry: {
+            match: [
+                /ETIMEDOUT/,
+                /EHOSTUNREACH/,
+                /ECONNRESET/,
+                /ECONNREFUSED/,
+                /EPIPE/,
+                /SequelizeConnectionError/,
+                /SequelizeConnectionRefusedError/,
+                /SequelizeHostNotFoundError/,
+                /SequelizeHostNotReachableError/,
+                /SequelizeInvalidConnectionError/,
+                /SequelizeConnectionTimedOutError/
+            ],
+            max: 5 // 最大重试次数
+        }
     });
     return sequelize;
 }
@@ -209,7 +225,7 @@ let db_opt = {
             total_turn: { type: DataTypes.INTEGER, defaultValue: 0 },
             pay_first: { type: DataTypes.FLOAT, defaultValue: 0 },
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
-            customer_confirm_time: { type: DataTypes.STRING},
+            customer_confirm_time: { type: DataTypes.STRING },
             confirm_opt_name: { type: DataTypes.STRING },
         },
         bidding_turn: {
