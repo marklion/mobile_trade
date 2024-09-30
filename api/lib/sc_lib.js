@@ -243,7 +243,7 @@ module.exports = {
                 const emptyContentsCount = allContentsUploaded.reqs.filter(req => !req.sc_content).length;
                 if (emptyContentsCount == 0) {
                     await this.fetch_send_sc_check_msg(
-                        msg='司机已上传所有安检资料，请及时审核',
+                        msg='已上传-待审核',
                         order_id=plan?.id,
                         open_id=null,
                         _company=company,
@@ -313,7 +313,7 @@ module.exports = {
                 if (allContentsPassed.length === 0) {
                     // 所有安检资料都已通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
-                        msg='安检资料已通过审核',
+                        msg='审核通过',
                         order_id=plan?.id,
                         open_id=plan?.driver?.open_id,
                         null,
@@ -324,7 +324,7 @@ module.exports = {
                 if (allContentsPassed.length === 1 && !content.passed) {
                     // 反审安检资料从通过变为不通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
-                        '安检资料未通过审核，请重新上传',
+                        msg='驳回',
                         order_id=plan?.id,
                         open_id=plan?.driver?.open_id,
                         null,

@@ -535,7 +535,7 @@ module.exports = {
             template_id: '2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8',
             data: {
                 const2: { value: check_msg },
-                character_string1: { value: order_id }
+                character_string1: { value: order_id.toString() }
             },
         });
     },
@@ -544,7 +544,7 @@ module.exports = {
             template_id: '2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8',
             data: {
                 const2: { value: check_msg },
-                character_string1: { value: order_id }
+                character_string1: { value: order_id.toString() }
             },
         }
         let users = await company.getRbac_users();
