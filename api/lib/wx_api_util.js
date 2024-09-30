@@ -537,4 +537,30 @@ module.exports = {
             send_wx_msg({ ...req }, item);
         });
     },
+    send_sc_check_msg_to_driver: async function (check_msg, order_id, openId) {
+        await send_wx_msg({
+            touser: openId,
+            template_id: '2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8',
+            data: {
+                const2: { value: check_msg },
+                character_string1: { value: order_id.toString() }
+            },
+        });
+    },
+    send_sc_check_msg_to_checker: async function (check_msg, order_id, company) {
+        let req = {
+            template_id: '2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8',
+            data: {
+                const2: { value: check_msg },
+                character_string1: { value: order_id.toString() }
+            },
+        }
+        let users = await company.getRbac_users();
+        let related_users = await filter_related_users('sc', users);
+        related_users.forEach(async item => {
+            req.touser = item;
+            send_wx_msg({ ...req });
+        });
+    }
+    
 }

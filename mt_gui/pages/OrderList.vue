@@ -1029,7 +1029,8 @@ export default {
         pass_sc: async function (id, comment) {
             await this.$send_req('/sc/check', {
                 content_id: id,
-                comment: comment
+                comment: comment,
+                plan_id: this.focus_plan.id
             });
             this.$refs.sc_confirm.refresh();
         },
