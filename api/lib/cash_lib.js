@@ -63,11 +63,11 @@ module.exports = {
             let resp = await contract.getBalance_histories({
                 where: {
                     [db_opt.Op.and]: [
-                        sq.where(sq.fn('datetime', sq.col('time')), {
-                            [db_opt.Op.gte]: sq.fn('datetime', begin_time)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('time')), {
+                            [db_opt.Op.gte]: sq.fn('TIMESTAMP', begin_time)
                         }),
-                        sq.where(sq.fn('datetime', sq.col('time')), {
-                            [db_opt.Op.lte]: sq.fn('datetime', end_time)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('time')), {
+                            [db_opt.Op.lte]: sq.fn('TIMESTAMP', end_time)
                         }),
                     ]
                 }

@@ -86,7 +86,7 @@ module.exports = {
         }
         await er.destroy()
     },
-    get_all_paper:async function(stuff, pageNo) {
+    get_all_paper: async function (stuff, pageNo) {
         let papers = await stuff.getExam_papers({
             offset: pageNo * 20,
             limit: 20,
@@ -94,7 +94,11 @@ module.exports = {
                 {
                     model: db_opt.get_sq().models.question,
                     include: [
-                        db_opt.get_sq().models.option_answer
+                        {
+                            model: db_opt.get_sq().models.option_answer,
+                            order: [['id', 'ASC']],
+                            separate: true,
+                        }
                     ]
                 }
             ],
@@ -119,7 +123,7 @@ module.exports = {
             await er[0].removeQuestion(eq[0])
         }
     },
-    get_exam_by_plan:async function(plan) {
+    get_exam_by_plan: async function (plan) {
         let exams = await plan.getExams({
             include: [
                 {
@@ -132,9 +136,9 @@ module.exports = {
                             ]
                         }
                     ]
-                },{
-                    model:db_opt.get_sq().models.exam_answer,
-                    include:[
+                }, {
+                    model: db_opt.get_sq().models.exam_answer,
+                    include: [
                         db_opt.get_sq().models.option_answer
                     ]
                 }

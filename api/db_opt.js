@@ -3,19 +3,42 @@ const cls = require('cls-hooked');
 const namespace = cls.createNamespace('my-very-own-namespace');
 Sequelize.useCLS(namespace);
 function get_db_handle() {
-    const sequelize = new Sequelize({
-        dialect: 'sqlite',
-        storage: '/database/mt.db',
-        dialectModule: require('/usr/local/lib/node_modules/sqlite3'),
+    const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASS, {
+        dialect: 'mysql',
+        dialectModule: require('mysql2'),
+        host: process.env.DB_HOST,
         define: {
             freezeTableName: true,
+            charset: 'utf8mb4'
         },
         logging: function (sql, time) {
-            if (time > 200) {
+            if (time > 100) {
                 console.log(time + '->' + sql);
             }
         },
         benchmark: true,
+        pool: {
+            max: 10,
+            min: 0,
+            acquire: 2000,
+            idle: 10000
+        },
+        retry: {
+            match: [
+                /ETIMEDOUT/,
+                /EHOSTUNREACH/,
+                /ECONNRESET/,
+                /ECONNREFUSED/,
+                /EPIPE/,
+                /SequelizeConnectionError/,
+                /SequelizeConnectionRefusedError/,
+                /SequelizeHostNotFoundError/,
+                /SequelizeHostNotReachableError/,
+                /SequelizeInvalidConnectionError/,
+                /SequelizeConnectionTimedOutError/
+            ],
+            max: 5 // 最大重试次数
+        }
     });
     return sequelize;
 }
@@ -53,8 +76,8 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING, unique: true },
             script: { type: DataTypes.STRING },
-            address: { type: DataTypes.STRING },
-            contact: { type: DataTypes.STRING },
+            address: { type: DataTypes.STRING(2048) },
+            contact: { type: DataTypes.STRING(2048) },
             attachment: { type: DataTypes.STRING },
             third_key: { type: DataTypes.STRING },
             third_url: { type: DataTypes.STRING },
@@ -64,8 +87,8 @@ let db_opt = {
             zh_ssid: { type: DataTypes.STRING },
             event_types: { type: DataTypes.STRING },
             remote_event_url: { type: DataTypes.STRING },
-            driver_notice: { type: DataTypes.STRING },
-            notice: { type: DataTypes.STRING },
+            driver_notice: { type: DataTypes.STRING(4000) },
+            notice: { type: DataTypes.STRING(4000) },
             zc_rpc_url: { type: DataTypes.STRING },
             zczh_back_end: { type: DataTypes.STRING },
             zczh_back_token: { type: DataTypes.STRING },
@@ -165,7 +188,7 @@ let db_opt = {
         },
         archive_plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            content: { type: DataTypes.STRING },
+            content: { type: DataTypes.TEXT },
         },
         price_history: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -202,7 +225,7 @@ let db_opt = {
             total_turn: { type: DataTypes.INTEGER, defaultValue: 0 },
             pay_first: { type: DataTypes.FLOAT, defaultValue: 0 },
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
-            customer_confirm_time: { type: DataTypes.STRING},
+            customer_confirm_time: { type: DataTypes.STRING },
             confirm_opt_name: { type: DataTypes.STRING },
         },
         bidding_turn: {
@@ -249,11 +272,11 @@ let db_opt = {
         },
         question: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            name: { type: DataTypes.STRING },
+            name: { type: DataTypes.STRING(4000) },
         },
         option_answer: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            name: { type: DataTypes.STRING },
+            name: { type: DataTypes.STRING(4000) },
             is_correct: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         exam_paper: {
@@ -392,9 +415,6 @@ let db_opt = {
     install: async function () {
         console.log('run install');
         let sq = this.get_sq();
-        await sq.query("PRAGMA synchronous = OFF");
-        await sq.query("PRAGMA journal_mode = DELETE");
-        await sq.query("PRAGMA temp_store = 2");
         Object.keys(this.model).forEach((key) => {
             sq.define(key, this.model[key], { paranoid: true });
         });

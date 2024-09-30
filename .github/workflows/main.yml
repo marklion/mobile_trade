@@ -28,9 +28,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Shutdown Ubuntu MySQL (SUDO)
+        run: sudo service mysql stop # Shutdown the Default MySQL, "sudo" is necessary, please not remove it
+      - name: MySQL Action Setup
+        uses: mirromutth/mysql-action@v1.1
+        with:
+          host port: 3306 # Optional, default value is 3306. The port of host
+          container port: 3306 # Optional, default value is 3306. The port of container
+          mysql version: '8.0' # Optional, default value is "latest". The version of the MySQL
+          mysql database: 'automation_test' # Optional, default value is "test". The specified database which will be create
+          mysql user: 'sysadmin' # Required if "mysql root password" is empty, default is empty. The superuser for the specified database. Can use secrets, too
+          mysql password: ${{ secrets.DB_PASSWORD}} # Required if "mysql user" exists. The password for the "mysql user"
       - name: Run build-wrapper
         run: |
           docker pull marklion/mt_deploy:v1.0
           docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.0 make -f `realpath .`/Makefile
           docker tag marklion/mt_deploy:v1.0 mt_deploy:v1.0
-          make test
+          ip addr show docker0 | grep -Po 'inet \K[\d.]+'
+          cur_ip=$(ip addr show docker0 | grep -Po 'inet \K[\d.]+')
+          make test db_password=${{ secrets.DB_PASSWORD }} db_host=${cur_ip}
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_results
+          path: |
+            build/output.xml
+            build/log.html
+            build/report.html

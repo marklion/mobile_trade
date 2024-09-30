@@ -9,26 +9,36 @@ Library  Collections
 
 *** Variables ***
 ${WX_API_RECORD_FILE}  /database/wx_api_log.txt
-${DB_PATH}  ../build/mt.db
+${LOCAL_DB_NAME}  j4tst
+${LOCAL_DB_USER}  db_user
+${LOCAL_DB_PASSWORD}  db_pass
+${LOCAL_DB_HOST}  localhost
 @{WX_MSG_CATCHED}
 
 *** Keywords ***
-Get DB Path
-    ${real_db_path}  Set Variable  ${DB_PATH}
-    IF  $server_db != ''
-        ${real_db_path}  Set Variable  ${server_db}
+Get DB Params
+    ${real_db_name}  Set Variable  ${LOCAL_DB_NAME}
+    ${real_db_user}  Set Variable  ${LOCAL_DB_USER}
+    ${real_db_password}  Set Variable  ${LOCAL_DB_PASSWORD}
+    ${real_db_host}  Set Variable  ${LOCAL_DB_HOST}
+    IF  $db_name != ''
+        ${real_db_name}  Set Variable  ${db_name}
+        ${real_db_user}  Set Variable  ${db_user}
+        ${real_db_password}  Set Variable  ${db_pass}
+        ${real_db_host}  Set Variable  ${db_host}
     END
-    RETURN  ${real_db_path}
+    RETURN  database="${real_db_name}", user='${real_db_user}', password='${real_db_password}', host='${real_db_host}'
+DB Connect
+    ${db_p}  Get DB Params
+    Connect To Database Using Custom Params  pymysql  ${db_p}
 Clear Table
     [Arguments]  ${table}
-    ${db_p}  Get DB Path
-    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    DB Connect
     Delete All Rows From Table  ${table}
     Disconnect From All Databases
 
 RBAC reset
-    ${db_p}  Get DB Path
-    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    DB Connect
     Execute Sql String  delete from rbac_user where phone != '18911992582';
     Execute Sql String  delete from rbac_user_role where rbacUserId not in (select id from rbac_user where phone = '18911992582');
     Execute Sql String  delete from rbac_role where companyId is not null;
@@ -54,8 +64,7 @@ Plan Reset
 
 Company Set Script
     [Arguments]  ${company_id}  ${script_path}
-    ${db_p}  Get DB Path
-    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    DB Connect
     Execute Sql String  update company set script = '${script_path}' where id = ${company_id};
     Disconnect From All Databases
 
@@ -70,22 +79,19 @@ Bidding Reset
 
 Change Bidding Begin Time
     [Arguments]  ${turn_id}  ${begin_time}
-    ${db_p}  Get DB Path
-    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    DB Connect
     Execute Sql String  update bidding_turn set begin_time = '${begin_time}' where id = ${turn_id};
     Disconnect From All Databases
 
 Change SC Content Expired Date
     [Arguments]  ${sc_id}  ${expired_date}
-    ${db_p}  Get DB Path
-    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    DB Connect
     Execute Sql String  update sc_content set expired_time = '${expired_date}' where id = ${sc_id};
     Disconnect From All Databases
 
 Update User OpenId
     [Arguments]  ${phone}  ${open_id}
-    ${db_p}  Get DB Path
-    Connect To Database Using Custom Params  sqlite3  database="${db_p}"
+    DB Connect
     Execute Sql String  update rbac_user set open_id = '${open_id}' where phone = '${phone}';
     Disconnect From All Databases
 

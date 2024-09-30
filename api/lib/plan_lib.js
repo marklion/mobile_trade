@@ -147,14 +147,14 @@ module.exports = {
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         let conditions = {
-            order: [['updatedAt', 'DESC'], ['id', 'ASC']],
+            order: [['updatedAt', 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             include: [
                 { model: sq.models.company, as: 'buy_company' },
                 { model: sq.models.stuff, },
                 { model: sq.models.rbac_user, }
-            ]
+            ],
         };
         if (stuff_id != undefined) {
             conditions.include[1].where = { id: stuff_id };
@@ -191,11 +191,11 @@ module.exports = {
         let sq = db_opt.get_sq();
         let where_condition = {
             [db_opt.Op.and]: [
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('datetime', _condition.start_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', _condition.start_time)
                 }),
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('datetime', _condition.end_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', _condition.end_time)
                 }),
             ]
         };
@@ -277,11 +277,12 @@ module.exports = {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         let search_condition = {
-            order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
             include: util_lib.plan_detail_include(),
+
         };
         let result = [];
         let count = await user.countPlans({ where: where_condition });
@@ -322,7 +323,7 @@ module.exports = {
             [db_opt.Op.or]: stuff_or
         });
         let search_condition = {
-            order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -919,8 +920,8 @@ module.exports = {
                         { call_time: null },
                         { register_time: { [db_opt.Op.ne]: null } },
                         { status: { [db_opt.Op.ne]: 3 } },
-                        sq.where(sq.fn('datetime', sq.col('register_time')), {
-                            [db_opt.Op.lt]: sq.fn('datetime', plan.register_time)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('register_time')), {
+                            [db_opt.Op.lt]: sq.fn('TIMESTAMP', plan.register_time)
                         }),
                     ],
                 }
@@ -953,7 +954,7 @@ module.exports = {
         };
         let plans = await sq.models.plan.findAll({
             where: cond,
-            order: [[sq.fn('datetime', sq.col('register_time')), 'ASC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('register_time')), 'ASC']],
             offset: pageNo * 20,
             limit: 20,
             include: util_lib.plan_detail_include(),
@@ -1073,11 +1074,11 @@ module.exports = {
         let sq = db_opt.get_sq();
         let cond = {
             [db_opt.Op.and]: [
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('datetime', body.start_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
                 }),
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('datetime', body.end_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
                 }),
             ]
         }
@@ -1095,11 +1096,11 @@ module.exports = {
         let sq = db_opt.get_sq();
         let cond = {
             [db_opt.Op.and]: [
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('datetime', body.start_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
                 }),
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('datetime', body.end_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
                 }),
             ]
         }
@@ -1355,8 +1356,8 @@ module.exports = {
                         where: {
                             [db_opt.Op.and]: [
                                 { status: { [db_opt.Op.ne]: 3 } },
-                                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                                    [db_opt.Op.lte]: sq.fn('datetime', expired_day)
+                                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', expired_day)
                                 }),
                             ]
                         }

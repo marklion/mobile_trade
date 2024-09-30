@@ -859,11 +859,11 @@ module.exports = {
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 let cond = {
                     [db_opt.Op.and]: [
-                        sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                            [db_opt.Op.gte]: sq.fn('datetime', body.begin_date)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                            [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.begin_date)
                         }),
-                        sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                            [db_opt.Op.lte]: sq.fn('datetime', body.end_date)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                            [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_date)
                         }),
                         {
                             status: 3
@@ -873,7 +873,7 @@ module.exports = {
                 if (driver) {
                     let ret = { tickets: [], total: 0 };
                     let plans = await driver.getPlans({
-                        order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
+                        order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
                         where: cond,
                         limit: 20,
                         offset: body.pageNo * 20,
