@@ -178,4 +178,20 @@ module.exports = {
             }
         };
     },
+    contract_res_detail_define: {
+        id: { type: Number, mean: '合同ID', example: 1 },
+        sign_time: { type: String, mean: '签订时间', example: '2020-01-01 12:00:00' },
+        balance: { type: Number, mean: '余额', example: 1 },
+        begin_time: { type: String, mean: '开始时间', example: '2020-01-01 12:00:00' },
+        end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
+        number: { type: String, mean: '合同号', example: "abc" },
+        customer_code: { type: String, mean: '客户合同号', example: "sss" },
+        rbac_users: {
+            type: Array, mean: '授权用户', explain: {
+                id: { type: Number, mean: '用户ID', example: 1 },
+                name: { type: String, mean: '用户姓名', example: '用户姓名' },
+                phone: { type: String, mean: '用户电话', example: '用户电话' },
+            }
+        }
+    }
 }

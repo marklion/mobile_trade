@@ -1194,7 +1194,6 @@ export default {
             this.refresh_plans();
         },
         prepare_plan_detail: async function (item) {
-            console.log(item.stuff)
             // 获取销售或采购合同信息
             if (this.$has_module('sale_management') || this.$has_module('buy_management')) {
                 let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
