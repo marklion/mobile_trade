@@ -1230,9 +1230,8 @@ export default {
             // 获取销售或采购合同信息
             if (this.$has_module('sale_management') || this.$has_module('buy_management')) {
                 let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                let company_id = this.cur_is_buy ? item.stuff.company.id : item.company.id;
                 let resp = await this.$send_req(url, {
-                    [this.cur_is_buy ? 'supplier_id' : 'customer_id']: company_id,
+                    [this.cur_is_buy ? 'supplier_id' : 'customer_id']: item.company.id,
                 })
                 // 标注合同是否一个月内即将到期
                 const oneMonthFromNow = moment().add(1, 'month');
