@@ -67,6 +67,7 @@
         "optimization" : {
             "subPackages" : true
         },
+		"lazyCodeLoading": "requiredComponents",
         "requiredPrivateInfos" : [ "getLocation" ]
     },
     "mp-alipay" : {

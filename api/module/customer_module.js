@@ -136,8 +136,14 @@ module.exports = {
             result: api_param_result_define.plan_detail_define,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
-                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
                 let buy_company = await rbac_lib.get_company_by_token(token);
+                
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                let sale_company = await stuff.getCompany();
+                // 判断是否在黑名单中
+                if (await plan_lib.is_in_blacklist(sale_company.id,body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
+                    throw { err_msg: '创建计划失败，司机或车辆已被列入黑名单' };
+                }
                 let driver = await sq.models.driver.findByPk(body.driver_id);
                 let main_vehicle = await sq.models.vehicle.findByPk(body.main_vehicle_id);
                 let behind_vehicle = await sq.models.vehicle.findByPk(body.behind_vehicle_id);
@@ -238,6 +244,21 @@ module.exports = {
                 await bidding_lib.accept_bidding(token, body.item_id);
                 return { result: true };
             },
+        },
+        bidding_confirm:{
+            name:'竞价结果确认',
+            description:'竞价结果确认',
+            is_write:true,
+            is_get_api:false,
+            params:{
+                bidding_id:{type:Number,have_to:true,mean:'竞价ID',example:1},
+            },
+            result:{
+                result:{type:Boolean,mean:'结果',example:true},
+            },
+            func:async function(body, token){
+                return await bidding_lib.confirm_bidding(token, body.bidding_id);
+            }
         },
         bidding_price: {
             name: '出价',

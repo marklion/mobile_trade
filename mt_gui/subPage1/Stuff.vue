@@ -82,6 +82,9 @@
             <u-switch slot="value" v-model="price_profile.hide_impact_selector" @change="update_price_profile"></u-switch>
         </u-cell>
     </view>
+    <view v-else-if="cur_seg == 2">
+        <BlackList ref="blacklist_ref" />
+    </view>
     <fui-modal width="600" :show="show_stuff_fetch" v-if="show_stuff_fetch" @click="fetch_stuff">
         <fui-form ref="form" top="100">
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
@@ -142,10 +145,12 @@
 <script>
 import ListShow from '../components/ListShow.vue'
 import utils from '@/components/firstui/fui-utils';
+import BlackList from './BlackList.vue';
 export default {
     name: 'Stuff',
     components: {
-        ListShow
+        ListShow,
+        BlackList
     },
     data: function () {
         return {
@@ -154,7 +159,7 @@ export default {
                 hide_impact_selector: false,
             },
             cur_seg: 0,
-            seg_list: ['物料配置', '调价策略'],
+            seg_list: ['物料配置', '调价策略','黑名单'],
             show_cancel_next_price: false,
             cancel_next_stuff_id: 0,
             show_next_date: false,
@@ -407,7 +412,8 @@ export default {
         },
     },
     onPullDownRefresh() {
-        this.$refs.stuff_ref.refresh();
+        this.$refs?.stuff_ref?.refresh();
+        this.$refs?.blacklist_ref?.refresh();
         this.stuff_ready_fetch = {
             name: '',
             comment: undefined,

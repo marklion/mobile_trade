@@ -2,6 +2,7 @@ const db_opt = require('../db_opt');
 const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const util_lib = require('./util_lib');
+const wx_api_util = require('./wx_api_util');
 module.exports = {
     sc_req_detail: {
         id: { type: Number, have_to: true, mean: 'ID', example: 1 },
@@ -236,6 +237,19 @@ module.exports = {
                 content.attachment = _attachment;
                 content.expired_time = _expired_time;
                 await content.save();
+
+                // 检查当前司机是否所有所需证件都已上传
+                const allContentsUploaded = await this.get_sc_status_by_plan(plan);
+                const emptyContentsCount = allContentsUploaded.reqs.filter(req => !req.sc_content).length;
+                if (emptyContentsCount == 0) {
+                    await this.fetch_send_sc_check_msg(
+                        msg='已上传-待审核',
+                        order_id=plan?.id,
+                        open_id=null,
+                        _company=company,
+                        notifyTo='CHECKER'
+                    );
+                }
             }
             else {
                 throw { err_msg: '创建安检内容失败' };
@@ -258,7 +272,7 @@ module.exports = {
         }
         return ret;
     },
-    check_sc_content: async function (_content_id, _token, _comment) {
+    check_sc_content: async function (_content_id, _token, _comment, _plan_id) {
         let sq = db_opt.get_sq();
         let content = await sq.models.sc_content.findByPk(_content_id, {
             include: [{
@@ -267,7 +281,7 @@ module.exports = {
                     model: sq.models.stuff,
                     include: [sq.models.company]
                 }]
-            }]
+            }, { model: sq.models.driver }]
         });
         let company = await rbac_lib.get_company_by_token(_token);
         let user = await rbac_lib.get_user_by_token(_token);
@@ -283,9 +297,55 @@ module.exports = {
             content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
             content.checker = user.name;
             await content.save();
+            if (_plan_id) {
+                let plan = await util_lib.get_single_plan_by_id(_plan_id);
+                // 未通过的安检资料
+                const allContentsPassed = await sq.models.sc_content.findAll({
+                    where: {
+                        [db_opt.Op.or]: [
+                            { driverId: plan?.driver?.id || 0 },
+                            { vehicleId: plan?.main_vehicle?.id || 0 },
+                            { vehicleId: plan?.behind_vehicle?.id || 0 },
+                        ],
+                        passed: false
+                    }
+                });
+                if (allContentsPassed.length === 0) {
+                    // 所有安检资料都已通过，发送消息给司机
+                    await this.fetch_send_sc_check_msg(
+                        msg='审核通过',
+                        order_id=plan?.id,
+                        open_id=plan?.driver?.open_id,
+                        null,
+                        notifyTo='DRIVER'
+                    );
+                }
+
+                if (allContentsPassed.length === 1 && !content.passed) {
+                    // 反审安检资料从通过变为不通过，发送消息给司机
+                    await this.fetch_send_sc_check_msg(
+                        msg='驳回',
+                        order_id=plan?.id,
+                        open_id=plan?.driver?.open_id,
+                        null,
+                        notifyTo='DRIVER'
+                    );
+                }
+            }
+
         }
         else {
             throw { err_msg: '无权限' };
         }
     },
+    fetch_send_sc_check_msg: async function (msg, order_id, open_id,_company, notifyTo) {
+        if (notifyTo == 'DRIVER' && open_id) {
+            // 发送消息到司机端
+            wx_api_util.send_sc_check_msg_to_driver(msg, order_id, open_id);
+        }
+        if (notifyTo == 'CHECKER') {
+            // 发送消息到安检审核人员
+            wx_api_util.send_sc_check_msg_to_checker(msg, order_id,_company);
+        }
+    }
 };

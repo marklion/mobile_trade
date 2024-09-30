@@ -9,6 +9,14 @@
             </module-filter>
         </view>
     </u-cell>
+    <view>
+        <view v-if="bd.customer_confirm_time">
+            <u-cell title="价格已确认" :value="bd.bidding_turns[0].bidding_items[0].price" :label="bd.confirm_opt_name + '->' + bd.customer_confirm_time"></u-cell>
+        </view>
+        <view v-else-if="bd.status == 1">
+            <fui-text text="价格未确认" type="danger"></fui-text>
+        </view>
+    </view>
     <view v-for="single_turn in bd.bidding_turns" :key="single_turn.id">
         <u-cell :title="'第' + (single_turn.turn + 1) + '轮'" :value="single_turn.finish?'已完成':'未完成'" @click="prepare_show_bi(single_turn)" :isLink="true" arrow-direction="down">
             <view slot="label">

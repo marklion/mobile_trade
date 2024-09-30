@@ -643,7 +643,7 @@ module.exports = {
                         id: { type: Number, mean: '公司id', example: 123 },
                         name: { type: String, mean: '公司名', example: 'company_example' },
                         logo: { type: String, mean: '公司logo', example: 'logo_example' },
-                        pressure_config:{ type: Boolean, mean: '泄压配置', example: false },
+                        pressure_config: { type: Boolean, mean: '泄压配置', example: false },
                         bound_modules: {
                             type: Array, mean: '绑定模块列表', explain: {
                                 id: { type: Number, mean: '模块id', example: 123 },
@@ -859,11 +859,11 @@ module.exports = {
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 let cond = {
                     [db_opt.Op.and]: [
-                        sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                            [db_opt.Op.gte]: sq.fn('datetime', body.begin_date)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                            [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.begin_date)
                         }),
-                        sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                            [db_opt.Op.lte]: sq.fn('datetime', body.end_date)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                            [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_date)
                         }),
                         {
                             status: 3
@@ -873,7 +873,7 @@ module.exports = {
                 if (driver) {
                     let ret = { tickets: [], total: 0 };
                     let plans = await driver.getPlans({
-                        order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
+                        order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
                         where: cond,
                         limit: 20,
                         offset: body.pageNo * 20,
@@ -1409,5 +1409,119 @@ module.exports = {
                 return ret;
             }
         },
+        get_all_sys_notices: {
+            name: '获取全部系统通知',
+            description: '获取全部系统通知',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                notices: {
+                    type: Array, mean: '系统通知列表', explain: {
+                        id: { type: Number, mean: '通知ID', example: 1 },
+                        message: { type: String, mean: '通知内容', example: '系统维护通知' },
+                        is_published: { type: Boolean, mean: '发布状态', example: true },
+                        createdAt: { type: String, mean: '创建时间', example: '2022-01-01 00:00:00' },
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let ret = { notices: [] };
+                let notices = await sq.models.sys_notice.findAll({
+                    order: [['createdAt', 'DESC']]
+                });
+                notices.forEach(notice => {
+                    notice.createdAt = moment(notice.createdAt).format('YYYY-MM-DD HH:mm:ss');
+                });
+                ret.notices = notices;
+                return ret;
+            }
+        },
+        get_published_notice: {
+            name: '获取已发布的最新通知',
+            description: '获取已发布的最新通知',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                notice: {
+                    type: Object, mean: '最新通知对象', explain: {
+                        id: { type: Number, mean: '通知ID', example: 1 },
+                        message: { type: String, mean: '通知内容', example: '系统维护通知' },
+                        is_published: { type: Boolean, mean: '发布状态', example: true },
+                        createdAt: { type: String, mean: '创建时间', example: '2022-01-01 00:00:00' },
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let notice = await sq.models.sys_notice.findOne({
+                    where: {
+                        is_published: true
+                    },
+                    order: [['createdAt', 'DESC']]
+                });
+                if (notice) {
+                    notice.createdAt = moment(notice.createdAt).format('YYYY-MM-DD HH:mm:ss');
+                    return { notice };
+                } else {
+                    return {};
+                }
+            }
+        },
+        set_sys_notice: {
+            name: '设置系统通知',
+            description: '设置系统通知',
+            is_write: true,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                message: { type: String, have_to: true, mean: '通知内容', example: '系统维护通知' },
+                creator_name: { type: String, have_to: true, mean: '添加人姓名', example: '管理员' },
+                is_published: { type: Boolean, have_to: false, mean: '是否发布', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let notice = await sq.models.sys_notice.create({
+                    message: body.message,
+                    creator_name: body.creator_name,
+                    is_published: body.is_published
+                });
+                if (notice) {
+                    return { result: true };
+                } else {
+                    throw { err_msg: '设置系统通知失败' };
+                }
+            }
+        },
+        delete_sys_notice: {
+            name: '删除系统通知',
+            description: '删除系统通知',
+            is_write: true,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                notice_id: { type: Number, have_to: true, mean: '通知ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '删除结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let notice = await sq.models.sys_notice.findByPk(body.notice_id);
+                if (notice) {
+                    await notice.destroy();
+                    return { result: true };
+                } else {
+                    throw { err_msg: '通知不存在' };
+                }
+            }
+        }
+
     },
 }

@@ -14,6 +14,8 @@ function make_bc_detail(need_turn = false) {
         total_turn: { type: Number, mean: '总轮次', example: 10 },
         pay_first: { type: Number, mean: '押金额度', example: 123 },
         status: { type: Number, mean: '状态', example: 0 },
+        customer_confirm_time: { type: String, mean: '客户确认时间', example: '2020-01-01 00:00:00' },
+        confirm_opt_name: { type: String, mean: '确认人', example: '张三' },
     }
     if (need_turn) {
         bidding_config.bidding_turns = {
@@ -267,6 +269,7 @@ module.exports = {
                 price: { type: Number, mean: '价格', example: 100 },
                 accept: { type: Boolean, mean: '是否接受', example: true },
                 time: { type: String, mean: '出价时间', example: '2020-01-01 00:00:00' },
+                win: {type: Boolean, mean: '是否中标', example: true},
                 bidding_turn: {
                     type: Object, mean: '竞价轮次', explain: {
                         id: { type: Number, mean: 'ID', example: 1 },

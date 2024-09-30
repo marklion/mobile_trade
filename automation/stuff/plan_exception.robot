@@ -235,13 +235,13 @@ Rollback While Entered
     Manual Pay A Plan  ${plan}
     Plan Enter  ${plan}
     Rollback Plan  ${plan}
-    Check New Status And History  ${plan}  2  回退  进厂
+    Check New Status And History  ${plan}  2  撤销  进厂
     Plan Enter  ${plan}
     ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Order  ${plan}
     Plan Enter  ${plan}
     Rollback Order  ${plan}
-    Check New Status And History  ${plan}  1  回退  进厂
+    Check New Status And History  ${plan}  1  撤销  进厂
     Plan Enter  ${plan}
 
 Disabled Action While Entered

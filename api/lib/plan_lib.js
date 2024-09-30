@@ -8,7 +8,6 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
-
 module.exports = {
     fetch_vehicle: async function (_plate, _is_behind) {
         let sq = db_opt.get_sq();
@@ -148,14 +147,14 @@ module.exports = {
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         let conditions = {
-            order: [['updatedAt', 'DESC'], ['id', 'ASC']],
+            order: [['updatedAt', 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             include: [
                 { model: sq.models.company, as: 'buy_company' },
                 { model: sq.models.stuff, },
                 { model: sq.models.rbac_user, }
-            ]
+            ],
         };
         if (stuff_id != undefined) {
             conditions.include[1].where = { id: stuff_id };
@@ -192,11 +191,11 @@ module.exports = {
         let sq = db_opt.get_sq();
         let where_condition = {
             [db_opt.Op.and]: [
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('datetime', _condition.start_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', _condition.start_time)
                 }),
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('datetime', _condition.end_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', _condition.end_time)
                 }),
             ]
         };
@@ -278,11 +277,12 @@ module.exports = {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         let search_condition = {
-            order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
             include: util_lib.plan_detail_include(),
+
         };
         let result = [];
         let count = await user.countPlans({ where: where_condition });
@@ -323,7 +323,7 @@ module.exports = {
             [db_opt.Op.or]: stuff_or
         });
         let search_condition = {
-            order: [[sq.fn('datetime', sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -359,8 +359,15 @@ module.exports = {
         if (!plan || (plan.enter_time && plan.enter_time.length > 0) || (plan.status == 3)) {
             throw { err_msg: '已进厂,无法修改' };
         }
+        if (plan.register_time && plan.register_time.length > 0) {
+            throw { err_msg: '车辆已排号,无法修改,建议操作过号后再修改' };
+        }
         let company = await plan.getCompany();
         let owner_company = (await util_lib.get_single_plan_by_id(_plan_id)).stuff.company;
+        // 判断是否在黑名单中
+        if (await this.is_in_blacklist(owner_company.id, _driver_id, _main_vehicle_id, _behind_vehicle_id)) {
+            throw { err_msg: '更新计划失败，司机或车辆已被列入黑名单' };
+        }
         let opt_company = await rbac_lib.get_company_by_token(_token);
         if ((company && opt_company && company.id == opt_company.id) || (owner_company && opt_company && owner_company.id == opt_company.id)) {
             let change_comment = '';
@@ -509,8 +516,7 @@ module.exports = {
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             if (is_exit) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    await plan.save();
+                    await field_lib.handle_cancel_enter(plan);
                     await this.rp_history_exit(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 }
                 else {
@@ -535,8 +541,8 @@ module.exports = {
             }
             if (plan.status == 1) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    rollback_content = '回退进厂';
+                    await this.plan_enter(_plan_id, _token, true);
+                    return;
                 }
                 else {
                     plan.status = 0;
@@ -545,8 +551,8 @@ module.exports = {
             }
             else if (plan.status == 2) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    plan.enter_time = '';
-                    rollback_content = '回退进厂';
+                    await this.plan_enter(_plan_id, _token, true);
+                    return;
                 }
                 else {
                     plan.status = 1;
@@ -914,8 +920,8 @@ module.exports = {
                         { call_time: null },
                         { register_time: { [db_opt.Op.ne]: null } },
                         { status: { [db_opt.Op.ne]: 3 } },
-                        sq.where(sq.fn('datetime', sq.col('register_time')), {
-                            [db_opt.Op.lt]: sq.fn('datetime', plan.register_time)
+                        sq.where(sq.fn('TIMESTAMP', sq.col('register_time')), {
+                            [db_opt.Op.lt]: sq.fn('TIMESTAMP', plan.register_time)
                         }),
                     ],
                 }
@@ -948,7 +954,7 @@ module.exports = {
         };
         let plans = await sq.models.plan.findAll({
             where: cond,
-            order: [[sq.fn('datetime', sq.col('register_time')), 'ASC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('register_time')), 'ASC']],
             offset: pageNo * 20,
             limit: 20,
             include: util_lib.plan_detail_include(),
@@ -1068,11 +1074,11 @@ module.exports = {
         let sq = db_opt.get_sq();
         let cond = {
             [db_opt.Op.and]: [
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('datetime', body.start_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
                 }),
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('datetime', body.end_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
                 }),
             ]
         }
@@ -1090,11 +1096,11 @@ module.exports = {
         let sq = db_opt.get_sq();
         let cond = {
             [db_opt.Op.and]: [
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('datetime', body.start_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
                 }),
-                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('datetime', body.end_time)
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
                 }),
             ]
         }
@@ -1157,6 +1163,7 @@ module.exports = {
                 ticket_no: element.ticket_no,
                 drop_address: element.drop_address,
                 fapiao_delivered: element.fapiao_delivered ? '是' : '否',
+                comment: element.comment,
             });
         }
         let columns = [{
@@ -1216,6 +1223,9 @@ module.exports = {
         }, {
             header: '发票已开?',
             key: 'fapiao_delivered',
+        }, {
+            header: '备注',
+            key: 'comment',
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
@@ -1346,8 +1356,8 @@ module.exports = {
                         where: {
                             [db_opt.Op.and]: [
                                 { status: { [db_opt.Op.ne]: 3 } },
-                                sq.where(sq.fn('datetime', sq.col('plan_time')), {
-                                    [db_opt.Op.lte]: sq.fn('datetime', expired_day)
+                                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', expired_day)
                                 }),
                             ]
                         }
@@ -1470,4 +1480,17 @@ module.exports = {
             await this.record_plan_history()
         });
     },
+    is_in_blacklist: async function (companyId, driverId, mainVehicleId, behindVehicleId) {
+        let blacklist = await db_opt.get_sq().models.blacklist.findOne({
+            where: {
+                companyId: companyId,
+                [db_opt.Op.or]: [
+                    { driverId: {[db_opt.Op.eq]: driverId } },
+                    { vehicleId: { [db_opt.Op.eq]: mainVehicleId } },
+                    { vehicleId: { [db_opt.Op.eq]: behindVehicleId } }
+                ]
+            }
+        });
+        return blacklist != null;
+    }
 };

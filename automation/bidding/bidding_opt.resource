@@ -11,7 +11,7 @@ Prepare Four Costomers And One Sale
     FOR  ${index}  IN RANGE  ${total_joiner}
         ${company}  Create One Company  jc_${index}
         ${user}  New User Login  p${index}  jc_${index}  o${index}  n${index}
-        ${tmp}  Create Dictionary  user_token=${user}  company=${company}  user_phone=p${index}
+        ${tmp}  Create Dictionary  user_token=${user}  company=${company}  user_phone=p${index}  open_id=o${index}  name=n${index}
         Append To List  ${joiners}  ${tmp}
     END
     ${sale_company}  Create One Company  sale
@@ -58,7 +58,7 @@ Add All Customer To Bidding Except First One
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts  ${-1}  &{req}
     @{joiner_ids}  Create List
     FOR  ${itr}  IN  @{found_contracts}
-        ${au_users}  Get From Dictionary  ${itr}  rbac_users
+        ${au_users}  Get From Dictionary  ${itr}  rbac_users  ${EMPTY}
         FOR  ${sub_itr}  IN  @{au_users}
             ${tmp}  Create Dictionary  id=${sub_itr}[id]
             Append To List  ${joiner_ids}  ${tmp}
@@ -90,3 +90,8 @@ Go Next Turn
     [Arguments]  ${bc_id}  ${top_n}=${2}
     ${req}  Create Dictionary  bc_id=${bc_id}  begin_time=2020-02-02  end_time=2020-02-02  top_n=${top_n}
     Req to Server  /bid/next_turn  ${sc_admin_token}  ${req}
+
+Confirm One Bidding
+    [Arguments]  ${bc_id}  ${token}  ${exception}=${False}
+    ${req}  Create Dictionary  bidding_id=${bc_id}
+    Req to Server  /customer/bidding_confirm  ${token}  ${req}  ${exception}

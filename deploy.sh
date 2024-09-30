@@ -1,17 +1,17 @@
 #!/bin/bash
 WECHAT_SECRET_INPUT="none"
 WECHAT_MP_SECRET_INPUT="none"
-MAIL_PWD_INPUT="none"
-OPEN_SSH_PORT_INPUT=""
 PORT=""
 DATA_BASE="mt.db"
-ALI_KEY_ID_INPUT="none"
-ALI_KEY_SEC_INPUT="none"
 OLD_DATA_PATH="/tmp"
 SHARE_KEY_INPUT=""
 DOCKER_IMG_NAME="mt_deploy:v1.0"
 DEFAULT_PWD_INPUT="_P@ssw0rd_"
 SRC_DIR=`dirname $(realpath $0)`/../
+DB_NAME_INPUT='test4delay'
+DB_USER_INPUT='sysadmin'
+DB_PASS_INPUT='no_pass'
+DB_HOST_INPUT='localhost'
 is_in_container() {
     ls /.dockerenv >/dev/null 2>&1
 }
@@ -30,7 +30,7 @@ get_docker_image() {
 
 start_all_server() {
     line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 133`
+    line=`expr $line - 130`
     mkdir /tmp/sys_mt
     tail -n $line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
@@ -45,6 +45,8 @@ start_all_server() {
     echo 'export LANG=zh_CN.UTF-8' >> ~/.bashrc
     echo 'export LC_ALL=zh_CN.UTF-8' >> ~/.bashrc
     cp /conf/*.xlsx /database/uploads/
+    mysql -h "${DB_HOST}" -u "${DB_USER}" --password="${DB_PASS}" -e "CREATE DATABASE ${DB_NAME}"
+    mysql -h "${DB_HOST}" -u "${DB_USER}" --password="${DB_PASS}" -e "SHOW DATABASES"
     pushd /api
     # pm2 --node-args="--inspect=0.0.0.0:9229" start index.js
     pm2 start index.js
@@ -68,22 +70,17 @@ start_docker_con() {
         MOUNT_PROC_ARG='-v /proc:/host/proc'
     fi
     local PORT_ARG="-p ${PORT}:80"
-    local SSH_PORT_ARG="-p 8222:22"
     if [ "$PORT" == "" ]
     then
         PORT_ARG=""
     fi
-    if [ "${OPEN_SSH_PORT_INPUT}" == "" ]
-    then
-        SSH_PORT_ARG=""
-    fi
-    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e SHARE_KEY="${SHARE_KEY_INPUT}" -e MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -v ${OLD_DATA_PATH}:/database/logo_res -e MAIL_PWD="${MAIL_PWD_INPUT}" -e DEFAULT_PWD="${DEFAULT_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
+    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} -e DB_HOST="${DB_HOST_INPUT}" -e DB_NAME="${DB_NAME_INPUT}" -e DB_USER="${DB_USER_INPUT}" -e DB_PASS="${DB_PASS_INPUT}" -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e SHARE_KEY="${SHARE_KEY_INPUT}" -e MP_SECRET="${WECHAT_MP_SECRET_INPUT}"   -v ${OLD_DATA_PATH}:/database/logo_res -e DEFAULT_PWD="${DEFAULT_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
     docker cp $0 ${CON_ID}:/root/ > /dev/null 2>&1
     docker start ${CON_ID} > /dev/null 2>&1
     echo ${CON_ID}
 }
 
-while getopts "sD:p:w:d:i:m:a:k:M:g:b:o:O:u:h:P:" arg
+while getopts "p:w:d:m:h:P:U:T:D:H:" arg
 do
     case $arg in
         p)
@@ -95,26 +92,26 @@ do
         m)
             WECHAT_MP_SECRET_INPUT=${OPTARG}
             ;;
-        M)
-            MAIL_PWD_INPUT=${OPTARG}
-            ;;
-        a)
-            ALI_KEY_ID_INPUT=${OPTARG}
-            ;;
-        k)
-            ALI_KEY_SEC_INPUT=${OPTARG}
-            ;;
         d)
             OLD_DATA_PATH=${OPTARG}
-            ;;
-        s)
-            OPEN_SSH_PORT_INPUT="true"
             ;;
         h)
             SHARE_KEY_INPUT=${OPTARG}
             ;;
         P)
             DEFAULT_PWD_INPUT=${OPTARG}
+            ;;
+        U)
+            DB_USER_INPUT=${OPTARG}
+            ;;
+        T)
+            DB_PASS_INPUT=${OPTARG}
+            ;;
+        D)
+            DB_NAME_INPUT=${OPTARG}
+            ;;
+        H)
+            DB_HOST_INPUT=${OPTARG}
             ;;
         *)
             echo "invalid args"

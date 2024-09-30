@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 const rbac_lib = require('./rbac_lib');
 const db_opt = require('../db_opt');
+const moment = require('moment');
 
 async function filter_related_users(module_name, users) {
     let ret = [];
@@ -195,7 +196,13 @@ function make_plan_status_msg(plan) {
     }
 }
 
-async function send_wx_msg(req) {
+function writeStringToFile(filePath, content) {
+    fs.appendFile(filePath, content, () => {
+        console.log('write file:', filePath, content);
+    });
+}
+
+async function send_wx_msg(req, mp_open_id) {
     let token = await get_pub_token()
     if (token) {
         if (proxy_is_open()) {
@@ -206,6 +213,7 @@ async function send_wx_msg(req) {
         }
     }
     console.log('send wx msg:', req);
+    writeStringToFile('/database/wx_api_log.txt',moment().format('YYYY-MM-DD HH:mm:ss') + '|' +  mp_open_id + '|' + req.template_id + '|' + JSON.stringify(req.data) + '\n');
 }
 
 module.exports = {
@@ -365,7 +373,7 @@ module.exports = {
         tar_array = tar_array.concat(await filter_related_users(module_name, users));
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req });
+            send_wx_msg({ ...req }, item);
         });
     },
     call_vehicle_msg: async function (plan) {
@@ -388,7 +396,7 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(plan.driver.open_id)
         }
-        await send_wx_msg(req);
+        await send_wx_msg(req, plan.driver.open_id);
     },
     plan_scale_msg: async function (plan) {
         let req = {
@@ -424,7 +432,7 @@ module.exports = {
         tar_array = tar_array.concat(await filter_related_users(module_name, users));
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req });
+            send_wx_msg({ ...req }, item);
         });
     },
     bidding_start_msg: async function (bidding_name, begin_time, user_open_id) {
@@ -443,7 +451,7 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(user_open_id)
         }
-        await send_wx_msg(req)
+        await send_wx_msg(req, user_open_id)
     },
     bidding_price_msg: async function (bc, price_user, price) {
         let stuff = await bc.getStuff()
@@ -468,7 +476,7 @@ module.exports = {
         tar_array = tar_array.concat(await filter_related_users('bid', users));
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req });
+            send_wx_msg({ ...req }, item);
         });
     },
     bidding_success_msg: async function (bc) {
@@ -489,7 +497,7 @@ module.exports = {
             }
         }
         req.touser = this.openid_map.get_pub_openid(bc.bidding_turns[0].bidding_items[0].rbac_user.open_id);
-        send_wx_msg({ ...req });
+        send_wx_msg({ ...req }, bc.bidding_turns[0].bidding_items[0].rbac_user.open_id);
     },
     bidding_finish_msg: async function (bc) {
         let stuff = await bc.getStuff()
@@ -526,7 +534,33 @@ module.exports = {
 
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req });
+            send_wx_msg({ ...req }, item);
         });
     },
+    send_sc_check_msg_to_driver: async function (check_msg, order_id, openId) {
+        await send_wx_msg({
+            touser: openId,
+            template_id: '2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8',
+            data: {
+                const2: { value: check_msg },
+                character_string1: { value: order_id.toString() }
+            },
+        });
+    },
+    send_sc_check_msg_to_checker: async function (check_msg, order_id, company) {
+        let req = {
+            template_id: '2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8',
+            data: {
+                const2: { value: check_msg },
+                character_string1: { value: order_id.toString() }
+            },
+        }
+        let users = await company.getRbac_users();
+        let related_users = await filter_related_users('sc', users);
+        related_users.forEach(async item => {
+            req.touser = item;
+            send_wx_msg({ ...req });
+        });
+    }
+    
 }

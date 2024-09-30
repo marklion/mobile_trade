@@ -26,6 +26,6 @@ clean:
 	for sub_component in $(SUB_DIR); do make clean -C $(SRC_DIR)/$$sub_component;done
 
 test:
-	$(SRC_DIR)/test.sh
+	$(SRC_DIR)/test.sh $(db_password) $(db_host)
 
 .PHONY:all $(SUB_DIR) $(DELIVER_PATH) clean pack test
