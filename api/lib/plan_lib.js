@@ -235,15 +235,24 @@ module.exports = {
     checkDuplicatePlans: async function (current_plan) {
         try {
             let sq = db_opt.get_sq();
-
             // 查找 plan 表中除了当前 planId 以外的未关闭状态的重复计划
+            const empty_plate_vehicle = await sq.models.vehicle.findOne({
+                where: {
+                    plate: '',
+                    is_behind: true
+                }
+            });
             const duplicatePlan = await sq.models.plan.findOne({
                 where: {
                     id: { [db_opt.Op.ne]: current_plan.id },
                     status: { [db_opt.Op.ne]: 3 },
                     [db_opt.Op.or]: [
                         { mainVehicleId: current_plan.main_vehicle.id },
-                        { behindVehicleId: current_plan.behind_vehicle.id },
+                        {[db_opt.Op.and]: [
+                            { behindVehicleId: current_plan.behind_vehicle.id },
+                            { behindVehicleId: { [db_opt.Op.ne]: empty_plate_vehicle.id } }
+                        ],
+                        },
                         { driverId: current_plan.driver.id }
                     ],
                     plan_time: current_plan.plan_time
