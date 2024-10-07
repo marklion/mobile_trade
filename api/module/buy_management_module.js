@@ -57,6 +57,29 @@ module.exports = {
                 return ret;
             },
         },
+        get_contract_by_supplier: {
+            name: '获取供应商合同',
+            description: '获取供应商合同',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                supplier_id: { type: Number, have_to: true, mean: '供应商ID', example: 1 }
+            },
+            result: common.contract_res_detail_define,
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let contracts = await company.getBuy_contracts({
+                    where: {
+                        saleCompanyId: body.supplier_id
+                    },
+                    include: db_opt.get_sq().models.rbac_user
+                })
+                if (contracts.length != 1) {
+                    throw { err_msg: "合同不存在" }
+                }
+                return contracts[0]
+            },
+        },
         contract_get: {
             name: '获取合同',
             description: '获取合同',
