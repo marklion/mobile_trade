@@ -1,10 +1,12 @@
 const express = require('express');
+const cors = require('cors');
 const json2md = require('json2md');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const moment = require('moment');
 const mergeImg = require('merge-img');
 const jimp = require('jimp').default;
 const app = express();
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.help_info = [];

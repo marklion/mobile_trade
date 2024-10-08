@@ -2,7 +2,7 @@
 <view>
     <fui-white-space size="large"></fui-white-space>
     <fui-section :title="stuff_name" size="50" isLine></fui-section>
-    <u-cell title="买方" :value="buyer_name"></u-cell>
+    <u-cell title="买方" :value="buyer_name" :label="(bidding_id == 0)?'':'竞价成功发起'"></u-cell>
     <u-cell title="卖方" :is_link="saler_name == '(未指定)'" :value="saler_name?saler_name:'(未指定)'" @click="show_select_company= true"></u-cell>
     <fui-divider></fui-divider>
     <fui-form ref="plan_form" :model="plan">
@@ -121,6 +121,7 @@ export default {
     name: 'OrderCreate',
     data: function () {
         return {
+            bidding_id: 0,
             show_import: false,
             import_sheet: [{
                 text: '选择文件',
@@ -560,6 +561,7 @@ export default {
                     behind_vehicle_id: ele.behind_vehicle.id,
                     driver_id: ele.driver.id,
                     is_proxy: this.is_proxy,
+                    bidding_id: this.bidding_id,
                 };
                 if (req.is_proxy) {
                     req.proxy_company_name = this.saler_name;
@@ -573,6 +575,9 @@ export default {
     },
     onLoad: async function (options) {
         this.plan.stuff_id = parseInt(options.stuff_id);
+        if (options.bidding_id) {
+            this.bidding_id = parseInt(options.bidding_id);
+        }
         this.stuff_name = options.stuff_name;
         this.saler_name = options.company_name;
         this.company_id = parseInt(options.company_id);
@@ -608,10 +613,12 @@ export default {
     white-space: nowrap;
     padding: 10px 0;
 }
+
 .vehicle-container {
     display: inline-flex;
     padding: 0 10px;
 }
+
 .vehicle-card {
     background-color: #ffffff;
     border-radius: 8px;
@@ -621,14 +628,17 @@ export default {
     flex-shrink: 0;
     overflow: hidden;
 }
+
 .single-vehicle {
     display: block;
     padding: 0;
 }
+
 .full-width {
     width: 100%;
     margin-right: 0;
 }
+
 .vehicle-actions {
     display: flex;
     justify-content: flex-end;

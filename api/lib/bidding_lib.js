@@ -41,7 +41,11 @@ module.exports = {
                 }],
                 order: [['id', 'DESC']]
             },
-            sq.models.stuff],
+            {
+                model: sq.models.stuff,
+                include: [sq.models.company]
+            }
+            ],
             order: [
                 ['id', 'DESC'],
                 [sq.models.bidding_turn, 'id', 'DESC'],
@@ -117,7 +121,10 @@ module.exports = {
                 include: [{
                     model: sq.models.bidding_turn,
                     include: [{
-                        model: sq.models.bidding_config, include: [sq.models.stuff]
+                        model: sq.models.bidding_config, include: [{
+                            model: sq.models.stuff,
+                            include: [sq.models.company]
+                        }]
                     }]
                 }]
             });

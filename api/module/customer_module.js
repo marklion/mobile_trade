@@ -27,7 +27,7 @@ module.exports = {
                         begin_time: { type: String, mean: '开始时间', example: '2020-01-01 12:00:00' },
                         end_time: { type: String, mean: '结束时间', example: '2020-01-01 12:00:00' },
                         number: { type: String, mean: '合同号', example: "abc" },
-                        expired:{type:Boolean,mean:'是否过期',example:false},
+                        expired: { type: Boolean, mean: '是否过期', example: false },
                         stuff: {
                             type: Array, mean: '货物', explain: {
                                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -38,7 +38,7 @@ module.exports = {
                             type: Object, mean: '销售公司', explain: {
                                 id: { type: Number, mean: '公司ID', example: 1 },
                                 name: { type: String, mean: '公司名称', example: '公司名称' },
-                                attachment:{type:String,mean:'附件',example:'附件'},
+                                attachment: { type: String, mean: '附件', example: '附件' },
                             }
                         },
                     }
@@ -132,16 +132,42 @@ module.exports = {
                 behind_vehicle_id: { type: Number, have_to: true, mean: '挂车ID', example: 1 },
                 driver_id: { type: Number, have_to: true, mean: '司机ID', example: 1 },
                 trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
+                bidding_id: { type: Number, have_to: false, mean: '竞价ID', example: 1 },
             },
             result: api_param_result_define.plan_detail_define,
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
+                let bc = await sq.models.bidding_config.findByPk(body.bidding_id);
+                let bi = undefined;
+                if (bc) {
+                    let user = await rbac_lib.get_user_by_token(token);
+                    let joiners = await user.getBidding_items({
+                        where: {
+                            win: true
+                        },
+                        include: [{
+                            model: sq.models.bidding_turn,
+                            required: true,
+                            include: [{
+                                model: sq.models.bidding_config,
+                                where: { id: bc.id, customer_confirm_time: { [db_opt.Op.ne]: null } },
+                                required: true
+                            }]
+                        }]
+                    });
+                    if (joiners.length > 0) {
+                        bi = joiners[0];
+                    }
+                    else {
+                        throw { err_msg: '未确认价格,不能生成计划' };
+                    }
+                }
                 let buy_company = await rbac_lib.get_company_by_token(token);
-                
+
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
                 let sale_company = await stuff.getCompany();
                 // 判断是否在黑名单中
-                if (await plan_lib.is_in_blacklist(sale_company.id,body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
+                if (await plan_lib.is_in_blacklist(sale_company.id, body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
                     throw { err_msg: '创建计划失败，司机或车辆已被列入黑名单' };
                 }
                 let driver = await sq.models.driver.findByPk(body.driver_id);
@@ -166,6 +192,11 @@ module.exports = {
                     new_plan.unit_price = stuff.price;
                     new_plan.status = 0;
                     new_plan.trans_company_name = body.trans_company_name;
+                    if (bi) {
+                        await new_plan.setBidding_item(bi);
+                        new_plan.unit_price = bi.price;
+                        new_plan.from_bidding = true;
+                    }
                     await new_plan.save();
                     wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
                 }
@@ -245,18 +276,18 @@ module.exports = {
                 return { result: true };
             },
         },
-        bidding_confirm:{
-            name:'竞价结果确认',
-            description:'竞价结果确认',
-            is_write:true,
-            is_get_api:false,
-            params:{
-                bidding_id:{type:Number,have_to:true,mean:'竞价ID',example:1},
+        bidding_confirm: {
+            name: '竞价结果确认',
+            description: '竞价结果确认',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                bidding_id: { type: Number, have_to: true, mean: '竞价ID', example: 1 },
             },
-            result:{
-                result:{type:Boolean,mean:'结果',example:true},
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
             },
-            func:async function(body, token){
+            func: async function (body, token) {
                 return await bidding_lib.confirm_bidding(token, body.bidding_id);
             }
         },

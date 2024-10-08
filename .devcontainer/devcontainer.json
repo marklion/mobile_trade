@@ -5,31 +5,34 @@
 	"build": {
 		"dockerfile": "Dockerfile",
 		// Update 'VARIANT' to pick an Ubuntu version: focal, bionic
-		"args": { "VARIANT": "focal" }
+		"args": {
+			"VARIANT": "focal"
+		}
 	},
-
 	// Set *default* container specific settings.json values on container create.
 	"settings": {},
-
-
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
-		"ms-vscode.cpptools",
-		"ms-ceintl.vscode-language-pack-zh-hans",
-		"twxs.cmake",
 		"eamodio.gitlens",
-		"tabnine.tabnine-vscode",
+		"febean.vue-format",
+		"github.copilot",
+		"github.copilot-chat",
+		"github.vscode-pull-request-github",
+		"ms-ceintl.vscode-language-pack-zh-hans",
+		"ms-python.debugpy",
+		"ms-python.python",
+		"ms-python.vscode-pylance",
+		"ms-vscode.cpptools",
 		"octref.vetur",
 		"oderwat.indent-rainbow",
-		"febean.vue-format"
+		"robocorp.robotframework-lsp",
+		"tabnine.tabnine-vscode",
+		"twxs.cmake",
 	],
-
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
-
+	"forwardPorts": [8080],
 	// Use 'postCreateCommand' to run commands after the container is created.
 	// "postCreateCommand": "uname -a",
-
 	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
 	"remoteUser": "root"
 }

@@ -153,7 +153,11 @@
                             </view>
                         </u-cell>
                     </module-filter>
-                    <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
+                    <u-cell title="计划时间" :value="focus_plan.plan_time">
+                        <view slot="label">
+                            <fui-text v-if="focus_plan.bidding_item" type="primary" :text="focus_plan.bidding_item.time + '出价' + focus_plan.bidding_item.price.toFixed(2) + '中标'" size="24"></fui-text>
+                        </view>
+                    </u-cell>
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
@@ -1489,10 +1493,10 @@ export default {
                 id: id,
             }
             this.show_blackList_confirm = true;
-            
+
         },
         confirm_add_to_blacklist: async function (e) {
-            if(e.index==1){
+            if (e.index == 1) {
                 await this.$send_req('/stuff/add_to_blacklist', {
                     type: this.focus_blackList.type,
                     ids: this.focus_blackList.id.toString(),
@@ -1571,5 +1575,4 @@ export default {
     align-items: center;
     z-index: 8889;
 }
-
 </style>

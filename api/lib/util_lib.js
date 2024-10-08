@@ -9,6 +9,14 @@ module.exports = {
             { model: db_opt.get_sq().models.driver, paranoid: false },
             { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company], paranoid: false },
             { model: db_opt.get_sq().models.plan_history, paranoid: false, separate: true, order: [[db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('time')), 'ASC']] },
+            {
+                model: db_opt.get_sq().models.bidding_item, paranoid: false, include: [{
+                    model: db_opt.get_sq().models.bidding_turn,
+                    include: [{
+                        model: db_opt.get_sq().models.bidding_config
+                    }]
+                }]
+            }
         ];
     },
     get_single_plan_by_id: async function (_plan_id) {
