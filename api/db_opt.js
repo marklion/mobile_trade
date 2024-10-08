@@ -102,7 +102,7 @@ let db_opt = {
             hide_impact_selector: { type: DataTypes.BOOLEAN, defaultValue: false },
             pressure_config: { type: DataTypes.BOOLEAN, defaultValue: false },
             check_qualification: { type: DataTypes.BOOLEAN, defaultValue: false },
-            qualification_expiration_date: { type: DataTypes.DATE, defaultValue: null },
+            qualification_expiration_date: { type: DataTypes.STRING(20)},
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

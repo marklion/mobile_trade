@@ -4,7 +4,7 @@
         <view>
             <image class="fui-cover" :src="(orig_attach?$convert_attach_url(orig_attach):'/static/no_att.jpg')" mode="widthFix"></image>
             <fui-date-picker :show="show_expire_date" type="3" :value="expire_date" @change="set_qualification_date" @cancel="show_expire_date = false"></fui-date-picker>
-            <fui-button v-if="orig_attach"  type="link" color="#000" :text="`有效期至${cur_exp_date}`" @click="show_expire_date = true"></fui-button>
+            <fui-button v-if="orig_attach"  type="link" color="#000" :text="!cur_exp_date?'设置有效期':`有效期至${cur_exp_date}`" @click="show_expire_date = true"></fui-button>
         </view>
         <view>
             <fui-button type="success" text="重新上传" @click="show_upload = true"></fui-button>

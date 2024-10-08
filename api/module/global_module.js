@@ -1529,7 +1529,7 @@ module.exports = {
             is_get_api: false,
             need_rbac: false,
             params: {
-                expire_date: { type: Date, have_to: true, mean: '资质有效期', example: '2048-10-31' }
+                expire_date: { type: String, have_to: true, mean: '资质有效期', example: '2048-10-31' }
             },
             result: {
                 result: { type: Boolean, mean: '设置结果', example: true }
@@ -1558,7 +1558,7 @@ module.exports = {
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 if (company) {
-                    return { expire_date: moment(company.qualification_expiration_date).format('YYYY-MM-DD') || '' };
+                    return { expire_date: company.qualification_expiration_date || '' };
                 } else {
                     throw { err_msg: '无权限' };
                 }
