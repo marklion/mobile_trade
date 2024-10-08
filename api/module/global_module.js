@@ -1328,7 +1328,7 @@ module.exports = {
             params: {
             },
             result: {
-                attach: { type: String, mean: '附件', example: 'https://www.baidu.com' }
+                attach: { type: String, mean: '附件', example: 'https://www.baidu.com' },
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
@@ -1521,7 +1521,49 @@ module.exports = {
                     throw { err_msg: '通知不存在' };
                 }
             }
-        }
+        },
+        set_qualification_expire_date: {
+            name: '设置公司资质有效期',
+            description: '设置公司资质有效期',
+            is_write: true,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                expire_date: { type: Date, have_to: true, mean: '资质有效期', example: '2048-10-31' }
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.qualification_expiration_date = body.expire_date;
+                    await company.save();
+                    return { result: true };
+                } else {
+                    throw { err_msg: '无权限' };
+                }
+            }
+        },
+        get_qualification_expire_date: {
+            name: '获取公司资质有效期',
+            description: '获取公司资质有效期',
+            is_write: false,
+            is_get_api: true,
+            need_rbac: true,
+            params: {},
+            result: {
+                expire_date: { type: String, mean: '资质有效期', example: '2048-10-31' }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    return { expire_date: moment(company.qualification_expiration_date).format('YYYY-MM-DD') || '' };
+                } else {
+                    throw { err_msg: '无权限' };
+                }
+            }
+        },
 
     },
 }

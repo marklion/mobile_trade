@@ -461,6 +461,16 @@ module.exports = {
             if (plan.company) {
                 company_id = plan.company.id;
             }
+            // 开启资质检查
+            if(plan.stuff.company.check_qualification)
+            {
+                // 只有下单方上传过资质附件，填写过有效期并且有效期没过期时才能确认计划
+                let hasValidQualification = plan.company.attachment && plan.company.qualification_expiration_date && new Date(plan.company.qualification_expiration_date) > new Date();
+                if (!hasValidQualification) {
+                    throw { err_msg: '下单方的资质附件未上传或未填写有效期' };
+                }
+            }
+            
             let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
             let creator = await plan.getRbac_user();
             if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {

@@ -81,6 +81,9 @@
         <u-cell title="隐藏调价影响计划开关">
             <u-switch slot="value" v-model="price_profile.hide_impact_selector" @change="update_price_profile"></u-switch>
         </u-cell>
+        <u-cell title="检查对方资质">
+            <u-switch slot="value" v-model="qualification_check" @change="set_company_qualification"></u-switch>
+        </u-cell>
     </view>
     <view v-else-if="cur_seg == 2">
         <BlackList ref="blacklist_ref" />
@@ -159,7 +162,7 @@ export default {
                 hide_impact_selector: false,
             },
             cur_seg: 0,
-            seg_list: ['物料配置', '调价策略','黑名单'],
+            seg_list: ['物料配置', '全局策略','黑名单'],
             show_cancel_next_price: false,
             cancel_next_stuff_id: 0,
             show_next_date: false,
@@ -206,6 +209,7 @@ export default {
             data2show2: [],
             show_close_time: false,
             today_date: utils.dateFormatter(new Date(), 'y-m-d h:i', 4, false),
+            qualification_check: false,
         }
     },
     methods: {
@@ -216,6 +220,14 @@ export default {
         update_price_profile: async function () {
             await this.$send_req('/sale_management/set_price_change_profile', this.price_profile);
             await this.init_price_profile();
+        },
+        set_company_qualification: async function () {
+            await this.$send_req('/stuff/set_check_qualification', { enable: this.qualification_check });
+            await this.get_company_qualification();
+        },
+        get_company_qualification: async function () {
+            let ret = await this.$send_req('/stuff/get_check_qualification', {});
+            this.qualification_check =   ret.enable;
         },
         seg_change: function (e) {
             this.cur_seg = e;
@@ -427,6 +439,7 @@ export default {
     },
     onLoad: function () {
         this.init_price_profile();
+        this.get_company_qualification();
     }
 }
 </script>
