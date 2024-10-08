@@ -1527,7 +1527,7 @@ module.exports = {
             description: '设置公司资质有效期',
             is_write: true,
             is_get_api: false,
-            need_rbac: true,
+            need_rbac: false,
             params: {
                 expire_date: { type: Date, have_to: true, mean: '资质有效期', example: '2048-10-31' }
             },
@@ -1549,8 +1549,8 @@ module.exports = {
             name: '获取公司资质有效期',
             description: '获取公司资质有效期',
             is_write: false,
-            is_get_api: true,
-            need_rbac: true,
+            is_get_api: false,
+            need_rbac: false,
             params: {},
             result: {
                 expire_date: { type: String, mean: '资质有效期', example: '2048-10-31' }
