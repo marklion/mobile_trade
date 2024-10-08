@@ -613,6 +613,38 @@ module.exports = {
                 }
             }
         },
+        set_check_qualification: {
+            name: '设置检查公司资质选项',
+            description: '设置检查公司资质选项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                enable: { type: Boolean, have_to: true, mean: '启用检查', example: false }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                company.check_qualification = body.enable;
+                await company.save();
+                return { result: true };
+            }
+        },
+        get_check_qualification: {
+            name: '获取是否可检查公司资质',
+            description: '获取是否可检查公司资质',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                enable: { type: Boolean, mean: '是否可查看资质', example: false }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { enable: company.check_qualification };
+            }
+        }
 
     }
 }

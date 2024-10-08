@@ -3,6 +3,8 @@
     <fui-card v-if="!show_upload">
         <view>
             <image class="fui-cover" :src="(orig_attach?$convert_attach_url(orig_attach):'/static/no_att.jpg')" mode="widthFix"></image>
+            <fui-date-picker :show="show_expire_date" type="3" :value="expire_date" @change="set_qualification_date" @cancel="show_expire_date = false"></fui-date-picker>
+            <fui-button v-if="orig_attach"  type="link" color="#000" :text="!cur_exp_date?'设置有效期':`有效期至${cur_exp_date}`" @click="show_expire_date = true"></fui-button>
         </view>
         <view>
             <fui-button type="success" text="重新上传" @click="show_upload = true"></fui-button>
@@ -22,6 +24,7 @@
 </template>
 
 <script>
+import moment from 'moment'
 export default {
     name: 'CompanyAttach',
     data: function () {
@@ -30,6 +33,9 @@ export default {
             show_upload: false,
             orig_attach: '',
             already_uploaded: [],
+            show_expire_date: false,
+            expire_date: moment().format('YYYY-MM-DD'),
+            cur_exp_date:''
         };
     },
     methods: {
@@ -69,10 +75,22 @@ export default {
             });
             this.init_attach();
             this.show_upload = false;
-        }
+        },
+        set_qualification_date: async function (date) {
+            await this.$send_req('/global/set_qualification_expire_date', {
+                expire_date: date.result
+            });
+            this.show_expire_date = false;
+            await this.get_qualification_expire_date();
+        },
+        get_qualification_expire_date: async function () {
+            let resp = await this.$send_req('/global/get_qualification_expire_date', {});
+            this.cur_exp_date = resp.expire_date;
+        },
     },
     onLoad: function () {
         this.init_attach();
+        this.get_qualification_expire_date();
     },
 }
 </script>
