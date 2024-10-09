@@ -1,18 +1,18 @@
 {
-    // 使用 IntelliSense 了解相关属性。
-    // 悬停以查看现有属性的描述。
-    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "node", // node 调试
-            "request": "attach", // launch / attach。luanch 为本地调试，attach 为远程/跨进程调试
-            "name": "Remote server", // 启动配置的名称，在面板中可以选择
-            "address": "192.168.0.112", // 服务器地址
-            "port": 39229, // 服务器端口，默认为 9229
-            "localRoot": "${workspaceFolder}/api/build/api", // 本地程序所在的目录
-            "remoteRoot": "/api/", // 服务器对应程序所在的目录
-            "sourceMaps": true
-        }
+            "type": "node",
+            "request": "launch",
+            "name": "debug backend",
+            "program": "${workspaceFolder}/api/build/api/index.js",
+            "envFile": "/tmp/purpose.env",
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "cwd": "${workspaceFolder}/api",
+            "sourceMaps": true,
+            "preLaunchTask": "Select Purpose",
+            "postDebugTask": "Reset DB"
+        },
     ]
 }

@@ -135,11 +135,13 @@
                         </view>
                     </u-cell>
                     <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
-                    <u-cell title="合同有效期">
-                        <view slot="value">
-                            <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="26"  :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
-                        </view>
-                    </u-cell>
+                    <module-filter :rm_array="['sale_management', 'buy_management']">
+                        <u-cell title="合同有效期">
+                            <view slot="value">
+                                <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="26" :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
+                            </view>
+                        </u-cell>
+                    </module-filter>
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
                     <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
                         <u-cell title="余额" :label="user_authorize">
@@ -153,7 +155,11 @@
                             </view>
                         </u-cell>
                     </module-filter>
-                    <u-cell title="计划时间" :value="focus_plan.plan_time"></u-cell>
+                    <u-cell title="计划时间" :value="focus_plan.plan_time">
+                        <view slot="label">
+                            <fui-text v-if="focus_plan.bidding_item" type="primary" :text="focus_plan.bidding_item.time + '出价' + focus_plan.bidding_item.price.toFixed(2) + '中标'" size="24"></fui-text>
+                        </view>
+                    </u-cell>
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
@@ -1238,11 +1244,11 @@ export default {
                 const contractEndDate = moment(resp.end_time);
                 const monthsDifference = contractEndDate.diff(moment(), 'months', true);
                 const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
-                if(diffOneMonth){
+                if (diffOneMonth) {
                     resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
                 }
                 this.cur_contract = resp;
-                
+
             }
             this.focus_plan = item;
             this.show_plan_detail = true;
@@ -1489,10 +1495,10 @@ export default {
                 id: id,
             }
             this.show_blackList_confirm = true;
-            
+
         },
         confirm_add_to_blacklist: async function (e) {
-            if(e.index==1){
+            if (e.index == 1) {
                 await this.$send_req('/stuff/add_to_blacklist', {
                     type: this.focus_blackList.type,
                     ids: this.focus_blackList.id.toString(),
@@ -1571,5 +1577,4 @@ export default {
     align-items: center;
     z-index: 8889;
 }
-
 </style>

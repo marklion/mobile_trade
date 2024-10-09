@@ -15,4 +15,5 @@ module.exports = {
 	},
     mode: 'development',
     plugins: [new ESLintPlugin()],
+    devtool: 'source-map',
 }

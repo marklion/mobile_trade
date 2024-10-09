@@ -12,7 +12,10 @@
                 <view v-if="sbi.win">
                     <fui-col :span="8">
                         <fui-button v-if="!sbi.bidding_turn.bidding_config.customer_confirm_time" text="中标价确认" type="primary" btnSize="mini" @click="prepare_confirm(sbi)"></fui-button>
-                        <fui-button v-else text="查看确认单" type="success" btnSize="mini" @click="prepare_confirm(sbi)"></fui-button>
+                        <view v-else style="display: flex;">
+                            <fui-button text="查看确认单" type="success" btnSize="mini" @click="prepare_confirm(sbi)"></fui-button>
+                            <fui-button text="生成计划" type="primary" btnSize="mini" @click="nav_plan(sbi)"></fui-button>
+                        </view>
                     </fui-col>
                 </view>
                 <view v-if="!sbi.bidding_turn.finish">
@@ -160,6 +163,16 @@ export default {
         }
     },
     methods: {
+        nav_plan: function (sbi) {
+            let stuff = sbi.bidding_turn.bidding_config.stuff;
+            uni.navigateTo({
+                url: '/subPage1/OrderCreate?stuff_id=' + stuff.id +
+                    '&stuff_name=' + stuff.name +
+                    '&company_name=' + stuff.company.name +
+                    '&is_buy=false' + "&company_id=" + stuff.company.id +
+                    '&bidding_id=' + sbi.bidding_turn.bidding_config.id,
+            });
+        },
         confirm_price: async function (e) {
             if (e.index == 1) {
                 await this.$send_req('/customer/bidding_confirm', {

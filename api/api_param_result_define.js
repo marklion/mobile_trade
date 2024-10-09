@@ -5,6 +5,12 @@ function make_bc_detail(need_turn = false) {
             type: Object, mean: '货物', explain: {
                 id: { type: Number, mean: 'ID', example: 1 },
                 name: { type: String, mean: '名称', example: '货物名称' },
+                company: {
+                    type: Object, mean: '货物所属公司', explain: {
+                        id: { type: Number, mean: '公司ID', example: 1 },
+                        name: { type: String, mean: '名称', example: '张三的公司' },
+                    }
+                },
             }
         },
         total: { type: Number, mean: '总量', example: 100 },
@@ -91,6 +97,28 @@ const exam_paper_info = {
     },
 };
 
+const bidding_items = {
+    items: {
+        type: Array, mean: '出价列表', explain: {
+            id: { type: Number, mean: '出价ID', example: 1 },
+            price: { type: Number, mean: '价格', example: 100 },
+            accept: { type: Boolean, mean: '是否接受', example: true },
+            time: { type: String, mean: '出价时间', example: '2020-01-01 00:00:00' },
+            win: { type: Boolean, mean: '是否中标', example: true },
+            bidding_turn: {
+                type: Object, mean: '竞价轮次', explain: {
+                    id: { type: Number, mean: 'ID', example: 1 },
+                    begin_time: { type: String, mean: '开始时间', example: '2020-01-01 00:00:00' },
+                    end_time: { type: String, mean: '结束时间', example: '2020-01-01 00:00:00' },
+                    turn: { type: Number, mean: '轮次', example: 1 },
+                    finish: { type: Boolean, mean: '是否结束', example: true },
+                    bidding_config: { type: Object, mean: '竞价配置', explain: make_bc_detail() },
+                }
+            },
+        }
+    }
+};
+
 module.exports = {
     exam_paper_info: exam_paper_info,
     exam_info: {
@@ -154,6 +182,8 @@ module.exports = {
         only_count: { type: Boolean, have_to: false, mean: '只返回数量', example: true },
     },
     sc_req_detail: sc_req_detail,
+
+
     plan_detail_define: {
         id: { type: Number, mean: '计划ID', example: 1 },
         plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
@@ -204,7 +234,7 @@ module.exports = {
                         name: { type: String, mean: '公司名称', example: '公司名称' },
                         driver_notice: { type: String, mean: '司机通知', example: '司机通知' },
                         attachment: { type: String, mean: '附件', example: '附件' },
-                        pressure_config: { type: Boolean, mean: '是否支持泄压', example:false },
+                        pressure_config: { type: Boolean, mean: '是否支持泄压', example: false },
                     }
                 },
                 need_sc: { type: Boolean, mean: '是否需要安检', example: true },
@@ -254,35 +284,17 @@ module.exports = {
         sc_info: {
             type: Array, mean: '安检信息', explain: sc_req_detail
         },
-        duplicateInfo:{
+        duplicateInfo: {
             type: Object, mean: '重复信息', explain: {
                 isDuplicate: { type: Boolean, mean: '是否重复', example: false },
                 message: { type: String, mean: '重复信息', example: '计划重复....' },
             }
+        },
+        bidding_item: {
+            type: Object, mean: '竞价信息', explain: bidding_items.items.explain
         }
     },
-
-    bidding_items: {
-        items: {
-            type: Array, mean: '出价列表', explain: {
-                id: { type: Number, mean: '出价ID', example: 1 },
-                price: { type: Number, mean: '价格', example: 100 },
-                accept: { type: Boolean, mean: '是否接受', example: true },
-                time: { type: String, mean: '出价时间', example: '2020-01-01 00:00:00' },
-                win: {type: Boolean, mean: '是否中标', example: true},
-                bidding_turn: {
-                    type: Object, mean: '竞价轮次', explain: {
-                        id: { type: Number, mean: 'ID', example: 1 },
-                        begin_time: { type: String, mean: '开始时间', example: '2020-01-01 00:00:00' },
-                        end_time: { type: String, mean: '结束时间', example: '2020-01-01 00:00:00' },
-                        turn: { type: Number, mean: '轮次', example: 1 },
-                        finish: { type: Boolean, mean: '是否结束', example: true },
-                        bidding_config: { type: Object, mean: '竞价配置', explain: make_bc_detail() },
-                    }
-                },
-            }
-        }
-    },
+    bidding_items: bidding_items,
     dev_data: {
         third_key: { type: String, have_to: false, mean: '货达key', example: 'third_key_example' },
         third_url: { type: String, have_to: false, mean: '货达url', example: 'third_url_example' },

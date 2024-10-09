@@ -1,0 +1,4 @@
+{
+    "robot.language-server.python": "/workspaces/mobile_trade/.venv/bin/python",
+    "robot.python.executable": "/workspaces/mobile_trade/.venv/bin/python"
+}
