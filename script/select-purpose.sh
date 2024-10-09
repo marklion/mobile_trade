@@ -6,8 +6,8 @@ read purpose
 
 DEFAULT_PWD='_P@ssw0rd_'
 DB_HOST='rm-2ze6222dda7fe8427eo.mysql.rds.aliyuncs.com'
-DB_USER='sysadmin'
-DB_PASS='P@ssw0rd'
+DB_USER='some user'
+DB_PASS='some password'
 DB_NAME='yst_day'
 MP_SECRET='95d3081c86858a974c601457e5270384'
 if [ "${purpose}" == 2 ]
