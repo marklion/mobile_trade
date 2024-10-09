@@ -836,7 +836,8 @@ module.exports = {
                 where: {
                     status: {
                         [db_opt.Op.ne]: 3
-                    }
+                    },
+                    biddingItemId:null,
                 }
             });
             for (let index = 0; index < plans.length; index++) {

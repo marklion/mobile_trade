@@ -377,12 +377,15 @@ module.exports = {
                     await Promise.all(planIds.map(async (item) => {
                         let plan = await sq.models.plan.findOne({
                             where: { id: item },
-                            include: [{ model: sq.models.stuff }],
+                            include: [{ model: sq.models.stuff }, { model: sq.models.bidding_item }],
                             transaction
                         });
 
                         if (!plan || !company && !(await company.hasStuff(plan.stuff, { transaction }))) {
                             return { result: false };
+                        }
+                        if (plan.bidding_item) {
+                            throw new Error('竞价计划不允许调价');
                         }
                         let unitPrice = Number(body.unit_price);
                         if (isNaN(unitPrice)) {

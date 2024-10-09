@@ -95,3 +95,27 @@ Confirm One Bidding
     [Arguments]  ${bc_id}  ${token}  ${exception}=${False}
     ${req}  Create Dictionary  bidding_id=${bc_id}
     Req to Server  /customer/bidding_confirm  ${token}  ${req}  ${exception}
+
+Prepare One Finish Bidding
+    [Documentation]  create a bidding and spicify someone to win, return the bidding_config and winner
+    ${added_one}  Create A Bidding  ${test_stuff}  ${1}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${199}
+    Customer Price Out  ${joiners}[2][user_token]  ${200}
+    Customer Price Out  ${joiners}[3][user_token]  ${50}
+
+    RETURN  ${added_one}  ${joiners}[2]  ${200}
+
+Create Bidding Plan
+    [Arguments]  ${bc_id}  ${token}  ${exception}=${False}
+    ${mv}  Search Main Vehicle by Index  0  ${token}
+    ${bv}  Search behind Vehicle by Index  0  ${token}
+    ${dv}  Search Driver by Index  0  ${token}
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  token=${token}  exception=${exception}  bidding_id=${bc_id}
+
+    RETURN  ${plan}

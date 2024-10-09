@@ -413,6 +413,8 @@ let db_opt = {
         _sq.models.vehicle.hasMany(_sq.models.blacklist);
         _sq.models.blacklist.belongsTo(_sq.models.driver);
         _sq.models.driver.hasMany(_sq.models.blacklist);
+        _sq.models.bidding_item.hasOne(_sq.models.plan);
+        _sq.models.plan.belongsTo(_sq.models.bidding_item);
     },
     install: async function () {
         console.log('run install');

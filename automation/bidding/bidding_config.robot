@@ -143,19 +143,10 @@ Confirm Bidding When Two Turn Finished
     Should Not Be Empty    ${resp}[0][customer_confirm_time]
 Confirm Bidding When One Turn Finished
     [Teardown]  Bidding Reset
-    ${added_one}  Create A Bidding  ${test_stuff}  ${1}
-    Add All Customer To Bidding Except First One  ${added_one}[id]
-    Move Bidding Date
-    Customer Accept Bidding  ${joiners}[1][user_token]
-    Customer Accept Bidding  ${joiners}[2][user_token]
-    Customer Accept Bidding  ${joiners}[3][user_token]
-    Move Bidding Date  ${False}
-    Customer Price Out  ${joiners}[1][user_token]  ${199}
-    Customer Price Out  ${joiners}[2][user_token]  ${200}
-    Customer Price Out  ${joiners}[3][user_token]  ${50}
-    Confirm One Bidding    ${added_one}[id]  ${joiners}[2][user_token]
+    ${result}  Prepare One Finish Bidding
+    Confirm One Bidding    ${result}[0][id]  ${result}[1][user_token]
     ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
-    Should Be Equal  ${resp}[0][confirm_opt_name]  ${joiners}[2][name]
+    Should Be Equal  ${resp}[0][confirm_opt_name]  ${result}[1][name]
     Should Not Be Empty    ${resp}[0][customer_confirm_time]
 
 
@@ -178,3 +169,31 @@ Bidding Msg Verify
     WxMsg Catch
     WxMsg was recieved    ${joiners}[2][open_id]    中标
     WxMsg was recieved    opid1234    出价
+
+Create Plan Based on Bidding
+    [Teardown]  Run Keywords  Bidding Reset  AND  Plan Reset
+    ${result}  Prepare One Finish Bidding
+    ${creator}  Set Variable  ${result}[1]
+    Confirm One Bidding    ${result}[0][id]  ${creator}[user_token]
+    Create Bidding Plan  ${result}[0][id]  ${creator}[user_token]
+    ${resp}  Search Plans Based on User    ${creator}[user_token]  ${False}
+    ${focus_plan}  Set Variable  ${resp}[0]
+    Should Be Equal    ${focus_plan}[unit_price]    ${result}[2]
+    Should Not Be Empty    ${focus_plan}[bidding_item]
+    Should Be True    ${focus_plan}[from_bidding]
+    ${req}=    Create Dictionary    unit_price=${123}   plan_id=${focus_plan}[id]   comment=abc
+    ${resp}=   Req to Server    /stuff/change_price_by_plan    ${sc_admin_token}    ${req}  ${True}
+
+Create Plan Based on Bidding With Exception
+    [Teardown]  Run Keywords  Bidding Reset  AND  Plan Reset
+    ${result}  Prepare One Finish Bidding
+    ${creator}  Set Variable  ${result}[1]
+    Create Bidding Plan  ${result}[0][id]  ${creator}[user_token]  ${True}
+    Confirm One Bidding    ${result}[0][id]  ${creator}[user_token]
+    Create Bidding Plan  ${result}[0][id]  ${joiners}[3][user_token]  ${True}
+
+Create Plan Based on Bidding Before Finish
+    [Teardown]  Run Keywords  Bidding Reset  AND  Plan Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  ${1}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Create Bidding Plan  ${added_one}[id]  ${joiners}[2][user_token]  ${True}
