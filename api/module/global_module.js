@@ -10,6 +10,7 @@ const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
 const clean_driver = require('../lib/clean_driver');
+const common = require('./common');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -1135,6 +1136,89 @@ module.exports = {
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
                 await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
+            },
+        },
+        download_ticket_zip: {
+            name: '下载磅单ZIP',
+            description: '下载磅单ZIP',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
+            },
+            result: {
+                url: { type: String, mean: '下载地址', example: 'https://abc' },
+            },
+            func: async function (body, token) {
+                const fs = require('fs');
+                const archiver = require('archiver');
+                const uuid = require('uuid');
+                const path = require('path');
+                try {
+                    const company = await rbac_lib.get_company_by_token(token);
+                    let plans = await db_opt.get_sq().models.plan.findAll({
+                        where: {
+                            companyId: company.id,
+                            [db_opt.Op.and]: [
+                                db_opt.get_sq().where(db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('plan_time')), {
+                                    [db_opt.Op.gte]: db_opt.get_sq().fn('TIMESTAMP', body.begin_time)
+                                }),
+                                db_opt.get_sq().where(db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('plan_time')), {
+                                    [db_opt.Op.lte]: db_opt.get_sq().fn('TIMESTAMP', body.end_time)
+                                }),
+                            ]
+                        }
+                    });
+
+                    const capturePromises = plans.map(async (plan) => {
+                        let real_file_name = uuid.v4();
+                        const filePath = '/uploads/ticket_' + real_file_name + '.png';
+                        await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + plan.id, '/database' + filePath)
+                        return `/database${filePath}`;
+                    });
+
+                    const filePaths = await Promise.all(capturePromises);
+                    if (filePaths.length === 0) {
+                        throw new Error('未找到磅单信息');
+                    }
+
+                    const outputPath = `/database/uploads/ticket_${uuid.v4().split('-')[0]}.zip`;
+
+                    // 确保输出目录存在
+                    await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+
+                    const output = fs.createWriteStream(outputPath);
+                    const archive = archiver('zip', { zlib: { level: 9 } });
+
+                    output.on('close', () => {
+                        console.log('ZIP文件创建成功,大小:' + archive.pointer() + ' bytes');
+                    });
+
+                    archive.on('error', (err) => {
+                        console.error('ZIP文件创建失败: ' + err.message);
+                    });
+
+                    archive.pipe(output);
+                    await Promise.all(filePaths.map(async (filePath) => {
+                        const absolutePath = path.resolve(filePath);
+                        try {
+                            await archive.file(absolutePath, { name: `磅单_${uuid.v4().split('-')[0]}.png` });
+                            console.log(`文件已添加到ZIP: ${absolutePath}`);
+                        } catch (err) {
+                            console.error(`无法访问文件 ${absolutePath}: ${err.message}`);
+                        }
+                    }));
+                    archive.finalize()
+                    await common.do_export_later(token, '磅单导出',()=>{
+                        return outputPath
+                    })
+
+                } catch (error) {
+                    console.error(error)
+                    throw { err_msg: '导出失败' };
+                }
             },
         },
         set_order_prefer: {
