@@ -10,6 +10,7 @@ const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
 const clean_driver = require('../lib/clean_driver');
+const common = require('./common');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -1135,6 +1136,105 @@ module.exports = {
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
                 await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
+            },
+        },
+        download_ticket_zip: {
+            name: '下载磅单ZIP',
+            description: '下载磅单ZIP',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
+                ticket_type: { type: String, have_to: true, mean: '磅单类型', example: 'sale' },
+            },
+            result: {
+                url: { type: String, mean: '下载地址', example: 'https://abc' },
+            },
+            func: async function (body, token) {
+                const fs = require('fs');
+                const archiver = require('archiver');
+                const uuid = require('uuid');
+                const path = require('path');
+                let plans = [];
+                try {
+                    let ticket_type = body.ticket_type;
+                    console.log(ticket_type);
+                    switch (ticket_type) {
+                        case 'sale_management':
+                            plans = await plan_lib.filter_plan4manager(body, token);
+                            break;
+                        case 'buy_management':
+                            plans = await plan_lib.filter_plan4manager(body, token, true);
+                            break;
+                        case 'customer':
+                            plans = await plan_lib.filter_plan4user(body, token);
+                            break;
+                        case 'supplier':
+                            plans = await plan_lib.filter_plan4user(body, token, true);
+                            break;
+                        default:
+                            throw { err_msg: '磅单类型错误' };
+                    }
+                    
+                    const capturePromises = plans.map(async (plan) => {
+                        let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
+                        const filePath = '/uploads/ticket_' + real_file_name + '.png';
+                        await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + plan.id, '/database' + filePath)
+                        return `/database${filePath}`;
+                    });
+
+                    const filePaths = await Promise.all(capturePromises);
+                    if (filePaths.length === 0) {
+                        throw '未找到磅单信息';
+                    }
+
+                    const outputPath = `/database/uploads/ticket_${uuid.v4().split('-')[0]}.zip`;
+
+                    // 确保输出目录存在
+                    await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
+
+                    const output = fs.createWriteStream(outputPath);
+                    const archive = archiver('zip', { zlib: { level: 9 } });
+
+                    output.on('close', async () => {
+                        console.log('ZIP文件创建成功,大小:' + archive.pointer() + ' bytes');
+                        // 删除打包前的文件
+                        await Promise.all(filePaths.map(async (filePath) => {
+                            try {
+                                const absolutePath = path.resolve(filePath);
+                                await fs.promises.unlink(absolutePath);
+                                console.log(`磅单快照文件已删除: ${absolutePath}`);
+                            } catch (err) {
+                                console.error(`无法删除磅单快照文件 ${absolutePath}: ${err.message}`);
+                            }
+                        }));
+                    });
+
+                    archive.on('error', (err) => {
+                        console.error('ZIP文件创建失败: ' + err.message);
+                    });
+
+                    archive.pipe(output);
+                    await Promise.all(filePaths.map(async (filePath) => {
+                        const absolutePath = path.resolve(filePath);
+                        try {
+                            const fileName = absolutePath.match(/ticket_(.*)/)[1];
+                            await archive.file(absolutePath, { name: `磅单_${fileName}` });
+                            console.log(`文件已添加到ZIP: ${absolutePath}`);
+                        } catch (err) {
+                            console.error(`无法访问文件 ${absolutePath}: ${err.message}`);
+                        }
+                    }));
+                    archive.finalize()
+                    await common.do_export_later(token, '磅单导出',()=>{
+                        return outputPath
+                    })
+
+                } catch (error) {
+                    throw { err_msg: error };
+                }
             },
         },
         set_order_prefer: {
