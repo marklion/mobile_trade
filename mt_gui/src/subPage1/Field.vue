@@ -9,7 +9,7 @@
                         <fui-text :text="item.company.name" size="24"></fui-text>
                         <fui-text type="primary" :text="'排号时间：' + item.register_time" size="24"></fui-text>
                         <fui-text v-if="item.call_time" type="success" :text="'叫号时间：' + item.call_time" size="24"></fui-text>
-                        <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + item.seal_no" size="24"></fui-text>
+                        <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + (item.seal_no?item.seal_no:'') + '-' + (item.drop_take_zone_name?item.drop_take_zone_name:'')" size="24"></fui-text>
                         <fui-text v-if="item.enter_time" type="purple" :text="'一次重量:' + item.p_weight" size="24"></fui-text>
                     </view>
                     <view slot="value" style="display:flex; flex-direction: column;">
@@ -33,7 +33,7 @@
         </list-show>
     </view>
     <view v-else-if="cur_page == 1">
-        <dev-opt  v-for="(single_dev,index) in all_dev" :key="index" :device="single_dev" @refresh="dev_refresh"></dev-opt>
+        <dev-opt v-for="(single_dev,index) in all_dev" :key="index" :device="single_dev" @refresh="dev_refresh"></dev-opt>
     </view>
     <view v-else-if="cur_page == 2">
         <view v-if="stamp_pic">
@@ -54,8 +54,15 @@
                 <fui-button type="success" btnSize="mini" @click="confirmSealNo">确认泄压</fui-button>
             </slot>
         </fui-input>
-
+        <fui-input label="装卸区域" v-if="zones" disabled v-model="zone_name" @click="show_zone_select = true"></fui-input>
     </fui-modal>
+    <fui-bottom-popup :show="show_zone_select" @close="show_zone_select = false" z-index="1002">
+        <fui-list>
+            <fui-list-cell v-for="item in zones" :key="item.id" arrow @click="zone_name = item.name; show_zone_select = false">
+                {{item.name}}
+            </fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
 </view>
 </template>
 
@@ -84,7 +91,10 @@ export default {
             stamp_pic: '',
             all_dev: [],
             is_exit_confirm: false,
-            focus_company:{},
+            focus_company: {},
+            zones: [],
+            zone_name: '',
+            show_zone_select: false,
         };
     },
     methods: {
@@ -165,6 +175,7 @@ export default {
             this.tmp_seal_no = item.seal_no;
             this.show_confirm_vehicle = true;
             this.focus_company = item.stuff.company;
+            this.zones = item.stuff.drop_take_zones;
         },
         confirmSealNo: function () {
             this.tmp_seal_no = '正在泄压';
@@ -173,7 +184,8 @@ export default {
             await this.$send_req('/scale/confirm_vehicle', {
                 plan_id: this.focus_plan_id,
                 is_confirm: e.index == 1,
-                seal_no: this.tmp_seal_no
+                seal_no: this.tmp_seal_no,
+                drop_take_zone_name: this.zone_name
             });
             uni.startPullDownRefresh();
             this.show_confirm_vehicle = false;

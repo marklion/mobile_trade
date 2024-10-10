@@ -149,7 +149,8 @@ module.exports = {
             params: {
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
                 is_confirm: { type: Boolean, have_to: true, mean: '是否确认', example: true },
-                seal_no: { type: String, have_to: false, mean: '封号', example: '123456' }
+                seal_no: { type: String, have_to: false, mean: '封号', example: '123456' },
+                drop_take_zone_name: { type: String, have_to: false, mean: '装卸区', example: '装卸区' },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -157,6 +158,7 @@ module.exports = {
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
                     plan.seal_no = body.seal_no;
+                    plan.drop_take_zone_name = body.drop_take_zone_name;
                     await field_lib.handle_confirm_vehicle(plan, body.is_confirm);
                     await plan.save();
                 });

@@ -134,6 +134,7 @@ let db_opt = {
             is_proxy: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_repeat: { type: DataTypes.BOOLEAN, defaultValue: false },
             fapiao_delivered: { type: DataTypes.BOOLEAN, defaultValue: false },
+            drop_take_zone_name: { type: DataTypes.STRING },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
