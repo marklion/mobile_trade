@@ -4,30 +4,6 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "add cors",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                "${workspaceFolder}/script/set_cors.sh",
-                "true"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/api"
-            },
-        },
-        {
-            "label": "del cors",
-            "type": "shell",
-            "command": "bash",
-            "args": [
-                "${workspaceFolder}/script/set_cors.sh",
-                "false"
-            ],
-            "options": {
-                "cwd": "${workspaceFolder}/api"
-            },
-        },
-        {
             "label": "build project",
             "type": "shell",
             "command": "make -j 10",
@@ -37,9 +13,6 @@
             "problemMatcher": [
                 "$tsc"
             ],
-            "dependsOn": [
-                "add cors"
-            ]
         },
         {
             "label": "Select Purpose",
@@ -72,9 +45,6 @@
                 "${workspaceFolder}/script/reset-db.sh"
             ],
             "problemMatcher": [],
-            "dependsOn": [
-                "del cors"
-            ]
         }
     ]
 }

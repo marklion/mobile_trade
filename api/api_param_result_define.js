@@ -215,6 +215,7 @@ module.exports = {
         is_proxy: { type: Boolean, mean: '是否代理', example: true },
         is_repeat: { type: Boolean, mean: '是否多次进厂', example: true },
         fapiao_delivered: { type: Boolean, mean: '是否发票已开具', example: true },
+        drop_take_zone_name: { type: String, mean: '卸货取货区域', example: '卸货取货区域' },
         rbac_user: {
             type: Object, mean: '创建人', explain: {
                 id: { type: Number, mean: '用户ID', example: 1 },
@@ -242,6 +243,12 @@ module.exports = {
                 no_need_register: { type: Boolean, mean: '不需要登记', example: true },
                 need_exam: { type: Boolean, mean: '是否需要考试', example: true },
                 concern_fapiao: { type: Boolean, mean: '是否关注发票', example: true },
+                drop_take_zones: {
+                    type: Array, mean: '卸货取货区域', explain: {
+                        id: { type: Number, mean: '区域ID', example: 1 },
+                        name: { type: String, mean: '区域名称', example: '区域名称' }
+                    }
+                },
             }
         },
         company: {

@@ -7,7 +7,7 @@ module.exports = {
             { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.driver, paranoid: false },
-            { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company], paranoid: false },
+            { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company, db_opt.get_sq().models.drop_take_zone], paranoid: false },
             { model: db_opt.get_sq().models.plan_history, paranoid: false, separate: true, order: [[db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('time')), 'ASC']] },
             {
                 model: db_opt.get_sq().models.bidding_item, paranoid: false, include: [{
