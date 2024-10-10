@@ -1153,12 +1153,12 @@ module.exports = {
                 url: { type: String, mean: '下载地址', example: 'https://abc' },
             },
             func: async function (body, token) {
-                const fs = require('fs');
-                const archiver = require('archiver');
-                const uuid = require('uuid');
-                const path = require('path');
-                let plans = [];
-                try {
+                await common.do_export_later(token, '磅单导出', async () => {
+                    const fs = require('fs');
+                    const archiver = require('archiver');
+                    const uuid = require('uuid');
+                    const path = require('path');
+                    let plans = [];
                     let ticket_type = body.ticket_type;
                     console.log(ticket_type);
                     switch (ticket_type) {
@@ -1177,20 +1177,21 @@ module.exports = {
                         default:
                             throw { err_msg: '磅单类型错误' };
                     }
-                    
-                    const capturePromises = plans.map(async (plan) => {
+
+                    const filePaths = [];
+                    for (let index = 0; index < plans.length; index++) {
+                        const plan = plans[index];
                         let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
                         const filePath = '/uploads/ticket_' + real_file_name + '.png';
                         await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + plan.id, '/database' + filePath)
-                        return `/database${filePath}`;
-                    });
-
-                    const filePaths = await Promise.all(capturePromises);
+                        filePaths.push(`/database${filePath}`);
+                    }
                     if (filePaths.length === 0) {
                         throw '未找到磅单信息';
                     }
 
-                    const outputPath = `/database/uploads/ticket_${uuid.v4().split('-')[0]}.zip`;
+                    let download_path = `/uploads/ticket_${uuid.v4().split('-')[0]}.zip`;
+                    const outputPath = `/database${download_path}`;
 
                     // 确保输出目录存在
                     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true });
@@ -1228,13 +1229,8 @@ module.exports = {
                         }
                     }));
                     archive.finalize()
-                    await common.do_export_later(token, '磅单导出',()=>{
-                        return outputPath
-                    })
-
-                } catch (error) {
-                    throw { err_msg: error };
-                }
+                    return download_path
+                })
             },
         },
         set_order_prefer: {
