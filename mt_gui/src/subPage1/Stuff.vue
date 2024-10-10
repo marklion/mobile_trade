@@ -69,6 +69,15 @@
                         </fui-label>
                     </fui-col>
                 </fui-row>
+                <fui-divider text="装卸区域配置"></fui-divider>
+                <view style="display: flex; flex-wrap:wrap;">
+                    <fui-tag v-for="zone in item.drop_take_zones" :key="zone.id" :text="zone.name" theme="light" margin-right="24" :padding="['12rpx','20rpx']">
+                        <view class="fui-close__icon">
+                            <fui-icon name="close" color="#465CFF" :size="32" @click="prepare_del_zone(zone.id)"></fui-icon>
+                        </view>
+                    </fui-tag>
+                    <fui-button text="添加" btnSize="mini" type="primary" @click="prepare_add_zone(item)"></fui-button>
+                </view>
                 <fui-white-space size="large"></fui-white-space>
             </fui-card>
         </list-show>
@@ -88,6 +97,13 @@
     <view v-else-if="cur_seg == 2">
         <BlackList ref="blacklist_ref" />
     </view>
+    <fui-modal width="600" :show="show_zone_add" v-if="show_zone_add" @click="zone_add">
+        <fui-form ref="zone_form" top="100">
+            <fui-input required label="区域名称" borderTop placeholder="请输入区域名称" v-model="zone_req.zone_name"></fui-input>
+        </fui-form>
+    </fui-modal>
+    <fui-modal width="600" :show="show_zone_del" v-if="show_zone_del" :descr="'确定要删除吗？'" @click="delete_zone">
+    </fui-modal>
     <fui-modal width="600" :show="show_stuff_fetch" v-if="show_stuff_fetch" @click="fetch_stuff">
         <fui-form ref="form" top="100">
             <fui-input required label="物料名称" borderTop placeholder="请输入物料名" :disabled="is_update" v-model="stuff_ready_fetch.name"></fui-input>
@@ -162,7 +178,7 @@ export default {
                 hide_impact_selector: false,
             },
             cur_seg: 0,
-            seg_list: ['物料配置', '全局策略','黑名单'],
+            seg_list: ['物料配置', '全局策略', '黑名单'],
             show_cancel_next_price: false,
             cancel_next_stuff_id: 0,
             show_next_date: false,
@@ -210,9 +226,54 @@ export default {
             show_close_time: false,
             today_date: utils.dateFormatter(new Date(), 'y-m-d h:i', 4, false),
             qualification_check: false,
+            add_zone_stuff_id: 0,
+            show_zone_add: false,
+            zone_req: {
+                zone_name: ''
+            },
+            del_zone_id: 0,
+            show_zone_del:false,
         }
     },
     methods: {
+        prepare_del_zone:function(zone_id){
+            this.del_zone_id = zone_id;
+            this.show_zone_del = true;
+        },
+        delete_zone:async function(e) {
+            if (e.index == 1) {
+                await this.$send_req('/stuff/del_zone', {
+                    id: this.del_zone_id
+                });
+                uni.startPullDownRefresh();
+            }
+            this.show_zone_del = false;
+        },
+        zone_add: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                    name: 'zone_name',
+                    rule: ['required'],
+                    msg: ['请输入区域名称']
+                }];
+
+                let val_ret = await this.$refs.zone_form.validator(this.zone_req, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                await this.$send_req('/stuff/add_zone', {
+                    stuff_id: this.add_zone_stuff_id,
+                    name: this.zone_req.zone_name
+                });
+                uni.startPullDownRefresh();
+                this.zone_req.zone_name = '';
+            }
+            this.show_zone_add = false;
+        },
+        prepare_add_zone: function (item) {
+            this.add_zone_stuff_id = item.id;
+            this.show_zone_add = true;
+        },
         init_price_profile: async function () {
             let resp = await this.$send_req('/sale_management/get_price_change_profile', {});
             this.price_profile = resp;
@@ -222,12 +283,14 @@ export default {
             await this.init_price_profile();
         },
         set_company_qualification: async function () {
-            await this.$send_req('/stuff/set_check_qualification', { enable: this.qualification_check });
+            await this.$send_req('/stuff/set_check_qualification', {
+                enable: this.qualification_check
+            });
             await this.get_company_qualification();
         },
         get_company_qualification: async function () {
             let ret = await this.$send_req('/stuff/get_check_qualification', {});
-            this.qualification_check =   ret.enable;
+            this.qualification_check = ret.enable;
         },
         seg_change: function (e) {
             this.cur_seg = e;
@@ -393,8 +456,8 @@ export default {
                     msg: ['请输入物料名']
                 }, {
                     name: 'expect_count',
-                    rule: ['required','isAmount'],
-                    msg: ['请输入预计单车装货量','预计装货量请填写数字']
+                    rule: ['required', 'isAmount'],
+                    msg: ['请输入预计单车装货量', '预计装货量请填写数字']
                 }, {
                     name: 'delay_days',
                     rule: ['isNumber'],
@@ -450,5 +513,11 @@ export default {
     display: flex;
     align-items: center;
     justify-content: space-between;
+}
+
+.fui-close__icon {
+    display: flex;
+    align-items: center;
+    padding: 6rpx 0 4rpx 24rpx;
 }
 </style>

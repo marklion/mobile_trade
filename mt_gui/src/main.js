@@ -8,7 +8,7 @@ import './uni.promisify.adaptor'
 Vue.config.productionTip = false
 Vue.prototype.$remote_url = function() {
   if (process.env.NODE_ENV === 'development') {
-    return 'http://localhost:8081';
+    return '';
   }
   else
   {
