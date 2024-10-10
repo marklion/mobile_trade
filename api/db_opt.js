@@ -134,6 +134,7 @@ let db_opt = {
             is_proxy: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_repeat: { type: DataTypes.BOOLEAN, defaultValue: false },
             fapiao_delivered: { type: DataTypes.BOOLEAN, defaultValue: false },
+            drop_take_zone_name: { type: DataTypes.STRING },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -305,6 +306,10 @@ let db_opt = {
             creator_name: { type: DataTypes.STRING },
             is_published: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
+        drop_take_zone:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -415,6 +420,9 @@ let db_opt = {
         _sq.models.driver.hasMany(_sq.models.blacklist);
         _sq.models.bidding_item.hasOne(_sq.models.plan);
         _sq.models.plan.belongsTo(_sq.models.bidding_item);
+
+        _sq.models.drop_take_zone.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.drop_take_zone);
     },
     install: async function () {
         console.log('run install');

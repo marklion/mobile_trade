@@ -62,17 +62,25 @@ module.exports = {
                         delay_days: { type: Number, mean: '延迟天数', example: 1 },
                         need_exam: { type: Boolean, mean: '是否需要考试', example: false },
                         concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
+                        drop_take_zones: {
+                            type: Array, mean: '装卸货区域', explain: {
+                                id: { type: Number, mean: 'ID', example: 1 },
+                                name: { type: String, mean: '名称', example: 'A区' }
+                            }
+                        },
                     }
                 },
             },
             func: async function (body, token) {
+                let sq = db_opt.get_sq();
                 let company = await rbac_lib.get_company_by_token(token);
                 return {
                     stuff: await company.getStuff(
                         {
                             order: [['id', 'ASC']],
                             offset: body.pageNo * 20,
-                            limit: 20
+                            limit: 20,
+                            include: [{ model: sq.models.drop_take_zone }]
                         }
                     ), total: await company.countStuff()
                 };
@@ -647,7 +655,60 @@ module.exports = {
                 let company = await rbac_lib.get_company_by_token(token);
                 return { enable: company.check_qualification };
             }
-        }
-
+        },
+        add_zone: {
+            name: '添加装卸货区域',
+            description: '添加装卸货区域',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '区域名称', example: 'A区' },
+                stuff_id: { type: Number, have_to: true, mean: '物料', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                let company = await rbac_lib.get_company_by_token(token);
+                if (stuff && company && await company.hasStuff(stuff)) {
+                    let exist_zones = await stuff.getDrop_take_zones({ where: { name: body.name } });
+                    if (exist_zones.length == 0) {
+                        let zone = await sq.models.drop_take_zone.create({
+                            name: body.name,
+                        });
+                        await zone.setStuff(stuff);
+                    }
+                    return { result: true };
+                }
+                else {
+                    throw { err_msg: '无权限' };
+                }
+            },
+        },
+        del_zone: {
+            name: '删除装卸货区域',
+            description: '删除装卸货区域',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '区域ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let zone = await sq.models.drop_take_zone.findByPk(body.id);
+                let stuff = await zone.getStuff({ include: [{ model: sq.models.company }] });
+                let company = await rbac_lib.get_company_by_token(token);
+                if (stuff && company && await company.hasStuff(stuff)) {
+                    await zone.destroy();
+                    return { result: true };
+                }
+                else {
+                    throw { err_msg: '区域不存在' };
+                }
+            }
+        },
     }
 }

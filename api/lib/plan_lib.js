@@ -248,10 +248,11 @@ module.exports = {
                     status: { [db_opt.Op.ne]: 3 },
                     [db_opt.Op.or]: [
                         { mainVehicleId: current_plan.main_vehicle.id },
-                        {[db_opt.Op.and]: [
-                            { behindVehicleId: current_plan.behind_vehicle.id },
-                            { behindVehicleId: { [db_opt.Op.ne]: empty_plate_vehicle.id } }
-                        ],
+                        {
+                            [db_opt.Op.and]: [
+                                { behindVehicleId: current_plan.behind_vehicle.id },
+                                { behindVehicleId: { [db_opt.Op.ne]: empty_plate_vehicle.id } }
+                            ],
                         },
                         { driverId: current_plan.driver.id }
                     ],
@@ -462,15 +463,14 @@ module.exports = {
                 company_id = plan.company.id;
             }
             // 开启资质检查
-            if(plan.stuff.company.check_qualification)
-            {
+            if (plan.stuff.company.check_qualification) {
                 // 只有下单方上传过资质附件，填写过有效期并且有效期没过期时才能确认计划
                 let hasValidQualification = plan.company.attachment && plan.company.qualification_expiration_date && new Date(plan.company.qualification_expiration_date) > new Date();
                 if (!hasValidQualification) {
                     throw { err_msg: '下单方的资质附件未上传或未填写有效期' };
                 }
             }
-            
+
             let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
             let creator = await plan.getRbac_user();
             if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
@@ -837,7 +837,7 @@ module.exports = {
                     status: {
                         [db_opt.Op.ne]: 3
                     },
-                    biddingItemId:null,
+                    biddingItemId: null,
                 }
             });
             for (let index = 0; index < plans.length; index++) {
@@ -1246,6 +1246,9 @@ module.exports = {
         }, {
             header: '备注',
             key: 'comment',
+        }, {
+            header: '装卸区域',
+            key: 'drop_take_zone_name'
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
@@ -1505,7 +1508,7 @@ module.exports = {
             where: {
                 companyId: companyId,
                 [db_opt.Op.or]: [
-                    { driverId: {[db_opt.Op.eq]: driverId } },
+                    { driverId: { [db_opt.Op.eq]: driverId } },
                     { vehicleId: { [db_opt.Op.eq]: mainVehicleId } },
                     { vehicleId: { [db_opt.Op.eq]: behindVehicleId } }
                 ]
