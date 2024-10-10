@@ -38,9 +38,11 @@
             </module-filter>
         </module-filter>
         <u-divider lineColor="blue"></u-divider>
-        <module-filter :rm_array="['sc']">
+        <module-filter :rm_array="['sale_management', 'buy_management', 'supplier', 'customer']">
             <u-cell-group title="磅单导出">
-                <u-cell title="导出" isLink @click="export_weight_ticket()"></u-cell>
+                <module-filter v-for="(single_module, index) in all_module" :key="index" :require_module="single_module">
+                    <u-cell :title="'导出' + button_name[index] + '磅单'" isLink @click="export_weight_ticket(single_module)"></u-cell>
+                </module-filter>
             </u-cell-group>
         </module-filter>
     </view>
@@ -213,13 +215,21 @@ export default {
             });
             this.cur_page = 1;
         },
-        export_weight_ticket: async function () {
-            await this.$send_req('/global/download_ticket_zip', {
-                begin_time: this.begin_date,
-                end_time: this.end_date,
-            });
-
-            this.cur_page = 1;
+        export_weight_ticket: async function (ticket_type) {
+            try {
+                await this.$send_req('/global/download_ticket_zip', {
+                    start_time: this.begin_date,
+                    end_time: this.end_date,
+                    ticket_type: ticket_type,
+                });
+                this.cur_page = 1;
+            } catch (error) {
+                uni.showToast({
+                    title: error,
+                    icon: 'none',
+                    duration: 2000
+                });
+            }
         },
         get_sale_contract: async function (pageNo) {
             if (!this.$has_module('sale_management')) {

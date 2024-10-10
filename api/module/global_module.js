@@ -1145,8 +1145,9 @@ module.exports = {
             is_write: false,
             is_get_api: false,
             params: {
-                begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
+                ticket_type: { type: String, have_to: true, mean: '磅单类型', example: 'sale' },
             },
             result: {
                 url: { type: String, mean: '下载地址', example: 'https://abc' },
@@ -1156,24 +1157,29 @@ module.exports = {
                 const archiver = require('archiver');
                 const uuid = require('uuid');
                 const path = require('path');
+                let plans = [];
                 try {
-                    const company = await rbac_lib.get_company_by_token(token);
-                    let plans = await db_opt.get_sq().models.plan.findAll({
-                        where: {
-                            companyId: company.id,
-                            [db_opt.Op.and]: [
-                                db_opt.get_sq().where(db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('plan_time')), {
-                                    [db_opt.Op.gte]: db_opt.get_sq().fn('TIMESTAMP', body.begin_time)
-                                }),
-                                db_opt.get_sq().where(db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('plan_time')), {
-                                    [db_opt.Op.lte]: db_opt.get_sq().fn('TIMESTAMP', body.end_time)
-                                }),
-                            ]
-                        }
-                    });
-
+                    let ticket_type = body.ticket_type;
+                    console.log(ticket_type);
+                    switch (ticket_type) {
+                        case 'sale_management':
+                            plans = await plan_lib.filter_plan4manager(body, token);
+                            break;
+                        case 'buy_management':
+                            plans = await plan_lib.filter_plan4manager(body, token, true);
+                            break;
+                        case 'customer':
+                            plans = await plan_lib.filter_plan4user(body, token);
+                            break;
+                        case 'supplier':
+                            plans = await plan_lib.filter_plan4user(body, token, true);
+                            break;
+                        default:
+                            throw { err_msg: '磅单类型错误' };
+                    }
+                    
                     const capturePromises = plans.map(async (plan) => {
-                        let real_file_name = uuid.v4();
+                        let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
                         const filePath = '/uploads/ticket_' + real_file_name + '.png';
                         await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + plan.id, '/database' + filePath)
                         return `/database${filePath}`;
@@ -1181,7 +1187,7 @@ module.exports = {
 
                     const filePaths = await Promise.all(capturePromises);
                     if (filePaths.length === 0) {
-                        throw new Error('未找到磅单信息');
+                        throw '未找到磅单信息';
                     }
 
                     const outputPath = `/database/uploads/ticket_${uuid.v4().split('-')[0]}.zip`;
@@ -1192,8 +1198,18 @@ module.exports = {
                     const output = fs.createWriteStream(outputPath);
                     const archive = archiver('zip', { zlib: { level: 9 } });
 
-                    output.on('close', () => {
+                    output.on('close', async () => {
                         console.log('ZIP文件创建成功,大小:' + archive.pointer() + ' bytes');
+                        // 删除打包前的文件
+                        await Promise.all(filePaths.map(async (filePath) => {
+                            try {
+                                const absolutePath = path.resolve(filePath);
+                                await fs.promises.unlink(absolutePath);
+                                console.log(`磅单快照文件已删除: ${absolutePath}`);
+                            } catch (err) {
+                                console.error(`无法删除磅单快照文件 ${absolutePath}: ${err.message}`);
+                            }
+                        }));
                     });
 
                     archive.on('error', (err) => {
@@ -1204,7 +1220,8 @@ module.exports = {
                     await Promise.all(filePaths.map(async (filePath) => {
                         const absolutePath = path.resolve(filePath);
                         try {
-                            await archive.file(absolutePath, { name: `磅单_${uuid.v4().split('-')[0]}.png` });
+                            const fileName = absolutePath.match(/ticket_(.*)/)[1];
+                            await archive.file(absolutePath, { name: `磅单_${fileName}` });
                             console.log(`文件已添加到ZIP: ${absolutePath}`);
                         } catch (err) {
                             console.error(`无法访问文件 ${absolutePath}: ${err.message}`);
@@ -1216,8 +1233,7 @@ module.exports = {
                     })
 
                 } catch (error) {
-                    console.error(error)
-                    throw { err_msg: '导出失败' };
+                    throw { err_msg: error };
                 }
             },
         },
