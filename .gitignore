@@ -18,3 +18,4 @@ log.html
 report.html
 output.xml
 /automation/__pycache__/
+**/package-lock.json
