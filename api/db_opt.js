@@ -135,6 +135,7 @@ let db_opt = {
             is_repeat: { type: DataTypes.BOOLEAN, defaultValue: false },
             fapiao_delivered: { type: DataTypes.BOOLEAN, defaultValue: false },
             drop_take_zone_name: { type: DataTypes.STRING },
+            checkout_delay: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -166,6 +167,7 @@ let db_opt = {
             next_operator: { type: DataTypes.STRING },
             need_exam: { type: DataTypes.BOOLEAN, defaultValue: false },
             concern_fapiao: { type: DataTypes.BOOLEAN, defaultValue: false },
+            checkout_delay:{type: DataTypes.BOOLEAN, defaultValue: false},
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

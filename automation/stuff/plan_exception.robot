@@ -321,6 +321,48 @@ Disabled Action While Delivered
     Order Close Failed  ${plan}
     Cancel Check In Failed  ${plan}
 
+Rollback While Checkout If Checkout Delay
+    [Setup]  Set Stuff Checkout Delay
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay  ${False}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Deliver A Plan  ${plan}  ${20}
+    Checkout A Plan    ${plan}
+    Rollback Plan  ${plan}
+    Check New Status And History  ${plan}  2  回退  结算
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal As Numbers  ${new_balance}  ${cur_balance}
+    Rollback Plan    ${plan}
+    Check New Status And History  ${plan}  2  回退  发车
+    Deliver A Plan  ${plan}  ${20}
+    Checkout A Plan    ${plan}
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Not Be Equal    ${new_balance}    ${cur_balance}
+    Rollback Plan  ${plan}
+    Checkout A Plan    ${plan}
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Not Be Equal    ${new_balance}    ${cur_balance}
+
+Disabled Action If Checkout_delay
+    [Setup]  Set Stuff Checkout Delay
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay  ${False}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Checkout Failure A Plan    ${plan}
+    Deliver A Plan  ${plan}  ${20}
+    Checkout A Plan    ${plan}
+    Checkout Failure A Plan    ${plan}
+
 Disabled Action While Closed
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -438,3 +480,8 @@ Check New Status And History
     FOR  ${itr}  IN  @{action_types}
         Should Contain  ${latest_node}[action_type]  ${itr}
     END
+
+Checkout Failure A Plan
+    [Arguments]  ${plan}  ${token}=${bc1_user_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server    /customer/checkout_plan    ${token}    ${req}  ${True}

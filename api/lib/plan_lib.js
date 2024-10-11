@@ -9,6 +9,19 @@ const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
 module.exports = {
+    close_a_plan: async function (plan, token) {
+        plan.status = 3;
+        await plan.save();
+        wx_api_util.plan_scale_msg(plan);
+        await this.rp_history_checkout(plan, (await rbac_lib.get_user_by_token(token)).name);
+        if (!plan.is_buy) {
+            await this.plan_cost(plan);
+        }
+        if (plan.is_repeat) {
+            await this.dup_plan(plan, token);
+        }
+        await hook_plan('deliver_plan', plan);
+    },
     fetch_vehicle: async function (_plate, _is_behind) {
         let sq = db_opt.get_sq();
         let vehicle_found = await sq.models.vehicle.findOrCreate({ where: { plate: _plate }, defaults: { is_behind: _is_behind } });
@@ -475,6 +488,7 @@ module.exports = {
             let creator = await plan.getRbac_user();
             if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
                 plan.status = 1;
+                plan.checkout_delay = plan.stuff.checkout_delay;
                 await plan.save();
                 wx_api_util.send_plan_status_msg(plan);
                 await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
@@ -500,6 +514,9 @@ module.exports = {
         }
         if (plan.enter_time && plan.enter_time.length > 0) {
             throw { err_msg: '已进厂,无法关闭' };
+        }
+        if (plan.status == 2 && plan.count != 0 && plan.checkout_delay) {
+            throw { err_msg: '等待下单方确认,无法关闭' };
         }
         if (plan.call_time) {
             await field_lib.handle_cancel_check_in(plan);
@@ -552,13 +569,22 @@ module.exports = {
             }
         });
     },
-    plan_rollback: async function (_plan_id, _token, msg) {
+    plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan) => {
             let rollback_content = '';
             if (plan.manual_close) {
                 throw { err_msg: '已关闭,无法回退' };
             }
-            if (plan.status == 1) {
+            if (for_checkout_rollback && plan.status == 3) {
+                rollback_content = '回退结算';
+                if (plan.is_buy) {
+                    plan.status = 1;
+                }
+                else {
+                    plan.status = 2;
+                    await this.plan_undo_cost(plan);
+                }
+            } else if (plan.status == 1) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
                     await this.plan_enter(_plan_id, _token, true);
                     return;
@@ -567,9 +593,15 @@ module.exports = {
                     plan.status = 0;
                     rollback_content = '回退确认';
                 }
-            }
-            else if (plan.status == 2) {
-                if (plan.enter_time && plan.enter_time.length > 0) {
+            } else if (plan.status == 2) {
+                if (plan.checkout_delay && plan.count != 0) {
+                    plan.count = 0;
+                    plan.p_time = '';
+                    plan.p_weight = 0;
+                    plan.m_time = '';
+                    plan.m_weight = 0;
+                    rollback_content = '回退发车';
+                } else if (plan.enter_time && plan.enter_time.length > 0) {
                     await this.plan_enter(_plan_id, _token, true);
                     return;
                 }
@@ -577,14 +609,10 @@ module.exports = {
                     plan.status = 1;
                     rollback_content = '回退验款';
                 }
-            }
-            else if (plan.status == 3) {
-                if (plan.is_buy) {
-                    plan.status = 1;
-                }
-                else {
-                    await this.plan_undo_cost(plan);
-                    plan.status = 2;
+            } else if (plan.status == 3) {
+                await this.plan_rollback(plan.id, _token, msg, true);
+                if (plan.checkout_delay) {
+                    return;
                 }
                 plan.count = 0;
                 plan.p_time = '';
@@ -592,8 +620,7 @@ module.exports = {
                 plan.m_time = '';
                 plan.m_weight = 0;
                 rollback_content = '回退发车';
-            }
-            else {
+            } else {
                 throw { err_msg: '无法回退' };
             }
             rollback_content += ':' + msg;
@@ -705,7 +732,6 @@ module.exports = {
             status_req = 1;
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
-            plan.status = 3;
             plan.ticket_no = (ticket_no ? ticket_no : (moment().format('YYYYMMDDHHmmss') + _plan_id));
             plan.count = _count;
             plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
@@ -715,17 +741,22 @@ module.exports = {
             if (seal_no) {
                 plan.seal_no = seal_no;
             }
-            wx_api_util.plan_scale_msg(plan);
             await plan.save();
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);
-            if (!plan.is_buy) {
-                await this.plan_cost(plan);
+            if (!plan.checkout_delay) {
+                await this.close_a_plan(plan, _token);
             }
-            if (plan.is_repeat) {
-                await this.dup_plan(plan, _token);
-            }
-            await hook_plan('deliver_plan', plan);
         });
+    },
+    checkout_plan: async function (_plan_id, token) {
+        await this.action_in_plan(_plan_id, token, 2, async (plan) => {
+            if (plan.checkout_delay && plan.status == 2 && plan.count != 0) {
+                await this.close_a_plan(plan, token);
+            }
+            else {
+                throw { err_msg: '无法结算' };
+            }
+        }, true);
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
@@ -780,6 +811,9 @@ module.exports = {
     },
     rp_history_deliver: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '发车');
+    },
+    rp_history_checkout: async function (_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, '结算');
         let plan = await util_lib.get_single_plan_by_id(_plan.id);
         let last_archive = await plan.getArchive_plan();
         if (last_archive) {
@@ -787,8 +821,7 @@ module.exports = {
         }
         let content = plan.toJSON();
         content.sc_info = (await sc_lib.get_sc_status_by_plan(plan)).reqs;
-        console.log(content.sc_info);
-        plan.createArchive_plan({ content: JSON.stringify(content) });
+        await plan.createArchive_plan({ content: JSON.stringify(content) });
     },
     rp_history_close: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '关闭');

@@ -69,6 +69,19 @@
                         </fui-label>
                     </fui-col>
                 </fui-row>
+                <fui-white-space size="large"></fui-white-space>
+                <fui-row>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="延迟结算"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.checkout_delay" @change="change_checkout_delay($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
+                </fui-row>
                 <fui-divider text="装卸区域配置"></fui-divider>
                 <view style="display: flex; flex-wrap:wrap;">
                     <fui-tag v-for="zone in item.drop_take_zones" :key="zone.id" :text="zone.name" theme="light" margin-right="24" :padding="['12rpx','20rpx']">
@@ -232,15 +245,15 @@ export default {
                 zone_name: ''
             },
             del_zone_id: 0,
-            show_zone_del:false,
+            show_zone_del: false,
         }
     },
     methods: {
-        prepare_del_zone:function(zone_id){
+        prepare_del_zone: function (zone_id) {
             this.del_zone_id = zone_id;
             this.show_zone_del = true;
         },
-        delete_zone:async function(e) {
+        delete_zone: async function (e) {
             if (e.index == 1) {
                 await this.$send_req('/stuff/del_zone', {
                     id: this.del_zone_id
@@ -313,6 +326,12 @@ export default {
             await this.$send_req('/stuff/exam_config', {
                 stuff_id: item.id,
                 need_exam: event.detail.value,
+            });
+        },
+        change_checkout_delay: async function (event, item) {
+            await this.$send_req('/stuff/checkout_delay_config', {
+                stuff_id: item.id,
+                checkout_delay: event.detail.value,
             });
         },
         change_need_enter_weight: async function (event, item) {
