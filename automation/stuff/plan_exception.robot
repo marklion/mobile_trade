@@ -323,7 +323,7 @@ Disabled Action While Delivered
 
 Rollback While Checkout If Checkout Delay
     [Setup]  Set Stuff Checkout Delay
-    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay  ${False}
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay  delay=${False}
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
     ${dv}  Search Driver by Index  0
@@ -350,7 +350,7 @@ Rollback While Checkout If Checkout Delay
 
 Disabled Action If Checkout_delay
     [Setup]  Set Stuff Checkout Delay
-    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay  ${False}
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay  delay=${False}
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
     ${dv}  Search Driver by Index  0
