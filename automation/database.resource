@@ -102,6 +102,10 @@ Exam Reset
     Clear Table  exam
     Clear Table  exam_answer
 
+FC Reset
+    Clear Table    field_check_table
+    Clear Table    field_check_item
+
 WxMsg Catch
     Sleep    2s
     ${records}  Get File  ${WX_API_RECORD_FILE}

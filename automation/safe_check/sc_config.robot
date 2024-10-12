@@ -172,6 +172,45 @@ SC Archived After Plan Finish
         Should Be True  ${itr}[sc_content][passed]
     END
 
+FC Table Config
+    [Teardown]  FC Reset
+    Add FC Table    t1
+    Add FC Table    t2
+    Add FC Table    t3
+    Add FC Table    t2
+    ${fc_table}  Search FC Table    t2
+    Should Not Be Empty    ${fc_table}
+    Del FC Table    ${fc_table}[id]
+    ${fc_table}  Search FC Table    t3
+    Should Not Be Empty    ${fc_table}
+    ${fc_table}  Search FC Table    t2
+    Should Be Empty    ${fc_table}
+
+FC Table Config Item
+    [Setup]  Add FC Table    t1
+    [Teardown]  FC Reset
+    Add Item to FC Table    t1    i1
+    Add Item to FC Table    t1    i2
+    Add Item to FC Table    t1    i3
+    Add Item to FC Table    t1    i2
+    ${fc_item}  Search FC Item    t1    i2
+    Should Not Be Empty    ${fc_item}
+    Del Item from FC Table    t1    i2
+    ${fc_item}  Search FC Item    t1    i3
+    Should Not Be Empty    ${fc_item}
+    ${fc_item}  Search FC Item    t1    i2
+    Should Be Empty    ${fc_item}
+
+FC Table Config Role
+    [Setup]  Add FC Table    t1
+    [Teardown]  FC Reset
+    Set Role to FC Table    t1    fcr1
+    ${fc_table}  Search FC Table    t1
+    ${role}  Get Role By Name    ${sc_admin_token}    fcr1
+    Should Be Equal    ${fc_table}[rbac_role][id]    ${role}[id]
+    Set Role to FC Table    t1    fcr2
+    ${fc_table}  Search FC Table    t1
+    Should Not Be Equal    ${fc_table}[rbac_role][id]    ${role}[id]
 
 
 

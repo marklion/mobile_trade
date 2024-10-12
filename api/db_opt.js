@@ -312,6 +312,14 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
         },
+        field_check_table:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+        },
+        field_check_item:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -425,6 +433,13 @@ let db_opt = {
 
         _sq.models.drop_take_zone.belongsTo(_sq.models.stuff);
         _sq.models.stuff.hasMany(_sq.models.drop_take_zone);
+
+        _sq.models.field_check_table.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.field_check_table);
+        _sq.models.field_check_item.belongsTo(_sq.models.field_check_table);
+        _sq.models.field_check_table.hasMany(_sq.models.field_check_item);
+        _sq.models.field_check_table.belongsTo(_sq.models.rbac_role);
+        _sq.models.rbac_role.hasMany(_sq.models.field_check_table);
     },
     install: async function () {
         console.log('run install');
