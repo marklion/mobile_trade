@@ -346,5 +346,21 @@ module.exports = {
             let plans = await plan_lib.filter_plan4user(body, token);
             return await plan_lib.make_file_by_plans(plans);
         }),
+        checkout_plan: {
+            name: '结算',
+            description: '结算',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.checkout_plan(body.plan_id, token);
+                return { result: true };
+            },
+        },
     }
 }

@@ -2,6 +2,19 @@ const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const sq = db_opt.get_sq();
+async function change_stuff_single_switch(stuff_id, switch_name, switch_value, token) {
+    let sq = db_opt.get_sq();
+    let company = await rbac_lib.get_company_by_token(token);
+    let stuff = await sq.models.stuff.findByPk(stuff_id);
+    if (stuff && company && await company.hasStuff(stuff)) {
+        stuff[switch_name] = switch_value;
+        await stuff.save();
+    }
+    else {
+        throw { err_msg: '货物不存在' };
+    }
+    return { result: true };
+}
 module.exports = {
     name: 'stuff',
     description: '物料管理',
@@ -62,6 +75,7 @@ module.exports = {
                         delay_days: { type: Number, mean: '延迟天数', example: 1 },
                         need_exam: { type: Boolean, mean: '是否需要考试', example: false },
                         concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
+                        checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
                         drop_take_zones: {
                             type: Array, mean: '装卸货区域', explain: {
                                 id: { type: Number, mean: 'ID', example: 1 },
@@ -121,17 +135,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (stuff && company && await company.hasStuff(stuff)) {
-                    stuff.no_need_register = body.no_need_register;
-                    await stuff.save();
-                }
-                else {
-                    throw { err_msg: '货物不存在' };
-                }
-                return { result: true };
+                return await change_stuff_single_switch(body.stuff_id, 'no_need_register', body.no_need_register, token);
             },
         },
         enter_weight: {
@@ -147,17 +151,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (stuff && company && await company.hasStuff(stuff)) {
-                    stuff.need_enter_weight = body.need_enter_weight;
-                    await stuff.save();
-                }
-                else {
-                    throw { err_msg: '货物不存在' };
-                }
-                return { result: true };
+                return await change_stuff_single_switch(body.stuff_id, 'need_enter_weight', body.need_enter_weight, token);
             },
         },
         exam_config: {
@@ -173,17 +167,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (stuff && company && await company.hasStuff(stuff)) {
-                    stuff.need_exam = body.need_exam;
-                    await stuff.save();
-                }
-                else {
-                    throw { err_msg: '货物不存在' };
-                }
-                return { result: true };
+                return await change_stuff_single_switch(body.stuff_id, 'need_exam', body.need_exam, token);
             },
         },
         sc_config: {
@@ -199,17 +183,23 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (stuff && company && await company.hasStuff(stuff)) {
-                    stuff.need_sc = body.need_sc;
-                    await stuff.save();
-                }
-                else {
-                    throw { err_msg: '货物不存在' };
-                }
-                return { result: true };
+                return await change_stuff_single_switch(body.stuff_id, 'need_sc', body.need_sc, token);
+            },
+        },
+        checkout_delay_config: {
+            name: '配置货物是否需要延迟结算',
+            description: '配置货物是否需要延迟结算',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                checkout_delay: { type: Boolean, have_to: true, mean: '是否需要延迟结算', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token);
             },
         },
         change_price: {

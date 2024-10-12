@@ -151,6 +151,31 @@ Deliver Plan And Check
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
     Re-Add Stuff
 
+Deliver Plan With Delay Checkout
+    [Setup]  Set Stuff Checkout Delay
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay  delay=${False}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Check In A Plan  ${plan}
+    ${dv}  Search Driver by Index  0
+    Plan Enter  ${plan}
+    Deliver A Plan  ${plan}  ${23}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2  ${True}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${single_cost}  Set Variable  ${plan}[unit_price]
+    ${single_cost}  Set Variable  ${single_cost * 23}
+    ${expect_balance}  Evaluate  $orig_balance - $single_cost
+    Should Not Be Equal  ${expect_balance}  ${cur_balance}
+    Checkout A Plan    ${plan}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal  ${expect_balance}  ${cur_balance}
+
 Lots of Plan Explore
     [Teardown]  Plan Reset
     @{plans_need_next}  Create List
@@ -400,6 +425,14 @@ Verify Plan Detail
             IF  $action == '发车'
                 ${found_node}  Set Variable  ${True}
                 Should Be Equal As Strings  ${itr}[operator]  sc_admin
+            END
+        END
+        Should Be True  ${found_node}
+        ${found_node}  Set Variable  ${False}
+        FOR  ${itr}  IN  @{history}
+            ${action}  Get From Dictionary  ${itr}  action_type
+            IF  $action == '结算'
+                ${found_node}  Set Variable  ${True}
             END
         END
         Should Be True  ${found_node}

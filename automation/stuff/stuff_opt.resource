@@ -432,3 +432,13 @@ Set Check In Stay Minutes
     [Arguments]  ${minutes}=${0}
     ${req}  Create Dictionary  check_in_stay_minutes=${minutes}  lat=${0}  lon=${0}  distance_limit=${0}
     Req to Server  /sale_management/set_checkin_config  ${sc_admin_token}  ${req}
+
+Set Stuff Checkout Delay
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${delay}=${True}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  checkout_delay=${delay}
+    Req to Server   /stuff/checkout_delay_config     ${token}  ${req}
+
+Checkout A Plan
+    [Arguments]  ${plan}  ${token}=${bc1_user_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    Req to Server    /customer/checkout_plan    ${token}    ${req}
