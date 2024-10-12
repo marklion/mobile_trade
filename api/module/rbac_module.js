@@ -1,5 +1,6 @@
 const api_param_result_define = require('../api_param_result_define');
 const rbac_lib = require('../lib/rbac_lib');
+const db_opt = require('../db_opt');
 module.exports = {
     name: 'rbac',
     description: '权限管理',
@@ -185,7 +186,7 @@ module.exports = {
                 return ret;
             },
         },
-        unbind_role2user:{
+        unbind_role2user: {
             name: '解绑角色与用户',
             description: '解绑角色与用户',
             is_write: true,
@@ -213,9 +214,9 @@ module.exports = {
                 return ret;
             },
         },
-        get_dev_data:{
-            name:'获取开发数据',
-            description:'获取开发数据',
+        get_dev_data: {
+            name: '获取开发数据',
+            description: '获取开发数据',
             is_write: false,
             is_get_api: false,
             params: {
@@ -242,6 +243,34 @@ module.exports = {
                 });
                 await company.save();
                 return { result: true };
+            },
+        },
+        add_fc_table2role: {
+            name: '添加检查表到角色',
+            description: '添加检查表到角色',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                table_id: { type: Number, have_to: true, mean: '检查表id', example: 123 },
+                role_id: { type: Number, have_to: true, mean: '角色ID', example: 123 },
+            },
+            result: {
+                result: { type: Boolean, mean: '添加结果', example: true },
+            },
+            func: async function (body, token) {
+                let role = await db_opt.get_sq().models.rbac_role.findByPk(body.role_id);
+                let table = await db_opt.get_sq().models.field_check_table.findByPk(body.table_id, {
+                    include:[db_opt.get_sq().models.stuff]
+                });
+                let company = await rbac_lib.get_company_by_token(token);
+
+                if (role && table && company && await company.hasStuff(table.stuff)) {
+                    await role.addField_check_table(table);
+                    return { result: true };
+                }
+                else {
+                    throw { err_msg: '角色或表不存在' };
+                }
             },
         },
     }

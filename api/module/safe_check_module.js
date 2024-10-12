@@ -1,7 +1,18 @@
 const api_param_result_define = require('../api_param_result_define');
-const plan_lib = require('../lib/plan_lib');
-const rbac_lib = require('../lib/rbac_lib');
 const sc_lib = require('../lib/sc_lib');
+const fc_lib = require('../lib/fc_lib');
+const rbac_lib = require('../lib/rbac_lib');
+const db_opt = require('../db_opt');
+const sq = db_opt.get_sq();
+async function could_config_stuff(stuff_id, token) {
+    let ret = false;
+    let company = await rbac_lib.get_company_by_token(token);
+    let stuff = await sq.models.stuff.findByPk(stuff_id);
+    if (stuff && company && await company.hasStuff(stuff)) {
+        ret = true;
+    }
+    return ret;
+}
 module.exports = {
     name: 'sc',
     description: '安检管理',
@@ -90,9 +101,125 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true },
             },
             func: async function (body, token) {
-                await sc_lib.check_sc_content(body.content_id, token, body.comment,body.plan_id);
+                await sc_lib.check_sc_content(body.content_id, token, body.comment, body.plan_id);
                 return { result: true };
             },
+        },
+        add_fc_table: {
+            name: '添加现场检查表',
+            description: '添加现场检查表',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '表名', example: '表名' },
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                if (!await could_config_stuff(body.stuff_id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                await fc_lib.add_fc_table(body.name, body.stuff_id);
+                return { result: true };
+            },
+        },
+        del_fc_table: {
+            name: '删除现场检查表',
+            description: '删除现场检查表',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '表ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_table = await fc_lib.get_fc_table(body.id, true);
+                if (!await could_config_stuff(fc_table.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                await fc_lib.del_fc_table(body.id);
+                return { result: true };
+            }
+        },
+        get_all_fc_table: {
+            name: '获取所有现场检查表',
+            description: '获取所有现场检查表',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 }
+            },
+            result: {
+                fc_table: {
+                    type: Array, mean: '现场检查表', explain: {
+                        id: { type: Number, mean: '表ID', example: 1 },
+                        name: { type: String, mean: '表名', example: '表名' },
+                        field_check_items: {
+                            type: Array, mean: '检查项', explain: {
+                                id: { type: Number, mean: '检查项ID', example: 1 },
+                                name: { type: String, mean: '检查项名', example: '检查项名' },
+                            }
+                        },
+                        rbac_role: {
+                            type: Object, mean: '绑定角色', explain: {
+                                id: { type: Number, mean: '角色ID', example: 1 },
+                                name: { type: String, mean: '角色名', example: '角色名' },
+                            }
+                        }
+                    }
+                }
+            },
+            func: async function (body, token) {
+                if (!await could_config_stuff(body.stuff_id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                return await fc_lib.get_all_fc_table(body.stuff_id, body.pageNo);
+            }
+        },
+        add_item2fc_table: {
+            name: '添加现场检查表项',
+            description: '添加现场检查表项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                table_id: { type: Number, have_to: true, mean: '表ID', example: 1 },
+                name: { type: String, have_to: true, mean: '检查项名', example: '检查项名' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_table = await fc_lib.get_fc_table(body.table_id, true);
+                if (!await could_config_stuff(fc_table.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                await fc_lib.add_item2fc_table(body.table_id, body.name);
+                return { result: true };
+            }
+        },
+        del_fc_item: {
+            name: '删除现场检查表项',
+            description: '删除现场检查表项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '检查项ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_item = await fc_lib.get_fc_item(body.id);
+                if (!await could_config_stuff(fc_item.field_check_table.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                await fc_lib.del_fc_item(body.id);
+                return { result: true };
+            }
         },
     }
 }

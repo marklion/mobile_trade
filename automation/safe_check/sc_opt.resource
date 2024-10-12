@@ -96,3 +96,59 @@ Check Pass SC Status By Index
     END
     Req to Server  /sc/check  ${token}  ${req}
 
+Add FC Table
+    [Arguments]  ${table_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
+    ${req}  Create Dictionary  name=${table_name}  stuff_id=${stuff_id}
+    Req to Server    /sc/add_fc_table  ${token}  ${req}
+
+Del FC Table
+    [Arguments]  ${table_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${table_id}
+    Req to Server    /sc/del_fc_table  ${token}  ${req}
+
+Search FC Table
+    [Arguments]  ${table_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
+    ${req}  Create Dictionary  stuff_id=${stuff_id}
+    ${resp}  Req Get to Server  /sc/get_all_fc_table  ${token}  fc_table  ${-1}  &{req}
+    ${found_one}  Set Variable  ${EMPTY}
+    FOR    ${element}    IN    @{resp}
+        ${itr_name}  Get From Dictionary  ${element}  name  ${None}
+        IF  $table_name == $itr_name
+            ${found_one}  Set Variable  ${element}
+            Exit For Loop
+        END
+    END
+    RETURN  ${found_one}
+
+Add Item to FC Table
+    [Arguments]  ${table_name}  ${item_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
+    ${table}  Search FC Table    ${table_name}
+    ${req}  Create Dictionary  table_id=${table}[id]  name=${item_name}
+    Req to Server    /sc/add_item2fc_table  ${token}  ${req}
+
+Search FC Item
+    [Arguments]  ${table_name}  ${item_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
+    ${table}  Search FC Table    ${table_name}
+    ${found_one}  Set Variable  ${EMPTY}
+    FOR    ${element}    IN    @{table}[field_check_items]
+        ${itr_name}  Get From Dictionary  ${element}  name  ${None}
+        IF  $itr_name == $item_name
+            ${found_one}  Set Variable  ${element}
+            Exit For Loop
+        END
+    END
+    RETURN  ${found_one}
+
+Del Item from FC Table
+    [Arguments]  ${table_name}  ${item_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
+    ${fc_item}  Search FC Item    ${table_name}  ${item_name}
+    ${req}  Create Dictionary  id=${fc_item}[id]
+    Req to Server    /sc/del_fc_item  ${token}  ${req}
+
+Set Role to FC Table
+    [Arguments]  ${table_name}  ${role_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
+    Add Role    ${token}    ${role_name}
+    ${role}  Get Role By Name    ${token}    ${role_name}
+    ${table}  Search FC Table    ${table_name}
+    ${req}  Create Dictionary  role_id=${role}[id]  table_id=${table}[id]
+    Req to Server    /rbac/add_fc_table2role    ${token}    ${req}
