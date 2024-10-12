@@ -1234,21 +1234,24 @@ export default {
         },
         prepare_plan_detail: async function (item) {
             // 获取销售或采购合同信息
-            if (this.$has_module('sale_management') || this.$has_module('buy_management')) {
-                let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                let resp = await this.$send_req(url, {
-                    [this.cur_is_buy ? 'supplier_id' : 'customer_id']: item.company.id,
-                })
-                // 标注合同是否一个月内即将到期
-                const oneMonthFromNow = moment().add(1, 'month');
-                const contractEndDate = moment(resp.end_time);
-                const monthsDifference = contractEndDate.diff(moment(), 'months', true);
-                const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
-                if (diffOneMonth) {
-                    resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
+            if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && item.company.id) {
+                try {
+                    let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
+                    let resp = await this.$send_req(url, {
+                        [this.cur_is_buy ? 'supplier_id' : 'customer_id']: item.company.id,
+                    })
+                    // 标注合同是否一个月内即将到期
+                    const oneMonthFromNow = moment().add(1, 'month');
+                    const contractEndDate = moment(resp.end_time);
+                    const monthsDifference = contractEndDate.diff(moment(), 'months', true);
+                    const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
+                    if (diffOneMonth) {
+                        resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
+                    }
+                    this.cur_contract = resp;
+                } catch (error) {
+                    console.log(error);
                 }
-                this.cur_contract = resp;
-
             }
             this.focus_plan = item;
             this.show_plan_detail = true;
