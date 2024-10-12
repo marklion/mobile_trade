@@ -1285,20 +1285,43 @@ module.exports = {
                             }
                             console.log(`开始创建安检登记表 - 计划ID: ${plan.id}`);
                             let doc = officegen('docx');
+                            doc.createP({ align: 'center' }).addText(`${archive_plan.stuff.company.name}安检信息检查记录表`, { font_size: 22 });
+                            const commonOpts = { cellColWidth: 4000, align: 'left' };
+                            const headerOpts = { ...commonOpts, b: true, sz: '22', shd: { fill: 'D9EAD3' } };
+                            const valueOpts = { ...commonOpts, sz: '22' };
                             let table = [
-                                [{ val: '安检项目名称', opts: { cellColWidth: 4261, b: true, sz: '24', shd: { fill: 'D9EAD3' } } }, { val: '输入内容', opts: { cellColWidth: 4261, b: true, sz: '24', shd: { fill: 'D9EAD3' } } }],
+                                [{ val: '安检项目名称', opts: headerOpts},{ val: '输入内容', opts: headerOpts }],
                             ];
+                            doc.createP({ align: 'left' }).addText('基础信息', { font_size: 18 });
+                            // 基础信息
+                            let basicInfoTable = [];
+                            const addRow = (label, value) => {
+                                basicInfoTable.push([
+                                    { val: label, opts: headerOpts },
+                                    { val: value, opts: valueOpts },
+                                ]);
+                            };
+
+                            addRow('主车号', archive_plan.main_vehicle?.plate);
+                            addRow('挂车号', archive_plan.behind_vehicle?.plate);
+                            addRow('司机姓名', archive_plan.driver?.name);
+                            addRow('司机电话', archive_plan.driver?.phone);
+                            addRow('身份证号', archive_plan.driver?.id_card);
+                            addRow('计划日期', archive_plan.plan_time);
+
+                            doc.createTable(basicInfoTable, { tableColWidth: 8000 });
                             // 安检项目内容
                             let sc_info = archive_plan.sc_info;
+                            doc.createP({ align: 'left' }).addText('安检信息', { font_size: 18 });
                             if (sc_info && sc_info.length > 0) {
                                 sc_info.forEach(item => {
                                     // 安检登记项为可导出且为输入项
                                     if (item.add_to_export && item.need_input) {
-                                        table.push([item.name, item?.sc_content?.input]);
+                                        table.push([{ val: item.name, opts: valueOpts }, { val: item?.sc_content?.input, opts: valueOpts }]);
                                     }
                                 });
                             }
-                            doc.createTable(table);
+                            doc.createTable(table, { tableColWidth: 8000 });
                             let filename = `安检登记表_${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}.docx`;
                             let download_path = path.resolve('/database/uploads/', filename);
                             let out = fs.createWriteStream(download_path, { encoding: 'utf8' });
