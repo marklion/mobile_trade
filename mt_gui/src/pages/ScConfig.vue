@@ -34,6 +34,9 @@
             <fui-form-item label="需要有效期">
                 <u-switch v-model="sc_fetch_req.need_expired"></u-switch>
             </fui-form-item>
+            <fui-form-item label="添加到导出表">
+                <u-switch v-model="sc_fetch_req.add_to_export"></u-switch>
+            </fui-form-item>
         </fui-form>
     </fui-modal>
     <fui-bottom-popup :show="show_belong_pick" @close="show_belong_pick= false">
@@ -93,7 +96,8 @@ export default {
                 "need_expired": true,
                 "need_input": true,
                 "prompt": "",
-                "stuff_id": 0
+                "stuff_id": 0,
+                "add_to_export": false
             },
             new_sc: false,
         };

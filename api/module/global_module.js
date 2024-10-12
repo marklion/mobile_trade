@@ -11,6 +11,10 @@ const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
 const clean_driver = require('../lib/clean_driver');
 const common = require('./common');
+const fs = require('fs');
+const archiver = require('archiver');
+const uuid = require('uuid');
+const path = require('path');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -1154,13 +1158,8 @@ module.exports = {
             },
             func: async function (body, token) {
                 await common.do_export_later(token, '磅单导出', async () => {
-                    const fs = require('fs');
-                    const archiver = require('archiver');
-                    const uuid = require('uuid');
-                    const path = require('path');
                     let plans = [];
                     let ticket_type = body.ticket_type;
-                    console.log(ticket_type);
                     switch (ticket_type) {
                         case 'sale_management':
                             plans = await plan_lib.filter_plan4manager(body, token);
@@ -1183,11 +1182,11 @@ module.exports = {
                         const plan = plans[index];
                         let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
                         const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                        await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + plan.id, '/database' + filePath)
+                        await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + plan.id, '/database' + filePath);
                         filePaths.push(`/database${filePath}`);
                     }
                     if (filePaths.length === 0) {
-                        throw '未找到磅单信息';
+                        throw { err_msg: '未找到磅单信息' };
                     }
 
                     let download_path = `/uploads/ticket_${uuid.v4().split('-')[0]}.zip`;
@@ -1231,6 +1230,109 @@ module.exports = {
                     archive.finalize()
                     return download_path
                 })
+            },
+        },
+        download_sc_contents_zip: {
+            name: '下载安检登记表ZIP',
+            description: '下载安检登记表ZIP',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2023-01-01' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2023-12-31' },
+                export_type: { type: String, have_to: true, mean: '导出类型', example: 'sale_management' },
+            },
+            result: {
+                file_path: { type: String, mean: '文件路径', example: 'uploads/安检登记表_20230101_至_20231231.zip' },
+            },
+            func: async function (body, token) {
+                try {
+                    await common.do_export_later(token, '安检登记表导出', async () => {
+                        let officegen = require('officegen');
+                        let plans = [];
+                        switch (body.export_type) {
+                            case 'sale_management':
+                                plans = await plan_lib.filter_plan4manager(body, token);
+                                break;
+                            case 'buy_management':
+                                plans = await plan_lib.filter_plan4manager(body, token, true);
+                                break;
+                            case 'customer':
+                                plans = await plan_lib.filter_plan4user(body, token);
+                                break;
+                            case 'supplier':
+                                plans = await plan_lib.filter_plan4user(body, token, true);
+                                break;
+                            default:
+                                throw { err_msg: '类型错误' };
+                        }
+                        if (plans.length === 0) {
+                            throw { err_msg: '未找到安检信息' };
+                        }
+                        const archive = archiver('zip', { zlib: { level: 9 } });
+                        let zip_name = `安检登记表_${uuid.v4().split('-')[0]}_${body.start_time}_至_${body.end_time}.zip`;
+                        const zipOutput = fs.createWriteStream(path.resolve('/database/uploads/', zip_name));
+                        archive.pipe(zipOutput);
+
+                        const filePaths = [];
+
+                        for (let index = 0; index < plans.length; index++) {
+                            const plan = plans[index];
+                            let archive_plan = await plan_lib.replace_plan2archive(plan);
+                            if (!archive_plan) {
+                                continue;
+                            }
+                            console.log(`开始创建安检登记表 - 计划ID: ${plan.id}`);
+                            let doc = officegen('docx');
+                            let table = [
+                                [{ val: '安检项目名称', opts: { cellColWidth: 4261, b: true, sz: '24', shd: { fill: 'D9EAD3' } } }, { val: '输入内容', opts: { cellColWidth: 4261, b: true, sz: '24', shd: { fill: 'D9EAD3' } } }],
+                            ];
+                            // 安检项目内容
+                            let sc_info = archive_plan.sc_info;
+                            if (sc_info && sc_info.length > 0) {
+                                sc_info.forEach(item => {
+                                    // 安检登记项为可导出且为输入项
+                                    if (item.add_to_export && item.need_input) {
+                                        table.push([item.name, item?.sc_content?.input]);
+                                    }
+                                });
+                            }
+                            doc.createTable(table);
+                            let filename = `安检登记表_${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}.docx`;
+                            let download_path = path.resolve('/database/uploads/', filename);
+                            let out = fs.createWriteStream(download_path, { encoding: 'utf8' });
+                            out.on('error', function (err) {
+                                console.log(err);
+                            });
+                            await new Promise((resolve, reject) => {
+                                doc.generate(out, {
+                                    finalize: resolve,
+                                    error: reject
+                                });
+                            });
+                            filePaths.push(download_path);
+                        }
+                        for (const filePath of filePaths) {
+                            archive.append(fs.createReadStream(filePath), { name: path.basename(filePath) });
+                        }
+                        zipOutput.on('close', async () => {
+                            console.log('安检登记表ZIP文件创建成功,大小:' + archive.pointer() + ' bytes');
+                            // 删除打包前的文件
+                            await Promise.all(filePaths.map(async (filePath) => {
+                                await fs.promises.unlink(filePath);
+                            }));
+                        });
+
+                        archive.finalize();
+                        return '/uploads/' + zip_name;
+                    });
+
+
+                } catch (error) {
+                    console.error('安检登记表导出失败', error);
+                    throw error;
+                }
             },
         },
         set_order_prefer: {

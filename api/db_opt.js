@@ -208,6 +208,7 @@ let db_opt = {
             need_expired: { type: DataTypes.BOOLEAN, defaultValue: false },
             belong_type: { type: DataTypes.INTEGER, defaultValue: 0 },
             prompt: { type: DataTypes.STRING },
+            add_to_export: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         sc_content: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
