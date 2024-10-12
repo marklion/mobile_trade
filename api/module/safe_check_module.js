@@ -30,7 +30,8 @@ module.exports = {
                 need_input: { type: Boolean, have_to: true, mean: '是否需要输入', example: true },
                 need_expired: { type: Boolean, have_to: true, mean: '是否需要过期时间', example: true },
                 belong_type: { type: Number, have_to: true, mean: '所属类型,0->司乘,1->主车,2->挂车', example: 0 },
-                prompt: { type: String, have_to: false, mean: '提示', example: '请输入' }
+                prompt: { type: String, have_to: false, mean: '提示', example: '请输入' },
+                add_to_export: { type: Boolean, have_to: false, mean: '是否添加到导出表', example: false }
             },
             result: api_param_result_define.sc_req_detail,
             func: async function (body, token) {
