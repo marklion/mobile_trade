@@ -2,6 +2,8 @@
 echo "frontend_deploy.sh"
 npm install -g miniprogram-ci
 pushd ./mt_gui/
+n 16.8.0
+yarn install
 npm run build:mp-weixin
 popd
 pushd ./mt_gui/dist/build/
