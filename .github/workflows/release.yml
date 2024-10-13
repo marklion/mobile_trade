@@ -31,12 +31,14 @@ jobs:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
         SERVER: ${{ secrets.SERVER }}
         USER: ${{ secrets.USER }}
+        UPLOAD_KEY: ${{ secrets.UPLOAD_KEY }}
       run: |
         eval `ssh-agent`
         echo "$SSH_PRIVATE_KEY" | ssh-add -
         scp -o StrictHostKeyChecking=no build/install.sh $USER@$SERVER:/root/install_new.sh
         ssh -o StrictHostKeyChecking=no $USER@$SERVER 'bash -s' < backend_deploy.sh
-        ./frontend_deploy.sh
+        echo "$UPLOAD_KEY" > upload.key
+        ./frontend_deploy.sh $(git describe --tags)
 
     - name: Update deployment status (success)
       if: success()
