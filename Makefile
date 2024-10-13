@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 SRC_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 DELIVER_PATH=$(SRC_DIR)/build
-SUB_DIR=api conf script automation lag_rpc
+SUB_DIR=api conf script automation lag_rpc mt_gui
 BUILD_MODE=build
 export BUILD_MODE
 

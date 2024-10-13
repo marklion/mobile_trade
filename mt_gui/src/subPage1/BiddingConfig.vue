@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import BidDetail from '../components/BidDetail.vue';
+import BidDetail from './BidDetail.vue';
 import ListShow from '../components/ListShow.vue';
 export default {
     name: 'BiddingConfig',

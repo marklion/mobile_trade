@@ -20,3 +20,4 @@ output.xml
 /automation/__pycache__/
 **/package-lock.json
 **/yarn.lock
+**/last-build-time.txt

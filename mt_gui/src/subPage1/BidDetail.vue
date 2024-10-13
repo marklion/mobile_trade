@@ -79,9 +79,9 @@
 </template>
 
 <script>
-import ModuleFilter from './ModuleFilter.vue';
+import ModuleFilter from '../components/ModuleFilter.vue';
 import utils from '@/components/firstui/fui-utils';
-import ListShow from './ListShow.vue';
+import ListShow from '../components/ListShow.vue';
 export default {
     name: 'BidDetail',
     components: {
