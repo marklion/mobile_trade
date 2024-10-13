@@ -199,12 +199,12 @@ export default {
         unLogin: function () {
             uni.removeStorageSync('token');
             uni.reLaunch({
-                url: '/pages/Login'
+                url: '/subPage1/Login'
             });
         },
         rebind: function () {
             uni.navigateTo({
-                url: '/pages/Bind'
+                url: '/subPage1/Bind'
             });
         },
         config_role: function () {

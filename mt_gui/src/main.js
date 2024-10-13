@@ -54,7 +54,7 @@ Vue.prototype.$init_self = async function () {
     uni.setStorageSync('self_info', self_info);
   } catch (error) {
     uni.navigateTo({
-      url: '/pages/Login'
+      url: '/subPage1/Login'
     });
   }
 };

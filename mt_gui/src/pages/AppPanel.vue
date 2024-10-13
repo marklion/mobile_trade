@@ -27,11 +27,13 @@ export default {
                     name: '竞价管理',
                     icon: 'bankcard',
                     require_module: 'bid',
+                    sub_page_name: 'subPage1',
                     path: 'BiddingConfig'
                 }, {
                     name: '竞价参与',
                     icon: 'bankcard',
                     require_module: 'customer',
+                    sub_page_name: 'subPage1',
                     path: 'BiddingJoin'
                 }, {
                     name: '现场管理',
@@ -43,12 +45,14 @@ export default {
                     name: '合同管理',
                     icon: 'pullup',
                     require_module: undefined,
+                    sub_page_name: 'subPage1',
                     path: 'Contract'
                 },
                 {
                     name: '安检配置',
                     icon: 'keyboard',
                     require_module: 'sc',
+                    sub_page_name: 'subPage1',
                     path: 'ScConfig'
                 },
                 {

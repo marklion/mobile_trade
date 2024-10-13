@@ -84,7 +84,7 @@ export default {
             } catch (error) {
                 if ('用户未找到' == error) {
                     uni.navigateTo({
-                        url: '/pages/Bind'
+                        url: '/subPage1/Bind'
                     });
                 }
             }

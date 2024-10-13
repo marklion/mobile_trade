@@ -13,28 +13,10 @@
 			}
 		},
 		{
-			"path": "pages/Login"
-		},
-		{
-			"path": "pages/Bind"
-		},
-		{
 			"path": "pages/Myself"
 		},
 		{
 			"path": "pages/AppPanel"
-		},
-		{
-			"path": "pages/Contract",
-			"style": {
-				"enablePullDownRefresh": true
-			}
-		},
-		{
-			"path": "pages/BuyContract",
-			"style": {
-				"enablePullDownRefresh": true
-			}
 		},
 		{
 			"path": "pages/OrderList",
@@ -57,24 +39,7 @@
 				"enablePullDownRefresh": true
 			}
 		},
-		{
-			"path": "pages/ScConfig",
-			"style": {
-				"enablePullDownRefresh": true
-			}
-		},
-		{
-			"path": "pages/BiddingConfig",
-			"style": {
-				"enablePullDownRefresh": true
-			}
-		},
-		{
-			"path": "pages/BiddingJoin",
-			"style": {
-				"enablePullDownRefresh": true
-			}
-		},
+
 		{
 			"path": "pages/DevPage"
 		},
@@ -92,6 +57,36 @@
 		{
 			"root": "subPage1",
 			"pages": [
+				{
+					"path": "BiddingJoin",
+					"style": {
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "BiddingConfig",
+					"style": {
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "ScConfig",
+					"style": {
+						"enablePullDownRefresh": true
+					}
+				},
+				{
+					"path": "Bind"
+				},
+				{
+					"path": "Login"
+				},
+				{
+					"path": "Contract",
+					"style": {
+						"enablePullDownRefresh": true
+					}
+				},
 				{
 					"path": "VehicleTeam",
 					"style": {
