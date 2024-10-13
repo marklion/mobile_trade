@@ -15,6 +15,7 @@ pack:all
 
 all:$(DELIVER_PATH)
 api:lag_rpc
+mt_gui:api
 $(DELIVER_PATH):$(SUB_DIR)
 	[ -d $@ ] || mkdir $@
 	for component in $^;do [ -d $(SRC_DIR)/$$component/build ] && cp -a $(SRC_DIR)/$$component/build/* $@/ || echo no_assert; done
