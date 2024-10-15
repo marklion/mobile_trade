@@ -152,3 +152,48 @@ Set Role to FC Table
     ${table}  Search FC Table    ${table_name}
     ${req}  Create Dictionary  role_id=${role}[id]  table_id=${table}[id]
     Req to Server    /rbac/add_fc_table2role    ${token}    ${req}
+
+Search FC Plan Table
+    [Arguments]  ${plan}  ${table_name}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]
+    ${resp}  Req Get to Server  /sc/get_fc_plan_table  ${token}  fc_plan_tables  ${-1}  &{req}
+    ${found_one}  Set Variable  ${EMPTY}
+    FOR    ${element}    IN    @{resp}
+        ${itr_name}  Get From Dictionary  ${element}  name  ${None}
+        IF  $table_name == $itr_name
+            ${found_one}  Set Variable  ${element}
+            Exit For Loop
+        END
+    END
+    RETURN  ${found_one}
+
+Search FC Result
+    [Arguments]  ${plan}  ${table_name}  ${item_name}  ${token}=${sc_admin_token}
+    ${fc_pt}  Search FC Plan Table    ${plan}    ${table_name}
+    ${found}  Set Variable  ${EMPTY}
+    FOR  ${fc_rc}  IN  @{fc_pt}[fc_plan_table][fc_check_results]
+        ${fc_item_name}  Get From Dictionary    ${fc_rc}[field_check_item]    name    ${None}
+        IF  $fc_item_name == $item_name
+            ${found}  Set Variable  ${fc_rc}
+            Exit For Loop
+        END
+    END
+    RETURN  ${found}
+
+Set FC Item Passed
+    [Arguments]  ${plan}  ${table_name}  ${item_name}  ${passed}=${True}  ${token}=${sc_admin_token}  ${expect_failure}=${False}
+    ${fc_plan_table}  Search FC Plan Table    ${plan}    ${table_name}  ${token}
+    FOR  ${fc_rc}  IN  @{fc_plan_table}[fc_plan_table][fc_check_results]
+        ${fc_item_name}  Get From Dictionary    ${fc_rc}[field_check_item]    name    ${None}
+        IF  $fc_item_name == $item_name
+            ${req}  Create Dictionary  fc_result_id=${fc_rc}[id]  is_pass=${passed}
+            Req to Server    /sc/set_fc_pass  ${token}  ${req}  ${expect_failure}
+            Exit For Loop
+        END
+    END
+
+Set FC Plan Table Finish
+    [Arguments]  ${plan}  ${table_name}  ${token}=${sc_admin_token}  ${expect_failure}=${False}
+    ${fc_pt}  Search FC Plan Table    ${plan}    ${table_name}
+    ${req}  Create Dictionary  fc_plan_id=${fc_pt}[id]
+    Req to Server    /sc/commit_fc_plan   ${token}  ${req}  ${expect_failure}

@@ -212,7 +212,30 @@ FC Table Config Role
     ${fc_table}  Search FC Table    t1
     Should Not Be Equal    ${fc_table}[rbac_role][id]    ${role}[id]
 
+FC Excute
+    [Setup]  Prepare FC Configured
+    [Teardown]  FC Reset
+    Set FC Item Passed  ${test_plan}    t1    i11
+    Set FC Item Passed  ${test_plan}    t2    i21
+    ${fc_cr}  Search FC Result    ${test_plan}    t1    i11
+    Should Not Be Empty    ${fc_cr}[pass_time]
+    ${fc_cr}  Search FC Result    ${test_plan}    t2    i21
+    Should Not Be Empty    ${fc_cr}[pass_time]
+    ${fc_cr}  Search FC Result    ${test_plan}    t2    i22
+    Should Not Contain    ${fc_cr}    pass_time
 
+    Set FC Plan Table Finish    ${test_plan}    t2
+    ${fc_plan_table}  Search FC Plan Table    ${test_plan}    t1
+    Should Not Contain    ${fc_plan_table}[fc_plan_table]  finish_time
+    ${fc_plan_table}  Search FC Plan Table    ${test_plan}    t2
+    Should Not Be Empty    ${fc_plan_table}[fc_plan_table][finish_time]
+
+FC Excute Failure
+    [Setup]  Prepare FC Configured
+    [Teardown]  FC Reset
+    Set Role to FC Table    t1    fcr1
+    Set FC Item Passed    ${test_plan}  t1  i11  expect_failure=${True}
+    Set FC Plan Table Finish    ${test_plan}    t1  expect_failure=${True}
 
 *** Keywords ***
 Enable SC AND Add Some SC req
@@ -229,3 +252,16 @@ Get Driver And Sale Plan SC
     ${resp_sale}  Get SC Status By Plan  ${plan}  ${passed}
     Lists Should Be Equal  ${resp_driver}  ${resp_sale}
     RETURN  ${resp_driver}
+
+Prepare FC Configured
+    Add FC Table    t1
+    Add Item to FC Table    t1    i11
+    Add Item to FC Table    t1    i12
+    Add Item to FC Table    t1    i13
+    Add FC Table    t2
+    Add Item to FC Table    t2    i21
+    Add Item to FC Table    t2    i22
+    Add Item to FC Table    t2    i23
+    Add Item to FC Table    t2    i24
+    Set Role to FC Table    t1    公司管理员
+    Set Role to FC Table    t2    公司管理员

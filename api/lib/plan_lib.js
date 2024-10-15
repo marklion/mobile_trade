@@ -8,6 +8,7 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
+const fc_lib = require('./fc_lib');
 module.exports = {
     close_a_plan: async function (plan, token) {
         plan.status = 3;

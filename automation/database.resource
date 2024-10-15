@@ -105,6 +105,8 @@ Exam Reset
 FC Reset
     Clear Table    field_check_table
     Clear Table    field_check_item
+    Clear Table    fc_plan_table
+    Clear Table    fc_check_result
 
 WxMsg Catch
     Sleep    2s
