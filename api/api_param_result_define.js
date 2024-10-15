@@ -250,6 +250,7 @@ module.exports = {
                         name: { type: String, mean: '区域名称', example: '区域名称' }
                     }
                 },
+                manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
             }
         },
         company: {
@@ -300,7 +301,11 @@ module.exports = {
         },
         bidding_item: {
             type: Object, mean: '竞价信息', explain: bidding_items.items.explain
-        }
+        },
+        first_weight: { type: String, mean: '第一次计量', example: '-30° 40mpa' },
+        second_weight: { type: String, mean: '第二次计量', example: '-30° 40mpa' },
+        first_weight_fileList: { type: String, mean: '第一次计量图片', example: 'uploads/1.png' },
+        second_weight_fileList: { type: String, mean: '第二次计量图片', example: 'uploads/2.png' },
     },
     bidding_items: bidding_items,
     dev_data: {

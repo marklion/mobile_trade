@@ -171,7 +171,7 @@
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
                             </module-filter>
                             <module-filter require_module="scale">
-                                <fui-button v-if="(focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
+                                <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
                             </module-filter>
                         </view>
                         <view slot="label">
@@ -263,8 +263,13 @@
             </view>
             <view class="group_sep">
                 <u-cell-group title="装卸信息">
+                    <u-cell title="计量信息">
+                        <view slot="right-icon">
+                            <fui-button btnSize="mini" type="primary" text="查看" @click="show_manual_weight = true"></fui-button>
+                        </view>
+                    </u-cell>
                     <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
-                    <u-cell title="装车量" :value="focus_plan.count"></u-cell>
+                    <u-cell title="装卸量" :value="focus_plan.count"></u-cell>
                     <u-cell v-if="focus_plan.p_time" title="皮重" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
                     <u-cell v-if="focus_plan.m_time" title="毛重" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
                 </u-cell-group>
@@ -432,6 +437,15 @@
     <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
     <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
+    <fui-modal :zIndex="1002" :buttons="['确定']" v-if="show_manual_weight" title="计量信息" :show="show_manual_weight" maskClosable @cancel="show_manual_weight = false" @click="show_manual_weight = false">
+        <fui-form disabled>
+            <fui-input  label="一次计量信息" borderTop v-model="focus_plan.first_weight"></fui-input>
+            <fui-upload :isAdd="false" :isDel="false" borderColor="gray" width="100" height="100" :file-list="parse_weight_urls(focus_plan.first_weight_fileList)"></fui-upload>
+            <fui-input  label="二次计量信息" borderTop v-model="focus_plan.second_weight"></fui-input>
+            <fui-upload :isAdd="false" :isDel="false" borderColor="gray" width="100" height="100" :file-list="parse_weight_urls(focus_plan.second_weight_fileList)"></fui-upload>
+            <fui-input  label="装卸量" borderTop  v-model="focus_plan.count"></fui-input>
+        </fui-form>
+    </fui-modal>
 </view>
 </template>
 
@@ -454,6 +468,7 @@ export default {
     data: function () {
         return {
             show_blackList_confirm: false,
+            show_manual_weight: false,
             focus_blackList: {
                 type: '',
                 id: 0,
@@ -749,8 +764,16 @@ export default {
 
             return ret;
         },
+        
     },
     methods: {
+        parse_weight_urls: function (urls) {
+            if (!urls)
+                return [];
+            else {
+                return urls.split('|').map(url => this.$convert_attach_url(url));;
+            }
+        },
         change_index: function (e) {
             this.gallery_index = e.index
         },

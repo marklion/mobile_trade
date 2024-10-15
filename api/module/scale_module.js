@@ -273,5 +273,34 @@ module.exports = {
                 return { pic: resp };
             }
         },
+        manual_weight: {
+            name: '手动计量',
+            description: '手动计量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                first_weight: { type: String, have_to: true, mean: '第一次计量', example: '-30度 40MPa' },
+                second_weight: { type: String, have_to: true, mean: '第二次计量', example: '-30度 40MPa' },
+                load_weight: { type: Number, have_to: true, mean: '装载重量', example: 1 },
+                first_weight_fileList: { type: String, have_to: false, mean: '第一次计量图片列表', example: 'upload/1.jpg|upload/2.jpg' },
+                second_weight_fileList: { type: String, have_to: false, mean: '第二次计量图片列表', example: 'upload/1.jpg|upload/2.jpg' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    plan.first_weight = body.first_weight;
+                    plan.second_weight = body.second_weight;
+                    plan.count = body.load_weight;
+                    plan.first_weight_fileList = body.first_weight_fileList;
+                    plan.second_weight_fileList = body.second_weight_fileList;
+                    await plan.save();
+                });
+                return { result: true };
+            }
+        }
+        
     }
 }
