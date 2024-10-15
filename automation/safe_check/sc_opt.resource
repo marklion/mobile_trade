@@ -195,5 +195,5 @@ Set FC Item Passed
 Set FC Plan Table Finish
     [Arguments]  ${plan}  ${table_name}  ${token}=${sc_admin_token}  ${expect_failure}=${False}
     ${fc_pt}  Search FC Plan Table    ${plan}    ${table_name}
-    ${req}  Create Dictionary  fc_plan_id=${fc_pt}[id]
+    ${req}  Create Dictionary  fc_plan_id=${fc_pt}[fc_plan_table][id]
     Req to Server    /sc/commit_fc_plan   ${token}  ${req}  ${expect_failure}
