@@ -878,7 +878,7 @@ module.exports = {
                 if (driver) {
                     let ret = { tickets: [], total: 0 };
                     let plans = await driver.getPlans({
-                        order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
+                        order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
                         where: cond,
                         limit: 20,
                         offset: body.pageNo * 20,

@@ -37,7 +37,7 @@ module.exports = {
                         model: sq.models.rbac_user,
                         include: [sq.models.company]
                     }],
-                    order: [['accept', 'DESC'], ['price', 'DESC']]
+                    order: [['accept', 'DESC'], ['price', 'DESC'], ['id', 'DESC']]
                 }],
                 order: [['id', 'DESC']]
             },
@@ -92,7 +92,7 @@ module.exports = {
         let bc = await sq.models.bidding_config.findByPk(bc_id, { include: [sq.models.stuff] });
         let company = await rbac_lib.get_company_by_token(token);
         if (bc.status == 0 && bc.stuff && company && await company.hasStuff(bc.stuff)) {
-            let exist_bts = await bc.getBidding_turns({ order: [['turn', 'DESC']] });
+            let exist_bts = await bc.getBidding_turns({ order: [['turn', 'DESC'], ['id', 'DESC']] });
             if (exist_bts.length == 0 || exist_bts[0].turn + 1 < bc.total_turn) {
                 let cur_turn = exist_bts.length == 0 ? 0 : (exist_bts[0].turn + 1);
                 let bt = await bc.createBidding_turn({ begin_time: begin_time, end_time: end_time, turn: cur_turn });
@@ -265,12 +265,12 @@ module.exports = {
         let bc = await sq.models.bidding_config.findByPk(bc_id, { include: [sq.models.stuff] });
         let company = await rbac_lib.get_company_by_token(token);
         if (bc.status == 0 && bc.stuff && company && await company.hasStuff(bc.stuff)) {
-            let exist_bts = await bc.getBidding_turns({ order: [['turn', 'DESC']] });
+            let exist_bts = await bc.getBidding_turns({ order: [['turn', 'DESC'], ['id', 'DESC']] });
             if (exist_bts.length == 0) {
                 throw { err_msg: '前一轮还未开始' };
             }
             let last_joiners = [];
-            let last_items = await exist_bts[0].getBidding_items({ order: [['price', 'DESC']] });
+            let last_items = await exist_bts[0].getBidding_items({ order: [['price', 'DESC'], ['id', 'DESC']] });
             for (let index = 0; index < last_items.length && index < top_n; index++) {
                 const element = last_items[index];
                 last_joiners.push(element.rbacUserId);

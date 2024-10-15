@@ -300,7 +300,7 @@ module.exports = {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         let search_condition = {
-            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -346,7 +346,7 @@ module.exports = {
             [db_opt.Op.or]: stuff_or
         });
         let search_condition = {
-            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -1007,7 +1007,7 @@ module.exports = {
         };
         let plans = await sq.models.plan.findAll({
             where: cond,
-            order: [[sq.fn('TIMESTAMP', sq.col('register_time')), 'ASC']],
+            order: [[sq.fn('TIMESTAMP', sq.col('register_time')), 'ASC'], ['id', 'DESC']],
             offset: pageNo * 20,
             limit: 20,
             include: util_lib.plan_detail_include(),
