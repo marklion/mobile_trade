@@ -147,7 +147,7 @@
                         <u-cell title="余额" :label="user_authorize">
                             <view slot="value">
                                 <module-filter require_module="cash">
-                                    {{cur_contract.balance.toFixed(2)}}
+                                    {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}   
                                 </module-filter>
                             </view>
                             <view slot="right-icon">
@@ -437,7 +437,7 @@
     <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
     <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
-    <fui-modal :zIndex="1002" :buttons="['确定']" v-if="show_manual_weight" title="计量信息" :show="show_manual_weight" maskClosable @cancel="show_manual_weight = false" @click="show_manual_weight = false">
+    <fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" title="计量信息" :show="show_manual_weight" maskClosable @cancel="show_manual_weight = false">
         <fui-form disabled>
             <fui-input  label="一次计量信息" borderTop v-model="focus_plan.first_weight"></fui-input>
             <fui-upload :isAdd="false" :isDel="false" borderColor="gray" width="100" height="100" :file-list="parse_weight_urls(focus_plan.first_weight_fileList)"></fui-upload>
@@ -445,6 +445,8 @@
             <fui-upload :isAdd="false" :isDel="false" borderColor="gray" width="100" height="100" :file-list="parse_weight_urls(focus_plan.second_weight_fileList)"></fui-upload>
             <fui-input  label="装卸量" borderTop  v-model="focus_plan.count"></fui-input>
         </fui-form>
+        <fui-button v-if="focus_plan.stuff.checkout_delay && plan_owner && focus_plan.status != 3" btnSize="medium" type="success" text="结算"  @click="confirm_manual_weight"></fui-button>
+        <fui-button v-else btnSize="medium" text="关闭"  @click="show_manual_weight = false"></fui-button>
     </fui-modal>
 </view>
 </template>
@@ -1535,7 +1537,15 @@ export default {
                 });
             }
             this.show_blackList_confirm = false;
-        }
+        },
+        confirm_manual_weight: async function () {
+            await this.$send_req(this.cur_confirm_url, {
+                plan_id: this.focus_plan.id
+            });
+            this.refresh_plans();
+            this.show_manual_weight = false;
+            this.show_plan_detail = false;
+        },
     },
     onPullDownRefresh() {
         this.refresh_plans();

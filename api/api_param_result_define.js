@@ -251,6 +251,7 @@ module.exports = {
                     }
                 },
                 manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
+                checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
             }
         },
         company: {
