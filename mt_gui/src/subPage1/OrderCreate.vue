@@ -355,7 +355,7 @@ export default {
         },
         download_temple: async function () {
             uni.downloadFile({
-                url: this.$convert_attach_url('/uploads/模板.xlsx'),
+                url: this.$convert_attach_url('/uploads/模板1.xlsx'),
                 success: (res) => {
                     const filePath = res.tempFilePath
                     uni.openDocument({
