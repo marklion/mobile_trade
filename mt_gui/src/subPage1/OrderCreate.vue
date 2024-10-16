@@ -337,7 +337,9 @@ export default {
                         main_vehicle: row.getCell(1).text.toUpperCase().replaceAll(regStrReplace, ''),
                         behind_vehicle: row.getCell(2).text.toUpperCase().replaceAll(regStrReplace, ''),
                         driver_name: row.getCell(3).text.toUpperCase().replaceAll(regStrReplace, ''),
-                        driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace, '')
+                        driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        // 模板最后一列放备注信息
+                        comment: row.getCell(row.cellCount).text.replaceAll(regStrReplace, ''),
                     })
                 }
             });
@@ -427,7 +429,8 @@ export default {
                                     name: element.driver_name,
                                     phone: element.driver_phone
                                 },
-                                comment: '文件导入'
+                                comment: element.comment || '文件导入',
+
                             };
                         } catch (error) {
                             console.error('error:', error);
@@ -562,6 +565,7 @@ export default {
                     driver_id: ele.driver.id,
                     is_proxy: this.is_proxy,
                     bidding_id: this.bidding_id,
+                    comment: ele.comment,
                 };
                 if (req.is_proxy) {
                     req.proxy_company_name = this.saler_name;
