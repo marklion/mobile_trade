@@ -778,6 +778,7 @@ export default {
             else {
                 return urls.split('|').map(url => this.$convert_attach_url(url));;
             }
+        },
         nav_to_fc: function () {
             uni.navigateTo({
                 url: '/subPage1/FcExecute?plan_id=' + this.focus_plan.id
