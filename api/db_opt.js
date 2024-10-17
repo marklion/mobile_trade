@@ -143,6 +143,10 @@ let db_opt = {
             fapiao_delivered: { type: DataTypes.BOOLEAN, defaultValue: false },
             drop_take_zone_name: { type: DataTypes.STRING },
             checkout_delay: { type: DataTypes.BOOLEAN, defaultValue: false },
+            first_weight: { type: DataTypes.STRING, defaultValue: '' },
+            second_weight: { type: DataTypes.STRING, defaultValue: '' },
+            first_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
+            second_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -174,7 +178,8 @@ let db_opt = {
             next_operator: { type: DataTypes.STRING },
             need_exam: { type: DataTypes.BOOLEAN, defaultValue: false },
             concern_fapiao: { type: DataTypes.BOOLEAN, defaultValue: false },
-            checkout_delay: { type: DataTypes.BOOLEAN, defaultValue: false },
+            checkout_delay:{type: DataTypes.BOOLEAN, defaultValue: false},
+            manual_weight:{type: DataTypes.BOOLEAN, defaultValue: false},
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

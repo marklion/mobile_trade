@@ -81,6 +81,16 @@
                             </fui-list-cell>
                         </fui-label>
                     </fui-col>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="手动计量"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.manual_weight" @change="change_manual_weight($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
                 </fui-row>
                 <fui-divider text="装卸区域配置"></fui-divider>
                 <view style="display: flex; flex-wrap:wrap;">
@@ -332,6 +342,12 @@ export default {
             await this.$send_req('/stuff/checkout_delay_config', {
                 stuff_id: item.id,
                 checkout_delay: event.detail.value,
+            });
+        },
+        change_manual_weight: async function (event, item) {
+            await this.$send_req('/stuff/manual_weight_config', {
+                stuff_id: item.id,
+                manual_weight: event.detail.value
             });
         },
         change_need_enter_weight: async function (event, item) {
