@@ -445,7 +445,7 @@
             <fui-upload :isAdd="false" :isDel="false" borderColor="gray" width="100" height="100" :file-list="parse_weight_urls(focus_plan.second_weight_fileList)"></fui-upload>
             <fui-input  label="装卸量" borderTop  v-model="focus_plan.count"></fui-input>
         </fui-form>
-        <fui-button v-if="focus_plan.stuff.checkout_delay && plan_owner && focus_plan.status != 3" btnSize="medium" type="success" text="结算"  @click="confirm_manual_weight"></fui-button>
+        <fui-button v-if="focus_plan.stuff.checkout_delay && plan_owner && focus_plan.status != 3 && Number(focus_plan.count) > 0" btnSize="medium" type="success" text="结算"  @click="confirm_manual_weight"></fui-button>
         <fui-button v-else btnSize="medium" text="关闭"  @click="show_manual_weight = false"></fui-button>
     </fui-modal>
 </view>

@@ -64,7 +64,7 @@
             </fui-list-cell>
         </fui-list>
     </fui-bottom-popup>
-    <fui-modal v-if="show_manual_weight" :show="show_manual_weight"  @cancel="manual_weight_form_reset(); show_manual_weight = false" @click="confirm_manual_weight">
+    <fui-modal v-if="show_manual_weight" :show="show_manual_weight" @cancel="manual_weight_form_reset(); show_manual_weight = false" @click="confirm_manual_weight">
         <fui-form ref="manual_weight_form">
             <fui-form-item label="一次计量">
                 <fui-input v-model="manual_weight_form.first_weight" placeholder="请输入一次计量">
@@ -72,7 +72,7 @@
                 </fui-input>
             </fui-form-item>
             <fui-form-item>
-                <fui-upload max="4" width="80" height="80" :sizeType="['compressed']"   ref="first_weight_upload" :url="upload_url" @success="after_first_weight_uploaded" @error="meet_upload_error" @complete="after_first_weight_action" @delete="delete_first_weight_file"></fui-upload>
+                <fui-upload max="4" width="80" height="80" callUpload  confirmDel :fileList="first_weight_fileUrl" :sizeType="['compressed']" ref="first_weight_upload"  @reupload="reupload_first_weight" @error="meet_upload_error" @complete="after_first_weight_action"></fui-upload>
             </fui-form-item>
             <fui-form-item label="二次计量">
                 <fui-input v-model="manual_weight_form.second_weight" placeholder="请输入二次计量">
@@ -80,7 +80,7 @@
                 </fui-input>
             </fui-form-item>
             <fui-form-item>
-                <fui-upload max="4" width="80" height="80" :sizeType="['compressed']"   ref="second_weight_upload" :url="upload_url" @success="after_second_weight_uploaded" @error="meet_upload_error" @complete="after_second_weight_action" @delete="delete_second_weight_file"></fui-upload>
+                <fui-upload max="4" width="80" height="80" callUpload  confirmDel :fileList="second_weight_fileUrl" :sizeType="['compressed']" ref="second_weight_upload"  @reupload="reupload_second_weight" @error="meet_upload_error" @complete="after_second_weight_action"></fui-upload>
             </fui-form-item>
             <fui-form-item label="装卸量">
                 <fui-input v-model="manual_weight_form.load_weight" type="number" placeholder="请输入装卸量"></fui-input>
@@ -123,7 +123,7 @@ export default {
             manual_weight_form: {
                 first_weight: '',
                 second_weight: '',
-                load_weight: '',
+                load_weight: 0,
                 first_weight_fileList: [],
                 second_weight_fileList: [],
                 first_weight_file_len: 0,
@@ -146,6 +146,19 @@ export default {
                 },
             ],
         };
+    },
+    computed: {
+        first_weight_fileUrl: function () {
+            console.log('first_weight_fileUrl', this.manual_weight_form.first_weight_fileList);
+            return this.manual_weight_form.first_weight_fileList.map(ele => {
+                return this.$convert_attach_url(ele);
+            });
+        },
+        second_weight_fileUrl: function () {
+            return this.manual_weight_form.second_weight_fileList.map(ele => {
+                return this.$convert_attach_url(ele);
+            });
+        }
     },
     methods: {
         init_dev: async function () {
@@ -176,8 +189,11 @@ export default {
             await this.set_stamp_pic()
         },
         meet_upload_error: async function (e) {
-            console.log('meet_upload_error');
-            console.log(e);
+            uni.showToast({
+                title: '上传失败',
+                icon: 'none',
+                duration: 2000
+            });
         },
         init_stamp_pic: async function () {
             let ret = await this.$send_req('/scale/get_stamp_pic');
@@ -212,6 +228,11 @@ export default {
         },
         prepare_manual_weight: function (item) {
             this.focus_plan_id = item.id;
+            this.$set(this.manual_weight_form, 'first_weight', item.first_weight);
+            this.$set(this.manual_weight_form, 'second_weight', item.second_weight);
+            this.$set(this.manual_weight_form, 'load_weight', item.count);
+            this.$set(this.manual_weight_form, 'first_weight_fileList', item.first_weight_fileList ? item.first_weight_fileList.split('|') : []);
+            this.$set(this.manual_weight_form, 'second_weight_fileList', item.second_weight_fileList ? item.second_weight_fileList.split('|') : []);
             this.show_manual_weight = true;
         },
         enter_vehicle: async function (e) {
@@ -282,23 +303,24 @@ export default {
         },
         confirm_manual_weight: async function (event) {
             if (event.index == 1) {
-                this.$refs.manual_weight_form.validator(this.manual_weight_form, this.menual_weight_rules).then(async res => {
+                this.$refs.manual_weight_form.validator(this.manual_weight_form, []).then(async res => {
                     if (res.isPassed) {
                         let ret = await this.$send_req('/scale/manual_weight', {
                             plan_id: this.focus_plan_id,
                             first_weight: this.manual_weight_form.first_weight,
                             second_weight: this.manual_weight_form.second_weight,
-                            load_weight: Number(this.manual_weight_form.load_weight),
+                            load_weight: Number(this.manual_weight_form.load_weight || 0),
                             first_weight_fileList: this.manual_weight_form.first_weight_fileList.join('|'),
                             second_weight_fileList: this.manual_weight_form.second_weight_fileList.join('|'),
                         });
-                        if(ret.result) {
+                        if (ret.result) {
                             uni.showToast({
                                 title: '提交成功',
                                 icon: 'success',
                                 duration: 2000
                             });
                             this.show_manual_weight = false;
+                            this.$refs.plans.refresh();
                             this.manual_weight_form_reset();
                         } else {
                             uni.showToast({
@@ -311,7 +333,6 @@ export default {
                 }).catch(err => {
                     console.log('validator', err);
                 });
-                console.log('upload file end');
 
             } else {
                 this.show_manual_weight = false;
@@ -327,8 +348,30 @@ export default {
                 second_weight_fileList: []
             };
         },
+        fileUpload:function (file) {
+            return new Promise((resolve, reject) => {
+                uni.uploadFile({
+                    url: this.upload_url,
+                    name: 'file',
+                    filePath: file.path,
+                    success: (res) => {
+                        if (res.statusCode == 200) {
+                            //返回上传成功后的图片
+                            resolve(res.data)
+                        } else {
+                            //上传失败
+                            reject(false)
+                        }
+                    },
+                    fail: (err) => {
+                        //上传失败
+                        reject(false)
+                    }
+                })
+            })
+        },
         upload_first_weight: async function () {
-            if(this.manual_weight_form.first_weight_file_len==0) {
+            if (this.manual_weight_form.first_weight_file_len == 0) {
                 uni.showToast({
                     title: '请选择一次计量图片',
                     icon: 'none',
@@ -336,10 +379,10 @@ export default {
                 });
                 return;
             }
-            this.$refs.first_weight_upload.start();
+            this.$refs.first_weight_upload.upload(this.fileUpload);
         },
         upload_second_weight: async function () {
-            if(this.manual_weight_form.second_weight_file_len==0) {
+            if (this.manual_weight_form.second_weight_file_len == 0) {
                 uni.showToast({
                     title: '请选择二次计量图片',
                     icon: 'none',
@@ -347,30 +390,46 @@ export default {
                 });
                 return;
             }
-            this.$refs.second_weight_upload.start();
+            this.$refs.second_weight_upload.upload(this.fileUpload);
         },
         after_first_weight_action: function (e) {
-            this.manual_weight_form.first_weight_file_len = e.urls.length;
+            if (e.action == 'upload') {
+                uni.showToast({
+                    title: '上传成功',
+                    icon: 'none',
+                    duration: 2000
+                });
+                this.manual_weight_form.first_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/'));
+            }
+            if(e.action == 'choose'){
+                this.manual_weight_form.first_weight_file_len = e.urls.length;
+            }
+            if (e.action == 'delete') {
+                this.manual_weight_form.first_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/'));
+            }
         },
         after_second_weight_action: function (e) {
-            this.manual_weight_form.second_weight_file_len = e.urls.length;
+            if (e.action == 'upload') {
+                uni.showToast({
+                    title: '上传成功',
+                    icon: 'none',
+                    duration: 2000
+                });
+                this.manual_weight_form.second_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/'));
+            }
+            if(e.action == 'choose'){
+                this.manual_weight_form.second_weight_file_len = e.urls.length;
+            }
+            if (e.action == 'delete') {
+                this.manual_weight_form.second_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/'));
+            } 
         },
-        after_first_weight_uploaded: async function (e) {
-            this.manual_weight_form.first_weight_fileList[e.index] = e.res.data;
-            uni.showToast({
-                title: '上传成功',
-                icon: 'none',
-                duration: 2000
-            });
+        reupload_first_weight: function (e) {
+            this.$refs.first_weight_upload.upload(this.fileUpload,e.index);
         },
-        after_second_weight_uploaded: async function (e) {
-            this.manual_weight_form.second_weight_fileList[e.index]= e.res.data;
-            uni.showToast({
-                title: '上传成功',
-                icon: 'none',
-                duration: 2000
-            });
-        },
+        reupload_second_weight: function (e) {
+            this.$refs.second_weight_upload.upload(this.fileUpload,e.index);
+        }
     },
     onPullDownRefresh: function () {
         if (this.$refs.plans) {

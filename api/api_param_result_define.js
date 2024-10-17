@@ -192,7 +192,7 @@ module.exports = {
         status: { type: Number, mean: '状态', example: 1 },
         comment: { type: String, mean: '备注', example: '备注' },
         from_bidding: { type: Boolean, mean: '是否来自竞价', example: true },
-        count: { type: Number, mean: '数量', example: 1 },
+        count: { type: String, mean: '数量', example: '1.0' },
         p_weight: { type: Number, mean: '皮重', example: 1 },
         m_weight: { type: Number, mean: '毛重', example: 1 },
         p_time: { type: String, mean: '皮重时间', example: '2020-01-01 12:00:00' },

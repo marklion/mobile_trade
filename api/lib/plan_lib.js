@@ -748,6 +748,10 @@ module.exports = {
             }
         });
     },
+    manual_deliver_plan: async function (_plan, _token) {
+        await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name);
+        await this.close_a_plan(_plan, _token);
+    },
     checkout_plan: async function (_plan_id, token) {
         await this.action_in_plan(_plan_id, token, 2, async (plan) => {
             if (plan.checkout_delay && plan.status == 2 && plan.count != 0) {
@@ -991,16 +995,21 @@ module.exports = {
             let tmp = await company.getStuff();
             for (let index = 0; index < tmp.length; index++) {
                 const element = tmp[index];
-                stuff_array.push(element.id);
+                stuff_array.push(element);
             }
         }
         let cond = {
             [db_opt.Op.and]: [
-                { register_time: { [db_opt.Op.ne]: null } },
+                {
+                    [db_opt.Op.or]: [
+                        { register_time: { [db_opt.Op.ne]: null } },
+                        { stuffId: { [db_opt.Op.in]: stuff_array.filter(ele => ele.manual_weight == true).map(ele => ele.id) } }
+                    ]
+                },
                 { status: { [db_opt.Op.ne]: 3 } },
                 {
                     stuffId: {
-                        [db_opt.Op.or]: stuff_array
+                        [db_opt.Op.in]: stuff_array.map(ele => ele.id)
                     }
                 }
             ],
@@ -1017,7 +1026,9 @@ module.exports = {
         });
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
-            element.p_weight = await hook_plan('get_p_weight', element);
+            if(!element.stuff.manual_weight){
+                element.p_weight = await hook_plan('get_p_weight', element);
+            }
         }
         return { rows: plans, count: count };
     },

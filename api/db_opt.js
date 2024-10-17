@@ -138,8 +138,8 @@ let db_opt = {
             checkout_delay: { type: DataTypes.BOOLEAN, defaultValue: false },
             first_weight: { type: DataTypes.STRING, defaultValue: '' },
             second_weight: { type: DataTypes.STRING, defaultValue: '' },
-            first_weight_fileList: { type: DataTypes.STRING, defaultValue: '' },
-            second_weight_fileList: { type: DataTypes.STRING, defaultValue: '' },
+            first_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
+            second_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
