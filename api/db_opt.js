@@ -2,6 +2,13 @@ const { Sequelize, DataTypes, Op } = require('sequelize');
 const cls = require('cls-hooked');
 const namespace = cls.createNamespace('my-very-own-namespace');
 Sequelize.useCLS(namespace);
+
+function getDecimalValue(fieldName) {
+    return function() {
+        const value = this.getDataValue(fieldName);
+        return value === null ? null : parseFloat(value);
+    };
+}
 function get_db_handle() {
     const sequelize = new Sequelize(process.env.DB_NAME, process.env.DB_USER, process.env.DB_PASS, {
         dialect: 'mysql',
@@ -92,9 +99,9 @@ let db_opt = {
             zc_rpc_url: { type: DataTypes.STRING },
             zczh_back_end: { type: DataTypes.STRING },
             zczh_back_token: { type: DataTypes.STRING },
-            pos_lat: { type: DataTypes.FLOAT, defaultValue: 0 },
-            pos_lon: { type: DataTypes.FLOAT, defaultValue: 0 },
-            distance_limit: { type: DataTypes.FLOAT, defaultValue: 0 },
+            pos_lat: { type: DataTypes.DECIMAL(12, 9), defaultValue: 0, get:getDecimalValue('pos_lat') },
+            pos_lon: { type: DataTypes.DECIMAL(12, 9), defaultValue: 0, get:getDecimalValue('pos_lon') },
+            distance_limit: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('distance_limit') },
             zc_phone: { type: DataTypes.STRING },
             check_in_stay_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
             logo: { type: DataTypes.STRING },
@@ -102,18 +109,18 @@ let db_opt = {
             hide_impact_selector: { type: DataTypes.BOOLEAN, defaultValue: false },
             pressure_config: { type: DataTypes.BOOLEAN, defaultValue: false },
             check_qualification: { type: DataTypes.BOOLEAN, defaultValue: false },
-            qualification_expiration_date: { type: DataTypes.STRING(20)},
+            qualification_expiration_date: { type: DataTypes.STRING(20) },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             plan_time: { type: DataTypes.STRING },
-            unit_price: { type: DataTypes.FLOAT, defaultValue: 0 },
+            unit_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('unit_price') },
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
             comment: { type: DataTypes.STRING },
             from_bidding: { type: DataTypes.BOOLEAN, defaultValue: false },
-            count: { type: DataTypes.FLOAT, defaultValue: 0 },
-            p_weight: { type: DataTypes.FLOAT, defaultValue: 0 },
-            m_weight: { type: DataTypes.FLOAT, defaultValue: 0 },
+            count: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('count') },
+            p_weight: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('p_weight') },
+            m_weight: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('m_weight')},
             p_time: { type: DataTypes.STRING },
             m_time: { type: DataTypes.STRING },
             use_for: { type: DataTypes.STRING },
@@ -128,7 +135,7 @@ let db_opt = {
             ticket_no: { type: DataTypes.STRING },
             seal_no: { type: DataTypes.STRING },
             trans_company_name: { type: DataTypes.STRING },
-            enter_count: { type: DataTypes.FLOAT, defaultValue: 0 },
+            enter_count: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('enter_count') },
             enter_attachment: { type: DataTypes.STRING },
             confirmed: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_proxy: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -156,11 +163,11 @@ let db_opt = {
         stuff: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
-            price: { type: DataTypes.FLOAT, defaultValue: 0 },
+            price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('price')},
             comment: { type: DataTypes.STRING },
-            next_price: { type: DataTypes.FLOAT, defaultValue: 0 },
+            next_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('next_price') },
             change_last_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
-            expect_count: { type: DataTypes.FLOAT, defaultValue: 0 },
+            expect_count: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('expect_count') },
             need_sc: { type: DataTypes.BOOLEAN, defaultValue: false },
             use_for_buy: { type: DataTypes.BOOLEAN, defaultValue: false },
             need_enter_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -177,7 +184,7 @@ let db_opt = {
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             sign_time: { type: DataTypes.STRING },
-            balance: { type: DataTypes.FLOAT, defaultValue: 0 },
+            balance: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('balance') },
             begin_time: { type: DataTypes.STRING },
             end_time: { type: DataTypes.STRING },
             number: { type: DataTypes.STRING },
@@ -194,7 +201,7 @@ let db_opt = {
             time: { type: DataTypes.STRING },
             operator: { type: DataTypes.STRING },
             comment: { type: DataTypes.STRING },
-            cash_increased: { type: DataTypes.FLOAT, defaultValue: 0 },
+            cash_increased: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('cash_increased') },
         },
         archive_plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -205,7 +212,7 @@ let db_opt = {
             time: { type: DataTypes.STRING },
             operator: { type: DataTypes.STRING },
             comment: { type: DataTypes.STRING },
-            new_price: { type: DataTypes.FLOAT, defaultValue: 0 },
+            new_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('new_price') },
         },
         sc_req: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -229,12 +236,12 @@ let db_opt = {
         },
         bidding_config: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            total: { type: DataTypes.FLOAT, defaultValue: 0 },
+            total: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('total')},
             comment: { type: DataTypes.STRING },
-            min: { type: DataTypes.FLOAT, defaultValue: 0 },
-            max: { type: DataTypes.FLOAT, defaultValue: 0 },
+            min: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('min')},
+            max: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('max')},
             total_turn: { type: DataTypes.INTEGER, defaultValue: 0 },
-            pay_first: { type: DataTypes.FLOAT, defaultValue: 0 },
+            pay_first: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('pay_first')},
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
             customer_confirm_time: { type: DataTypes.STRING },
             confirm_opt_name: { type: DataTypes.STRING },
@@ -248,7 +255,7 @@ let db_opt = {
         },
         bidding_item: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            price: { type: DataTypes.FLOAT, defaultValue: 0 },
+            price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('price')},
             time: { type: DataTypes.STRING },
             accept: { type: DataTypes.BOOLEAN, defaultValue: false },
             win: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -314,17 +321,25 @@ let db_opt = {
             creator_name: { type: DataTypes.STRING },
             is_published: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
-        drop_take_zone:{
+        drop_take_zone: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
         },
-        field_check_table:{
+        field_check_table: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
         },
-        field_check_item:{
+        field_check_item: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
+        },
+        fc_plan_table: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            finish_time: { type: DataTypes.STRING },
+        },
+        fc_check_result: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            pass_time: { type: DataTypes.STRING },
         },
     },
     make_associate: function (_sq) {
@@ -446,6 +461,17 @@ let db_opt = {
         _sq.models.field_check_table.hasMany(_sq.models.field_check_item);
         _sq.models.field_check_table.belongsTo(_sq.models.rbac_role);
         _sq.models.rbac_role.hasMany(_sq.models.field_check_table);
+
+        _sq.models.fc_plan_table.belongsTo(_sq.models.field_check_table);
+        _sq.models.field_check_table.hasMany(_sq.models.fc_plan_table);
+        _sq.models.fc_plan_table.belongsTo(_sq.models.plan);
+        _sq.models.plan.hasMany(_sq.models.fc_plan_table);
+        _sq.models.fc_plan_table.belongsTo(_sq.models.rbac_user);
+        _sq.models.rbac_user.hasMany(_sq.models.fc_plan_table);
+        _sq.models.fc_check_result.belongsTo(_sq.models.fc_plan_table);
+        _sq.models.fc_plan_table.hasMany(_sq.models.fc_check_result);
+        _sq.models.fc_check_result.belongsTo(_sq.models.field_check_item);
+        _sq.models.field_check_item.hasMany(_sq.models.fc_check_result);
     },
     install: async function () {
         console.log('run install');

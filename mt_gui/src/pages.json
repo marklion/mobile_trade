@@ -64,6 +64,12 @@
 					}
 				},
 				{
+					"path": "FcExecute",
+					"style": {
+						"enablePullDownRefresh": true
+					}
+				},
+				{
 					"path": "BiddingConfig",
 					"style": {
 						"enablePullDownRefresh": true

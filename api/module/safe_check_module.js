@@ -3,7 +3,10 @@ const sc_lib = require('../lib/sc_lib');
 const fc_lib = require('../lib/fc_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const util_lib = require('../lib/util_lib');
 const sq = db_opt.get_sq();
+const moment = require('moment');
+const { name } = require('./global_module');
 async function could_config_stuff(stuff_id, token) {
     let ret = false;
     let company = await rbac_lib.get_company_by_token(token);
@@ -13,6 +16,54 @@ async function could_config_stuff(stuff_id, token) {
     }
     return ret;
 }
+
+function fc_table_explain(has_plan = false) {
+    let ret = {
+        id: { type: Number, mean: '表ID', example: 1 },
+        name: { type: String, mean: '表名', example: '表名' },
+        field_check_items: {
+            type: Array, mean: '检查项', explain: {
+                id: { type: Number, mean: '检查项ID', example: 1 },
+                name: { type: String, mean: '检查项名', example: '检查项名' },
+            }
+        },
+        rbac_role: {
+            type: Object, mean: '绑定角色', explain: {
+                id: { type: Number, mean: '角色ID', example: 1 },
+                name: { type: String, mean: '角色名', example: '角色名' },
+            }
+        }
+    }
+    if (has_plan) {
+        ret.fc_plan_table = {
+            type: Object, mean: '计划现场检查表', explain: {
+                id: { type: Number, mean: '计划表ID', example: 1 },
+                finish_time: { type: String, mean: '完成时间', example: '2020-01-01' },
+                fc_check_results: {
+                    type: Array, mean: '检查结果', explain: {
+                        id: { type: Number, mean: '结果ID', example: 1 },
+                        pass_time: { type: String, mean: '通过时间', example: '2020-01-01' },
+                        field_check_item: {
+                            type: Object, mean: '检查项', explain: {
+                                id: { type: Number, mean: '检查项ID', example: 1 },
+                                name: { type: String, mean: '检查项名', example: '检查项名' },
+                            }
+                        },
+                    }
+                },
+                rbac_user: {
+                    type: Object, mean: '提交人', explain: {
+                        id: { type: Number, mean: '用户ID', example: 1 },
+                        name: { type: String, mean: '用户名', example: '用户名' }
+                    }
+                }
+            }
+        }
+    }
+    return ret;
+}
+
+
 module.exports = {
     name: 'sc',
     description: '安检管理',
@@ -156,22 +207,7 @@ module.exports = {
             },
             result: {
                 fc_table: {
-                    type: Array, mean: '现场检查表', explain: {
-                        id: { type: Number, mean: '表ID', example: 1 },
-                        name: { type: String, mean: '表名', example: '表名' },
-                        field_check_items: {
-                            type: Array, mean: '检查项', explain: {
-                                id: { type: Number, mean: '检查项ID', example: 1 },
-                                name: { type: String, mean: '检查项名', example: '检查项名' },
-                            }
-                        },
-                        rbac_role: {
-                            type: Object, mean: '绑定角色', explain: {
-                                id: { type: Number, mean: '角色ID', example: 1 },
-                                name: { type: String, mean: '角色名', example: '角色名' },
-                            }
-                        }
-                    }
+                    type: Array, mean: '现场检查表', explain: fc_table_explain(),
                 }
             },
             func: async function (body, token) {
@@ -219,6 +255,90 @@ module.exports = {
                     throw { err_msg: '无权限' };
                 }
                 await fc_lib.del_fc_item(body.id);
+                return { result: true };
+            }
+        },
+        get_fc_plan_table: {
+            name: '获取现场检查表',
+            description: '获取现场检查表',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
+            },
+            result: {
+                fc_plan_tables: {
+                    type: Array, mean: '计划现场检查表', explain: fc_table_explain(true),
+                },
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!await could_config_stuff(plan.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                await fc_lib.prepare_empty_fc(body.plan_id);
+                return await fc_lib.get_fc_plan_table(body.plan_id, body.pageNo);
+            }
+        },
+        set_fc_pass: {
+            name: '设置现场检查项通过',
+            description: '设置现场检查项通过',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                fc_result_id: { type: Number, have_to: true, mean: '检查结果ID', example: 1 },
+                is_pass: { type: Boolean, have_to: true, mean: '是否通过', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_result = await sq.models.fc_check_result.findByPk(body.fc_result_id);
+                let fc_item = await fc_lib.get_fc_item(fc_result.fieldCheckItemId);
+                if (!await could_config_stuff(fc_item.field_check_table.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                let fc_table = await fc_lib.get_fc_table(fc_item.field_check_table.id, true);
+                let user = await rbac_lib.get_user_by_token(token);
+                if (!await user.hasRbac_role(fc_table.rbac_role)) {
+                    throw { err_msg: '无权限' };
+                }
+                if (body.is_pass) {
+                    fc_result.pass_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                }
+                else {
+                    fc_result.pass_time = null;
+                }
+                await fc_result.save();
+
+                return { result: true };
+            },
+        },
+        commit_fc_plan: {
+            name: '提交现场检查表',
+            description: '提交现场检查表',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                fc_plan_id: { type: Number, have_to: true, mean: '计划表ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_plan_table = await sq.models.fc_plan_table.findByPk(body.fc_plan_id);
+                let plan = await fc_plan_table.getPlan({ include: [sq.models.stuff] });
+                if (!await could_config_stuff(plan.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                let fc_table = await fc_lib.get_fc_table(fc_plan_table.fieldCheckTableId, true);
+                let user = await rbac_lib.get_user_by_token(token);
+                if (!await user.hasRbac_role(fc_table.rbac_role)) {
+                    throw { err_msg: '无权限' };
+                }
+                fc_plan_table.finish_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                await fc_plan_table.save();
+                await fc_plan_table.setRbac_user(user);
                 return { result: true };
             }
         },

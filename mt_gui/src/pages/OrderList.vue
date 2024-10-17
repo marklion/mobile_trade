@@ -254,7 +254,10 @@
                 </u-cell-group>
                 <module-filter v-else require_module="sc">
                     <u-cell title="安检执行">
-                        <fui-button slot="right-icon" btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
+                        <view slot="right-icon">
+                            <fui-button btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
+                            <fui-button btnSize="mini" type="warning" text="检查" @click="nav_to_fc"></fui-button>
+                        </view>
                     </u-cell>
                 </module-filter>
                 <module-filter require_module="exam">
@@ -775,6 +778,10 @@ export default {
             else {
                 return urls.split('|').map(url => this.$convert_attach_url(url));;
             }
+        nav_to_fc: function () {
+            uni.navigateTo({
+                url: '/subPage1/FcExecute?plan_id=' + this.focus_plan.id
+            })
         },
         change_index: function (e) {
             this.gallery_index = e.index
