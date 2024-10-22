@@ -402,12 +402,12 @@ Manual Weight With Count
     ${dv}  Search Driver by Index  0
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
-    Manual Pay A Plan  ${plan}
     ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Manual Pay A Plan  ${plan}
     Manual Weight A Plan With Count  ${plan}
     ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Should Not Be Equal    ${new_balance}    ${cur_balance}
-    Check New Status And History  ${plan}  3  关闭
+    Check New Status And History  ${plan}  3  发车
 
 Manual Weight Without Count
     [Teardown]  Plan Reset
@@ -421,7 +421,7 @@ Manual Weight Without Count
     Manual Weight A Plan Without Count  ${plan}
     ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Should Be Equal    ${new_balance}    ${cur_balance}
-    Check New Status And History  ${plan}  3  关闭
+    Check New Status And History  ${plan}  2  验款
 
 
 
