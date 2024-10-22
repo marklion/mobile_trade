@@ -395,6 +395,35 @@ Disabled Action While Closed
     Order Rollback Failed  ${plan}
     Cancel Check In Failed  ${plan}
 
+Manual Weight With Count
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Manual Weight A Plan With Count  ${plan}
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Not Be Equal    ${new_balance}    ${cur_balance}
+    Check New Status And History  ${plan}  3  关闭
+
+Manual Weight Without Count
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Manual Weight A Plan Without Count  ${plan}
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal    ${new_balance}    ${cur_balance}
+    Check New Status And History  ${plan}  3  关闭
+
+
 
 *** Keywords ***
 Update Failed
@@ -486,21 +515,16 @@ Checkout Failure A Plan
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server    /customer/checkout_plan    ${token}    ${req}  ${True}
 
-Manual Weight With Count
+Manual Weight A Plan With Count
     [Arguments]  ${plan}  ${token}=${bc1_user_token}
-    ${req}  Create Dictionary  plan_id=${plan}[id]  first_weight=1000  second_weight=2000  count=1000
+    ${req}  Create Dictionary  plan_id=${plan}[id]  count=1000
     Req to Server  /scale/manual_weight  ${token}  ${req}  ${True}
     ${cur_plan}  Get Plan By Id  ${plan}[id]
-    Should Be Equal As Integers  ${cur_plan}[status]  3  # Plan should be closed
-    ${latest_node}  Get Latest History Node  ${cur_plan}
-    Should Contain  ${latest_node}[action_type]  发车
-    Should Contain  ${latest_node}[action_type]  结算
+    Should Be Equal As Integers  ${cur_plan}[status]  3 
 
-Manual Weight Without Count
+Manual Weight A Plan Without Count
     [Arguments]  ${plan}  ${token}=${bc1_user_token}
-    ${req}  Create Dictionary  plan_id=${plan}[id]  first_weight=1000  second_weight=2000
+    ${req}  Create Dictionary  plan_id=${plan}[id]   count=0
     Req to Server  /scale/manual_weight  ${token}  ${req}  ${True}
     ${cur_plan}  Get Plan By Id  ${plan}[id]
-    Should Be Equal As Integers  ${cur_plan}[status]  2  # Plan should not be closed
-    ${latest_node}  Get Latest History Node  ${cur_plan}
-    Should Contain  ${latest_node}[action_type]  发车
+    Should Be Equal As Integers  ${cur_plan}[status]  2 
