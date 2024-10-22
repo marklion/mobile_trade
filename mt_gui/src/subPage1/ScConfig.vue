@@ -32,6 +32,8 @@
                     <view class="button-container">
                         <fui-button radius="0" btnSize="mini" type="success" text="新增检查项" @click="prepare_add_item2fc_table(item)"></fui-button>
                         <fui-button radius="0" btnSize="mini" type="primary" text="设定角色" @click="prepare_set_role(item)"></fui-button>
+                        <fui-button radius="0" btnSize="mini" type="warning" text="设定模板" @click="prepare_upload_template(item)"></fui-button>
+                        <fui-button v-if="item.template_path" radius="0" btnSize="mini" type="purple" text="下载模板" @click="prepare_download_template(item.template_path)"></fui-button>
                         <fui-button radius="0" btnSize="mini" type="danger" text="删除表格" @click="prepare_del_table(item)"></fui-button>
                     </view>
                 </fui-card>
@@ -167,6 +169,8 @@ export default {
             show_fc_item_delete: false,
             show_del_table: false,
             show_role_set: false,
+            fileList: [],
+            upload_path: '',
         };
     },
     methods: {
@@ -186,6 +190,68 @@ export default {
             });
             uni.startPullDownRefresh();
             this.show_role_set = false;
+        },
+        upload_template: async function (e) {
+            if (e.index == 1) {
+                await this.$send_req('/sc/set_table_template', {
+                    table_id: this.focus_fc_table.id,
+                    template_path: this.upload_path
+                });
+                this.fileList = [];
+                uni.startPullDownRefresh();
+            }
+        },
+        prepare_download_template: async function (path) {
+            let file_path = this.$convert_attach_url(path);
+            wx.downloadFile({
+                url: file_path,
+                success: function (res) {
+                    const filePath = res.tempFilePath;
+                    // 打开文件
+                    wx.openDocument({
+                        filePath: filePath,
+                        fileType: 'docx',
+                        success: function () {
+                            console.log('文件打开成功');
+                        },
+                        fail: function (err) {
+                            console.error('文件打开失败', err);
+                        }
+                    });
+                },
+                fail: function (err) {
+                    console.error('文件下载失败', err);
+                }
+            });
+        },
+        prepare_upload_template: async function (table) {
+            let res = await wx.chooseMessageFile({
+                count: 1,
+                type: 'file',
+                extension: ['docx'],
+            });
+
+            // 获取文件路径
+            let file_path = res.tempFiles[0].path;
+            // 上传文件
+            wx.uploadFile({
+                url: this.$remote_url() + '/api/v1/upload_file',
+                filePath: file_path,
+                name: 'file', // 文件对应的 key，后端可以通过这个 key 获取文件
+                success: async (uploadRes) => {
+                    console.log('文件上传成功', uploadRes);
+                    // 处理上传成功后的逻辑
+                    await this.$send_req('/sc/set_table_template', {
+                        table_id: table.id,
+                        template_path: uploadRes.data
+                    });
+                    uni.startPullDownRefresh();
+                },
+                fail: (uploadErr) => {
+                    console.error('文件上传失败', uploadErr);
+                    // 处理上传失败后的逻辑
+                },
+            });
         },
         prepare_set_role: function (table) {
             this.show_role_set = true;

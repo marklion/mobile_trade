@@ -21,3 +21,4 @@ output.xml
 **/package-lock.json
 **/yarn.lock
 **/last-build-time.txt
+mt_gui/dist
