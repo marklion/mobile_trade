@@ -268,7 +268,7 @@
                 <u-cell-group title="装卸信息">
                     <u-cell title="计量信息">
                         <view slot="right-icon">
-                            <fui-button btnSize="mini" type="primary" text="查看" @click="show_manual_weight = true"></fui-button>
+                            <fui-button btnSize="mini" type="primary" text="查看" @click="show_manual_weight"></fui-button>
                         </view>
                     </u-cell>
                     <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
@@ -440,17 +440,7 @@
     <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
     <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
-    <fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" title="计量信息" :show="show_manual_weight" maskClosable @cancel="show_manual_weight = false">
-        <fui-form disabled>
-            <fui-input  label="一次计量信息" borderTop v-model="focus_plan.first_weight"></fui-input>
-            <fui-upload :isAdd="false" :isDel="false" borderColor="gray" width="100" height="100" :file-list="parse_weight_urls(focus_plan.first_weight_fileList)"></fui-upload>
-            <fui-input  label="二次计量信息" borderTop v-model="focus_plan.second_weight"></fui-input>
-            <fui-upload :isAdd="false" :isDel="false" borderColor="gray" width="100" height="100" :file-list="parse_weight_urls(focus_plan.second_weight_fileList)"></fui-upload>
-            <fui-input  label="装卸量" borderTop  v-model="focus_plan.count"></fui-input>
-        </fui-form>
-        <fui-button v-if="focus_plan.stuff.checkout_delay && plan_owner && focus_plan.status != 3 && Number(focus_plan.count) > 0" btnSize="medium" type="success" text="结算"  @click="confirm_manual_weight"></fui-button>
-        <fui-button v-else btnSize="medium" text="关闭"  @click="show_manual_weight = false"></fui-button>
-    </fui-modal>
+    <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
 </view>
 </template>
 
@@ -462,6 +452,7 @@ import $fui from '@/components/firstui/fui-clipboard';
 import ScUpload from '../components/ScUpload.vue';
 import pickRegions from '@/components/pick-regions/pick-regions.vue'
 import moment from 'moment';
+import Measurement from '../components/Measurement.vue';
 export default {
     name: 'OrderList',
     components: {
@@ -469,11 +460,11 @@ export default {
         "module-filter": ModuleFilterVue,
         "sc-upload": ScUpload,
         "pick-regions": pickRegions,
+        "measurement": Measurement,
     },
     data: function () {
         return {
             show_blackList_confirm: false,
-            show_manual_weight: false,
             focus_blackList: {
                 type: '',
                 id: 0,
@@ -1546,14 +1537,13 @@ export default {
             }
             this.show_blackList_confirm = false;
         },
-        confirm_manual_weight: async function () {
-            await this.$send_req(this.cur_confirm_url, {
-                plan_id: this.focus_plan.id
-            });
-            this.refresh_plans();
-            this.show_manual_weight = false;
-            this.show_plan_detail = false;
+        show_manual_weight: function () {
+            this.$refs.measurement.show();
         },
+        measurement_refresh: function () {
+            this.refresh_plans();
+            this.show_plan_detail = false;
+        }
     },
     onPullDownRefresh() {
         this.refresh_plans();

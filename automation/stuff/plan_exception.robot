@@ -485,3 +485,22 @@ Checkout Failure A Plan
     [Arguments]  ${plan}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server    /customer/checkout_plan    ${token}    ${req}  ${True}
+
+Manual Weight With Count
+    [Arguments]  ${plan}  ${token}=${bc1_user_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  first_weight=1000  second_weight=2000  count=1000
+    Req to Server  /scale/manual_weight  ${token}  ${req}  ${True}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  3  # Plan should be closed
+    ${latest_node}  Get Latest History Node  ${cur_plan}
+    Should Contain  ${latest_node}[action_type]  发车
+    Should Contain  ${latest_node}[action_type]  结算
+
+Manual Weight Without Count
+    [Arguments]  ${plan}  ${token}=${bc1_user_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  first_weight=1000  second_weight=2000
+    Req to Server  /scale/manual_weight  ${token}  ${req}  ${True}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  2  # Plan should not be closed
+    ${latest_node}  Get Latest History Node  ${cur_plan}
+    Should Contain  ${latest_node}[action_type]  发车

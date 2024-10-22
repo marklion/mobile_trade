@@ -751,7 +751,9 @@ module.exports = {
     },
     manual_deliver_plan: async function (_plan, _token) {
         await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name);
-        await this.close_a_plan(_plan, _token);
+        if (!_plan.checkout_delay) {
+            await this.close_a_plan(_plan, _token);
+        }
     },
     checkout_plan: async function (_plan_id, token) {
         await this.action_in_plan(_plan_id, token, 2, async (plan) => {
@@ -996,21 +998,16 @@ module.exports = {
             let tmp = await company.getStuff();
             for (let index = 0; index < tmp.length; index++) {
                 const element = tmp[index];
-                stuff_array.push(element);
+                stuff_array.push(element.id);
             }
         }
         let cond = {
             [db_opt.Op.and]: [
-                {
-                    [db_opt.Op.or]: [
-                        { register_time: { [db_opt.Op.ne]: null } },
-                        { stuffId: { [db_opt.Op.in]: stuff_array.filter(ele => ele.manual_weight == true).map(ele => ele.id) } }
-                    ]
-                },
+                { register_time: { [db_opt.Op.ne]: null } },
                 { status: { [db_opt.Op.ne]: 3 } },
                 {
                     stuffId: {
-                        [db_opt.Op.in]: stuff_array.map(ele => ele.id)
+                        [db_opt.Op.in]: stuff_array
                     }
                 }
             ],

@@ -282,7 +282,7 @@ module.exports = {
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
                 first_weight: { type: String, have_to: false, mean: '第一次计量', example: '-30度 40MPa' },
                 second_weight: { type: String, have_to: false, mean: '第二次计量', example: '-30度 40MPa' },
-                load_weight: { type: Number, have_to: false, mean: '装载重量', example: 1 },
+                count: { type: Number, have_to: false, mean: '装载重量', example: 1 },
                 first_weight_fileList: { type: String, have_to: false, mean: '第一次计量图片列表', example: 'upload/1.jpg|upload/2.jpg' },
                 second_weight_fileList: { type: String, have_to: false, mean: '第二次计量图片列表', example: 'upload/1.jpg|upload/2.jpg' },
             },
@@ -293,11 +293,11 @@ module.exports = {
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
                     plan.first_weight = body.first_weight;
                     plan.second_weight = body.second_weight;
-                    plan.count = body.load_weight;
+                    plan.count = body.count;
                     plan.first_weight_fileList = body.first_weight_fileList;
                     plan.second_weight_fileList = body.second_weight_fileList;
                     await plan.save();
-                    if(plan.count > 0 && !plan.checkout_delay){
+                    if(plan.count > 0){
                         await plan_lib.manual_deliver_plan(plan, token);
                     }
                 });
