@@ -1,6 +1,6 @@
 <!-- MeasurementComponent.vue -->
 <template>
-<fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" :show="show_manual_weight" @cancel="show_manual_weight = false;reset()">
+<fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" :show="show_manual_weight">
     <fui-form ref="form">
         <fui-form-item label="一次计量">
             <fui-input v-model="form_data.first_weight" placeholder="请输入一次计量">
@@ -25,8 +25,9 @@
         </fui-form-item>
     </fui-form>
     <view style="display: flex; justify-content: space-between;">
-        <fui-button btnSize="small" text="关闭" @click="show_manual_weight = false"></fui-button>
-        <fui-button v-if="form_data.stuff.checkout_delay && form_data.status != 3 && plan_owner && Number(form_data.count) > 0" btnSize="small" type="success" text="结算" @click="confirm_manual_weight"></fui-button>
+        <fui-button btnSize="small" text="取消" @click="hide"></fui-button>
+        <fui-button v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && focus_plan.count > 0 && plan_owner" btnSize="small" type="success" text="结算" @click="confirm_manual_weight"></fui-button>
+        <fui-button v-else btnSize="small" type="success" text="提交" @click="confirm_manual_weight"></fui-button>
     </view>
            
     
@@ -37,7 +38,7 @@
 export default {
     name: 'Measurement',
     props: {
-        focus_plan: Object
+         focus_plan: Object
     },
     data() {
         return {
@@ -51,6 +52,9 @@ export default {
                 count: '',
                 first_weight_fileList: '',
                 second_weight_fileList: '',
+                stuff:{
+                    checkout_delay: false,
+                }
             }
         };
     },
@@ -96,6 +100,7 @@ export default {
         },
         hide: function () {
             this.show_manual_weight = false;
+            this.reset();
         },
         reset: function () {
             this.first_weight_file_len = 0;
@@ -107,6 +112,7 @@ export default {
                 first_weight_fileList: '',
                 second_weight_fileList: '',
             };
+            this.$emit('refresh');
         },
         confirm_manual_weight: async function () {
             this.$refs.form.validator(this.form_data, []).then(async res => {
@@ -116,8 +122,8 @@ export default {
                         first_weight: this.form_data.first_weight,
                         second_weight: this.form_data.second_weight,
                         count: Number(this.form_data.count) || 0,
-                        first_weight_fileList: [this.form_data.first_weight_fileList].join('|'),
-                        second_weight_fileList: [this.form_data.second_weight_fileList].join('|'),
+                        first_weight_fileList: this.$refs.first_weight_upload.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|'),
+                        second_weight_fileList: this.$refs.second_weight_upload.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|'),
                     });
                     if (ret.result) {
                         uni.showToast({
@@ -127,7 +133,6 @@ export default {
                         });
                         this.show_manual_weight = false;
                         this.reset();
-                        this.$emit('refresh');
                     } else {
                         uni.showToast({
                             title: '提交失败',
@@ -163,7 +168,6 @@ export default {
             })
         },
         upload_first_weight: async function () {
-            console.log(this.$refs.first_weight_upload.urls.length)
             if (this.$refs.first_weight_upload.urls.length==0) {
                 uni.showToast({
                     title: '请选择一次计量图片',
@@ -192,10 +196,6 @@ export default {
                     icon: 'none',
                     duration: 2000
                 });
-                this.form_data.first_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|');
-            }
-            if (e.action == 'delete') {
-                this.form_data.first_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|');
             }
         },
         after_second_weight_action: function (e) {
@@ -205,10 +205,6 @@ export default {
                     icon: 'none',
                     duration: 2000
                 });
-                this.form_data.second_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|');
-            }
-            if (e.action == 'delete') {
-                this.form_data.second_weight_fileList = e.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|');
             }
         },
         reupload_first_weight: function (e) {
