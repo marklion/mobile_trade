@@ -26,8 +26,7 @@
     </fui-form>
     <view style="display: flex; justify-content: space-between;">
         <fui-button btnSize="small" text="取消" @click="hide"></fui-button>
-        <fui-button v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && focus_plan.count > 0 && plan_owner" btnSize="small" type="success" text="结算" @click="confirm_manual_weight"></fui-button>
-        <fui-button v-else btnSize="small" type="success" text="提交" @click="confirm_manual_weight"></fui-button>
+        <fui-button v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && plan_owner" btnSize="small" type="success" :text="focus_plan.count > 0 ? '结算' : '提交'" @click="confirm_manual_weight"></fui-button>
     </view>
            
     
