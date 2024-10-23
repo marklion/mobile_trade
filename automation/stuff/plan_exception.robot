@@ -407,7 +407,7 @@ Manual Weight With Count
     Manual Weight A Plan With Count  ${plan}
     ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Should Not Be Equal    ${new_balance}    ${cur_balance}
-    Check New Status And History  ${plan}  3  发车
+    Check New Status And History  ${plan}  3  结算
 
 Manual Weight Without Count
     [Teardown]  Plan Reset
@@ -516,15 +516,15 @@ Checkout Failure A Plan
     Req to Server    /customer/checkout_plan    ${token}    ${req}  ${True}
 
 Manual Weight A Plan With Count
-    [Arguments]  ${plan}  ${token}=${bc1_user_token}
-    ${req}  Create Dictionary  plan_id=${plan}[id]  count=1000
-    Req to Server  /scale/manual_weight  ${token}  ${req}  ${True}
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  count=${1000}
+    Req to Server  /scale/manual_weight  ${token}  ${req}
     ${cur_plan}  Get Plan By Id  ${plan}[id]
     Should Be Equal As Integers  ${cur_plan}[status]  3 
 
 Manual Weight A Plan Without Count
-    [Arguments]  ${plan}  ${token}=${bc1_user_token}
-    ${req}  Create Dictionary  plan_id=${plan}[id]   count=0
-    Req to Server  /scale/manual_weight  ${token}  ${req}  ${True}
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]   count=${0}
+    Req to Server  /scale/manual_weight  ${token}  ${req}
     ${cur_plan}  Get Plan By Id  ${plan}[id]
     Should Be Equal As Integers  ${cur_plan}[status]  2 
