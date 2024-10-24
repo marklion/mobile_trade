@@ -82,6 +82,7 @@ module.exports = {
                                 name: { type: String, mean: '名称', example: 'A区' }
                             }
                         },
+                        manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
                     }
                 },
             },
@@ -202,6 +203,22 @@ module.exports = {
                 return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token);
             },
         },
+        manual_weight_config: {
+            name: '配置货物是否需要手动计量',
+            description: '配置货物是否需要手动计量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                manual_weight: { type: Boolean, have_to: true, mean: '是否需要手动计量', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'manual_weight', body.manual_weight, token);
+            },
+        },  
         change_price: {
             name: '调价',
             description: '调价',

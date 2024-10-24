@@ -66,7 +66,7 @@
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
                         <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
-                        <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
+                        <fui-tag v-if="item.count && item.count != 0" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
                     </view>
                     <template slot="label">
                         <view>
@@ -147,7 +147,7 @@
                         <u-cell title="余额" :label="user_authorize">
                             <view slot="value">
                                 <module-filter require_module="cash">
-                                    {{cur_contract.balance.toFixed(2)}}
+                                    {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}
                                 </module-filter>
                             </view>
                             <view slot="right-icon">
@@ -171,7 +171,7 @@
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
                             </module-filter>
                             <module-filter require_module="scale">
-                                <fui-button v-if="(focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)" btnSize="mini" type="success" text="发车" @click="show_scale_input = true"></fui-button>
+                                <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
                             </module-filter>
                         </view>
                         <view slot="label">
@@ -266,8 +266,13 @@
             </view>
             <view class="group_sep">
                 <u-cell-group title="装卸信息">
+                    <u-cell title="计量信息">
+                        <view slot="right-icon">
+                            <fui-button v-if="focus_plan.stuff.manual_weight" btnSize="mini" type="primary" text="查看" @click="show_manual_weight"></fui-button>
+                        </view>
+                    </u-cell>
                     <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
-                    <u-cell title="装车量" :value="focus_plan.count"></u-cell>
+                    <u-cell title="装卸量" :value="focus_plan.count"></u-cell>
                     <u-cell v-if="focus_plan.p_time" title="皮重" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
                     <u-cell v-if="focus_plan.m_time" title="毛重" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
                 </u-cell-group>
@@ -435,6 +440,7 @@
     <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
     <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
+    <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
 </view>
 </template>
 
@@ -446,6 +452,7 @@ import $fui from '@/components/firstui/fui-clipboard';
 import ScUpload from '../components/ScUpload.vue';
 import pickRegions from '@/components/pick-regions/pick-regions.vue'
 import moment from 'moment';
+import Measurement from '../components/Measurement.vue';
 export default {
     name: 'OrderList',
     components: {
@@ -453,6 +460,7 @@ export default {
         "module-filter": ModuleFilterVue,
         "sc-upload": ScUpload,
         "pick-regions": pickRegions,
+        "measurement": Measurement,
     },
     data: function () {
         return {
@@ -752,8 +760,16 @@ export default {
 
             return ret;
         },
+
     },
     methods: {
+        parse_weight_urls: function (urls) {
+            if (!urls)
+                return [];
+            else {
+                return urls.split('|').map(url => this.$convert_attach_url(url));;
+            }
+        },
         nav_to_fc: function () {
             uni.navigateTo({
                 url: '/subPage1/FcExecute?plan_id=' + this.focus_plan.id
@@ -1520,6 +1536,13 @@ export default {
                 });
             }
             this.show_blackList_confirm = false;
+        },
+        show_manual_weight: function () {
+            this.$refs.measurement.show();
+        },
+        measurement_refresh: function () {
+            this.refresh_plans();
+            this.show_plan_detail = false;
         }
     },
     onPullDownRefresh() {

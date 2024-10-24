@@ -26,6 +26,7 @@
                         <view v-else>
                             <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
                             <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
+                            <fui-button btnSize="mini" v-if="item.stuff.manual_weight" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
                         </view>
                     </view>
                 </u-cell>
@@ -63,6 +64,7 @@
             </fui-list-cell>
         </fui-list>
     </fui-bottom-popup>
+    <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
 </view>
 </template>
 
@@ -70,11 +72,13 @@
 import ListShow from '@/components/ListShow.vue';
 import $fui from '@/components/firstui/fui-clipboard';
 import DevOpt from './DevOpt.vue';
+import Measurement from '@/components/Measurement.vue';
 export default {
     name: 'Field',
     components: {
         "list-show": ListShow,
-        "dev-opt": DevOpt
+        "dev-opt": DevOpt,
+        "measurement": Measurement
     },
     data: function () {
         return {
@@ -95,6 +99,7 @@ export default {
             zones: [],
             zone_name: '',
             show_zone_select: false,
+            focus_plan:{},
         };
     },
     methods: {
@@ -109,6 +114,9 @@ export default {
                 uni.hideLoading()
             }, 2000);
 
+        },
+        measurement_refresh: function () {
+            this.$refs.plans.refresh();
         },
         delete_stamp_pic: async function () {
             await this.$send_req('/scale/set_stamp_pic', {
@@ -126,8 +134,11 @@ export default {
             await this.set_stamp_pic()
         },
         meet_upload_error: async function (e) {
-            console.log('meet_upload_error');
-            console.log(e);
+            uni.showToast({
+                title: '上传失败',
+                icon: 'none',
+                duration: 2000
+            });
         },
         init_stamp_pic: async function () {
             let ret = await this.$send_req('/scale/get_stamp_pic');
@@ -159,6 +170,11 @@ export default {
             this.focus_plan_id = item.id;
             this.show_enter_vehicle = true;
             this.is_exit_confirm = is_exit;
+        },
+        prepare_manual_weight: function (item) {
+            this.focus_plan_id = item.id;
+            this.focus_plan = item;
+            this.$refs.measurement.show();
         },
         enter_vehicle: async function (e) {
             if (e.index == 1) {
@@ -225,7 +241,7 @@ export default {
                 plan_id: item.id
             });
             uni.startPullDownRefresh();
-        }
+        },
     },
     onPullDownRefresh: function () {
         if (this.$refs.plans) {

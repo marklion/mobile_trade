@@ -749,6 +749,12 @@ module.exports = {
             }
         });
     },
+    manual_deliver_plan: async function (_plan, _token) {
+        await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name);
+        if (!_plan.checkout_delay) {
+            await this.close_a_plan(_plan, _token);
+        }
+    },
     checkout_plan: async function (_plan_id, token) {
         await this.action_in_plan(_plan_id, token, 2, async (plan) => {
             if (plan.checkout_delay && plan.status == 2 && plan.count != 0) {
@@ -1001,7 +1007,7 @@ module.exports = {
                 { status: { [db_opt.Op.ne]: 3 } },
                 {
                     stuffId: {
-                        [db_opt.Op.or]: stuff_array
+                        [db_opt.Op.in]: stuff_array
                     }
                 }
             ],
@@ -1018,7 +1024,9 @@ module.exports = {
         });
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
-            element.p_weight = await hook_plan('get_p_weight', element);
+            if(!element.stuff.manual_weight){
+                element.p_weight = await hook_plan('get_p_weight', element);
+            }
         }
         return { rows: plans, count: count };
     },

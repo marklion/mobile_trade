@@ -395,6 +395,35 @@ Disabled Action While Closed
     Order Rollback Failed  ${plan}
     Cancel Check In Failed  ${plan}
 
+Manual Weight With Count
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Manual Pay A Plan  ${plan}
+    Manual Weight A Plan With Count  ${plan}
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Not Be Equal    ${new_balance}    ${cur_balance}
+    Check New Status And History  ${plan}  3  结算
+
+Manual Weight Without Count
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Manual Weight A Plan Without Count  ${plan}
+    ${new_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal    ${new_balance}    ${cur_balance}
+    Check New Status And History  ${plan}  2  验款
+
+
 
 *** Keywords ***
 Update Failed
@@ -485,3 +514,17 @@ Checkout Failure A Plan
     [Arguments]  ${plan}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server    /customer/checkout_plan    ${token}    ${req}  ${True}
+
+Manual Weight A Plan With Count
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  count=${1000}
+    Req to Server  /scale/manual_weight  ${token}  ${req}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  3 
+
+Manual Weight A Plan Without Count
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan}[id]   count=${0}
+    Req to Server  /scale/manual_weight  ${token}  ${req}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  2 
