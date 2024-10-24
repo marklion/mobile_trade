@@ -6,7 +6,8 @@ const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const sq = db_opt.get_sq();
 const moment = require('moment');
-const { name } = require('./global_module');
+const plan_lib = require('../lib/plan_lib');
+const common = require('./common');
 async function could_config_stuff(stuff_id, token) {
     let ret = false;
     let company = await rbac_lib.get_company_by_token(token);
@@ -21,6 +22,7 @@ function fc_table_explain(has_plan = false) {
     let ret = {
         id: { type: Number, mean: '表ID', example: 1 },
         name: { type: String, mean: '表名', example: '表名' },
+        template_path: { type: String, mean: '模板', example: '模板' },
         field_check_items: {
             type: Array, mean: '检查项', explain: {
                 id: { type: Number, mean: '检查项ID', example: 1 },
@@ -217,6 +219,27 @@ module.exports = {
                 return await fc_lib.get_all_fc_table(body.stuff_id, body.pageNo);
             }
         },
+        set_table_template: {
+            name: '设置现场检查表模板',
+            description: '设置现场检查表模板',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                table_id: { type: Number, have_to: true, mean: '表ID', example: 1 },
+                template_path: { type: String, have_to: true, mean: '模板', example: '模板' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_table = await fc_lib.get_fc_table(body.table_id, true);
+                if (!await could_config_stuff(fc_table.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                await fc_lib.upload_fc_table_template(body.table_id, body.template_path);
+                return { result: true };
+            },
+        },
         add_item2fc_table: {
             name: '添加现场检查表项',
             description: '添加现场检查表项',
@@ -341,6 +364,29 @@ module.exports = {
                 await fc_plan_table.setRbac_user(user);
                 return { result: true };
             }
+        },
+        export_fc_table: {
+            name: '导出现场检查表',
+            description: '导出现场检查表',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let plans = [];
+                let tmp_plans = await plan_lib.filter_plan4manager(body, token);
+                plans = plans.concat(tmp_plans);
+                tmp_plans = await plan_lib.filter_plan4manager(body, token, true);
+                plans = plans.concat(tmp_plans);
+                await common.do_export_later(token, '现场检查表', async () => {
+                    return await fc_lib.export_fc(plans);
+                });
+            },
         },
     }
 }
