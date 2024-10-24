@@ -1,7 +1,7 @@
 <!-- MeasurementComponent.vue -->
 <template>
 <fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" :show="show_manual_weight">
-    <fui-form ref="form">
+    <fui-form ref="form" :disabled="plan_owner">
         <fui-form-item label="一次计量">
             <fui-input v-model="form_data.first_weight" placeholder="请输入一次计量">
                 <fui-button type="primary" btnSize="mini" @click="upload_first_weight">上传</fui-button>
@@ -26,7 +26,8 @@
     </fui-form>
     <view style="display: flex; justify-content: space-between;">
         <fui-button btnSize="small" text="取消" @click="hide"></fui-button>
-        <fui-button v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && plan_owner" btnSize="small" type="success" :text="focus_plan.count > 0 ? '结算' : '提交'" @click="confirm_manual_weight"></fui-button>
+        <fui-button  v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && plan_owner && focus_plan.count > 0" btnSize="small" type="success" text="结算" @click="confirm_manual_weight"></fui-button>
+        <fui-button  v-if="!focus_plan.is_buy && !plan_owner" btnSize="small" type="success" text="提交" @click="confirm_manual_weight"></fui-button>
     </view>
            
     

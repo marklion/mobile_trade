@@ -26,7 +26,7 @@
                         <view v-else>
                             <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
                             <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
-                            <fui-button btnSize="mini" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
+                            <fui-button btnSize="mini" v-if="item.stuff.manual_weight" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
                         </view>
                     </view>
                 </u-cell>
