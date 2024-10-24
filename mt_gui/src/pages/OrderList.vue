@@ -66,7 +66,7 @@
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
                         <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
-                        <fui-tag v-if="item.m_time" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
+                        <fui-tag v-if="item.count && item.count != 0" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
                     </view>
                     <template slot="label">
                         <view>
@@ -147,7 +147,7 @@
                         <u-cell title="余额" :label="user_authorize">
                             <view slot="value">
                                 <module-filter require_module="cash">
-                                    {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}   
+                                    {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}
                                 </module-filter>
                             </view>
                             <view slot="right-icon">
@@ -268,7 +268,7 @@
                 <u-cell-group title="装卸信息">
                     <u-cell title="计量信息">
                         <view slot="right-icon">
-                            <fui-button btnSize="mini" type="primary" text="查看" @click="show_manual_weight"></fui-button>
+                            <fui-button v-if="focus_plan.stuff.manual_weight" btnSize="mini" type="primary" text="查看" @click="show_manual_weight"></fui-button>
                         </view>
                     </u-cell>
                     <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
@@ -760,7 +760,7 @@ export default {
 
             return ret;
         },
-        
+
     },
     methods: {
         parse_weight_urls: function (urls) {
