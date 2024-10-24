@@ -81,7 +81,18 @@ export const asyncRoutes = [
         name: 'order_bought',
         component: () => import('@/views/order/OrderBought'), // Parent router-view
         meta: { title: '采购接单', roles: ['buy_management'] },
-      }
+      },
+      {
+        path: 'order_buy',
+        name: 'order_buy',
+        component: () => import('@/views/order/OrderBuy'), // Parent router-view
+        meta: { title: '采购下单', roles: ['customer'] },
+      }, {
+        path: 'order_sale',
+        name: 'order_sale',
+        component: () => import('@/views/order/OrderSale'), // Parent router-view
+        meta: { title: '销售下单', roles: ['supplier'] },
+      },
     ]
   },
 
