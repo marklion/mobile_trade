@@ -228,7 +228,7 @@ export default {
             let res = await wx.chooseMessageFile({
                 count: 1,
                 type: 'file',
-                extension: ['docx'],
+                extension: ['docx','doc'],
             });
 
             // 获取文件路径
