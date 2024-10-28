@@ -10,6 +10,7 @@
 </template>
 
 <script>
+import PinyinMatch from 'pinyin-match';
 export default {
     name: 'PageContent',
     data: function () {
@@ -32,7 +33,8 @@ export default {
         },
         body_key: String,
         enable: Boolean,
-        search_func: Function,
+        search_input: String,
+        search_key: Array,
     },
     methods: {
         cancel_search: function () {
@@ -54,7 +56,15 @@ export default {
                 fetch_ret = [];
                 fetch_ret = await this.search_fetch();
                 fetch_ret.forEach((record) => {
-                    if (this.search_func(record)) {
+                    if (this.search_input.length > 0) {
+                        let search_key_string = '';
+                        this.search_key.forEach(key => {
+                            search_key_string += this.$getNestedProperty(record, key);
+                        });
+                        if (PinyinMatch.match(search_key_string, this.search_input)) {
+                            new_records.push(record);
+                        }
+                    } else {
                         new_records.push(record);
                     }
                 });

@@ -8,7 +8,8 @@ const getDefaultState = () => {
     name: '',
     avatar: '',
     roles: [],
-    company_name: ''
+    company_name: '',
+    id:0,
   }
 }
 
@@ -32,7 +33,10 @@ const mutations = {
   },
   SET_COMPANY_NAME: (state, company_name) => {
     state.company_name = company_name
-  }
+  },
+  SET_ID: (state, id) => {
+    state.id = id
+  },
 }
 
 const actions = {
@@ -66,6 +70,7 @@ const actions = {
         commit('SET_NAME', data.name)
         commit('SET_COMPANY_NAME', data.company)
         commit('SET_AVATAR', 'https://picsum.photos/200.jpg')
+        commit('SET_ID', data.id)
         resolve(roles)
       }).catch(error => {
         reject(error)

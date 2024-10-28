@@ -24,6 +24,8 @@
             <el-tab-pane label="已关闭" name="3"></el-tab-pane>
         </el-tabs>
         <div style="display:flex;">
+            <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id" @refresh="refresh_order"></select-search>
+            <select-search body_key="stuff" first_item="所有物料" get_url="/stuff/get_all" item_label="name" item_value="id" :permission_array="['stuff']" v-model="stuff_id" @refresh="refresh_order"></select-search>
             <el-input placeholder="输入车号过滤" v-model="filter_string">
                 <div slot="suffix">
                     <el-button type="primary" size="small" @click="do_search">搜索</el-button>
@@ -34,7 +36,7 @@
             </el-date-picker>
         </div>
     </div>
-    <page-content ref="order" body_key="plans" :search_func="search_func" :req_body="filter" :req_url="req_url" :enable="filter_ready">
+    <page-content ref="order" body_key="plans" :search_input="filter_string" :search_key="['main_vehicle.plate', 'behind_vehicle.plate']" :req_body="filter" :req_url="req_url" :enable="filter_ready">
         <template v-slot:default="slotProps">
             <div style="height: 85vh">
                 <el-table :data="slotProps.content" style="width: 100%" stripe height="100%">
@@ -73,20 +75,40 @@
             </div>
         </template>
     </page-content>
+    <el-drawer destroy-on-close title="计划详情" :visible.sync="show_plan_detail" direction="rtl" size="70%">
+        <order-detail :motived="motived" :plan="focus_plan" @refresh="show_plan_detail= false; refresh_order()"></order-detail>
+    </el-drawer>
 </div>
 </template>
 
 <script>
 import page_content from './PageContent.vue';
 import moment from 'moment';
-import PinyinMatch from 'pinyin-match';
+import SelectSearch from './SelectSearch.vue';
+import OrderDetail from './OrderDetail.vue';
 export default {
     name: 'OrderShowTable',
     components: {
         'page-content': page_content,
+        'select-search': SelectSearch,
+        'order-detail': OrderDetail,
+    },
+    computed: {
+        contract_get_url: function () {
+            if (this.is_buy) {
+                return '/buy_management/contract_get';
+            } else {
+                return '/sale_management/contract_get';
+            }
+        }
     },
     data: function () {
         return {
+            show_plan_detail: false,
+            focus_plan: {},
+            stuff_id: 0,
+            company_id: 0,
+            company_search_input: '',
             status_string: function (status) {
                 let status_array = ['未确认', '未付款', '未发车', '已关闭'];
                 let index = status;
@@ -144,7 +166,8 @@ export default {
     },
     methods: {
         expend: function (plan) {
-            console.log(plan);
+            this.focus_plan = plan;
+            this.show_plan_detail = true;
         },
         cancel_search: function () {
             this.filter_string = '';
@@ -152,13 +175,6 @@ export default {
         },
         do_search: function () {
             this.$refs.order.do_search();
-        },
-        search_func: function (item) {
-            if (this.filter_string) {
-                return PinyinMatch.match(item.main_vehicle.plate, this.filter_string) || PinyinMatch.match(item.behind_vehicle.plate, this.filter_string);
-            } else {
-                return true;
-            }
         },
         refresh_order_count: async function () {
             this.count_by_status.need_confirm = (await this.$send_req(this.req_url, {
@@ -191,6 +207,16 @@ export default {
                 this.filter.status = parseInt(this.status);
             } else {
                 this.filter.status = undefined;
+            }
+            if (this.stuff_id != 0) {
+                this.filter.stuff_id = this.stuff_id;
+            } else {
+                this.filter.stuff_id = undefined;
+            }
+            if (this.company_id != 0) {
+                this.filter.company_id = this.company_id;
+            } else {
+                this.filter.company_id = undefined;
             }
             this.filter.start_time = moment(this.date_range[0]).format('YYYY-MM-DD');
             this.filter.end_time = moment(this.date_range[1]).format('YYYY-MM-DD');
