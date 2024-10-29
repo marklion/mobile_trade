@@ -130,7 +130,9 @@ module.exports = {
         if (fc_plan_table.fc_plan_table) {
             for (let index = 0; index < fc_plan_table.fc_plan_table.fc_check_results.length; index++) {
                 const element = fc_plan_table.fc_plan_table.fc_check_results[index];
-                ret[element.field_check_item.name] = element.pass_time ? '通过' : '未通过';
+                if (element && element.field_check_item) {
+                    ret[element.field_check_item.name] = element.pass_time ? '通过' : '未通过';
+                }
             }
             if (fc_plan_table.fc_plan_table.finish_time) {
                 ret.checker = fc_plan_table.fc_plan_table.rbac_user.name;
@@ -198,7 +200,7 @@ module.exports = {
                 if (fc_result_table) {
                     let template_path = fc_plan_table.template_path;
                     if (template_path) {
-                        let tmp_doc = await this.make_file_by_fc_result(fc_result_table, template_path);
+                        let tmp_doc = await this.make_file_by_fc_result(fc_result_table,'/database' +  template_path);
                         filePaths.push(tmp_doc);
                     }
                 }
