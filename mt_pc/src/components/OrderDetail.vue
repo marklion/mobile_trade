@@ -92,7 +92,7 @@
                                     {{item.sc_content.input}}
                                 </div>
                                 <div v-if="item.sc_content.attachment">
-                                    <el-image style="width: 180px; height: 180px" :src="item.sc_content.attachment" fit="fill" :preview-src-list="reorder_pics(item.id)"></el-image>
+                                    <el-image style="width: 180px; height: 180px" :src="$make_file_url( item.sc_content.attachment)" fit="fill" :preview-src-list="reorder_pics(item.id)"></el-image>
                                 </div>
                                 <div>
                                     到期时间：{{item.sc_content.expired_time}}
@@ -254,7 +254,9 @@ export default {
                     break;
                 }
             }
-            ret = before_array.concat(after_array).map(ele => ele.sc_content.attachment);
+            ret = before_array.concat(after_array).map(ele => {
+                return this.$make_file_url(ele.sc_content.attachment)
+            });
             return ret;
         },
         add_black_list: async function (type, id) {
@@ -400,18 +402,18 @@ export default {
             this.$emit('refresh');
         },
         preview_company_attach: function () {
-            this.show_pics = true;
             this.pics = [];
             if (this.plan.company.attachment) {
-                this.pics.push(this.plan.company.attachment);
+                this.pics.push(this.$make_file_url(this.plan.company.attachment));
             } else {
-                this.pics.push('/static/no_att.jpg')
+                this.pics.push(this.$make_file_url('/static/no_att.jpg'))
             }
             if (this.plan.stuff.company.attachment) {
-                this.pics.push(this.plan.stuff.company.attachment);
+                this.pics.push(this.$make_file_url(this.plan.stuff.company.attachment));
             } else {
-                this.pics.push('/static/no_att.jpg')
+                this.pics.push(this.$make_file_url('/static/no_att.jpg'))
             }
+            this.show_pics = true;
         },
         init_contract: async function () {
             if ((this.$hasPermission('sale_management') || this.$hasPermission('buy_management')) && this.plan.company.id) {

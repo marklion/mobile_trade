@@ -40,6 +40,13 @@ Vue.prototype.$getNestedProperty = function (obj, path) {
   }
   return result;
 }
+Vue.prototype.$make_file_url = function (url) {
+  let ret = 'https://www.d8sis.cn/mt_api/api/v1/upload_file';
+  if (url) {
+    ret = 'https://www.d8sis.cn/mt_api' + url;
+  }
+  return ret;
+}
 Vue.directive('permission', permission)
 
 new Vue({
