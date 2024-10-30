@@ -63,7 +63,7 @@
     <view v-if="cur_page == 1">
         <list-show ref="dr" :fetch_function="get_export_record" height="90vh" v-model="records">
             <view v-for="item in records" :key="item.id">
-                <u-cell :title="item.name" :label="item.create_time" :value="status_string(item.url)" :isLink="item.url != undefined" @click="download_file(item.url,item.name)"></u-cell>
+                <u-cell :title="item.name" :label="item.create_time" :value="status_string(item.url)" :isLink="item.url != undefined" @click="download_file(item.url)"></u-cell>
             </view>
         </list-show>
     </view>
@@ -123,65 +123,17 @@ export default {
         };
     },
     methods: {
-        download_file: function (url, name) {
-            if (name == '磅单导出') {
-                this.download_zip_file(url);
-            } else if (name == '安检登记表导出') {
-                this.download_zip_file(url);
-            } else {
-                uni.downloadFile({
-                    url: this.$convert_attach_url(url),
-                    success: function (res) {
-                        var filePath = res.tempFilePath;
-                        uni.openDocument({
-                            filePath: filePath,
-                            showMenu: true,
-                        });
-                    }
-                });
-
-            }
-        },
-        download_zip_file: function (url) {
-            try {
-                uni.downloadFile({
-                    url: this.$convert_attach_url(url),
-                    success: (res) => {
-                        if (res.statusCode === 200) {
-                            uni.saveFile({
-                                tempFilePath: res.tempFilePath,
-                                success: (res) => {
-                                    uni.showToast({
-                                        title: '下载成功',
-                                        icon: 'success',
-                                        duration: 2000
-                                    });
-                                },
-                                fail: () => {
-                                    uni.showToast({
-                                        title: '下载失败',
-                                        icon: 'none',
-                                        duration: 2000
-                                    });
-                                }
-                            });
-                        }
-                    },
-                    fail: () => {
-                        uni.showToast({
-                            title: '下载失败',
-                            icon: 'none',
-                            duration: 2000
-                        });
-                    }
-                });
-            } catch (error) {
-                uni.showToast({
-                    title: '下载失败',
-                    icon: 'none',
-                    duration: 2000
-                });
-            }
+        download_file: function (url) {
+            uni.downloadFile({
+                url: this.$convert_attach_url(url),
+                success: function (res) {
+                    var filePath = res.tempFilePath;
+                    uni.openDocument({
+                        filePath: filePath,
+                        showMenu: true,
+                    });
+                }
+            });
         },
         get_export_record: async function (pageNo) {
             let res = await this.$send_req('/global/get_export_record', {
