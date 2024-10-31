@@ -10,6 +10,6 @@ $(DELIVER_PATH):
 	cp $(SRC_DIR)/*.so $(DELIVER_PATH)/
 	cp $(SRC_DIR)/*.xlsx $(DELIVER_PATH)/
 clean:
-	rm -rf $(DELIVER_PATH)
+	rm -rf $(SRC_DIR)/build
 
 .PHONY:all $(DELIVER_PATH) clean

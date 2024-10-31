@@ -30,11 +30,12 @@ get_docker_image() {
 
 start_all_server() {
     line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 130`
+    line=`expr $line - 131`
     mkdir /tmp/sys_mt
     tail -n $line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
     cp /conf/ngx_http_flv_live_module.so /lib/nginx/modules/
+    chown -R 'www-data' /mt_pc
     nginx -c /conf/nginx.conf
     service cups start
     wetty &

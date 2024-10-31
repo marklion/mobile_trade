@@ -10,6 +10,6 @@ $(DELIVER_PATH):
 	chmod +x $(DELIVER_PATH)/*.py
 	chmod +x $(DELIVER_PATH)/*.sh
 clean:
-	rm -rf $(DELIVER_PATH)
+	rm -rf $(SRC_DIR)/build
 
 .PHONY:all $(DELIVER_PATH) clean

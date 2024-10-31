@@ -33,23 +33,26 @@ import Layout from '@/layout'
 export const constantRoutes = [
   {
     path: '/login',
+    name: 'login',
     component: () => import('@/views/login'),
     hidden: true
   },
   {
     path: '/404',
+    name: 'fof',
     component: () => import('@/views/404'),
     hidden: true
   },
   {
     path: '/',
     component: Layout,
+    name: 'home',
     redirect: '/dashboard',
     children: [{
       path: 'dashboard',
       name: 'Dashboard',
       component: () => import('@/views/dashboard'),
-      meta: { title: '主页', icon: 'dashboard' }
+      meta: { title: '主页', icon: 'dashboard', affix: true }
     }]
   }
 ]
@@ -98,9 +101,11 @@ export const asyncRoutes = [
 
   {
     path: 'OpenApi',
+    name: 'OpenApi',
     component: Layout,
     children: [
       {
+        name: 'api_help',
         path: 'https://www.d8sis.cn/mt_api/api/help',
         meta: { title: '开放接口', icon: 'link' }
       }

@@ -1,6 +1,7 @@
 'use strict'
 const path = require('path')
 const defaultSettings = require('./src/settings.js')
+const fs = require('fs-extra');
 
 function resolve(dir) {
   return path.join(__dirname, dir)
@@ -25,7 +26,7 @@ module.exports = {
    * Detail: https://cli.vuejs.org/config/#publicpath
    */
   publicPath: '/',
-  outputDir: 'dist',
+  outputDir: 'build/mt_pc',
   assetsDir: 'static',
   lintOnSave: process.env.NODE_ENV === 'development',
   productionSourceMap: false,
@@ -55,6 +56,47 @@ module.exports = {
     }
   },
   chainWebpack(config) {
+    config.plugin('check-changes')
+      .use({
+        apply: (compiler) => {
+          compiler.hooks.beforeRun.tapAsync('CheckChangesPlugin', (compilation, callback) => {
+            const vueFilesDir = path.resolve(__dirname, 'src');
+            const lastBuildFile = path.resolve(__dirname, 'last-build-time.txt');
+            let lastBuildTime = 0;
+
+            if (fs.existsSync(lastBuildFile)) {
+              lastBuildTime = fs.readFileSync(lastBuildFile, 'utf-8');
+            }
+
+            let filesChanged = false;
+            const checkFiles = (dir) => {
+              const files = fs.readdirSync(dir);
+              for (let file of files) {
+                const filePath = path.join(dir, file);
+                const stat = fs.statSync(filePath);
+
+                if (stat.isDirectory()) {
+                  checkFiles(filePath);
+                } else if (stat.mtimeMs > lastBuildTime) {
+                  filesChanged = true;
+                  break;
+                }
+              }
+            };
+
+            checkFiles(vueFilesDir);
+
+            if (!filesChanged) {
+              console.log('No relevant changes detected, skipping build.');
+              process.exit(0); // Exit the process to skip the build
+            } else {
+              fs.writeFileSync(lastBuildFile, Date.now().toString());
+            }
+
+            callback();
+          });
+        }
+      });
     // it can improve the speed of the first screen, it is recommended to turn on preload
     config.plugin('preload').tap(() => [
       {

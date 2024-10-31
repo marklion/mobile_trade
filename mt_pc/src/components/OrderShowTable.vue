@@ -247,7 +247,7 @@ export default {
 
 <style scoped>
 .order_show {
-    height: calc(100vh - 50px);
+    height: calc(100vh - 83px);
     overflow-y: auto;
 }
 

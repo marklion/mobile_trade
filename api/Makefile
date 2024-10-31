@@ -8,5 +8,7 @@ $(DELIVER_PATH)/api/index.js:*.js module/*.js lib/*.js plugin/*.js gen_code/*.js
 	pushd $(SRC_DIR); npm install && npm run build;
 clean:
 	rm -rf $(DELIVER_PATH)
+	rm -rf $(SRC_DIR)/node_modules
+	rm -rf $(SRC_DIR)/gen_code
 
 .PHONY:all clean

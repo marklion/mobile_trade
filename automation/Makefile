@@ -7,6 +7,10 @@ $(DELIVER_PATH):
 	[ -d $(DELIVER_PATH) ] || mkdir -p $(DELIVER_PATH)
 	cp `ls $(SRC_DIR) | grep -v build | grep -v Makefile` -a $(DELIVER_PATH)
 clean:
-	rm -rf $(DELIVER_PATH)
+	rm -rf $(SRC_DIR)/build
+	rm -rf $(SRC_DIR)/__pychache__
+	rm -rf $(SRC_DIR)/log.html
+	rm -rf $(SRC_DIR)/report.html
+	rm -rf $(SRC_DIR)/output.xml
 
 .PHONY:all $(DELIVER_PATH) clean

@@ -1,13 +1,11 @@
 SHELL=/bin/bash
 SRC_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 all:
-	pushd $(SRC_DIR); n 16.8.0 && yarn install && npm run build:mp-weixin; n 18.17.0;
+	pushd $(SRC_DIR); npm install && npm run build:prod;
 clean:
-	rm -rf $(SRC_DIR)/dist
+	rm -rf $(SRC_DIR)/build
 	rm -rf $(SRC_DIR)/node_modules
-	rm -rf $(SRC_DIR)/.hbuilderx
 	rm -rf $(SRC_DIR)/last-build-time.txt
 	rm -rf $(SRC_DIR)/package-lock.json
-	rm -rf $(SRC_DIR)/yarn.lock
 
 .PHONY:all clean
