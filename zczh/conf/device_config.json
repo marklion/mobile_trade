@@ -1,0 +1,36 @@
+{
+    "gate": [
+        {
+            "name": "物资门",
+            "entry": "abc",
+            "exit": "abc",
+            "entry_id_reader_ip": "192.168.2.30"
+        }
+    ],
+    "scale": [
+        {
+            "name": "地磅1",
+            "entry": "abc",
+            "exit": "abc",
+            "raster_ip": [
+                "192.168.2.70",
+                "192.168.2.71"
+            ],
+            "scale_ip": "192.168.2.50",
+            "entry_printer_ip": "192.168.2.40",
+            "exit_printer_ip": "192.168.2.41"
+        },
+        {
+            "name": "地磅2",
+            "entry": "abc",
+            "exit": "abc",
+            "raster_ip": [
+                "192.168.2.72",
+                "192.168.2.73"
+            ],
+            "scale_ip": "192.168.2.51",
+            "entry_printer_ip": "192.168.2.42",
+            "exit_printer_ip": "192.168.2.43"
+        }
+    ]
+}

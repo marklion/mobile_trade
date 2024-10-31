@@ -1,0 +1,40 @@
+cmake_minimum_required(VERSION 3.10)
+project(core_service)
+
+SET(LIBRARY_OUTPUT_PATH ${PRJ_INTERNAL_BUILD}/lib)
+SET(EXECUTABLE_OUTPUT_PATH ${PRJ_INTERNAL_BUILD}/bin)
+add_compile_options(-std=gnu++14 -g)
+
+aux_source_directory(./lib LIB_SRC)
+aux_source_directory(./core CORE_SERVICE_SRC)
+aux_source_directory(./device DEVICE_SERVICE_SRC)
+aux_source_directory(./cli CLI_SRC)
+
+add_library(rpc_lib SHARED ${LIB_SRC})
+add_executable(core_service ${CORE_SERVICE_SRC})
+add_executable(device_center ${DEVICE_SERVICE_SRC})
+add_executable(zh_cli ${CLI_SRC})
+
+add_executable(mock_driver ./device/drivers/mock_driver.cpp)
+add_executable(zs_plate_cam ./device/drivers/zs_plate_cam.cpp)
+add_executable(id_reader_driver ./device/drivers/id_reader.cpp)
+add_executable(wr_style_scale_driver ./device/drivers/wr_style_scale.cpp)
+add_executable(wl_style_scale_driver ./device/drivers/wl_style_scale.cpp)
+
+find_library(IDL_LIB libzh_idl.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
+find_library(DB_LIB libsqlite_orm.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
+find_library(ZYZL_PLUGIN_LIB libzyzl_plugin.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
+find_library(UTIL_LIB libzh_utils.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
+find_library(FILE_UP_DOWN_LIB libfile_up_down.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
+find_library(SERIAL_LINK_LIB libserial_link.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
+
+target_link_libraries(rpc_lib ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} ${FILE_UP_DOWN_LIB} ${ZYZL_PLUGIN_LIB} ${SERIAL_LINK_LIB})
+target_link_libraries(core_service pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
+target_link_libraries(device_center pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
+target_link_libraries(zh_cli pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
+
+target_link_libraries(mock_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
+target_link_libraries(zs_plate_cam pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib VzLPRSDK)
+target_link_libraries(id_reader_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib termb)
+target_link_libraries(wr_style_scale_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
+target_link_libraries(wl_style_scale_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)

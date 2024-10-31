@@ -1,0 +1,141 @@
+# 组件模板配置
+fake_cam: &fake_cam_ref
+  program_name: "/bin/fake_cam"
+  cmd_args:
+    - "ip"
+    - "port"
+zs_cam: &zs_cam_ref
+  program_name: "/bin/zs_cam"
+  cmd_args:
+    - "ip"
+    - "port"
+    - "username"
+    - "password"
+    - "boudrate"
+
+ser_id_reader: &si_reader_ref
+  program_name: "/bin/ser_id_reader"
+  cmd_args:
+    - "ip"
+    - "port"
+
+ser_qr_reader: &sq_reader_ref
+  program_name: "/bin/ser_qr_reader"
+  cmd_args:
+    - "ip"
+    - "port"
+
+ser_printer: &s_printer_ref
+  program_name: "/bin/ser_printer"
+  cmd_args:
+    - "ip"
+    - "port"
+
+kl_scale: &kl_scale_ref
+  program_name: "/bin/kl_scale"
+  cmd_args:
+    - "ip"
+    - "port"
+
+hk_monitor: &hk_monitor_ref
+  program_name: "/bin/hk_monitor"
+  cmd_args:
+    - "ip"
+    - "channel"
+    - "username"
+    - "password"
+
+state_machine1_define: &smd1_ref
+  program_name: "/bin/scale_sm1"
+  sm_type: scale
+  cmd_args:
+    - enter_cam
+    - exit_cam
+    - enter_led
+    - exit_led
+    - enter_traffic_light
+    - exit_traffic_light
+    - enter_speaker
+    - exit_speaker
+    - enter_id
+    - exit_id
+    - enter_qr
+    - exit_qr
+    - enter_printer
+    - exit_printer
+    - enter_monitor
+    - exit_monitor
+    - enter_gate
+    - exit_gate
+    - scale
+
+# 组件组合配置
+components:
+  # - name: kl_scale1
+  #   ip: 172.16.1.70
+  #   port: 30200
+  #   <<: *kl_scale_ref
+
+  # - name: zs_cam0
+  #   ip: 172.16.1.12
+  #   port: 80
+  #   username: admin
+  #   password: admin
+  #   boudrate: 19200
+  #   msg_center: "sm0"
+  #   <<: *zs_cam_ref
+  - name: test_cam_enter
+    ip: 192.168.0.109
+    port: 45419
+    msg_center: "sm0"
+    <<: *fake_cam_ref
+  - name: test_cam_exit
+    ip: 192.168.0.109
+    port: 45419
+    msg_center: "sm0"
+    <<: *fake_cam_ref
+  - name: hk_recorder0
+    ip: 172.16.1.168
+    channel: 1
+    username: admin
+    password: "P@ssw0rd"
+    msg_center: "门"
+    <<: *hk_monitor_ref
+  # - name: "reader0"
+  #   ip: 127.0.0.1
+  #   port: 30203
+  #   msg_center: "sm0"
+  #   <<: *si_reader_ref
+  # - name: "scanner0"
+  #   ip: 127.0.0.1
+  #   port: 30204
+  #   msg_center: "sm0"
+  #   <<: *sq_reader_ref
+  # # - name: "printer0"
+  # #   ip: 127.0.0.1
+  # #   port: 30204
+  # #   msg_center: "sm0"
+  # #   <<: *s_printer_ref
+  - name: "sm0"
+    enter_cam: test_cam_enter
+    exit_cam: test_cam_exit
+    enter_led: test_cam_enter
+    exit_led: test_cam_exit
+    enter_traffic_light: test_cam_enter
+    exit_traffic_light: test_cam_exit
+    enter_speaker: test_cam_enter
+    exit_speaker: test_cam_exit
+    enter_id: test_cam_enter
+    exit_id: test_cam_exit
+    enter_qr: test_cam_enter
+    exit_qr: test_cam_exit
+    enter_printer: test_cam_enter
+    exit_printer: test_cam_exit
+    enter_monitor: test_cam_enter
+    exit_monitor: test_cam_exit
+    enter_gate: test_cam_enter
+    exit_gate: test_cam_exit
+    scale: test_cam_exit
+    <<: *smd1_ref
+
+
