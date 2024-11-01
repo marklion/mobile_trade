@@ -316,8 +316,10 @@ module.exports = {
             for (let index = 0; index < bought_plans.length; index++) {
                 const element = bought_plans[index];
                 let arc_p = await this.replace_plan2archive(element);
-                let dup_p = await this.checkDuplicatePlans(element);
-                element.duplicateInfo = dup_p;
+                element.duplicateInfo = {
+                    isDuplicate: element.dup_info && element.dup_info.length > 0,
+                    message: element.dup_info?element.dup_info:''
+                };
                 if (arc_p) {
                     result.push(arc_p);
                 }
@@ -360,8 +362,10 @@ module.exports = {
             for (let index = 0; index < sold_plans.length; index++) {
                 const element = sold_plans[index];
                 let arc_p = await this.replace_plan2archive(element);
-                let dup_p = await this.checkDuplicatePlans(element);
-                element.duplicateInfo = dup_p;
+                element.duplicateInfo = {
+                    isDuplicate: element.dup_info && element.dup_info.length > 0,
+                    message: element.dup_info?element.dup_info:''
+                };
                 if (arc_p) {
                     result.push(arc_p);
                 }
@@ -436,6 +440,7 @@ module.exports = {
                 plan.drop_address = _drop_address;
             }
             await plan.save();
+            this.mark_dup_info(plan);
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, change_comment);
         }
         else {
@@ -796,7 +801,11 @@ module.exports = {
                 throw { err_msg: '未找到计划' };
             }
         }
-
+        this.mark_dup_info(plan);
+    },
+    mark_dup_info:async function(plan) {
+        plan.dup_info = (await this.checkDuplicatePlans(plan)).message;
+        await plan.save();
     },
     record_plan_history: async function (_plan, _operator, _action_type, _transation) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type }, _transation);
@@ -1024,7 +1033,7 @@ module.exports = {
         });
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
-            if(!element.stuff.manual_weight){
+            if (!element.stuff.manual_weight) {
                 element.p_weight = await hook_plan('get_p_weight', element);
             }
         }

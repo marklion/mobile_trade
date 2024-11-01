@@ -1550,12 +1550,12 @@ export default {
         uni.stopPullDownRefresh();
     },
     onLoad() {
+        this.reset_order_date(false);
         this.init_top_seg();
         let tom = new Date();
         tom.setDate(tom.getDate() + 1);
         this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
-        this.reset_order_date(false);
     },
 }
 </script>

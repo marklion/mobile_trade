@@ -198,6 +198,7 @@ module.exports = {
                         new_plan.from_bidding = true;
                     }
                     await new_plan.save();
+                    plan_lib.mark_dup_info(new_plan);
                     wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
                 }
                 else {

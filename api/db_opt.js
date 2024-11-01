@@ -147,6 +147,7 @@ let db_opt = {
             second_weight: { type: DataTypes.STRING, defaultValue: '' },
             first_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
             second_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
+            dup_info:{type: DataTypes.STRING},
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
