@@ -99,8 +99,8 @@ Contract Charge And Check
     ${resp}  Req Get to Server  /customer/get_charge_history  ${bc1_user_token}  histories  ${-1}  &{req}
     Should Be Equal As Numbers  ${resp}[0][cash_increased]  1200
     Should Be Equal As Strings  ${resp}[0][comment]  abcd
-    ${req}  Create Dictionary  contract_id=${contract_id}
-    ${resp}  Req Get to Server  /cash/history  ${sc_admin_token}  histories  ${-1}  &{req}
+
+    ${resp}  Get Charge History    ${contract_id}
     Should Be Equal As Numbers  ${resp}[0][cash_increased]  1200
     Should Be Equal As Strings  ${resp}[0][comment]  abcd
 

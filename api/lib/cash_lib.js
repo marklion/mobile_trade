@@ -37,15 +37,39 @@ module.exports = {
         }
     },
 
-    get_history_by_company: async function (_token, _contract_id, pageNo) {
+    get_history_by_company: async function (_token, _contract_id, pageNo, begin_time, end_time) {
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);
         let ret = { count: 0, rows: [] };
+        let where_condition = {
+            [db_opt.Op.and]: [
+                {
+                    id: {
+                        [db_opt.Op.ne]: 0
+                    }
+                }
+            ]
+        };
+        if (begin_time) {
+            where_condition[db_opt.Op.and].push({
+                time: {
+                    [db_opt.Op.gte]: begin_time
+                }
+            })
+        }
+        if (end_time) {
+            where_condition[db_opt.Op.and].push({
+                time: {
+                    [db_opt.Op.lte]: end_time
+                }
+            })
+        }
         if (company && contract && (await company.hasSale_contract(contract) || await company.hasBuy_contract(contract))) {
             ret.rows = await contract.getBalance_histories({
                 offset: pageNo * 20,
                 limit: 20,
                 order: [['id', 'DESC']],
+                where: where_condition
             });
             ret.count = await contract.countBalance_histories();
         }
