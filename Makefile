@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 SRC_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 DELIVER_PATH=$(SRC_DIR)/build
-SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc
+SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc zczh
 BUILD_MODE=build
 export BUILD_MODE
 
@@ -15,7 +15,7 @@ pack:all
 
 all:$(DELIVER_PATH)
 api:lag_rpc
-mt_gui:api mt_pc
+mt_gui:api mt_pc zczh
 $(DELIVER_PATH):$(SUB_DIR)
 	[ -d $@ ] || mkdir $@
 	for component in $^;do [ -d $(SRC_DIR)/$$component/build ] && cp -a $(SRC_DIR)/$$component/build/* $@/ || echo no_assert; done
