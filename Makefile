@@ -18,7 +18,7 @@ api:lag_rpc
 mt_gui:api mt_pc zczh
 $(DELIVER_PATH):$(SUB_DIR)
 	[ -d $@ ] || mkdir $@
-	for component in $^;do [ -d $(SRC_DIR)/$$component/build ] && cp -a $(SRC_DIR)/$$component/build/* $@/ || echo no_assert; done
+	for component in $^;do [ -d $(SRC_DIR)/$$component/build ] && [ 'zczh' != $$component ] && cp -a $(SRC_DIR)/$$component/build/* $@/ || echo no_assert; done
 
 $(SUB_DIR):
 	$(MAKE) -C $(SRC_DIR)/$@
