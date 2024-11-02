@@ -125,8 +125,8 @@ export default {
                         first_weight: this.form_data.first_weight,
                         second_weight: this.form_data.second_weight,
                         count: Number(this.form_data.count) || 0,
-                        first_weight_fileList: this.$refs.first_weight_upload.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|'),
-                        second_weight_fileList: this.$refs.second_weight_upload.urls.map(url => url.replace(/^.*uploads\//, 'uploads/')).join('|'),
+                        first_weight_fileList: this.$refs.first_weight_upload.urls.map(url => url.replace(/^.*uploads\//, '/uploads/')).join('|'),
+                        second_weight_fileList: this.$refs.second_weight_upload.urls.map(url => url.replace(/^.*uploads\//, '/uploads/')).join('|'),
                     });
                     if (ret.result) {
                         uni.showToast({

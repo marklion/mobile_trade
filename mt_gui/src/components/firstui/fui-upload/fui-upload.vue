@@ -398,7 +398,10 @@
 				uni.previewImage({
 					current: this.urls[index],
 					loop: true,
-					urls: this.urls
+					urls: this.urls,
+					style:{
+						zIndex:9999
+					}
 				})
 				// #endif
 				//百度小程序使用
