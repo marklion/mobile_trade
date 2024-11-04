@@ -384,7 +384,15 @@ module.exports = {
                 tmp_plans = await plan_lib.filter_plan4manager(body, token, true);
                 plans = plans.concat(tmp_plans);
                 await common.do_export_later(token, '现场检查表', async () => {
-                    return await fc_lib.export_fc(plans);
+                    let arch_plans = [];
+                    for (let index = 0; index < plans.length; index++) {
+                        const element = plans[index];
+                        let tmp = await plan_lib.replace_plan2archive(element);
+                        if (tmp && tmp.fc_info) {
+                            arch_plans.push(tmp);
+                        }
+                    }
+                    return await fc_lib.export_fc(arch_plans);
                 });
             },
         },
