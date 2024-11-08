@@ -828,6 +828,7 @@ module.exports = {
         }
         let content = plan.toJSON();
         content.sc_info = (await sc_lib.get_sc_status_by_plan(plan)).reqs;
+        content.fc_info = (await fc_lib.get_all_fc_plan_table(plan));
         await plan.createArchive_plan({ content: JSON.stringify(content) });
     },
     rp_history_close: async function (_plan, _operator) {

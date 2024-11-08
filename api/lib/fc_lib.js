@@ -119,13 +119,17 @@ module.exports = {
         let tmp_ret = [];
         do {
             tmp_ret = (await this.get_fc_plan_table(plan.id, pageNo)).fc_plan_tables;
+            tmp_ret.forEach(item=>{
+                let tmp = item.toJSON()
+                tmp.fc_plan_table = item.fc_plan_table.toJSON();
+                ret.push(tmp);
+            });
             pageNo++;
-            ret = ret.concat(tmp_ret);
         } while (tmp_ret.length > 0);
 
         return ret;
     },
-    make_fc_for_export: async function (fc_plan_table) {
+    make_fc_for_export: async function (fc_plan_table, plan) {
         let ret = {};
         if (fc_plan_table.fc_plan_table) {
             for (let index = 0; index < fc_plan_table.fc_plan_table.fc_check_results.length; index++) {
@@ -139,8 +143,6 @@ module.exports = {
                 ret.finish_time = fc_plan_table.fc_plan_table.finish_time;
             }
             ret.table_name = fc_plan_table.name;
-            let plan_id = (await fc_plan_table.fc_plan_table.getPlan()).id;
-            let plan = await util_lib.get_single_plan_by_id(plan_id);
             ret.stuff_name = plan.stuff.name;
             ret.company_name = plan.stuff.company.name;
             ret.main_vehicle = plan.main_vehicle.plate;
@@ -193,14 +195,14 @@ module.exports = {
         let filePaths = [];
         for (let index = 0; index < plans.length; index++) {
             const plan = plans[index];
-            let fc_plan_tables = await this.get_all_fc_plan_table(plan);
+            let fc_plan_tables = plan.fc_info;
             for (let jndex = 0; jndex < fc_plan_tables.length; jndex++) {
                 const fc_plan_table = fc_plan_tables[jndex];
-                let fc_result_table = await this.make_fc_for_export(fc_plan_table);
+                let fc_result_table = await this.make_fc_for_export(fc_plan_table, plan);
                 if (fc_result_table) {
                     let template_path = fc_plan_table.template_path;
                     if (template_path) {
-                        let tmp_doc = await this.make_file_by_fc_result(fc_result_table,'/database' +  template_path);
+                        let tmp_doc = await this.make_file_by_fc_result(fc_result_table, '/database' + template_path);
                         filePaths.push(tmp_doc);
                     }
                 }
