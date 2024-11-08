@@ -68,7 +68,7 @@ export const asyncRoutes = [
     redirect: 'noRedirect',
     name: 'Order',
     meta: {
-      title: '订单',
+      title: '订单管理',
       icon: 'nested',
       roles: ['sale_management', 'buy_management', 'customer', 'supplier']
     },
@@ -98,7 +98,36 @@ export const asyncRoutes = [
       },
     ]
   },
-
+  {
+    path:'/stuff',
+    component:Layout,
+    name:'Stuff',
+    meta:{
+      title:'物料管理',
+      icon:'el-icon-goods',
+      roles:['stuff']
+    },
+    children:[
+      {
+        path: 'stuff_config',
+        component: () => import('@/views/stuff/StuffConfig'),
+        name: 'stuff_config',
+        meta: { title: '物料配置'}
+      },
+      {
+        path: 'global_strategy',
+        component: () => import('@/views/stuff/GlobalStrategy'),
+        name: 'global_strategy', 
+        meta: { title: '全局策略'}
+      },
+      {
+        path: 'blacklist',
+        component: () => import('@/views/stuff/BlackList'),
+        name: 'blacklist',
+        meta: { title: '黑名单' }
+      }
+    ]
+  },
   {
     path: 'OpenApi',
     name: 'OpenApi',
