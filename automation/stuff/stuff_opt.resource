@@ -16,6 +16,7 @@ ${bc1_user_token}
 ${bc2_user_token}
 ${test_stuff}
 ${order_stuff}
+${DATE_FORMAT}  %Y-%m-%d
 *** Keywords ***
 Prepare Companies And Users
     ${buy_company1}  Create One Company  bc1
@@ -442,3 +443,15 @@ Checkout A Plan
     [Arguments]  ${plan}  ${token}=${bc1_user_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server    /customer/checkout_plan    ${token}    ${req}
+
+Get Charge History
+    [Arguments]  ${contract_id}  ${token}=${sc_admin_token}
+    ${today}  Get Current Date  result_format=${DATE_FORMAT}
+    ${yesterday}  Subtract Time From Date  ${today}  1 day  result_format=${DATE_FORMAT}
+    ${tomorrow}  Add Time To Date  ${today}  1 day  result_format=${DATE_FORMAT}
+    ${req}  Create Dictionary  contract_id=${contract_id}  end_time=${yesterday}  begin_time=${tomorrow}
+    ${resp}  Req Get to Server  /cash/history  ${token}  histories  ${-1}  &{req}
+    Should Be Empty    ${resp}
+    ${req}  Create Dictionary  contract_id=${contract_id}  begin_time=${yesterday}  end_time=${tomorrow}
+    ${resp}  Req Get to Server  /cash/history  ${token}  histories  ${-1}  &{req}
+    RETURN  ${resp}

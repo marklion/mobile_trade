@@ -31,6 +31,8 @@ module.exports = {
             is_get_api: true,
             params: {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                begin_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01' },
+                end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01' },
             },
             result: {
                 histories: {
@@ -43,7 +45,7 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo);
+                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, body.begin_time, body.end_time);
                 return {
                     histories: get_ret.rows,
                     total: get_ret.count,
