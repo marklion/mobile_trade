@@ -164,6 +164,8 @@ module.exports = {
         is_buy: { type: Boolean, mean: '是否购买', example: true },
         trans_company_name: { type: String, mean: '运输公司名', example: '' },
         stuff_name: { type: String, mean: '货物名', example: 'stuff_name_example' },
+        fw_info: { type: String, mean: '一次计量输入信息', example: 'fw_info_example' },
+        sw_info: { type: String, mean: '二次计量输入信息', example: 'sw_info_example' },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },

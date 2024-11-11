@@ -80,6 +80,9 @@ export default {
             label: '装载量',
             value: utils.moneyFormatter(ticket.count),
             list: [{
+                label: '物料',
+                value: ticket.stuff_name,
+            },{
                 label: '磅单号',
                 value: ticket.ticket_no,
             }, {
@@ -91,20 +94,40 @@ export default {
             }, {
                 label: '挂车号',
                 value: ticket.behind_plate
-            }, {
-                label: '皮重',
-                value: ticket.p_weight,
-            }, {
-                label: '过皮时间',
-                value: ticket.p_time,
-            }, {
+            }, ],
+        };
+        if (ticket.fw_info) {
+            this.ticket_content.list.push({
+                label: '一次计量',
+                value: ticket.fw_info,
+            });
+        }
+        if (ticket.sw_info) {
+            this.ticket_content.list.push({
+                label: '二次计量',
+                value: ticket.sw_info,
+            });
+        }
+        if (ticket.m_time) {
+            this.ticket_content.list.push({
                 label: '毛重',
                 value: ticket.m_weight,
-            }, {
+            });
+            this.ticket_content.list.push({
                 label: '过毛时间',
                 value: ticket.m_time,
-            }],
-        };
+            });
+        }
+        if (ticket.p_time) {
+            this.ticket_content.list.push({
+                label: '皮重',
+                value: ticket.p_weight,
+            });
+            this.ticket_content.list.push({
+                label: '过皮时间',
+                value: ticket.p_time,
+            });
+        }
         if (ticket.seal_no) {
             this.ticket_content.list.push({
                 label: '封签号',
