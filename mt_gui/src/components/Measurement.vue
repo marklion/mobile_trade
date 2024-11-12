@@ -106,19 +106,19 @@ export default {
         handleFirstWeightSuccess(e) {
             this.first_weight_upload.status = e.status;
             if (e.res.data) {
-                this.$refs.first_weight_upload.result(e.res.data, e.index)
+                this.$refs.first_weight_upload.result(this.$convert_attach_url(e.res.data), e.index)
             }
         },
         handleSecondWeightSuccess(e) {
             this.second_weight_upload.status = e.status;
             if (e.res.data) {
-                this.$refs.second_weight_upload.result(e.res.data, e.index)
+                this.$refs.second_weight_upload.result(this.$convert_attach_url(e.res.data), e.index)
             }
         },
         handleFirstWeightComplete(e) {
             this.first_weight_upload.status = e.status
             this.first_weight_upload.urls = e.urls
-            if (this.first_weight_upload.status === 'success' && e.action === 'upload') {
+            if (e.status === 'success' && e.action === 'upload') {
                 uni.showToast({
                     title: '上传完成！',
                     icon: 'success',
@@ -129,7 +129,7 @@ export default {
         handleSecondWeightComplete(e) {
             this.second_weight_upload.status = e.status
             this.second_weight_upload.urls = e.urls
-            if (this.second_weight_upload.status === 'success' && e.action === 'upload') {
+            if (e.status === 'success' && e.action === 'upload') {
                 uni.showToast({
                     title: '上传完成！',
                     icon: 'success',
