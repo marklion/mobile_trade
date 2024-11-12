@@ -53,6 +53,8 @@ async function get_ticket_func(body, token) {
         is_buy: plan.is_buy,
         trans_company_name: plan.trans_company_name,
         stuff_name: plan.stuff.name,
+        fw_info:plan.first_weight,
+        sw_info:plan.second_weight,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
