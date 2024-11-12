@@ -99,32 +99,26 @@ export const asyncRoutes = [
     ]
   },
   {
-    path:'/stuff',
-    component:Layout,
-    name:'Stuff',
-    meta:{
-      title:'物料管理',
-      icon:'el-icon-goods',
-      roles:['stuff']
+    path: '/bidding',
+    component: Layout,
+    name: 'Bidding',
+    meta: {
+      title: '竞价管理',
+      icon: 'nested',
+      roles: ['customer']
     },
-    children:[
+    children: [
       {
-        path: 'stuff_config',
-        component: () => import('@/views/stuff/StuffConfig'),
-        name: 'stuff_config',
-        meta: { title: '物料配置'}
+        path: 'biddingconfig',
+        name: 'biddingconfig',
+        component: () => import('@/views/bidding/BiddingConfig'),
+        meta: { title: '竞价配置', roles: ['customer'] }
       },
       {
-        path: 'global_strategy',
-        component: () => import('@/views/stuff/GlobalStrategy'),
-        name: 'global_strategy', 
-        meta: { title: '全局策略'}
-      },
-      {
-        path: 'blacklist',
-        component: () => import('@/views/stuff/BlackList'),
-        name: 'blacklist',
-        meta: { title: '黑名单' }
+        path: 'biddingjoin',
+        name: 'biddingjoin',
+        component: () => import('@/views/bidding/BiddingJoin'),
+        meta: { title: '竞价参与', roles: ['customer'] }
       }
     ]
   },
