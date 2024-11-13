@@ -158,7 +158,7 @@ export default {
             this.hide();
             this.reset();
         },
-        confirm_manual_weight: async function (only_upload = false) {
+        confirm_manual_weight: async function () {
             if (!/^\d+(\.\d+)?$/.test(this.form_data.count)) {
                 uni.showToast({
                     title: '装卸量必须为数字,未装卸完时请写0',
