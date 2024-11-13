@@ -63,6 +63,8 @@ SC Check Msg
     Msg Verify    opid1234    2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8
     Check Pass SC Status By Index  ${plan}  0
     Msg Verify    open_id_for_test   2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8
+    Check Pass SC Status By Index  ${plan}  0  ${False}
+    Msg Verify    open_id_for_test   2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8
 
 *** Keywords ***
 Prepare For Msg Test

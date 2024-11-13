@@ -300,19 +300,8 @@ module.exports = {
             content.checker = user.name;
             await content.save();
             if (_plan_id) {
-                let plan = await util_lib.get_single_plan_by_id(_plan_id);
-                // 未通过的安检资料
-                const allContentsPassed = await sq.models.sc_content.findAll({
-                    where: {
-                        [db_opt.Op.or]: [
-                            { driverId: plan?.driver?.id || 0 },
-                            { vehicleId: plan?.main_vehicle?.id || 0 },
-                            { vehicleId: plan?.behind_vehicle?.id || 0 },
-                        ],
-                        passed: false
-                    }
-                });
-                if (allContentsPassed.length === 0) {
+                let passed_sc = await this.plan_passed_sc(_plan_id);
+                if (passed_sc) {
                     // 所有安检资料都已通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
                         msg = '审核通过',
@@ -323,7 +312,7 @@ module.exports = {
                     );
                 }
 
-                if (allContentsPassed.length === 1 && !content.passed) {
+                if (!content.passed) {
                     // 反审安检资料从通过变为不通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
                         msg = '驳回',
