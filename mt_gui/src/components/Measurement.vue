@@ -1,39 +1,31 @@
-<!-- MeasurementComponent.vue -->
 <template>
-    <fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" :show="show_manual_weight">
-        <fui-form ref="form" :disabled="plan_owner">
-            <fui-form-item label="一次计量">
-                <fui-input v-model="form_data.first_weight" placeholder="请输入一次计量">
-                </fui-input>
-            </fui-form-item>
-            <fui-form-item>
-                <fui-upload max="4" width="80" height="80" :fileList="first_weight_fileUrl" immediate :url="upload_url"
-                    :sizeType="['compressed']" ref="first_weight_upload" @success="handleFirstWeightSuccess"
-                    @complete="handleFirstWeightComplete" />
-            </fui-form-item>
-            <fui-form-item label="二次计量">
-                <fui-input v-model="form_data.second_weight" placeholder="请输入二次计量">
-                </fui-input>
-            </fui-form-item>
-            <fui-form-item>
-                <fui-upload max="4" width="80" height="80" :fileList="second_weight_fileUrl" immediate :url="upload_url"
-                    :sizeType="['compressed']" ref="second_weight_upload" @success="handleSecondWeightSuccess"
-                    @complete="handleSecondWeightComplete"></fui-upload>
-            </fui-form-item>
-            <fui-form-item label="装卸量">
-                <fui-input v-model="form_data.count" placeholder="请输入装卸量"></fui-input>
-            </fui-form-item>
-        </fui-form>
-        <view style="display: flex; justify-content: space-between;">
-            <fui-button btnSize="small" text="取消" @click="hide"></fui-button>
-            <fui-button
-                v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && plan_owner && focus_plan.count > 0"
-                btnSize="small" type="success" text="结算" @click="checkout_plan"></fui-button>
-            <fui-button v-if="!focus_plan.is_buy && !plan_owner" btnSize="small" type="success" text="提交"
-                @click="confirm_manual_weight"></fui-button>
-        </view>
+<fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" :show="show_manual_weight">
+    <fui-form ref="form" :disabled="plan_owner">
+        <fui-form-item label="一次计量">
+            <fui-input v-model="form_data.first_weight" placeholder="请输入一次计量">
+            </fui-input>
+        </fui-form-item>
+        <fui-form-item>
+            <fui-upload max="4" width="160" height="160" :fileList="first_weight_fileUrl" immediate :url="upload_url" :sizeType="['compressed']" ref="first_weight_upload" @success="handleFirstWeightSuccess" @complete="handleFirstWeightComplete" />
+        </fui-form-item>
+        <fui-form-item label="二次计量">
+            <fui-input v-model="form_data.second_weight" placeholder="请输入二次计量">
+            </fui-input>
+        </fui-form-item>
+        <fui-form-item>
+            <fui-upload max="4" width="160" height="160" :fileList="second_weight_fileUrl" immediate :url="upload_url" :sizeType="['compressed']" ref="second_weight_upload" @success="handleSecondWeightSuccess" @complete="handleSecondWeightComplete"></fui-upload>
+        </fui-form-item>
+        <fui-form-item label="装卸量">
+            <fui-input v-model="form_data.count" placeholder="请输入装卸量"></fui-input>
+        </fui-form-item>
+    </fui-form>
+    <view style="display: flex; justify-content: space-between;">
+        <fui-button btnSize="small" text="取消" @click="hide"></fui-button>
+        <fui-button v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && plan_owner && focus_plan.count > 0" btnSize="small" type="success" text="结算" @click="checkout_plan"></fui-button>
+        <fui-button v-if="!focus_plan.is_buy && !plan_owner" btnSize="small" type="success" text="提交" @click="confirm_manual_weight"></fui-button>
+    </view>
 
-    </fui-modal>
+</fui-modal>
 </template>
 
 <script>
@@ -115,9 +107,11 @@ export default {
                 this.$refs.second_weight_upload.result(this.$convert_attach_url(e.res.data), e.index)
             }
         },
-        handleFirstWeightComplete(e) {
+        async handleFirstWeightComplete(e) {
             this.first_weight_upload.status = e.status
-            this.first_weight_upload.urls = e.urls
+            this.first_weight_upload.urls = e.urls.map(url => {
+                return url.replace(this.$remote_url(), '')
+            })
             if (e.status === 'success' && e.action === 'upload') {
                 uni.showToast({
                     title: '上传完成！',
@@ -126,9 +120,11 @@ export default {
                 });
             }
         },
-        handleSecondWeightComplete(e) {
+        async handleSecondWeightComplete(e) {
             this.second_weight_upload.status = e.status
-            this.second_weight_upload.urls = e.urls
+            this.second_weight_upload.urls = e.urls.map(url => {
+                return url.replace(this.$remote_url(), '')
+            })
             if (e.status === 'success' && e.action === 'upload') {
                 uni.showToast({
                     title: '上传完成！',
@@ -162,22 +158,31 @@ export default {
             this.hide();
             this.reset();
         },
-        confirm_manual_weight: async function () {
+        confirm_manual_weight: async function (only_upload = false) {
             if (!/^\d+(\.\d+)?$/.test(this.form_data.count)) {
                 uni.showToast({
-                    title: '装卸量必须为数字',
+                    title: '装卸量必须为数字,未装卸完时请写0',
                     icon: 'none',
                     duration: 2000
                 });
                 return;
             }
+            let fwfs = this.form_data.first_weight_fileList;
+            let swfs = this.form_data.second_weight_fileList;
+            if (this.first_weight_upload.urls.length > 0) {
+                fwfs = this.first_weight_upload.urls.join('|');
+            }
+            if (this.second_weight_upload.urls.length > 0) {
+                swfs = this.second_weight_upload.urls.join('|');
+            }
+
             let ret = await this.$send_req('/scale/manual_weight', {
                 plan_id: this.form_data.id,
                 first_weight: this.form_data.first_weight,
                 second_weight: this.form_data.second_weight,
                 count: Number(this.form_data.count) || 0,
-                first_weight_fileList: this.first_weight_upload.urls.join('|'),
-                second_weight_fileList: this.second_weight_upload.urls.join('|'),
+                first_weight_fileList: fwfs,
+                second_weight_fileList: swfs
             });
             if (ret.result) {
                 uni.showToast({
@@ -186,7 +191,7 @@ export default {
                     duration: 2000
                 });
                 this.show_manual_weight = false;
-                this.reset();
+                this.$emit('refresh');
             } else {
                 uni.showToast({
                     title: '提交失败',
