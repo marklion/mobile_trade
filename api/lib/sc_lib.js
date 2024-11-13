@@ -245,11 +245,11 @@ module.exports = {
                 const emptyContentsCount = allContentsUploaded.reqs.filter(req => !req.sc_content).length;
                 if (emptyContentsCount == 0) {
                     await this.fetch_send_sc_check_msg(
-                        msg='已上传-待审核',
-                        order_id=plan?.id,
-                        open_id=null,
-                        _company=company,
-                        notifyTo='CHECKER'
+                        msg = '已上传-待审核',
+                        order_id = plan?.id,
+                        open_id = null,
+                        _company = plan.stuff.company,
+                        notifyTo = 'CHECKER'
                     );
                 }
             }
@@ -315,22 +315,22 @@ module.exports = {
                 if (allContentsPassed.length === 0) {
                     // 所有安检资料都已通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
-                        msg='审核通过',
-                        order_id=plan?.id,
-                        open_id=plan?.driver?.open_id,
+                        msg = '审核通过',
+                        order_id = plan?.id,
+                        open_id = plan?.driver?.open_id,
                         null,
-                        notifyTo='DRIVER'
+                        notifyTo = 'DRIVER'
                     );
                 }
 
                 if (allContentsPassed.length === 1 && !content.passed) {
                     // 反审安检资料从通过变为不通过，发送消息给司机
                     await this.fetch_send_sc_check_msg(
-                        msg='驳回',
-                        order_id=plan?.id,
-                        open_id=plan?.driver?.open_id,
+                        msg = '驳回',
+                        order_id = plan?.id,
+                        open_id = plan?.driver?.open_id,
                         null,
-                        notifyTo='DRIVER'
+                        notifyTo = 'DRIVER'
                     );
                 }
             }
@@ -340,14 +340,14 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
-    fetch_send_sc_check_msg: async function (msg, order_id, open_id,_company, notifyTo) {
+    fetch_send_sc_check_msg: async function (msg, order_id, open_id, _company, notifyTo) {
         if (notifyTo == 'DRIVER' && open_id) {
             // 发送消息到司机端
             wx_api_util.send_sc_check_msg_to_driver(msg, order_id, open_id);
         }
         if (notifyTo == 'CHECKER') {
             // 发送消息到安检审核人员
-            wx_api_util.send_sc_check_msg_to_checker(msg, order_id,_company);
+            wx_api_util.send_sc_check_msg_to_checker(msg, order_id, _company);
         }
     }
 };
