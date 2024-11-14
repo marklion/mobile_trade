@@ -1055,6 +1055,15 @@ void scale_state_idle::after_exit(abs_state_machine &_sm)
     auto &sm = dynamic_cast<scale_sm &>(_sm);
     sm.open_entry();
     sm.cast_enter_info();
+    auto plate_cam_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "plate_cam");
+    std::string pic_path;
+    THR_CALL_DM_BEGIN();
+    client->cap_picture_slow(pic_path, plate_cam_id);
+    THR_CALL_DM_END();
+    THR_CALL_BEGIN(order_center);
+    client->order_push_attach(sm.order_number, "上磅照片", pic_path);
+    THR_CALL_END();
+    sm.record_scale_start();
 }
 
 std::unique_ptr<abs_sm_state> scale_state_idle::proc_event(abs_state_machine &_sm)
@@ -1097,41 +1106,65 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
     }
     else if (_sm.tft == abs_state_machine::scale)
     {
-        if (sm.weight_que.empty())
+        bool should_scale = true;
+        auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
+        if (set)
         {
-            sm.weight_que.push_back(sm.cur_weight);
-        }
-        else
-        {
-            if (sm.weight_que.back() != sm.cur_weight)
+            auto fg = set->get_parent<sql_device_meta>("front_gate");
+            auto bg = set->get_parent<sql_device_meta>("back_gate");
+            if (fg && bg)
             {
-                sm.weight_que.clear();
+                THR_CALL_DM_BEGIN();
+                if (!client->gate_is_close(fg->get_pri_id()) || !client->gate_is_close(bg->get_pri_id()))
+                {
+                    should_scale = false;
+                }
+                THR_CALL_DM_END();
             }
-            sm.weight_que.push_back(sm.cur_weight);
         }
-        auto require_weight_count = 3;
-        THR_CALL_BEGIN(config_management);
-        running_rule tmp;
-        client->get_rule(tmp);
-        if (tmp.weight_turn > 0)
+        if (should_scale)
         {
-            require_weight_count = tmp.weight_turn;
-        }
-        THR_CALL_END();
-        if (sm.weight_que.size() > require_weight_count)
-        {
-            vehicle_order_info tmp;
-            THR_CALL_BEGIN(order_center);
-            client->get_order(tmp, sm.order_number);
-            THR_CALL_END();
-            if (tmp.p_weight == 0 || tmp.confirm_info.operator_time.length() > 0)
+            if (sm.weight_que.empty())
             {
-                ret.reset(new scale_state_clean());
+                sm.weight_que.push_back(sm.cur_weight);
             }
             else
             {
-                sm.cast_need_confirm();
+                if (sm.weight_que.back() != sm.cur_weight)
+                {
+                    sm.weight_que.clear();
+                }
+                sm.weight_que.push_back(sm.cur_weight);
             }
+            auto require_weight_count = 3;
+            THR_CALL_BEGIN(config_management);
+            running_rule tmp;
+            client->get_rule(tmp);
+            if (tmp.weight_turn > 0)
+            {
+                require_weight_count = tmp.weight_turn;
+            }
+            THR_CALL_END();
+            if (sm.weight_que.size() > require_weight_count)
+            {
+                vehicle_order_info tmp;
+                THR_CALL_BEGIN(order_center);
+                client->get_order(tmp, sm.order_number);
+                THR_CALL_END();
+                if (tmp.p_weight == 0 || tmp.confirm_info.operator_time.length() > 0)
+                {
+                    ret.reset(new scale_state_clean());
+                }
+                else
+                {
+                    sm.cast_need_confirm();
+                }
+            }
+        }
+        else
+        {
+            sm.weight_que.clear();
+            ret.reset(new scale_state_prepare());
         }
     }
 
@@ -1142,15 +1175,6 @@ void scale_state_prepare::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
     sm.start_scale_timer(5);
-    auto plate_cam_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "plate_cam");
-    std::string pic_path;
-    THR_CALL_DM_BEGIN();
-    client->cap_picture_slow(pic_path, plate_cam_id);
-    THR_CALL_DM_END();
-    THR_CALL_BEGIN(order_center);
-    client->order_push_attach(sm.order_number, "上磅照片", pic_path);
-    THR_CALL_END();
-    sm.record_scale_start();
 }
 
 void scale_state_prepare::after_exit(abs_state_machine &_sm)
