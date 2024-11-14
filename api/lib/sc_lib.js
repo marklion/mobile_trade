@@ -300,6 +300,7 @@ module.exports = {
             content.checker = user.name;
             await content.save();
             if (_plan_id) {
+                let plan = await util_lib.get_single_plan_by_id(_plan_id);
                 let passed_sc = await this.plan_passed_sc(_plan_id);
                 if (passed_sc) {
                     // 所有安检资料都已通过，发送消息给司机
