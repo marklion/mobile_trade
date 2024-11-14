@@ -119,9 +119,11 @@ module.exports = {
         let tmp_ret = [];
         do {
             tmp_ret = (await this.get_fc_plan_table(plan.id, pageNo)).fc_plan_tables;
-            tmp_ret.forEach(item=>{
+            tmp_ret.forEach(item => {
                 let tmp = item.toJSON()
-                tmp.fc_plan_table = item.fc_plan_table.toJSON();
+                if (item.fc_plan_table) {
+                    tmp.fc_plan_table = item.fc_plan_table.toJSON();
+                }
                 ret.push(tmp);
             });
             pageNo++;
