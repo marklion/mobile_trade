@@ -213,7 +213,7 @@ async function send_wx_msg(req, mp_open_id) {
         }
     }
     console.log('send wx msg:', req);
-    writeStringToFile('/database/wx_api_log.txt',moment().format('YYYY-MM-DD HH:mm:ss') + '|' +  mp_open_id + '|' + req.template_id + '|' + JSON.stringify(req.data) + '\n');
+    writeStringToFile('/database/wx_api_log.txt', moment().format('YYYY-MM-DD HH:mm:ss') + '|' + mp_open_id + '|' + req.template_id + '|' + JSON.stringify(req.data) + '\n');
 }
 
 module.exports = {
@@ -545,7 +545,7 @@ module.exports = {
                 const2: { value: check_msg },
                 character_string1: { value: order_id.toString() }
             },
-        });
+        }, openId);
     },
     send_sc_check_msg_to_checker: async function (check_msg, order_id, company) {
         let req = {
@@ -559,8 +559,8 @@ module.exports = {
         let related_users = await filter_related_users('sc', users);
         related_users.forEach(async item => {
             req.touser = item;
-            send_wx_msg({ ...req });
+            send_wx_msg({ ...req }, item);
         });
     }
-    
+
 }
