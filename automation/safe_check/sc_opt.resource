@@ -90,7 +90,7 @@ Check Pass SC Status By Index
             Append To List  ${contents}  ${itr}[sc_content][id]
         END
     END
-    ${req}  Create Dictionary  content_id=${contents}[${index}]
+    ${req}  Create Dictionary  content_id=${contents}[${index}]  plan_id=${plan}[id]
     IF  ${pass} == ${False}
         Set To Dictionary  ${req}  comment=cancel
     END

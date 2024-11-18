@@ -8,7 +8,8 @@ static long g_boud_rate = 0;
 std::string g_last_plate;
 
 static int g_zc_handler = -1;
-static long long g_zc_ser_handler = -1;
+static long long g_zc_ser_handler0 = -1;
+static long long g_zc_ser_handler1 = -1;
 const uint16_t ModBusCRCTable[] = {
     0X0000, 0XC0C1, 0XC181, 0X0140, 0XC301, 0X03C0, 0X0280, 0XC241,
     0XC601, 0X06C0, 0X0780, 0XC741, 0X0500, 0XC5C1, 0XC481, 0X0440,
@@ -175,14 +176,18 @@ class zs_plate_cam_driver : public common_driver
 {
     bool m_gate_is_open = false;
     bool healthy = true;
-
 public:
     using common_driver::common_driver;
+    bool double_led = false;
 
     virtual void before_exit_driver()
     {
         VzLPRClient_Close(g_zc_handler);
-        VzLPRClient_SerialStop(g_zc_ser_handler);
+        VzLPRClient_SerialStop(g_zc_ser_handler0);
+        if (double_led)
+        {
+            VzLPRClient_SerialStop(g_zc_ser_handler1);
+        }
         VzLPRClient_Cleanup();
     }
     virtual void init_all_set()
@@ -216,12 +221,33 @@ public:
                         nullptr);
                     if (ser_handler != 0)
                     {
-                        g_zc_ser_handler = ser_handler;
+                        g_zc_ser_handler0 = ser_handler;
                     }
                     else
                     {
-                        log_driver(__FUNCTION__, "failed to open ser port:%lld", ser_handler);
-                        exit_driver("failed to open ser port");
+                        log_driver(__FUNCTION__, "failed to open ser port0:%lld", ser_handler);
+                        exit_driver("failed to open ser port0");
+                    }
+                    if (double_led)
+                    {
+                        auto ser_handler = VzLPRClient_SerialStart_V2(
+                            handler,
+                            1,
+                            [](int, const unsigned char *_resp_data, unsigned _resp_len, void *)
+                            {
+                                tdf_log pack_log("led");
+                                pack_log.log_package((const char *)_resp_data, _resp_len);
+                            },
+                            nullptr);
+                        if (ser_handler != 0)
+                        {
+                            g_zc_ser_handler1 = ser_handler;
+                        }
+                        else
+                        {
+                            log_driver(__FUNCTION__, "failed to open ser port1:%lld", ser_handler);
+                            exit_driver("failed to open ser port1");
+                        }
                     }
                     g_zc_handler = handler;
                     if (0 == (zs_ret = VzLPRClient_SetPlateInfoCallBack(handler, plate_callback, this, false)))
@@ -291,7 +317,11 @@ public:
         {
             auto l_frame = make_frame(0x62, make_oneline_text(itr, line_index++));
             usleep(120000);
-            zs_ret |= VzLPRClient_SerialSend(g_zc_ser_handler, (unsigned char *)(l_frame.data()), l_frame.length());
+            zs_ret |= VzLPRClient_SerialSend(g_zc_ser_handler0, (unsigned char *)(l_frame.data()), l_frame.length());
+            if (double_led)
+            {
+                zs_ret |= VzLPRClient_SerialSend(g_zc_ser_handler1, (unsigned char *)(l_frame.data()), l_frame.length());
+            }
         }
         if (0 != zs_ret)
         {
@@ -302,7 +332,7 @@ public:
     {
         auto voice_req = make_frame(0x30, make_voice_content(content));
         usleep(120000);
-        auto zs_ret = VzLPRClient_SerialSend(g_zc_ser_handler, (unsigned char *)(voice_req.data()), voice_req.length());
+        auto zs_ret = VzLPRClient_SerialSend(g_zc_ser_handler0, (unsigned char *)(voice_req.data()), voice_req.length());
         if (0 != zs_ret)
         {
             log_driver(__FUNCTION__, "failed to send ser data:%d", zs_ret);
@@ -333,7 +363,11 @@ public:
         auto zs_ret = VzLPRClient_GetGPIOValue(g_zc_handler, 0, &val);
         if (1 == val)
         {
-            ret = true;
+            zs_ret = VzLPRClient_GetGPIOValue(g_zc_handler, 1, &val);
+            if (1 == val)
+            {
+                ret = true;
+            }
         }
         if (zs_ret != 0)
         {
@@ -349,9 +383,11 @@ int main(int argc, char **argv)
     using namespace clipp;
     unsigned short run_port = 0;
     unsigned short self_id;
+    bool double_led = false;
     auto cli = (required("-p") & value("port", run_port),
                 required("-i") & value("self_id", self_id),
-                required("-a") & value("device_ip", g_dev_ip));
+                required("-a") & value("device_ip", g_dev_ip),
+                option("-d").set(double_led));
     if (!parse(argc, argv, cli))
     {
         std::cerr << "Usage:\n"
@@ -360,6 +396,7 @@ int main(int argc, char **argv)
         return -1;
     }
     auto pd = new zs_plate_cam_driver("zs_plate_cam_driver" + std::to_string(self_id), self_id);
+    pd->double_led = double_led;
     pd->init_all_set();
     common_driver::start_driver(run_port, pd);
 
