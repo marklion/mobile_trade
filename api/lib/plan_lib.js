@@ -702,8 +702,8 @@ module.exports = {
                 }
             });
             if (plan4next) {
-                wx_api_util.send_plan_status_msg(plan);
-                hook_plan('order_ready', plan);
+                wx_api_util.send_plan_status_msg(plan4next);
+                hook_plan('order_ready', plan4next);
             }
         } finally {
             rl();
