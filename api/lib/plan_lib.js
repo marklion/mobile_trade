@@ -9,6 +9,8 @@ const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
 const fc_lib = require('./fc_lib');
+const {Mutex} = require('async-mutex');
+const mutex = new Mutex();
 module.exports = {
     close_a_plan: async function (plan, token) {
         plan.status = 3;
@@ -666,35 +668,47 @@ module.exports = {
         }
     },
     verify_plan_pay: async function (_plan) {
-        if (_plan.status == 1) {
-            let plan = await util_lib.get_single_plan_by_id(_plan.id);
-            let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
-            let cur_balance = 0;
-            if (contracts.length == 1) {
-                cur_balance = contracts[0].balance;
-            }
-            let one_vehicle_cost = plan.stuff.price * plan.stuff.expect_count;
-            let paid_vehicle_count = await plan.company.countPlans({
-                where: {
-                    [db_opt.Op.and]: [
-                        {
-                            status: 2,
+        let rl = await mutex.acquire();
+        try {
+            let plan4next = undefined;
+            await db_opt.get_sq().transaction(async (t) => {
+                if (_plan.status == 1) {
+                    let plan = await util_lib.get_single_plan_by_id(_plan.id);
+                    let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+                    let cur_balance = 0;
+                    if (contracts.length == 1) {
+                        cur_balance = contracts[0].balance;
+                    }
+                    let one_vehicle_cost = plan.stuff.price * plan.stuff.expect_count;
+                    let paid_vehicle_count = await plan.company.countPlans({
+                        where: {
+                            [db_opt.Op.and]: [
+                                {
+                                    status: 2,
+                                },
+                                {
+                                    stuffId: plan.stuff.id
+                                }
+                            ]
                         },
-                        {
-                            stuffId: plan.stuff.id
-                        }
-                    ]
-                },
+                    });
+                    let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
+                    if ((cur_balance - already_verified_cash) >= one_vehicle_cost) {
+                        plan.status = 2;
+                        await plan.save();
+                        await this.rp_history_pay(plan, '自动');
+                        plan4next = plan;
+                    }
+                }
             });
-            let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
-            if ((cur_balance - already_verified_cash) >= one_vehicle_cost) {
-                plan.status = 2;
-                wx_api_util.send_plan_status_msg(plan);
-                await plan.save();
-                await this.rp_history_pay(plan, '自动');
-                hook_plan('order_ready', plan);
+            if (plan4next) {
+                wx_api_util.send_plan_status_msg(plan4next);
+                hook_plan('order_ready', plan4next);
             }
+        } finally {
+            rl();
         }
+
     },
     manual_pay_plan: async function (_plan_id, _token) {
         await this.action_in_plan(_plan_id, _token, 1, async (plan) => {
@@ -803,7 +817,7 @@ module.exports = {
         }
         this.mark_dup_info(plan);
     },
-    mark_dup_info:async function(plan) {
+    mark_dup_info: async function (plan) {
         plan.dup_info = (await this.checkDuplicatePlans(plan)).message;
         await plan.save();
     },
