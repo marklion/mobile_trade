@@ -3,13 +3,8 @@
         <el-header style="padding-top: 20px;">
             <div style="display:flex; justify-content:flex-start;gap: 10px;">
                 <el-button type="success" @click="show_create_diag = true">新增</el-button>
-                <el-input style="width: 400px;" placeholder="输入物料名称搜索" clearable @clear="cancel_search"
-                    v-model="search_info">
-                    <template #append>
-                        <el-button type="primary" size="small" @click="do_search">搜索</el-button>
-                    </template>
-                </el-input>
-                <el-countdown :value="Date.now() + 1000 * 60 * 60 * 7"></el-countdown>
+                <select-search v-model="search_info" filterable get_url="/stuff/get_all" first_item="所有物料" :search_key="['stuff.name']"
+                 item_label="name" item_value="name" :permission_array="['stuff']" body_key="stuff" @refresh="do_search"></select-search>
             </div>
         </el-header>
         <el-main>
@@ -136,8 +131,8 @@
                         <el-input type="number" v-model="new_bc.pay_first" placeholder="请输入押金"></el-input>
                     </el-form-item>
                     <el-form-item label="物料" prop="stuff_name">
-                        <el-input v-model="new_bc.stuff_name" placeholder="点击选择物料"
-                            @focus="handle_select_stuff"></el-input>
+                        <select-search ref="stuff_select" v-model="new_bc.stuff_id" filterable get_url="/stuff/get_all" first_item="请选择" :search_key="['stuff.name']"
+                            item_label="name" item_value="id" :permission_array="['stuff']" body_key="stuff" @on-change="add_stuff2bc"></select-search>
                     </el-form-item>
                     <el-form-item label="物料总量" prop="total">
                         <el-input type="number" v-model="new_bc.total" placeholder="请输入总量"></el-input>
@@ -151,25 +146,6 @@
                     <el-button type="primary" @click="submitForm('add_bc')">确定</el-button>
                 </span>
             </el-dialog>
-            <el-dialog title="选择物料" :visible.sync="show_stuff_select" width="600px" @close="reset_stuff_select">
-                <template>
-                    <el-input style="width: 400px;" placeholder="输入物料名称过滤" clearable @clear="cancel_search_stuff"
-                        v-model="search_stuff_info">
-                        <template #append>
-                            <el-button type="primary" size="small" @click="do_search_stuff">搜索</el-button>
-                        </template>
-                    </el-input>
-                </template>
-                <page-content :ref="'stuff_list'" body_key="stuff" :search_input="search_stuff_info"
-                    :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
-                    <template #default="slotProps">
-                        <el-table :data="slotProps.content" :table-layout="table_layout" @row-click="add_stuff2bc">
-                            <el-table-column prop="name" label="物料名称"></el-table-column>
-                        </el-table>
-                    </template>
-                </page-content>
-            </el-dialog>
-
             <el-dialog title="开启竞价" :visible.sync="show_start_bid" width="600px" @close="show_start_bid = false">
                 <el-form ref="start_bid" label-width="120px">
                     <el-form-item label="时间范围">
@@ -233,7 +209,6 @@ export default {
             search_stuff_info: '',
             show_create_diag: false,
             stuff_data2show: [],
-            show_stuff_select: false,
             show_start_bid: false,
             show_next_bid: false,
             bt_time_range: [new Date(), new Date(Date.now() + 60 * 60 * 1000)],
@@ -259,7 +234,7 @@ export default {
                 "stuff_id": 0,
                 "total": 0,
                 "total_turn": 1,
-                stuff_name: '',
+                "stuff_name": '',
             },
             rules: {
                 comment: [
@@ -280,7 +255,8 @@ export default {
                 total_turn: [
                     { required: true, message: '输入竞价总轮次', trigger: 'change' },
                 ]
-            }
+            },
+            stuff_list: [],
         };
     },
     watch: {
@@ -297,7 +273,11 @@ export default {
             this.$refs.bc_list.refresh(cur_page);
         },
         do_search: function () {
-            this.$refs.bc_list.do_search();
+            if (this.search_info == '' || this.search_info == '所有物料') {
+                this.$refs.bc_list.cancel_search();
+            }else{
+                this.$refs.bc_list.do_search();
+            }
         },
         do_search_stuff: function () {
             this.$refs.stuff_list.do_search();
@@ -340,10 +320,12 @@ export default {
                 }
             });
         },
-        add_stuff2bc: function (item) {
+        add_stuff2bc: async function (item) {
+            if(item.id == 0){
+                return;
+            }
             this.new_bc.stuff_id = item.id;
             this.new_bc.stuff_name = item.name;
-            this.show_stuff_select = false;
         },
         get_related_companies: async function (params) {
             let ret = [];
@@ -437,7 +419,12 @@ export default {
         prepare_company_select: function () {
             this.cust_selected = '';
             this.show_company_select = true;
+        },
+        get_stuff: async function () {
+            let resp = await this.$send_req('/stuff/get_all');
+            this.stuff_list = resp.stuff;
         }
+
     }
 }
 </script>
