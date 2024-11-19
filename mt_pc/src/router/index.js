@@ -153,6 +153,36 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/field',
+    component: Layout,
+    name: 'Field',
+    meta: {
+      title: '现场管理',
+      icon: 'nested',
+      roles: ['scale']
+    },
+    children: [
+      {
+        path: 'queue',
+        name: 'queue',
+        component: () => import('@/views/field/Queue'),
+        meta: { title: '排队车辆', roles: ['scale'] }
+      },
+      {
+        path: 'devopt',
+        name: 'devopt', 
+        component: () => import('@/views/field/DevOpt'),
+        meta: { title: '设备管理', roles: [] }
+      },
+      {
+        path: 'seal_pic',
+        name: 'seal_pic',
+        component: () => import('@/views/field/SealPic'), 
+        meta: { title: '磅单印章', roles: ['scale'] }
+      }
+    ]
+  },
+  {
     path: 'OpenApi',
     name: 'OpenApi',
     component: Layout,
