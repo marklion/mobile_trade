@@ -135,7 +135,7 @@ export const asyncRoutes = [
     meta: {
       title: '竞价管理',
       icon: 'nested',
-      roles: ['bid']
+      roles: ['bid', 'customer']
     },
     children: [
       {
@@ -148,7 +148,7 @@ export const asyncRoutes = [
         path: 'biddingjoin',
         name: 'biddingjoin',
         component: () => import('@/views/bidding/BiddingJoin'),
-        meta: { title: '竞价参与', roles: ['bid'] }
+        meta: { title: '竞价参与', roles: ['customer'] }
       }
     ]
   },
