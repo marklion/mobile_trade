@@ -129,6 +129,30 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/bidding',
+    component: Layout,
+    name: 'Bidding',
+    meta: {
+      title: '竞价管理',
+      icon: 'nested',
+      roles: ['bid', 'customer']
+    },
+    children: [
+      {
+        path: 'biddingconfig',
+        name: 'biddingconfig',
+        component: () => import('@/views/bidding/BiddingConfig'),
+        meta: { title: '竞价配置', roles: ['bid'] }
+      },
+      {
+        path: 'biddingjoin',
+        name: 'biddingjoin',
+        component: () => import('@/views/bidding/BiddingJoin'),
+        meta: { title: '竞价参与', roles: ['customer'] }
+      }
+    ]
+  },
+  {
     path: '/field',
     component: Layout,
     name: 'Field',
@@ -155,7 +179,8 @@ export const asyncRoutes = [
         name: 'seal_pic',
         component: () => import('@/views/field/SealPic'), 
         meta: { title: '磅单印章', roles: ['scale'] }
-      }]
+      }
+    ]
   },
   {
     path: 'OpenApi',
