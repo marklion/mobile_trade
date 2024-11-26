@@ -117,7 +117,7 @@ export const asyncRoutes = [
       {
         path: 'global_strategy',
         component: () => import('@/views/stuff/GlobalStrategy'),
-        name: 'global_strategy', 
+        name: 'global_strategy',
         meta: { title: '全局策略'}
       },
       {
@@ -170,15 +170,27 @@ export const asyncRoutes = [
       },
       {
         path: 'devopt',
-        name: 'devopt', 
+        name: 'devopt',
         component: () => import('@/views/field/DevOpt'),
         meta: { title: '设备管理', roles: [] }
       },
       {
         path: 'seal_pic',
         name: 'seal_pic',
-        component: () => import('@/views/field/SealPic'), 
+        component: () => import('@/views/field/SealPic'),
         meta: { title: '磅单印章', roles: ['scale'] }
+      }
+    ]
+  },
+  {
+    path: 'Help',
+    name: 'Help',
+    component: Layout,
+    children: [
+      {
+        name: 'doc_site',
+        path:  'https://console.d8sis.cn/help/',
+        meta: { title: '帮助', icon: 'link' }
       }
     ]
   },
@@ -194,6 +206,7 @@ export const asyncRoutes = [
       }
     ]
   },
+
 
   // 404 page must be placed at the end !!!
   { path: '*', redirect: '/404', hidden: true }

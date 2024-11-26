@@ -1,13 +1,13 @@
 SHELL=/bin/bash
 SRC_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 DELIVER_PATH=$(SRC_DIR)/build
-SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc zczh
+SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc zczh doc_site
 BUILD_MODE=build
 export BUILD_MODE
 
 pack:all
 	date '+%Y-%m-%d %H:%M:%S' > $(DELIVER_PATH)/conf/version.txt
-	tar zcf mt_deliver.tar.gz -C $(DELIVER_PATH) conf api script automation mt_pc
+	tar zcf mt_deliver.tar.gz -C $(DELIVER_PATH) conf api script automation mt_pc doc_site
 	cat $(SRC_DIR)/deploy.sh mt_deliver.tar.gz > $(DELIVER_PATH)/install.sh
 	chmod +x $(DELIVER_PATH)/install.sh
 	rm mt_deliver.tar.gz
