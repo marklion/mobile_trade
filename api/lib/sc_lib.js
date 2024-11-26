@@ -40,10 +40,19 @@ module.exports = {
                 });
             }
             if (tar_req) {
-                tar_req.need_attach = _req.need_attach;
-                tar_req.need_input = _req.need_input;
-                tar_req.need_expired = _req.need_expired;
-                tar_req.belong_type = _req.belong_type;
+                const fields = ['need_attach', 'need_input', 'need_expired', 'belong_type'];
+                const hasChanged = fields.some(field => tar_req[field] !== _req[field]);
+                fields.forEach(field => tar_req[field] = _req[field]);
+                if (hasChanged) {
+                    let sc_contents = await tar_req.getSc_contents();
+                    for (let sc_content of sc_contents) {
+                        if (sc_content.passed) {    
+                            sc_content.passed = false;
+                            sc_content.comment = '安检配置项已变更';
+                            await sc_content.save();
+                        }
+                    }
+                }
                 tar_req.prompt = _req.prompt;
                 tar_req.add_to_export = _req.add_to_export;
                 await tar_req.save();
