@@ -26,7 +26,6 @@
 		"octref.vetur",
 		"oderwat.indent-rainbow",
 		"robocorp.robotframework-lsp",
-		"tabnine.tabnine-vscode",
 		"twxs.cmake",
 	],
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.

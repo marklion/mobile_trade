@@ -1,0 +1,4 @@
+baseURL = 'https://example.org/'
+theme = "hugo-book"
+languageCode = 'zh-CN'
+title = '掌易助理说明文档'
