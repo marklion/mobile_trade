@@ -82,7 +82,7 @@ export default {
             list: [{
                 label: '物料',
                 value: ticket.stuff_name,
-            },{
+            }, {
                 label: '磅单号',
                 value: ticket.ticket_no,
             }, {
@@ -108,7 +108,7 @@ export default {
                 value: ticket.sw_info,
             });
         }
-        if (ticket.m_time) {
+        if (ticket.m_time && ticket.p_time) {
             this.ticket_content.list.push({
                 label: '毛重',
                 value: ticket.m_weight,
@@ -117,8 +117,6 @@ export default {
                 label: '过毛时间',
                 value: ticket.m_time,
             });
-        }
-        if (ticket.p_time) {
             this.ticket_content.list.push({
                 label: '皮重',
                 value: ticket.p_weight,
@@ -128,6 +126,14 @@ export default {
                 value: ticket.p_time,
             });
         }
+        else if (ticket.m_time || ticket.p_time)
+        {
+            this.ticket_content.list.push({
+                label:'计量时间',
+                value: ticket.m_time || ticket.p_time,
+            });
+        }
+
         if (ticket.seal_no) {
             this.ticket_content.list.push({
                 label: '封签号',
