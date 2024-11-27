@@ -290,12 +290,52 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
+                const moment = require('moment');
+                const db_opt = require('../db_opt');
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
+                    // 当日该物料已出货第几车
+                    let vehicle_count = await plan.stuff.countPlans({
+                        where: {
+                            status: 3,
+                            count: {
+                                [db_opt.Op.ne]: 0
+                            },
+                            [db_opt.Op.or]: [
+                                {
+                                    m_time: {
+                                        [db_opt.Op.gte]: moment().startOf('day').format('YYYY-MM-DD HH:mm:ss'),
+                                        [db_opt.Op.lte]: moment().endOf('day').format('YYYY-MM-DD HH:mm:ss')
+                                    }
+                                },
+                                {
+                                    p_time: {
+                                        [db_opt.Op.gte]: moment().startOf('day').format('YYYY-MM-DD HH:mm:ss'),
+                                        [db_opt.Op.lte]: moment().endOf('day').format('YYYY-MM-DD HH:mm:ss')
+                                    }
+                                }
+                            ]
+                        }
+                    });
+                    let cur_day_no = vehicle_count;
+                    plan.count = body.count;
+                    if(plan.count > 0){
+                        cur_day_no = vehicle_count + 1;
+                    }
+                    const prefix = plan.stuff.ticket_prefix;
+                    const date = moment().format('YYYYMMDDHHmmss');
+                    const countStr = cur_day_no ? cur_day_no.toString().padStart(4, '0') : '0000';
+                    // 磅单号
+                    plan.ticket_no = `${prefix}${date}${countStr}`;
                     plan.first_weight = body.first_weight;
                     plan.second_weight = body.second_weight;
-                    plan.count = body.count;
                     plan.first_weight_fileList = body.first_weight_fileList;
                     plan.second_weight_fileList = body.second_weight_fileList;
+                    if (plan.is_buy) {
+                        plan.m_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                    } else {
+                        plan.p_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                    }
+
                     await plan.save();
                     if(plan.count > 0){
                         await plan_lib.manual_deliver_plan(plan, token);

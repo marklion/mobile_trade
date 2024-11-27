@@ -91,6 +91,17 @@
                             </fui-list-cell>
                         </fui-label>
                     </fui-col>
+                    <fui-col v-if="item.manual_weight" :span="24">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="磅单号前缀"></fui-text>
+                                    <fui-input v-model="item.ticket_prefix" placeholder="请输入磅单号前缀"></fui-input>
+                                    <fui-button text="保存" btnSize="mini" type="primary" @click="save_ticket_prefix(item)"></fui-button>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
                 </fui-row>
                 <fui-divider text="装卸区域配置"></fui-divider>
                 <view style="display: flex; flex-wrap:wrap;">
@@ -255,10 +266,17 @@ export default {
                 zone_name: ''
             },
             del_zone_id: 0,
-            show_zone_del: false,
+            show_zone_del: false
         }
     },
     methods: {
+        save_ticket_prefix: async function (item) {
+            await this.$send_req('/stuff/set_ticket_prefix', {
+                stuff_id: item.id,
+                ticket_prefix: item.ticket_prefix
+            });
+            uni.startPullDownRefresh();
+        },
         prepare_del_zone: function (zone_id) {
             this.del_zone_id = zone_id;
             this.show_zone_del = true;
@@ -345,6 +363,7 @@ export default {
             });
         },
         change_manual_weight: async function (event, item) {
+            item.manual_weight = event.detail.value;
             await this.$send_req('/stuff/manual_weight_config', {
                 stuff_id: item.id,
                 manual_weight: event.detail.value

@@ -68,7 +68,7 @@ export default {
     },
     computed: {
         first_weight_fileUrl: function () {
-            if (this.focus_plan.first_weight_fileList != '') {
+            if (this.focus_plan.first_weight_fileList && this.focus_plan.first_weight_fileList != '') {
                 return this.focus_plan.first_weight_fileList.split('|').map(ele => {
                     return this.$convert_attach_url(ele);
                 });
@@ -77,7 +77,7 @@ export default {
             }
         },
         second_weight_fileUrl: function () {
-            if (this.focus_plan.second_weight_fileList != '') {
+            if (this.focus_plan.second_weight_fileList && this.focus_plan.second_weight_fileList != '') {
                 return this.focus_plan.second_weight_fileList.split('|').map(ele => {
                     return this.$convert_attach_url(ele);
                 });

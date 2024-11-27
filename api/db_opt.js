@@ -181,6 +181,7 @@ let db_opt = {
             concern_fapiao: { type: DataTypes.BOOLEAN, defaultValue: false },
             checkout_delay:{type: DataTypes.BOOLEAN, defaultValue: false},
             manual_weight:{type: DataTypes.BOOLEAN, defaultValue: false},
+            ticket_prefix: { type: DataTypes.STRING },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
