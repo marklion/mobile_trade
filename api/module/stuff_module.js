@@ -83,6 +83,7 @@ module.exports = {
                             }
                         },
                         manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
+                        ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                     }
                 },
             },
@@ -218,7 +219,7 @@ module.exports = {
             func: async function (body, token) {
                 return await change_stuff_single_switch(body.stuff_id, 'manual_weight', body.manual_weight, token);
             },
-        },  
+        },
         change_price: {
             name: '调价',
             description: '调价',
@@ -717,5 +718,23 @@ module.exports = {
                 }
             }
         },
+        set_ticket_prefix: {
+            name: '配置物料磅单号前缀',
+            description: '配置物料磅单号前缀',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                ticket_prefix: { type: String, have_to: true, mean: '前缀', example: 'SDJL' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                stuff.ticket_prefix = body.ticket_prefix;
+                await stuff.save();
+                return { result: true };
+            }
+        }
     }
 }
