@@ -26,6 +26,7 @@
                         <view v-else>
                             <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
                             <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
+                            <fui-button btnSize="mini" text="检查" type="warning"  @click="nav_to_fc(item)"></fui-button>
                             <fui-button btnSize="mini" v-if="item.stuff.manual_weight" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
                         </view>
                     </view>
@@ -103,6 +104,11 @@ export default {
         };
     },
     methods: {
+        nav_to_fc: function (_plan) {
+            uni.navigateTo({
+                url: '/subPage1/FcExecute?plan_id=' + _plan.id
+            })
+        },
         init_dev: async function () {
             let resp = await this.$send_req('/scale/get_device_status', {});
             this.$set(this, 'all_dev', resp.devices);
