@@ -87,6 +87,7 @@ module.exports = {
     },
     handle_cancel_check_in: async function (_plan) {
         _plan.register_time = null;
+        _plan.register_number = 0;
         _plan.call_time = null;
         await hook_plan('cancel_check_in', _plan);
         await _plan.save();
