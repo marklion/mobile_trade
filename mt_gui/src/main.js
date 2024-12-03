@@ -69,11 +69,16 @@ Vue.prototype.$has_module = function (mod_name) {
 };
 Vue.prototype.$convert_attach_url = function (url) {
   let prefix = Vue.prototype.$remote_url();
+  let baseUrl
   if (!prefix) {
     prefix = window.location.href;
+    let urlObj = new URL(prefix);
+    baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.port ? ':' + urlObj.port : ''}`;
   }
-  let urlObj = new URL(prefix);
-  let baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.port ? ':' + urlObj.port : ''}`;
+  else
+  {
+    baseUrl = prefix;
+  }
   let ret = baseUrl + url;
 
   return ret;

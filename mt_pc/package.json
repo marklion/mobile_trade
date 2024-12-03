@@ -5,7 +5,7 @@
   "author": "Marklion",
   "scripts": {
     "dev": "cross-env REMOTE_HOST=https://console.d8sis.cn vue-cli-service serve",
-    "build:prod": "vue-cli-service build",
+    "build:prod": "cross-env REMOTE_HOST=${ENV_REMOTE_HOST} REMOTE_MOBILE_HOST=${ENV_REMOTE_MOBILE_HOST} vue-cli-service build",
     "build:stage": "vue-cli-service build --mode staging",
     "preview": "node build/index.js --preview",
     "svgo": "svgo -f src/icons/svg --config=src/icons/svgo.yml",
