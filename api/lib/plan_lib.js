@@ -600,6 +600,9 @@ module.exports = {
                 else {
                     plan.status = 0;
                     rollback_content = '回退确认';
+                    if(plan.register_time){
+                        await field_lib.handle_cancel_check_in(plan);
+                    }
                 }
             } else if (plan.status == 2) {
                 if (plan.checkout_delay && plan.count != 0) {
@@ -616,6 +619,9 @@ module.exports = {
                 else {
                     plan.status = 1;
                     rollback_content = '回退验款';
+                    if(plan.register_time){
+                       await field_lib.handle_cancel_check_in(plan);
+                    }
                 }
             } else if (plan.status == 3) {
                 await this.plan_rollback(plan.id, _token, msg, true);
