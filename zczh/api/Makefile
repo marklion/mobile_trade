@@ -2,9 +2,10 @@ SHELL=/bin/bash
 SRC_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 DELIVER_PATH=$(SRC_DIR)/build
 all:$(DELIVER_PATH)
-
-$(DELIVER_PATH):
-	pushd $(SRC_DIR); npm install && npm run build;
+$(SRC_DIR)/node_modules:$(SRC_DIR)/package.json
+	pushd $(SRC_DIR); npm install;
+$(DELIVER_PATH):$(SRC_DIR)/node_modules
+	pushd $(SRC_DIR); npm run build;
 
 clean:
 	rm -rf $(DELIVER_PATH)

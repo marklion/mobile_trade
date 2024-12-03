@@ -20,7 +20,7 @@
             </span>
         </el-form-item>
         <el-button :loading="loading" type="primary" style="width:100%;margin-bottom:30px;" @click.native.prevent="handleLogin">登录</el-button>
-        <el-link type="primary" href="https://console.d8sis.cn/help/">帮助</el-link>
+        <el-link type="primary" :href="help_url()">帮助</el-link>
     </el-form>
 </div>
 </template>
@@ -41,6 +41,9 @@ export default {
             }
         }
         return {
+            help_url:function() {
+                return process.env.REMOTE_HOST + '/help/'
+            },
             loginForm: {
                 phone: '',
                 password: ''

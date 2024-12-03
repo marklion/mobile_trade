@@ -80,7 +80,7 @@ start_docker_con() {
     then
         SSH_PORT_ARG=""
     fi
-    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -e BASE_URL=${BASE_URL_INPUT} -e OEM_NAME=${OEM_NAME_INPUT} -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e WECHAT_MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -e MAIL_PWD="${MAIL_PWD_INPUT}" -e OEM_SHORT="${OEM_SHORT_INPUT}" -e URL_REMOTE="${URL_REMOTE_INPUT}" -v ${DATA_BASE_PATH}:/database -v ${DEVICE_CONFIG_FILE_PATH}:/conf/device -v ${IMG_BED}:/manage_dist/logo_res ${DOCKER_IMG_NAME} /root/install.sh`
+    local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} ${SSH_PORT_ARG} -e BASE_URL=${BASE_URL_INPUT} -e OEM_NAME=${OEM_NAME_INPUT} -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e WECHAT_MP_SECRET="${WECHAT_MP_SECRET_INPUT}" -e ALI_KEY_ID="${ALI_KEY_ID_INPUT}" -e ALI_KEY_SEC="${ALI_KEY_SEC_INPUT}" -e MAIL_PWD="${MAIL_PWD_INPUT}" -e OEM_SHORT="${OEM_SHORT_INPUT}" -v ${DATA_BASE_PATH}:/database -v ${DEVICE_CONFIG_FILE_PATH}:/conf/device -v ${IMG_BED}:/manage_dist/logo_res ${DOCKER_IMG_NAME} /root/install.sh`
     docker cp $0 ${CON_ID}:/root/
     docker start ${CON_ID}
 }

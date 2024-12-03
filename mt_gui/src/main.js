@@ -6,13 +6,12 @@ import uView from '@/uni_modules/uview-ui'
 Vue.use(uView)
 import './uni.promisify.adaptor'
 Vue.config.productionTip = false
-Vue.prototype.$remote_url = function() {
+Vue.prototype.$remote_url = function () {
   if (process.env.NODE_ENV === 'development') {
     return '';
   }
-  else
-  {
-    return 'https://www.d8sis.cn/mt_api';
+  else {
+    return process.env.REMOTE_HOST;
   }
 };
 Vue.prototype.$send_req = function (_url, _data) {
@@ -42,8 +41,8 @@ Vue.prototype.$send_req = function (_url, _data) {
       fail: (res) => {
         reject(res)
       },
-      complete:() =>{
-        uni.hideLoading({noConflict: true});
+      complete: () => {
+        uni.hideLoading({ noConflict: true });
       }
     })
   })
@@ -69,44 +68,51 @@ Vue.prototype.$has_module = function (mod_name) {
   return ret;
 };
 Vue.prototype.$convert_attach_url = function (url) {
-  let ret = Vue.prototype.$remote_url() + url;
+  let prefix = Vue.prototype.$remote_url();
+  if (!prefix) {
+    prefix = window.location.href;
+  }
+  let urlObj = new URL(prefix);
+  let baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.port ? ':' + urlObj.port : ''}`;
+  let ret = baseUrl + url;
+
   return ret;
 };
-Vue.prototype.$download_file = function(uri) {
+Vue.prototype.$download_file = function (uri) {
   uni.downloadFile({
     url: uri,
     success: (res) => {
-        if (res.statusCode === 200) {
-            // 下载成功，保存到本地
-            uni.saveImageToPhotosAlbum({
-                filePath: res.tempFilePath,
-                success: () => {
-                    uni.showToast({
-                        title: '下载成功',
-                        icon: 'success'
-                    });
-                },
-                fail: () => {
-                    uni.showToast({
-                        title: '保存失败',
-                        icon: 'none'
-                    });
-                }
+      if (res.statusCode === 200) {
+        // 下载成功，保存到本地
+        uni.saveImageToPhotosAlbum({
+          filePath: res.tempFilePath,
+          success: () => {
+            uni.showToast({
+              title: '下载成功',
+              icon: 'success'
             });
-        }else{
-          uni.showToast({
-            title: '下载失败',
-            icon: 'none'
-          });
-        }
+          },
+          fail: () => {
+            uni.showToast({
+              title: '保存失败',
+              icon: 'none'
+            });
+          }
+        });
+      } else {
+        uni.showToast({
+          title: '下载失败',
+          icon: 'none'
+        });
+      }
     },
     fail: () => {
-        uni.showToast({
-            title: '下载失败',
-            icon: 'none'
-        });
+      uni.showToast({
+        title: '下载失败',
+        icon: 'none'
+      });
     }
-});
+  });
 };
 Vue.prototype.$get_login_code = function () {
   return new Promise((resolve, reject) => {

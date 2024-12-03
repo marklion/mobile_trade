@@ -5,3 +5,7 @@ $(NODE_REST_SEVER):$(SRC_DIR)/idl.thrift
 	rm -rf $(NODE_REST_SEVER)
 	mkdir $(NODE_REST_SEVER)
 	thrift -out $(NODE_REST_SEVER) --gen js:node $^
+
+clean:
+	rm -rf $(NODE_REST_SEVER)
+.PHONY:clean

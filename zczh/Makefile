@@ -4,7 +4,6 @@ DELIVER_PATH=$(SRC_DIR)/build
 SUB_DIR=base service api conf
 BUILD_MODE=build
 export BUILD_MODE
-
 pack:all
 	date '+%Y-%m-%d %H:%M:%S' > $(DELIVER_PATH)/conf/version.txt
 	tar zcf zh_deliver.tar.gz -C $(DELIVER_PATH) bin lib conf api

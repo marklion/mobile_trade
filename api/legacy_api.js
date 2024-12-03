@@ -435,7 +435,7 @@ module.exports = {
                 let rtl_in = '无';
                 if (vl)
                 {
-                    vla = 'https://www.d8sis.cn/mt_api' + vl.attachment;
+                    vla = process.env.REMOTE_HOST + vl.attachment;
                     vl_et = vl.expired_time;
                 }
                 if (rtl)
