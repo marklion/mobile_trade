@@ -5,9 +5,13 @@ SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc zczh doc_site
 BUILD_MODE=build
 ENV_REMOTE_HOST=
 ENV_REMOTE_MOBILE_HOST=$(ENV_REMOTE_HOST)/mobile/\#
+ENV_MP_APPID=wxfbf41c757510dc4c
+ENV_PUB_APPID=wxa390f8b6f68e9c6d
 export BUILD_MODE
 export ENV_REMOTE_HOST
 export ENV_REMOTE_MOBILE_HOST
+export ENV_MP_APPID
+export ENV_PUB_APPID
 cur_host=$(shell cat ${SRC_DIR}/last_host.txt)
 
 .SILENT:
