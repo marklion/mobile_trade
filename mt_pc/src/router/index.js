@@ -189,7 +189,7 @@ export const asyncRoutes = [
     children: [
       {
         name: 'doc_site',
-        path:  'https://console.d8sis.cn/help/',
+        path:  process.env.REMOTE_HOST + '/help/',
         meta: { title: '帮助', icon: 'link' }
       }
     ]
@@ -201,7 +201,7 @@ export const asyncRoutes = [
     children: [
       {
         name: 'api_help',
-        path: 'https://www.d8sis.cn/mt_api/api/help',
+        path: process.env.REMOTE_HOST + '/api/help',
         meta: { title: '开放接口', icon: 'link' }
       }
     ]

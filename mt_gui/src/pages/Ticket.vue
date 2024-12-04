@@ -3,7 +3,7 @@
     <fui-section :title="title" size="50" class="centered-title"></fui-section>
     <fui-preview :previewData="ticket_content"></fui-preview>
     <view style="display:flex; justify-content: center;">
-        <fui-qrcode width="240" height="240" :value="'http://mt.d8sis.cn/#/pages/Ticket?id=' + id"></fui-qrcode>
+        <fui-qrcode width="240" height="240" :value="qr_path()"></fui-qrcode>
         <fui-avatar mode="widthFix" shape="square" background="white" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
     </view>
     <fui-button text="下载磅单图片" @click="download_pic" type="primary"></fui-button>
@@ -23,6 +23,10 @@ export default {
             stamp_path: '',
             id: 0,
             main_vehicle_plate: '',
+            qr_path: function () {
+                let ret = process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + this.id
+                return ret;
+            },
         }
     },
     methods: {
@@ -125,11 +129,9 @@ export default {
                 label: '过皮时间',
                 value: ticket.p_time,
             });
-        }
-        else if (ticket.m_time || ticket.p_time)
-        {
+        } else if (ticket.m_time || ticket.p_time) {
             this.ticket_content.list.push({
-                label:'计量时间',
+                label: '计量时间',
                 value: ticket.m_time || ticket.p_time,
             });
         }

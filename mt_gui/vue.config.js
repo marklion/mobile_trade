@@ -1,14 +1,28 @@
 const fs = require('fs-extra');
 const path = require('path')
+
+const currentScript = process.env.npm_lifecycle_event;
 module.exports = {
     devServer: {
         open: true,
         hot: true,
         proxy: {
+            '/api/v1/upload_file':{
+                target: process.env.REMOTE_HOST,
+                changeOrigin: true,
+            },
             '/api': {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
-            }
+            },
+            '/uploads':{
+                target: process.env.REMOTE_HOST,
+                changeOrigin: true,
+            },
+            '/logo_res':{
+                target: process.env.REMOTE_HOST,
+                changeOrigin: true,
+            },
         }
     },
     chainWebpack: config => {
@@ -17,7 +31,8 @@ module.exports = {
                 apply: (compiler) => {
                     compiler.hooks.beforeRun.tapAsync('CheckChangesPlugin', (compilation, callback) => {
                         const vueFilesDir = path.resolve(__dirname, 'src');
-                        const lastBuildFile = path.resolve(__dirname, 'last-build-time.txt');
+                        let build_target = currentScript.split(':').pop();
+                        const lastBuildFile = path.resolve(__dirname, 'last-build-time-' + build_target + '.txt');
                         let lastBuildTime = 0;
 
                         if (fs.existsSync(lastBuildFile)) {
@@ -53,5 +68,14 @@ module.exports = {
                     });
                 }
             });
+        config
+            .plugin('define')
+            .tap(args => {
+                let new_env = process.env;
+                args[0]['process.env'].REMOTE_MOBILE_HOST = '"' + new_env.REMOTE_MOBILE_HOST + '"'
+                args[0]['process.env'].REMOTE_HOST = '"' + new_env.REMOTE_HOST + '"'
+
+                return args
+            })
     }
 }

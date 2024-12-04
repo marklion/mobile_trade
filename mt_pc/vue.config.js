@@ -39,10 +39,22 @@ module.exports = {
       errors: true
     },
     proxy: {
+      '/api/v1/upload_file': {
+        target: process.env.REMOTE_HOST,
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-      }
+      },
+      '/uploads': {
+        target: process.env.REMOTE_HOST,
+        changeOrigin: true,
+      },
+      '/logo_res': {
+        target: process.env.REMOTE_HOST,
+        changeOrigin: true,
+      },
     }
   },
   configureWebpack: {
@@ -176,6 +188,15 @@ module.exports = {
             })
           // https:// webpack.js.org/configuration/optimization/#optimizationruntimechunk
           config.optimization.runtimeChunk('single')
+          config
+            .plugin('define')
+            .tap(args => {
+              let new_env = process.env;
+              args[0]['process.env'].REMOTE_MOBILE_HOST = '"' + new_env.REMOTE_MOBILE_HOST + '"'
+              args[0]['process.env'].REMOTE_HOST = '"' + new_env.REMOTE_HOST + '"'
+
+              return args
+            })
         }
       )
   }

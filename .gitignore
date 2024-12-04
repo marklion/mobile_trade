@@ -20,9 +20,10 @@ output.xml
 /automation/__pycache__/
 **/package-lock.json
 **/yarn.lock
-**/last-build-time.txt
+**/last-build-time*.txt
 mt_gui/dist
 **/cmake_tmp_dir/
 doc_site/public/
 doc_site/resources/
 doc_site/.hugo_build.lock
+last_host.txt

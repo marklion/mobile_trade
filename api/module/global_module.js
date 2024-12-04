@@ -1140,7 +1140,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
@@ -1184,7 +1184,7 @@ module.exports = {
                         const plan = plans[index];
                         let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
                         const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                        await do_web_cap('http://mt.d8sis.cn/#/pages/Ticket?id=' + plan.id, '/database' + filePath);
+                        await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, '/database' + filePath);
                         filePaths.push(`/database${filePath}`);
                     }
                     if (filePaths.length === 0) {

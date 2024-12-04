@@ -1,6 +1,5 @@
 const axios = require('axios');
 const fs = require('fs');
-const rbac_lib = require('./rbac_lib');
 const db_opt = require('../db_opt');
 const moment = require('moment');
 
@@ -44,8 +43,8 @@ const pub_token_store = {
     token: '',
     expire_time: 0,
 };
-const appid = 'wxfbf41c757510dc4c';
-const pub_appid = 'wxa390f8b6f68e9c6d';
+const appid = process.env.MP_APPID;
+const pub_appid = process.env.PUB_APPID;
 
 async function call_wx_api(url, req, method) {
     let ret = '';
