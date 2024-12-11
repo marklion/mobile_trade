@@ -158,6 +158,7 @@ const g_scale_set_info = {
         g_device_couple_format('qr_reader', '二维码阅读器'),
         g_device_couple_format('gate', '道闸'),
         g_device_couple_format('printer', '打印机'),
+        g_device_meta_format('card_reader', '读卡器'),
     ],
 }
 

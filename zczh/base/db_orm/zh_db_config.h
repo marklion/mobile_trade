@@ -12,12 +12,12 @@ const std::string node_name_exit = "出厂";
 const std::string node_name_p_weight = "一次称重";
 const std::string node_name_rollback_weight = "回退一次称重";
 const std::string node_name_m_weight = "二次称重";
-const std::string node_name_create= "创建";
-const std::string node_name_update= "更新";
-const std::string node_name_close= "关闭";
-const std::string node_name_check_in="排号";
-const std::string node_name_call="叫号";
-const std::string node_name_confirm="确认出厂";
+const std::string node_name_create = "创建";
+const std::string node_name_update = "更新";
+const std::string node_name_close = "关闭";
+const std::string node_name_check_in = "排号";
+const std::string node_name_call = "叫号";
+const std::string node_name_confirm = "确认出厂";
 class sql_stuff : public sql_tree_base
 {
 public:
@@ -170,6 +170,7 @@ public:
         add_parent_type<sql_device_meta>("front_printer");
         add_parent_type<sql_device_meta>("back_printer");
         add_parent_type<sql_device_meta>("scale");
+        add_parent_type<sql_device_meta>("card_reader");
     }
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
@@ -404,6 +405,7 @@ public:
     std::string date_ticket_prefix;
     std::string oem_name;
     long weight_turn = 0;
+    long need_issue_card = 0;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -415,6 +417,7 @@ public:
         ret.push_back(sqlite_orm_column("date_ticket_prefix", sqlite_orm_column::STRING, &date_ticket_prefix));
         ret.push_back(sqlite_orm_column("oem_name", sqlite_orm_column::STRING, &oem_name));
         ret.push_back(sqlite_orm_column("weight_turn", sqlite_orm_column::INTEGER, &weight_turn));
+        ret.push_back(sqlite_orm_column("need_issue_card", sqlite_orm_column::INTEGER, &need_issue_card));
 
         return ret;
     }
@@ -424,7 +427,8 @@ public:
     }
 };
 
-class sql_file_store:public sql_tree_base {
+class sql_file_store : public sql_tree_base
+{
 public:
     std::string file_path;
     std::string upload_date;
@@ -443,7 +447,8 @@ public:
     }
 };
 
-class sql_zyzl_plugin_que:public sql_tree_base {
+class sql_zyzl_plugin_que : public sql_tree_base
+{
 public:
     std::string req_body;
     std::string req_url;

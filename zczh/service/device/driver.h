@@ -72,6 +72,13 @@ public:
     virtual void video_record_slow(std::string &_return, const int64_t cam_id, const std::string &begin_date, const std::string &end_date)
     {
     }
+    virtual void last_card_no(std::string &_return, const int64_t card_reader_id)
+    {
+    }
+
+    virtual void push_card_no(const int64_t card_reader_id, const std::string &card_no)
+    {
+    }
     static void start_driver(unsigned short _port, common_driver *_driver)
     {
         std::shared_ptr<TMultiplexedProcessor> multi_processor(new TMultiplexedProcessor());

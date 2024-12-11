@@ -48,7 +48,7 @@ module.exports = {
 
                                 if (stat.isDirectory()) {
                                     checkFiles(filePath);
-                                } else if (stat.mtimeMs > lastBuildTime) {
+                                } else if (stat.mtimeMs > lastBuildTime && !filePath.endsWith('manifest.json')) {
                                     filesChanged = true;
                                     break;
                                 }

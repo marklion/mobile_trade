@@ -52,11 +52,11 @@ start_all_server() {
     ulimit -q 819200000 && service ssh start
     echo 'export LANG=zh_CN.UTF-8' >> ~/.bashrc
     echo 'export LC_ALL=zh_CN.UTF-8' >> ~/.bashrc
-    device_center &
+    device_center > /tmp/device_center.log 2>&1 &
     pushd /api
     pm2 start index.js
     popd
-    core_service
+    core_service > /tmp/core_service.log 2>&1
 }
 
 start_docker_con() {
