@@ -1,8 +1,5 @@
 const api_param_result_define = require('../api_param_result_define');
-const plan_lib = require('../lib/plan_lib');
-const rbac_lib = require('../lib/rbac_lib');
 const bidding_lib = require('../lib/bidding_lib');
-const db_opt = require('../db_opt');
 const common = require('./common')
 module.exports = {
     name: 'bid',
@@ -11,7 +8,6 @@ module.exports = {
         create: {
             name: '创建竞价',
             description: '创建竞价',
-
             is_write: true,
             is_get_api: false,
             params: {
@@ -22,16 +18,16 @@ module.exports = {
                 max: { type: Number, have_to: true, mean: '最大价格', example: 100 },
                 total_turn: { type: Number, have_to: true, mean: '总轮次', example: 10 },
                 pay_first: { type: Number, have_to: true, mean: '押金额度', example: 123 },
+                price_hide:{type:Boolean,have_to:false,mean:'价格隐藏',example:true},
             },
             result: api_param_result_define.bc_detail(),
             func: async function (body, token) {
-                return await bidding_lib.create_bidding(body.stuff_id, body.total, body.comment, body.min, body.max, body.total_turn, body.pay_first, token);
+                return await bidding_lib.create_bidding(body.stuff_id, body.total, body.comment, body.min, body.max, body.total_turn, body.pay_first, token, body.price_hide);
             },
         },
         get_all_created: {
             name: '获取所有创建的竞价',
             description: '获取所有创建的竞价',
-
             is_write: false,
             is_get_api: true,
             params: {},
@@ -45,7 +41,6 @@ module.exports = {
         add_turn: {
             name: '添加竞价轮次',
             description: '添加竞价轮次',
-
             is_write: true,
             is_get_api: false,
             params: {

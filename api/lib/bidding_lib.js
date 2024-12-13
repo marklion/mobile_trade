@@ -6,7 +6,7 @@ const officegen = require('officegen');
 const uuid = require('uuid');
 const fs = require('fs');
 module.exports = {
-    create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token) {
+    create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token, price_hide) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(stuff_id);
         let company = await rbac_lib.get_company_by_token(token);
@@ -19,6 +19,7 @@ module.exports = {
                 max: max,
                 total_turn: total_turn,
                 pay_first: pay_first,
+                price_hide: price_hide,
             });
             return await sq.models.bidding_config.findByPk(bidding.id, { include: [sq.models.stuff] });
         }
@@ -73,6 +74,15 @@ module.exports = {
         });
         ret.biddings = biddings.rows;
         ret.total = biddings.count;
+        ret.biddings.forEach(item => {
+            if (item.price_hide && item.status == 0) {
+                item.bidding_turns.forEach(bt => {
+                    bt.bidding_items.forEach(bi => {
+                        bi.price = 0;
+                    });
+                });
+            }
+        });
         return ret;
     },
     get_all_created_bidding: async function (token, pageNo) {
@@ -198,7 +208,11 @@ module.exports = {
             }
             item.price = price;
             item.time = moment().format('YYYY-MM-DD HH:mm:ss');
-            wx_api_util.bidding_price_msg(bc, user.name, price);
+            let price_msg = price;
+            if (bc.price_hide) {
+                price_msg = '隐藏';
+            }
+            wx_api_util.bidding_price_msg(bc, user.name, price_msg);
             await item.save();
             let not_price_yet_item_count = await item.bidding_turn.countBidding_items({
                 where: {

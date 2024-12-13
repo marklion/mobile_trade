@@ -46,9 +46,10 @@ Cleanup Joiner
     Clean Up Companies And Users
 
 Create A Bidding
-    [Arguments]  ${stuff}  ${total_turn}=${2}  ${pay_first}=${0}
+    [Arguments]  ${stuff}  ${total_turn}=${2}  ${pay_first}=${0}  ${price_hide}=${False}
     ${req}  Create Dictionary  stuff_id=${stuff}[id]  total=${50}
     ...    comment=abcd  min=${10}  max=${1000}  total_turn=${total_turn}  pay_first=${pay_first}
+    ...    price_hide=${price_hide}
     ${resp}  Req to Server  /bid/create  ${sc_admin_token}  ${req}
     RETURN  ${resp}
 

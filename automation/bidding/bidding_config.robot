@@ -26,6 +26,29 @@ Bidding Create And Check
     END
     ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
     Length Should Be  ${resp}  83
+
+Bidding When Price Hide
+    [Teardown]  Bidding Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  price_hide=${True}  total_turn=${1}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${100}
+    WxMsg Catch
+    WxMsg was recieved    opid1234    隐藏
+    ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
+    Should Be Equal As Numbers  ${resp}[0][bidding_turns][0][bidding_items][0][price]  0
+    Customer Price Out  ${joiners}[2][user_token]  ${200}
+    ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
+    Should Be Equal As Numbers  ${resp}[0][bidding_turns][0][bidding_items][0][price]  0
+    Customer Price Out  ${joiners}[3][user_token]  ${50}
+    ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
+    Should Be Equal As Numbers  ${resp}[0][bidding_turns][0][bidding_items][0][price]  200
+    WxMsg Catch
+    WxMsg was recieved    ${joiners}[2][open_id]    中标
 Accept And Bid
     [Teardown]  Bidding Reset
     ${added_one}  Create A Bidding  ${test_stuff}

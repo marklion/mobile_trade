@@ -22,6 +22,7 @@ function make_bc_detail(need_turn = false) {
         status: { type: Number, mean: '状态', example: 0 },
         customer_confirm_time: { type: String, mean: '客户确认时间', example: '2020-01-01 00:00:00' },
         confirm_opt_name: { type: String, mean: '确认人', example: '张三' },
+        price_hide: { type: Boolean, mean: '价格隐藏', example: true },
     }
     if (need_turn) {
         bidding_config.bidding_turns = {
