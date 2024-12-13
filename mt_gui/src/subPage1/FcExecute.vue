@@ -5,7 +5,7 @@
             <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="single_table.name" :tag="single_table.fc_plan_table.finish_time?(single_table.fc_plan_table.finish_time + ' 提交人:' + single_table.fc_plan_table.rbac_user.name):'未提交'">
                 <view v-for="item in single_table.fc_plan_table.fc_check_results" :key="item.id">
                     <u-cell :title="item.field_check_item.name">
-                        <u-switch slot="value" asyncChange :value="item.checked" @change="pass_fc($event, item)"></u-switch>
+                        <u-switch slot="value" inactiveColor="red" asyncChange :value="item.checked" @change="pass_fc($event, item)"></u-switch>
                     </u-cell>
                 </view>
                 <view style="display:flex; justify-content:center;">
