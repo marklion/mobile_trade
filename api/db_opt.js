@@ -247,6 +247,7 @@ let db_opt = {
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
             customer_confirm_time: { type: DataTypes.STRING },
             confirm_opt_name: { type: DataTypes.STRING },
+            price_hide: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         bidding_turn: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

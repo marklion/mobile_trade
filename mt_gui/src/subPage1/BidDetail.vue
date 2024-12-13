@@ -1,12 +1,16 @@
 <template>
 <view class="bd_show">
-    <u-cell :title="bd.comment + ' 共' + bd.total_turn + '轮'" :value="bd.stuff.name + ':' + bd.total" :label="bd.min + '~' + bd.max" :icon="status_icon(bd.status)">
+    <u-cell :title="bd.comment + ' 共' + bd.total_turn + '轮'" :value="bd.stuff.name + ':' + bd.total" :icon="status_icon(bd.status)">
         <view slot="right-icon">
             <module-filter require_module="bid">
                 <fui-button v-if="bd.status == 0 && bd.bidding_turns.length == 0" text="开启" type="primary" btnSize="mini" @click="show_start_bid = true"></fui-button>
                 <fui-button v-else-if="bd.status == 0 && bd.bidding_turns.length != bd.total_turn" text="开启下一轮" type="warning" btnSize="mini" @click="show_next_bid = true"></fui-button>
                 <fui-button v-if="bd.status == 0" text="停止" type="danger" btnSize="mini" @click="show_stop_bid = true"></fui-button>
             </module-filter>
+        </view>
+        <view slot="label">
+            {{bd.min + '~' + bd.max}}
+            <fui-text v-if="bd.price_hide" text="（价格隐藏）"></fui-text>
         </view>
     </u-cell>
     <view>

@@ -15,6 +15,12 @@
             <fui-input label="物料" borderTop disabled placeholder="点击选择物料" v-model="new_bc.stuff_name" @click="show_stuff_select = true"></fui-input>
             <fui-input label="物料总量" borderTop placeholder="请输入总量" v-model="new_bc.total"></fui-input>
             <fui-input label="竞价轮次" borderTop placeholder="请输入竞价轮次" v-model="new_bc.total_turn"></fui-input>
+            <fui-label>
+                <fui-list-cell>
+                    <fui-text text="是否隐藏价格"></fui-text>
+                    <u-switch v-model="new_bc.price_hide"></u-switch>
+                </fui-list-cell>
+            </fui-label>
         </fui-form>
     </fui-modal>
     <fui-bottom-popup :show="show_stuff_select" v-if="show_stuff_select" @close="show_stuff_select = false">
@@ -53,6 +59,7 @@ export default {
                 "total": 0,
                 "total_turn": 1,
                 stuff_name: '',
+                price_hide: false,
             },
         };
     },
@@ -90,7 +97,8 @@ export default {
                     min: this.new_bc.min,
                     stuff_name: this.new_bc.stuff_name,
                     total: this.new_bc.total,
-                    total_turn: this.new_bc.total_turn
+                    total_turn: this.new_bc.total_turn,
+                    price_hide: this.new_bc.price_hide,
                 }, rules);
                 if (!val_ret.isPassed) {
                     return;
