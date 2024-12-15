@@ -125,15 +125,19 @@ module.exports = {
                     }
                 }
 
-                let plan = await db_opt.get_sq().models.plan.findOne({
+                let plans = await db_opt.get_sq().models.plan.findAll({
                     where: mkplan_filter(plan_content_cond),
                 });
-                if (plan) {
-                    let full_plan = await util_lib.get_single_plan_by_id(plan.id);
-                    if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment)) {
-                        if (full_plan.stuff.no_need_register || full_plan.register_time) {
-                            ret.err_msg = '';
-                            ret.result = await make_plan_resp(full_plan);
+                for (let i = 0; i < plans.length; i++) {
+                    let plan = plans[i];
+                    if (plan) {
+                        let full_plan = await util_lib.get_single_plan_by_id(plan.id);
+                        if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment)) {
+                            if (full_plan.stuff.no_need_register || full_plan.register_time) {
+                                ret.err_msg = '';
+                                ret.result = await make_plan_resp(full_plan);
+                                break;
+                            }
                         }
                     }
                 }
@@ -409,47 +413,53 @@ module.exports = {
             res.send(ret);
             console.log(`Response sent for /pa_rest/cancel_plan: ${JSON.stringify(ret)}`); // 打印响应
         });
-        app.get('/pa_rest/vehicle_detail', async (req, res)=>{
+        app.get('/pa_rest/vehicle_detail', async (req, res) => {
             var token = req.query.token;
             var ret = { err_msg: '无权限' };
 
             try {
                 let today = moment().format('YYYY-MM-DD');
                 let vehicle = await db_opt.get_sq().models.vehicle.findOne({ where: { plate: req.query.plate_no } });
-                let plan = await vehicle.getPlans({where:{plan_time:today}});
+                let plan = await vehicle.getPlans({ where: { plan_time: today } });
                 if (plan.length == 0) {
                     throw { err_msg: '无当日计划' };
                 }
                 let driver = await plan[0].getDriver();
                 let stuff = await plan[0].getStuff();
-                let sc_vl_req = (await stuff.getSc_reqs({where:{name:{
-                    [db_opt.Op.like]:'%主车行驶%'
-                }}}))[0];
-                let sc_rtl_req = (await stuff.getSc_reqs({where:{name:{
-                    [db_opt.Op.like]:'%运输证%'
-                }}}))[0];
-                let vl = await vehicle.getSc_contents({where:{scReqId:sc_vl_req.id}})[0];
-                let rtl = await vehicle.getSc_contents({where:{scReqId:sc_rtl_req.id}})[0];
+                let sc_vl_req = (await stuff.getSc_reqs({
+                    where: {
+                        name: {
+                            [db_opt.Op.like]: '%主车行驶%'
+                        }
+                    }
+                }))[0];
+                let sc_rtl_req = (await stuff.getSc_reqs({
+                    where: {
+                        name: {
+                            [db_opt.Op.like]: '%运输证%'
+                        }
+                    }
+                }))[0];
+                let vl = await vehicle.getSc_contents({ where: { scReqId: sc_vl_req.id } })[0];
+                let rtl = await vehicle.getSc_contents({ where: { scReqId: sc_rtl_req.id } })[0];
                 let vla = '无';
                 let vl_et = '无';
                 let rtl_in = '无';
-                if (vl)
-                {
+                if (vl) {
                     vla = process.env.REMOTE_HOST + vl.attachment;
                     vl_et = vl.expired_time;
                 }
-                if (rtl)
-                {
+                if (rtl) {
                     rtl_in = rtl.input;
                 }
                 ret.err_msg = '';
                 ret.result = {
-                    plateNo:req.query.plate_no,
-                    driverName:driver.name,
-                    idNum:driver.id_card,
-                    vehicleLicenseUrl:vla,
-                    LicenseExpireDate:vl_et,
-                    roadTransportLicenseNum:rtl_in,
+                    plateNo: req.query.plate_no,
+                    driverName: driver.name,
+                    idNum: driver.id_card,
+                    vehicleLicenseUrl: vla,
+                    LicenseExpireDate: vl_et,
+                    roadTransportLicenseNum: rtl_in,
                 };
             } catch (error) {
                 console.log(error);
