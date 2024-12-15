@@ -207,7 +207,7 @@ void order_center_handler::check_order_pass()
                 auto call_time = util_get_time_by_string(itr.call_info.operator_time);
                 if (call_time + tmp.call_time_out * 60 < now)
                 {
-                    order_check_in(itr.order_number, false, "(超时自动过号)");
+                    order_check_in(itr.order_number, false, "(超时自动过号)", 0);
                 }
             }
         }
@@ -256,6 +256,7 @@ void order_center_handler::db_2_rpc(sql_order &_db, vehicle_order_info &_rpc)
         _rpc.history_records.push_back(tmp);
     }
     _rpc.continue_until = _db.continue_until;
+    _rpc.expect_weight = _db.expect_weight;
 }
 
 void order_center_handler::db_2_rpc(sql_order_attach &_db, vehicle_order_attachment &_rpc)
@@ -458,7 +459,7 @@ void order_center_handler::get_registered_order(std::vector<vehicle_order_info> 
     }
 }
 
-bool order_center_handler::order_check_in(const std::string &order_number, const bool is_check_in, const std::string &opt_name)
+bool order_center_handler::order_check_in(const std::string &order_number, const bool is_check_in, const std::string &opt_name, const double expect_weight)
 {
     bool ret = false;
 
@@ -481,6 +482,7 @@ bool order_center_handler::order_check_in(const std::string &order_number, const
         es->reg_info_time = util_get_timestring();
         es->reg_no = gen_reg_no();
         tmp.node_name += "->" + std::to_string(es->reg_no) + "号";
+        es->expect_weight = expect_weight;
     }
     else
     {

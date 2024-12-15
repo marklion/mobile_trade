@@ -322,7 +322,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->date_ticket_prefix = rule.date_ticket_prefix;
         er->oem_name = rule.oem_name;
         er->weight_turn = rule.weight_turn;
-        er->need_issue_card = rule.need_issue_card;
+        er->issue_card_path = rule.issue_card_path;
         ret = er->update_record();
     }
     else
@@ -335,7 +335,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         tmp.date_ticket_prefix = rule.date_ticket_prefix;
         tmp.oem_name = rule.oem_name;
         tmp.weight_turn = rule.weight_turn;
-        tmp.need_issue_card = rule.need_issue_card;
+        tmp.issue_card_path = rule.issue_card_path;
         ret = tmp.insert_record();
     }
     return ret;
@@ -358,7 +358,7 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.date_ticket_prefix = er->date_ticket_prefix;
         _return.oem_name = er->oem_name;
         _return.weight_turn = er->weight_turn;
-        _return.need_issue_card = er->need_issue_card;
+        _return.issue_card_path = er->issue_card_path;
     }
 }
 

@@ -1178,7 +1178,7 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 THR_CALL_END();
                 if (tmp.p_weight == 0)
                 {
-                    if (need_issue_card)
+                    if (need_issue_card && tmp.expect_weight != 0)
                     {
                         ret.reset(new scale_state_issue_card());
                     }
@@ -1375,18 +1375,18 @@ bool issue_card(const std::string &_order_number, double _weight, const std::str
     THR_CALL_END();
     if (tmp.order_number.length() > 0 && host.length() > 0)
     {
-        std::string cmd = "/conf/issue_card.sh '" + host + "' " + "1433 zczh zczh123 ";
+        std::string cmd = "/conf/issue_card.sh ";
         char sql[1048];
         sprintf(
             sql,
-            "insert into card values('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s');",
+            "'%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s'",
             _card_no.c_str(),
             tmp.plate_number.c_str(),
             tmp.back_plate_number.c_str(),
             tmp.company_name.c_str(),
             tmp.driver_name.c_str(),
-            (int)(tmp.p_weight * 1000),
             (int)(_weight * 1000),
+            (int)(tmp.expect_weight * 1000),
             util_get_timestring().c_str(),
             "0");
         cmd += "\"" + std::string(sql) + "\"";

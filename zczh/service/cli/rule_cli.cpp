@@ -1,6 +1,6 @@
 #include "rule_cli.h"
 #include "tabulate.hpp"
-void bdr(std::ostream &out, std::vector<std::string> _params)
+static void bdr(std::ostream &out, std::vector<std::string> _params)
 {
     rule_cli tmp;
     out << tmp.make_bdr() << std::endl;

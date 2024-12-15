@@ -307,6 +307,7 @@ public:
     long reg_no = 0;
     std::string create_time;
     std::string continue_until;
+    double expect_weight = 0;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -337,6 +338,7 @@ public:
         ret.push_back(sqlite_orm_column("reg_no", sqlite_orm_column::INTEGER, &reg_no));
         ret.push_back(sqlite_orm_column("create_time", sqlite_orm_column::STRING, &create_time));
         ret.push_back(sqlite_orm_column("continue_until", sqlite_orm_column::STRING, &continue_until));
+        ret.push_back(sqlite_orm_column("expect_weight", sqlite_orm_column::REAL, &expect_weight));
 
         return ret;
     }
@@ -405,7 +407,7 @@ public:
     std::string date_ticket_prefix;
     std::string oem_name;
     long weight_turn = 0;
-    long need_issue_card = 0;
+    std::string issue_card_path;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -417,7 +419,7 @@ public:
         ret.push_back(sqlite_orm_column("date_ticket_prefix", sqlite_orm_column::STRING, &date_ticket_prefix));
         ret.push_back(sqlite_orm_column("oem_name", sqlite_orm_column::STRING, &oem_name));
         ret.push_back(sqlite_orm_column("weight_turn", sqlite_orm_column::INTEGER, &weight_turn));
-        ret.push_back(sqlite_orm_column("need_issue_card", sqlite_orm_column::INTEGER, &need_issue_card));
+        ret.push_back(sqlite_orm_column("issue_card_path", sqlite_orm_column::STRING, &issue_card_path));
 
         return ret;
     }

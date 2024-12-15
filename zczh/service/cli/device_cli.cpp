@@ -740,11 +740,16 @@ void test_id_reader(std::ostream &out, std::vector<std::string> _params)
         out << "身份证号：" << id_no << std::endl;
     }
 }
-
+static void bdr(std::ostream &out, std::vector<std::string> _params)
+{
+    device_cli tmp;
+    out << tmp.make_bdr() << std::endl;
+}
 std::unique_ptr<cli::Menu> make_device_cli(const std::string &_menu_name)
 {
     auto root_menu = std::unique_ptr<cli::Menu>(new cli::Menu(_menu_name));
 
+    root_menu->Insert(CLI_MENU_ITEM(bdr), "列出配置");
     root_menu->Insert(CLI_MENU_ITEM(show_device_driver), "查看驱动");
     root_menu->Insert(CLI_MENU_ITEM(show_device_gate), "查看门组件");
     root_menu->Insert(CLI_MENU_ITEM(show_device_scale), "查看磅组件");

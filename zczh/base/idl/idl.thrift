@@ -214,6 +214,7 @@ struct vehicle_order_info {
     23:string stuff_from,
     24:i64 reg_no,
     25:string continue_until,
+    26:double expect_weight,
 }
 
 struct order_search_cond {
@@ -244,7 +245,7 @@ service order_center {
     list<vehicle_order_info> search_order(1:order_search_cond cond) throws (1:gen_exp e),
     vehicle_order_info get_order(1:string order_number) throws (1:gen_exp e),
     list<vehicle_order_info> get_registered_order() throws (1:gen_exp e),
-    bool order_check_in(1:string order_number, 2:bool is_check_in, 3:string opt_name) throws (1:gen_exp e),
+    bool order_check_in(1:string order_number, 2:bool is_check_in, 3:string opt_name, 4:double expect_weight) throws (1:gen_exp e),
     bool order_call(1:string order_number, 2:bool is_call, 3:string opt_name) throws (1:gen_exp e),
     bool order_confirm(1:string order_number, 2:bool is_confirm, 3:string opt_name) throws(1:gen_exp e),
     bool order_set_seal_no(1:string order_number, 2:string seal_no) throws(1:gen_exp e),
