@@ -84,6 +84,7 @@ module.exports = {
                         },
                         manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
                         ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
+                        need_expect_weight: { type: Boolean, mean: '是否需要期望重量', example: false },
                     }
                 },
             },
@@ -202,6 +203,22 @@ module.exports = {
             },
             func: async function (body, token) {
                 return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token);
+            },
+        },
+        expect_weight_config:{
+            name: '配置货物是否需要期望重量',
+            description: '配置货物是否需要期望重量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                need_expect_weight: { type: Boolean, have_to: true, mean: '是否需要期望重量', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'need_expect_weight', body.need_expect_weight, token);
             },
         },
         manual_weight_config: {

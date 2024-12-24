@@ -148,6 +148,7 @@ let db_opt = {
             first_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
             second_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
             dup_info:{type: DataTypes.STRING},
+            expect_weight: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('expect_weight') },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -182,6 +183,7 @@ let db_opt = {
             checkout_delay:{type: DataTypes.BOOLEAN, defaultValue: false},
             manual_weight:{type: DataTypes.BOOLEAN, defaultValue: false},
             ticket_prefix: { type: DataTypes.STRING },
+            need_expect_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

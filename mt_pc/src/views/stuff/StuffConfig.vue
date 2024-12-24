@@ -1,303 +1,271 @@
 <template>
-    <el-container>
-        <el-header height="50" style="padding-top: 20px;">
-            <template>
-                <el-button icon="el-icon-circle-plus" type="success"
-                    @click="show_stuff_fetch = true; is_update = false;clean_form()">新增物料</el-button>
-                <el-button :icon="view_type == 'card' ? 'el-icon-s-grid' : 'el-icon-s-data'" type="primary"
-                    @click="change_view_type()">{{ view_type == 'card' ? '卡片视图' : '表格视图' }}</el-button>
-                <el-input placeholder="输入物料名称搜索" v-model="filter_string" clearable @clear="cancel_search" style="width: 300px;margin-left: 10px;">
-                    <template #append>
-                        <el-button type="primary" size="small" icon="el-icon-search" @click="do_search" @keyup.enter="do_search">搜索</el-button>
-                    </template>
-                    </el-input>
-            </template>
-        </el-header>
-        <el-main>
-            <template>
-                <page-content ref="stuff" body_key="stuff" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
-                    <template v-slot:default="slotProps">
-                        <div v-if="view_type == 'card'" class="stuff_card_list">
-                            <div class="stuff_card_item" v-for="(item, index) in slotProps.content" :key="index">
-                                <el-card>
-                                    <template #header>
-                                        <div style="display: flex; justify-content: space-between;">
-                                            <span>{{ item.name }}</span>
-                                            <span>￥{{ item.price }}</span>
-                                        </div>
-                                    </template>
-                                    <div style="display: flex;gap: 10px; flex-wrap: wrap; align-items: center;">
-                                        <el-tag v-if="item.comment" type="info">{{ item.comment }}</el-tag>
-                                        <el-tag v-if="item.expect_count" type="danger">期望单车装载量: {{ item.expect_count
-                                            }}</el-tag>
-                                        <el-tag v-if="item.close_time" type="warning">自动关闭时间点: {{ item.close_time
-                                            }}</el-tag>
-                                        <el-tag v-if="item.delay_days" type="danger">允许迟到{{ item.delay_days }}天</el-tag>
-                                        <el-tag v-if="item.use_for_buy" type="primary">用于采购</el-tag>
-                                        <el-tag v-if="item.change_last_minutes" type="info">{{ next_price_show(item)
-                                            }}</el-tag>
-                                        <el-tag v-else type="success">用于销售</el-tag>
-                                        <el-tag v-if="item.concern_fapiao" type="primary">关注发票</el-tag>
+<el-container>
+    <el-header height="50" style="padding-top: 20px;">
+        <template>
+            <el-button icon="el-icon-circle-plus" type="success" @click="show_stuff_fetch = true; is_update = false;clean_form()">新增物料</el-button>
+            <el-button :icon="view_type == 'card' ? 'el-icon-s-grid' : 'el-icon-s-data'" type="primary" @click="change_view_type()">{{ view_type == 'card' ? '卡片视图' : '表格视图' }}</el-button>
+            <el-input placeholder="输入物料名称搜索" v-model="filter_string" clearable @clear="cancel_search" style="width: 300px;margin-left: 10px;">
+                <template #append>
+                    <el-button type="primary" size="small" icon="el-icon-search" @click="do_search" @keyup.enter="do_search">搜索</el-button>
+                </template>
+            </el-input>
+        </template>
+    </el-header>
+    <el-main>
+        <template>
+            <page-content ref="stuff" body_key="stuff" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
+                <template v-slot:default="slotProps">
+                    <div v-if="view_type == 'card'" class="stuff_card_list">
+                        <div class="stuff_card_item" v-for="(item, index) in slotProps.content" :key="index">
+                            <el-card>
+                                <template #header>
+                                    <div style="display: flex; justify-content: space-between;">
+                                        <span>{{ item.name }}</span>
+                                        <span>￥{{ item.price }}</span>
                                     </div>
-                                    <el-divider></el-divider>
-                                    <el-row style="display: flex; flex-wrap: nowrap; align-items: center;">
-                                        <el-button size="mini" @click="prepare_update(item)">修改</el-button>
-                                        <el-button size="mini" type="danger"
-                                            @click="prepare_delete(item)">删除</el-button>
-                                        <el-button size="mini" type="warning"
-                                            @click="prepare_change_price(item)">调价</el-button>
-                                        <el-button size="mini" type="info"
-                                            @click="prepare_history(item)">调价历史</el-button>
-                                        <el-button v-if="!item.change_last_minutes" size="mini" type="success"
-                                            @click="prepare_next_price(item)">定时调价</el-button>
-                                        <el-button v-else size="mini" type="success"
-                                            @click="prepare_cancel_next_price(item)">取消定时调价</el-button>
-                                    </el-row>
-                                    <el-divider></el-divider>
-                                    <el-row>
-                                        <el-col :span="12">
-                                            <el-switch v-model="item.need_sc" class="ml-2" inline-prompt
-                                                active-text="需要安检" @change="change_need_sc($event, item)" />
-                                        </el-col>
-                                        <el-col :span="12">
-                                            <el-switch v-model="item.need_enter_weight" inline-prompt
-                                                active-text="需要进厂前重量"
-                                                @change="change_need_enter_weight($event, item)"></el-switch>
-                                        </el-col>
-                                    </el-row>
-                                    <el-divider></el-divider>
-                                    <el-row>
-                                        <el-col :span="12">
-                                            <el-switch v-model="item.need_exam" inline-prompt active-text="需要考试"
-                                                @change="change_need_exam($event, item)" />
-                                        </el-col>
-                                        <el-col :span="12">
-                                            <el-switch v-model="item.no_need_register" inline-prompt active-text="不用排号"
-                                                @change="change_no_need_register($event, item)" />
-                                        </el-col>
-                                    </el-row>
-                                    <el-divider></el-divider>
-                                    <el-row>
-                                        <el-col :span="12">
-                                            <el-switch v-model="item.checkout_delay" inline-prompt active-text="延迟结算"
-                                                @change="change_checkout_delay($event, item)"></el-switch>
-                                        </el-col>
-                                        <el-col :span="12">
-                                            <el-switch v-model="item.manual_weight" inline-prompt active-text="手动计量"
-                                                @change="change_manual_weight($event, item)"></el-switch>
-                                        </el-col>
-                                    </el-row>
-                                    <el-divider content-position="center">装卸区域配置</el-divider>
-                                    <div style="display: flex; flex-wrap: nowrap; align-items: center;">
-                                        <el-tag v-for="zone in item.drop_take_zones" :key="zone.id" closable
-                                            @close="prepare_del_zone(zone.id)">{{
+                                </template>
+                                <div style="display: flex;gap: 10px; flex-wrap: wrap; align-items: center;">
+                                    <el-tag v-if="item.comment" type="info">{{ item.comment }}</el-tag>
+                                    <el-tag v-if="item.expect_count" type="danger">期望单车装载量: {{ item.expect_count
+                                            }}</el-tag>
+                                    <el-tag v-if="item.close_time" type="warning">自动关闭时间点: {{ item.close_time
+                                            }}</el-tag>
+                                    <el-tag v-if="item.delay_days" type="danger">允许迟到{{ item.delay_days }}天</el-tag>
+                                    <el-tag v-if="item.use_for_buy" type="primary">用于采购</el-tag>
+                                    <el-tag v-if="item.change_last_minutes" type="info">{{ next_price_show(item)
+                                            }}</el-tag>
+                                    <el-tag v-else type="success">用于销售</el-tag>
+                                    <el-tag v-if="item.concern_fapiao" type="primary">关注发票</el-tag>
+                                </div>
+                                <el-divider></el-divider>
+                                <el-row style="display: flex; flex-wrap: nowrap; align-items: center;">
+                                    <el-button size="mini" @click="prepare_update(item)">修改</el-button>
+                                    <el-button size="mini" type="danger" @click="prepare_delete(item)">删除</el-button>
+                                    <el-button size="mini" type="warning" @click="prepare_change_price(item)">调价</el-button>
+                                    <el-button size="mini" type="info" @click="prepare_history(item)">调价历史</el-button>
+                                    <el-button v-if="!item.change_last_minutes" size="mini" type="success" @click="prepare_next_price(item)">定时调价</el-button>
+                                    <el-button v-else size="mini" type="success" @click="prepare_cancel_next_price(item)">取消定时调价</el-button>
+                                </el-row>
+                                <el-divider></el-divider>
+                                <el-row>
+                                    <el-col :span="12">
+                                        <el-switch v-model="item.need_sc" class="ml-2" inline-prompt active-text="需要安检" @change="change_need_sc($event, item)" />
+                                    </el-col>
+                                    <el-col :span="12">
+                                        <el-switch v-model="item.need_enter_weight" inline-prompt active-text="需要进厂前重量" @change="change_need_enter_weight($event, item)"></el-switch>
+                                    </el-col>
+                                </el-row>
+                                <el-divider></el-divider>
+                                <el-row>
+                                    <el-col :span="12">
+                                        <el-switch v-model="item.need_exam" inline-prompt active-text="需要考试" @change="change_need_exam($event, item)" />
+                                    </el-col>
+                                    <el-col :span="12">
+                                        <el-switch v-model="item.no_need_register" inline-prompt active-text="不用排号" @change="change_no_need_register($event, item)" />
+                                    </el-col>
+                                </el-row>
+                                <el-divider></el-divider>
+                                <el-row>
+                                    <el-col :span="12">
+                                        <el-switch v-model="item.checkout_delay" inline-prompt active-text="延迟结算" @change="change_checkout_delay($event, item)"></el-switch>
+                                    </el-col>
+                                    <el-col :span="12">
+                                        <el-switch v-model="item.manual_weight" inline-prompt active-text="手动计量" @change="change_manual_weight($event, item)"></el-switch>
+                                    </el-col>
+                                </el-row>
+                                <el-row>
+                                    <el-col :span="12">
+                                        <el-switch v-model="item.need_expect_weight" inline-prompt active-text="需要填写期望重量" @change="change_need_expect_weight($event, item)"></el-switch>
+                                    </el-col>
+                                </el-row>
+                                <el-divider content-position="center">装卸区域配置</el-divider>
+                                <div style="display: flex; flex-wrap: nowrap; align-items: center;">
+                                    <el-tag v-for="zone in item.drop_take_zones" :key="zone.id" closable @close="prepare_del_zone(zone.id)">{{
                                                 zone.name }}</el-tag>
-                                        <el-button size="mini" type="primary"
-                                            @click="prepare_add_zone(item)">添加</el-button>
-                                    </div>
-                                </el-card>
-                            </div>
+                                    <el-button size="mini" type="primary" @click="prepare_add_zone(item)">添加</el-button>
+                                </div>
+                            </el-card>
                         </div>
-                        <div v-else>
-                            <el-table :data="slotProps.content" style="width: 100%" border stripe
-                                :default-sort="{ prop: 'name', order: 'ascending' }">
-                                <el-table-column prop="name" label="物料名称" width="120" align="center"
-                                    sortable></el-table-column>
-                                <el-table-column label="配置"  width="100" align="center">
-                                    <template slot-scope="scope">
-                                        <el-popover placement="right" trigger="hover" width="300">
-                                            <div class="switch-group">
-                                                <el-switch v-model="scope.row.need_sc" inline-prompt active-text="需要安检"
-                                                    @change="change_need_sc($event, scope.row)" />
-                                                <el-switch v-model="scope.row.need_enter_weight" inline-prompt
-                                                    active-text="需要进厂前重量"
-                                                    @change="change_need_enter_weight($event, scope.row)"></el-switch>
-                                                <el-switch v-model="scope.row.need_exam" inline-prompt
-                                                    active-text="需要考试" @change="change_need_exam($event, scope.row)" />
-                                                <el-switch v-model="scope.row.no_need_register" inline-prompt
-                                                    active-text="不用排号"
-                                                    @change="change_no_need_register($event, scope.row)" />
-                                                <el-switch v-model="scope.row.checkout_delay" inline-prompt
-                                                    active-text="延迟结算"
-                                                    @change="change_checkout_delay($event, scope.row)"></el-switch>
-                                                <el-switch v-model="scope.row.manual_weight" inline-prompt
-                                                    active-text="手动计量"
-                                                    @change="change_manual_weight($event, scope.row)"></el-switch>
-                                            </div>
-                                            <el-button slot="reference" size="mini" type="primary">配置</el-button>
-                                        </el-popover>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column prop="price" label="价格" align="center" sortable>
-                                    <template slot-scope="scope">
-                                        <span>￥{{ scope.row.price }}</span>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column label="调价历史" width="120" align="center">
-                                    <template slot-scope="scope">
-                                        <el-button size="mini" type="info"
-                                            @click="prepare_history(scope.row)">调价历史</el-button>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column label="装卸区域" width="120" align="center">
-                                    <template slot-scope="scope">
-                                        <el-popover placement="right" trigger="hover" width="300">
-                                            <div style="display: flex; flex-wrap: wrap; gap: 10px;">
-                                                <el-tag v-for="zone in scope.row.drop_take_zones" closable :key="zone.id" @close="prepare_del_zone(zone.id)">{{ zone.name }}</el-tag>
-                                                <el-button size="mini" type="primary" @click="prepare_add_zone(scope.row)">添加</el-button>
-                                            </div>
-                                            <el-button slot="reference" size="mini" type="link">查看</el-button>
-                                        </el-popover>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column prop="comment" show-overflow-tooltip label="备注" width="120" align="center"></el-table-column>
-                                <el-table-column prop="expect_count" label="期望单车装载量" width="150" align="center"
-                                    sortable></el-table-column>
-                                <el-table-column prop="delay_days" label="允许迟到天数" width="150" align="center"
-                                    sortable></el-table-column>
-                                <el-table-column prop="close_time" label="自动关闭时间点" width="150" align="center"
-                                    sortable></el-table-column>
-                                <el-table-column prop="use_for_buy" label="用于采购" width="100" align="center">
-                                    <template slot-scope="scope">
-                                        <el-tag :type="scope.row.use_for_buy ? 'success' : 'info'">{{
+                    </div>
+                    <div v-else>
+                        <el-table :data="slotProps.content" style="width: 100%" border stripe :default-sort="{ prop: 'name', order: 'ascending' }">
+                            <el-table-column prop="name" label="物料名称" width="120" align="center" sortable></el-table-column>
+                            <el-table-column label="配置" width="100" align="center">
+                                <template slot-scope="scope">
+                                    <el-popover placement="right" trigger="hover" width="300">
+                                        <div class="switch-group">
+                                            <el-switch v-model="scope.row.need_sc" inline-prompt active-text="需要安检" @change="change_need_sc($event, scope.row)" />
+                                            <el-switch v-model="scope.row.need_enter_weight" inline-prompt active-text="需要进厂前重量" @change="change_need_enter_weight($event, scope.row)"></el-switch>
+                                            <el-switch v-model="scope.row.need_exam" inline-prompt active-text="需要考试" @change="change_need_exam($event, scope.row)" />
+                                            <el-switch v-model="scope.row.no_need_register" inline-prompt active-text="不用排号" @change="change_no_need_register($event, scope.row)" />
+                                            <el-switch v-model="scope.row.checkout_delay" inline-prompt active-text="延迟结算" @change="change_checkout_delay($event, scope.row)"></el-switch>
+                                            <el-switch v-model="scope.row.manual_weight" inline-prompt active-text="手动计量" @change="change_manual_weight($event, scope.row)"></el-switch>
+                                        </div>
+                                        <el-button slot="reference" size="mini" type="primary">配置</el-button>
+                                    </el-popover>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="price" label="价格" align="center" sortable>
+                                <template slot-scope="scope">
+                                    <span>￥{{ scope.row.price }}</span>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="调价历史" width="120" align="center">
+                                <template slot-scope="scope">
+                                    <el-button size="mini" type="info" @click="prepare_history(scope.row)">调价历史</el-button>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="装卸区域" width="120" align="center">
+                                <template slot-scope="scope">
+                                    <el-popover placement="right" trigger="hover" width="300">
+                                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                            <el-tag v-for="zone in scope.row.drop_take_zones" closable :key="zone.id" @close="prepare_del_zone(zone.id)">{{ zone.name }}</el-tag>
+                                            <el-button size="mini" type="primary" @click="prepare_add_zone(scope.row)">添加</el-button>
+                                        </div>
+                                        <el-button slot="reference" size="mini" type="link">查看</el-button>
+                                    </el-popover>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="comment" show-overflow-tooltip label="备注" width="120" align="center"></el-table-column>
+                            <el-table-column prop="expect_count" label="期望单车装载量" width="150" align="center" sortable></el-table-column>
+                            <el-table-column prop="delay_days" label="允许迟到天数" width="150" align="center" sortable></el-table-column>
+                            <el-table-column prop="close_time" label="自动关闭时间点" width="150" align="center" sortable></el-table-column>
+                            <el-table-column prop="use_for_buy" label="用于采购" width="100" align="center">
+                                <template slot-scope="scope">
+                                    <el-tag :type="scope.row.use_for_buy ? 'success' : 'info'">{{
                                             scope.row.use_for_buy ? '是' : '否' }}</el-tag>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column prop="concern_fapiao" label="关注发票" width="100" align="center">
-                                    <template slot-scope="scope">
-                                        <el-tag :type="scope.row.concern_fapiao ? 'success' : 'info'">{{
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="concern_fapiao" label="关注发票" width="100" align="center">
+                                <template slot-scope="scope">
+                                    <el-tag :type="scope.row.concern_fapiao ? 'success' : 'info'">{{
                                             scope.row.concern_fapiao ? '是' : '否' }}</el-tag>
-                                    </template>
-                                </el-table-column>
-                                <el-table-column label="操作" fixed="right" width="300" align="center">
-                                    <template slot-scope="scope">
-                                        <el-button-group>
-                                            <el-button size="mini" type="primary"
-                                                @click="prepare_update(scope.row)">修改</el-button>
-                                            <el-button size="mini" type="danger"
-                                                @click="prepare_delete(scope.row)">删除</el-button>
-                                            <el-button size="mini" type="warning"
-                                                @click="prepare_change_price(scope.row)">调价</el-button>
-                                            <el-button v-if="!scope.row.change_last_minutes" size="mini" type="success"
-                                                @click="prepare_next_price(scope.row)">定时调价</el-button>
-                                            <el-button v-else size="mini" type="success"
-                                                @click="prepare_cancel_next_price(scope.row)">取消定时调价</el-button>
-                                        </el-button-group>
-                                    </template>
-                                </el-table-column>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="操作" fixed="right" width="300" align="center">
+                                <template slot-scope="scope">
+                                    <el-button-group>
+                                        <el-button size="mini" type="primary" @click="prepare_update(scope.row)">修改</el-button>
+                                        <el-button size="mini" type="danger" @click="prepare_delete(scope.row)">删除</el-button>
+                                        <el-button size="mini" type="warning" @click="prepare_change_price(scope.row)">调价</el-button>
+                                        <el-button v-if="!scope.row.change_last_minutes" size="mini" type="success" @click="prepare_next_price(scope.row)">定时调价</el-button>
+                                        <el-button v-else size="mini" type="success" @click="prepare_cancel_next_price(scope.row)">取消定时调价</el-button>
+                                    </el-button-group>
+                                </template>
+                            </el-table-column>
 
-                            </el-table>
-                        </div>
+                        </el-table>
+                    </div>
+                </template>
+            </page-content>
+        </template>
+        <el-dialog :visible.sync="show_zone_add" width="600px" title="添加物料装卸区域">
+            <el-form ref="zone_form" :model="zone_req" :rules="zone_rules">
+                <el-form-item label="区域名称" prop="zone_name">
+                    <el-input v-model="zone_req.zone_name"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="zone_add">确定</el-button>
+                    <el-button @click="show_zone_add = false">取消</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+        <el-dialog :visible.sync="show_stuff_fetch" :title="is_update ? '修改物料' : '新增物料'">
+            <el-form ref="form" :model="stuff_ready_fetch" :rules="rules">
+                <el-form-item label="物料名称" prop="name">
+                    <el-input v-model="stuff_ready_fetch.name" :disabled="is_update"></el-input>
+                </el-form-item>
+                <el-form-item label="备注" prop="comment">
+                    <el-input v-model="stuff_ready_fetch.comment"></el-input>
+                </el-form-item>
+                <el-form-item label="期望单车装载量" prop="expect_count">
+                    <el-input v-model="stuff_ready_fetch.expect_count"></el-input>
+                </el-form-item>
+                <el-form-item label="允许迟到天数" prop="delay_days">
+                    <el-input v-model="stuff_ready_fetch.delay_days"></el-input>
+                </el-form-item>
+                <el-form-item label="自动关闭时间点" prop="close_time">
+                    <el-time-picker v-model="stuff_ready_fetch.close_time" format="HH:mm" placeholder="选择时间，不填就是不关闭" :default-value="new Date('2000-01-01T01:00:00')"></el-time-picker>
+                </el-form-item>
+                <el-form-item label="用于采购" prop="use_for_buy">
+                    <el-switch v-model="stuff_ready_fetch.use_for_buy"></el-switch>
+                </el-form-item>
+                <el-form-item label="关注发票" prop="concern_fapiao">
+                    <el-switch v-model="stuff_ready_fetch.concern_fapiao"></el-switch>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="fetch_stuff">确定</el-button>
+                    <el-button @click="show_stuff_fetch = false">取消</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+        <el-dialog :visible.sync="show_cancel_next_price" width="600px" @close="show_cancel_next_price = false">
+            <span>确定要关闭定时调价吗?</span>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="show_cancel_next_price = false">取消</el-button>
+                <el-button type="primary" @click="do_cancel_next_price">确定</el-button>
+            </span>
+        </el-dialog>
+        <el-dialog :visible.sync="show_change_price" width="600px" title="调价">
+            <el-form ref="change_price_form" :model="stuff2change_price" :rules="price_rules">
+                <el-form-item label="新价格" prop="price">
+                    <el-input v-model="stuff2change_price.price"></el-input>
+                </el-form-item>
+                <el-form-item label="备注" prop="comment">
+                    <el-input v-model="stuff2change_price.comment"></el-input>
+                </el-form-item>
+                <el-form-item label="影响计划？" v-if="!price_profile.hide_impact_selector">
+                    <el-switch v-model="stuff2change_price.to_plan"></el-switch>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="change_price">确定</el-button>
+                    <el-button @click="show_change_price = false">取消</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+        <el-dialog :visible.sync="show_next_price" width="600px" title="定时调价" @close="show_next_price = false">
+            <el-form ref="next_price_form" :model="next_price_req" :rules="next_price_rules">
+                <el-form-item label="新价格" :rules="[{ required: true, message: '请输入新价格', trigger: 'blur' }]">
+                    <el-input v-model="next_price_req.next_price"></el-input>
+                </el-form-item>
+                <el-form-item label="备注" :rules="[{ required: true, message: '请输入备注', trigger: 'blur' }]">
+                    <el-input v-model="next_price_req.next_comment"></el-input>
+                </el-form-item>
+                <el-form-item label="调价时间">
+                    <el-date-picker v-model="next_price_req.next_time" type="datetime" placeholder="点击选择时间"></el-date-picker>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="do_next_price">确定</el-button>
+                    <el-button @click="show_next_price = false">取消</el-button>
+                </el-form-item>
+            </el-form>
+        </el-dialog>
+        <el-dialog :visible.sync="show_history" title="调价历史" @close="show_history = false">
+            <el-table :data="price_history_data">
+                <el-table-column prop="operator" label="操作人"></el-table-column>
+                <el-table-column prop="new_price" label="新价格"></el-table-column>
+                <el-table-column label="备注">
+                    <template slot-scope="scope">
+                        <el-tag type="info">{{ scope.row.comment }}</el-tag>
                     </template>
-                </page-content>
-            </template>
-            <el-dialog :visible.sync="show_zone_add" width="600px" title="添加物料装卸区域">
-                <el-form ref="zone_form" :model="zone_req" :rules="zone_rules">
-                    <el-form-item label="区域名称" prop="zone_name">
-                        <el-input v-model="zone_req.zone_name"></el-input>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" @click="zone_add">确定</el-button>
-                        <el-button @click="show_zone_add = false">取消</el-button>
-                    </el-form-item>
-                </el-form>
-            </el-dialog>
-            <el-dialog :visible.sync="show_stuff_fetch" :title="is_update ? '修改物料' : '新增物料'">
-                <el-form ref="form" :model="stuff_ready_fetch" :rules="rules">
-                    <el-form-item label="物料名称" prop="name">
-                        <el-input v-model="stuff_ready_fetch.name" :disabled="is_update"></el-input>
-                    </el-form-item>
-                    <el-form-item label="备注" prop="comment">
-                        <el-input v-model="stuff_ready_fetch.comment"></el-input>
-                    </el-form-item>
-                    <el-form-item label="期望单车装载量" prop="expect_count">
-                        <el-input v-model="stuff_ready_fetch.expect_count"></el-input>
-                    </el-form-item>
-                    <el-form-item label="允许迟到天数" prop="delay_days">
-                        <el-input v-model="stuff_ready_fetch.delay_days"></el-input>
-                    </el-form-item>
-                    <el-form-item label="自动关闭时间点" prop="close_time">
-                        <el-time-picker v-model="stuff_ready_fetch.close_time" format="HH:mm"
-                            placeholder="选择时间，不填就是不关闭" :default-value="new Date('2000-01-01T01:00:00')"></el-time-picker>
-                    </el-form-item>
-                    <el-form-item label="用于采购" prop="use_for_buy">
-                        <el-switch v-model="stuff_ready_fetch.use_for_buy"></el-switch>
-                    </el-form-item>
-                    <el-form-item label="关注发票" prop="concern_fapiao">
-                        <el-switch v-model="stuff_ready_fetch.concern_fapiao"></el-switch>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" @click="fetch_stuff">确定</el-button>
-                        <el-button @click="show_stuff_fetch = false">取消</el-button>
-                    </el-form-item>
-                </el-form>
-            </el-dialog>
-            <el-dialog :visible.sync="show_cancel_next_price" width="600px" @close="show_cancel_next_price = false">
-                <span>确定要关闭定时调价吗?</span>
-                <span slot="footer" class="dialog-footer">
-                    <el-button @click="show_cancel_next_price = false">取消</el-button>
-                    <el-button type="primary" @click="do_cancel_next_price">确定</el-button>
-                </span>
-            </el-dialog>
-            <el-dialog :visible.sync="show_change_price" width="600px" title="调价">
-                <el-form ref="change_price_form" :model="stuff2change_price" :rules="price_rules">
-                    <el-form-item label="新价格" prop="price">
-                        <el-input v-model="stuff2change_price.price"></el-input>
-                    </el-form-item>
-                    <el-form-item label="备注" prop="comment">
-                        <el-input v-model="stuff2change_price.comment"></el-input>
-                    </el-form-item>
-                    <el-form-item label="影响计划？" v-if="!price_profile.hide_impact_selector">
-                        <el-switch v-model="stuff2change_price.to_plan"></el-switch>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" @click="change_price">确定</el-button>
-                        <el-button @click="show_change_price = false">取消</el-button>
-                    </el-form-item>
-                </el-form>
-            </el-dialog>
-            <el-dialog :visible.sync="show_next_price" width="600px" title="定时调价" @close="show_next_price = false">
-                <el-form ref="next_price_form" :model="next_price_req" :rules="next_price_rules">
-                    <el-form-item label="新价格" :rules="[{ required: true, message: '请输入新价格', trigger: 'blur' }]">
-                        <el-input v-model="next_price_req.next_price"></el-input>
-                    </el-form-item>
-                    <el-form-item label="备注" :rules="[{ required: true, message: '请输入备注', trigger: 'blur' }]">
-                        <el-input v-model="next_price_req.next_comment"></el-input>
-                    </el-form-item>
-                    <el-form-item label="调价时间">
-                        <el-date-picker v-model="next_price_req.next_time" type="datetime"
-                            placeholder="点击选择时间"></el-date-picker>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button type="primary" @click="do_next_price">确定</el-button>
-                        <el-button @click="show_next_price = false">取消</el-button>
-                    </el-form-item>
-                </el-form>
-            </el-dialog>
-            <el-dialog :visible.sync="show_history" title="调价历史" @close="show_history = false">
-                <el-table :data="price_history_data">
-                    <el-table-column prop="operator" label="操作人"></el-table-column>
-                    <el-table-column prop="new_price" label="新价格"></el-table-column>
-                    <el-table-column label="备注">
-                        <template slot-scope="scope">
-                            <el-tag type="info">{{ scope.row.comment }}</el-tag>
-                        </template>
-                    </el-table-column>
-                    <el-table-column label="时间">
-                        <template slot-scope="scope">
-                            <el-tag type="danger">{{ scope.row.time }}</el-tag>
-                        </template>
-                    </el-table-column>
-                </el-table>
-            </el-dialog>
-        </el-main>
-    </el-container>
+                </el-table-column>
+                <el-table-column label="时间">
+                    <template slot-scope="scope">
+                        <el-tag type="danger">{{ scope.row.time }}</el-tag>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </el-dialog>
+    </el-main>
+</el-container>
 </template>
 
 <script>
 import moment from 'moment';
 import PageContent from '../../components/PageContent.vue';
-import { mapGetters } from 'vuex';
+import {
+    mapGetters
+} from 'vuex';
 export default {
     name: 'StuffConfig',
     components: {
@@ -362,30 +330,61 @@ export default {
                 zone_name: ''
             },
             rules: {
-                name: [{ required: true, message: '请输入物料名', trigger: 'change' }],
-                expect_count: [{ required: true, message: '请输入预计单车装货量', trigger: 'change' }],
-                delay_days: [{ required: true, message: '请输入允许迟到天数', trigger: 'change' }],
+                name: [{
+                    required: true,
+                    message: '请输入物料名',
+                    trigger: 'change'
+                }],
+                expect_count: [{
+                    required: true,
+                    message: '请输入预计单车装货量',
+                    trigger: 'change'
+                }],
+                delay_days: [{
+                    required: true,
+                    message: '请输入允许迟到天数',
+                    trigger: 'change'
+                }],
             },
             price_rules: {
-                price: [{ required: true, message: '请输入新价格', trigger: 'change' }],
-                comment: [{ required: true, message: '请输入备注', trigger: 'change' }],
+                price: [{
+                    required: true,
+                    message: '请输入新价格',
+                    trigger: 'change'
+                }],
+                comment: [{
+                    required: true,
+                    message: '请输入备注',
+                    trigger: 'change'
+                }],
             },
             zone_rules: {
-                zone_name: [{ required: true, message: '请输入区域名称', trigger: 'change' }]
+                zone_name: [{
+                    required: true,
+                    message: '请输入区域名称',
+                    trigger: 'change'
+                }]
             },
             next_price_rules: {
-                next_price: [{ required: true, message: '请输入新价格', trigger: 'change' }],
-                next_comment: [{ required: true, message: '请输入备注', trigger: 'change' }],
+                next_price: [{
+                    required: true,
+                    message: '请输入新价格',
+                    trigger: 'change'
+                }],
+                next_comment: [{
+                    required: true,
+                    message: '请输入备注',
+                    trigger: 'change'
+                }],
             }
         }
     },
-    mounted: async function () {
-    },
+    mounted: async function () {},
     computed: {
         ...mapGetters(['view_type'])
     },
     methods: {
-        refresh_stuff:function () {
+        refresh_stuff: function () {
             let current_page = this.$refs.stuff.cur_page;
             this.$refs.stuff.refresh(current_page);
         },
@@ -465,6 +464,12 @@ export default {
             await this.$send_req('/stuff/checkout_delay_config', {
                 stuff_id: item.id,
                 checkout_delay: event,
+            });
+        },
+        change_need_expect_weight:async function(event, item){
+            await this.$send_req('/stuff/expect_weight_config', {
+                stuff_id: item.id,
+                need_expect_weight: event
             });
         },
         change_manual_weight: async function (event, item) {
@@ -609,6 +614,7 @@ export default {
     }
 }
 </script>
+
 <style>
 .stuff_card_list {
     display: flex;

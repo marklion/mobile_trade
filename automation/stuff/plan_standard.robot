@@ -98,6 +98,23 @@ Driver Check In
     Check In A Plan  ${plan}
     Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1  ${True}
 
+Driver Set Expect Weight
+    [Setup]  Set Stuff Need Expect Weight
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Need Expect Weight  expect_weight=${False}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Check In A Plan  ${plan}  expect_fail=${True}
+    Set Expect Weight  ${plan}  ${34}
+    Check In A Plan  ${plan}
+    ${plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Numbers    ${plan}[expect_weight]  ${34}
+    Deliver A Plan  ${plan}  ${23}
+    Set Expect Weight  ${plan}  ${34}  ${True}
+
 Plan Enter and Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0

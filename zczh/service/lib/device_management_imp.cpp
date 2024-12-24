@@ -1389,7 +1389,7 @@ bool issue_card(const std::string &_order_number, double _weight, const std::str
             (int)(tmp.expect_weight * 1000),
             util_get_timestring().c_str(),
             "0");
-        cmd += "\"" + std::string(sql) + "\"";
+        cmd += host + " \"" + std::string(sql) + "\"";
         ret = (0 == system(cmd.c_str()));
     }
 

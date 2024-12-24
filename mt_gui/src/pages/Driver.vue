@@ -119,6 +119,11 @@
             </fui-form-item>
         </fui-form>
     </fui-modal>
+    <fui-modal :zIndex="1003" width="600" v-if="show_expect_weight" :show="show_expect_weight" @click="set_expect_weight">
+        <fui-form ref="sew" top="100">
+            <fui-input label="重量" borderTop placeholder="请输入重量" v-model="expect_weight.weight"></fui-input>
+        </fui-form>
+    </fui-modal>
     <fui-modal :zIndex="1003" width="600" v-if="show_delete_sc_content" descr="确定要删除吗？" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
 
@@ -220,6 +225,10 @@ export default {
                 name: '',
                 prompt: '',
             },
+            show_expect_weight: false,
+            expect_weight: {
+                weight: 0
+            },
             plan_show: function (item) {
                 let today_date = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
                 let is_today = false;
@@ -257,6 +266,12 @@ export default {
                     ret.list.push({
                         label: '进厂前装载量(已上传磅单)',
                         value: item.enter_count,
+                    });
+                };
+                if (item.expect_weight > 0) {
+                    ret.list.push({
+                        label: '期望重量',
+                        value: item.expect_weight,
                     });
                 };
                 let enter_permit = false;
@@ -321,6 +336,13 @@ export default {
                     ret.buttons.push({
                         text: '选择货源',
                         color: 'brown',
+                        item: item,
+                    });
+                }
+                if (item.stuff.need_expect_weight) {
+                    ret.buttons.push({
+                        text: '期望重量',
+                        color: 'black',
                         item: item,
                     });
                 }
@@ -543,7 +565,30 @@ export default {
                 uni.navigateTo({
                     url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id + '&driver_name=' + this.driver_self.name,
                 });
+            } else if (e.text == '期望重量') {
+                vue_this.focus_plan = e.item;
+                vue_this.show_expect_weight = true;
             }
+        },
+        set_expect_weight: async function (e) {
+            if (e.index == 1) {
+                let rules = [{
+                    name: 'weight',
+                    rule: ['required', 'isAmount'],
+                    msg: ['请输入重量', '请输入正确的重量']
+                }];
+                let val_ret = await this.$refs.sew.validator(this.expect_weight, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                await this.$send_req('/global/driver_set_expect_weight', {
+                    plan_id: this.focus_plan.id,
+                    open_id: this.driver_self.open_id,
+                    expect_weight: parseFloat(this.expect_weight.weight)
+                });
+                uni.startPullDownRefresh();
+            }
+            this.show_expect_weight = false;
         },
         upload_enter_weight: async function (e) {
             if (e.index == 1) {

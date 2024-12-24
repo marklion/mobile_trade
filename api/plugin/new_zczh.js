@@ -1,8 +1,4 @@
-const axios = require('axios');
-const db_opt = require('../db_opt');
-const plan_lib = require('../lib/plan_lib');
 const { push_req2zc } = require('./zczh_api_utils');
-const lag_rpc = require('../lib/lag_rpc');
 
 function make_url(url, plan) {
     let ret = '';
@@ -66,7 +62,8 @@ module.exports = {
         await push_req2zc({
             order_number: vo,
             is_check_in: true,
-            opt_name: '司机'
+            opt_name: '司机',
+            expect_weight: plan.expect_weight,
         }, make_url('/api/order/check_in', plan), make_token(plan));
         await push_req2zc({
             order_number: vo,
