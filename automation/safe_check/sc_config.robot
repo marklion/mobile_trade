@@ -171,6 +171,7 @@ SC Archived After Plan Finish
     FOR  ${itr}  IN  @{resp}[sc_info]
         Should Be True  ${itr}[sc_content][passed]
     END
+    Rollback Plan    ${test_plan}
 
 FC Table Config
     [Teardown]  FC Reset
