@@ -315,6 +315,12 @@ Check In A Plan
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  lat=${123}  lon=${333}
     Req to Server  /global/driver_checkin  none  ${req}  ${expect_fail}
 
+Set Expect Weight
+    [Arguments]  ${plan}  ${expect_weight}=22  ${expect_fail}=${False}
+    ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
+    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${plan}[id]  expect_weight=${expect_weight}
+    Req to Server  /global/driver_set_expect_weight  none  ${req}  ${expect_fail}
+
 Call A Plan
     [Arguments]  ${plan}  ${expect_fail}=${False}
     ${req}  Create Dictionary  plan_id=${plan}[id]
@@ -438,6 +444,11 @@ Set Stuff Checkout Delay
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${delay}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  checkout_delay=${delay}
     Req to Server   /stuff/checkout_delay_config     ${token}  ${req}
+
+Set Stuff Need Expect Weight
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${expect_weight}=${True}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  need_expect_weight=${expect_weight}
+    Req to Server   /stuff/expect_weight_config     ${token}  ${req}
 
 Checkout A Plan
     [Arguments]  ${plan}  ${token}=${bc1_user_token}

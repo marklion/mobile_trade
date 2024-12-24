@@ -111,6 +111,7 @@ void show_device_scale(std::ostream &out, std::vector<std::string> _params)
         PUT_DEVICE_TO_SET(printer.front);
         PUT_DEVICE_TO_SET(printer.back);
         PUT_DEVICE_TO_SET(scale);
+        PUT_DEVICE_TO_SET(card_reader);
         tab.add_row({std::to_string(itr.id), itr.name, util_join_string(device_info, "\n")});
     }
     tab.format().multi_byte_characters(true);
@@ -336,6 +337,10 @@ void mock_device_action(std::ostream &out, std::vector<std::string> _params)
         else if ("id_reader" == cmd)
         {
             client->push_id_read(1, _params[2]);
+        }
+        else if ("card_reader" == cmd)
+        {
+            client->push_card_no(1, _params[2]);
         }
         THR_CALL_DM_END();
     }
@@ -735,11 +740,16 @@ void test_id_reader(std::ostream &out, std::vector<std::string> _params)
         out << "身份证号：" << id_no << std::endl;
     }
 }
-
+static void bdr(std::ostream &out, std::vector<std::string> _params)
+{
+    device_cli tmp;
+    out << tmp.make_bdr() << std::endl;
+}
 std::unique_ptr<cli::Menu> make_device_cli(const std::string &_menu_name)
 {
     auto root_menu = std::unique_ptr<cli::Menu>(new cli::Menu(_menu_name));
 
+    root_menu->Insert(CLI_MENU_ITEM(bdr), "列出配置");
     root_menu->Insert(CLI_MENU_ITEM(show_device_driver), "查看驱动");
     root_menu->Insert(CLI_MENU_ITEM(show_device_gate), "查看门组件");
     root_menu->Insert(CLI_MENU_ITEM(show_device_scale), "查看磅组件");
@@ -829,10 +839,10 @@ std::string device_cli::make_bdr()
         ret += sub_bdr_make(itr.speaker.front, "front_speaker", itr.name);
         ret += sub_bdr_make(itr.video_cam.back, "back_video_cam", itr.name);
         ret += sub_bdr_make(itr.video_cam.front, "front_video_cam", itr.name);
-
         ret += sub_bdr_make(itr.printer.back, "back_printer", itr.name);
         ret += sub_bdr_make(itr.printer.front, "front_printer", itr.name);
         ret += sub_bdr_make(itr.scale, "scale", itr.name);
+        ret += sub_bdr_make(itr.card_reader, "card_reader", itr.name);
     }
     THR_CALL_END();
 

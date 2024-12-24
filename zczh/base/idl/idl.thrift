@@ -91,6 +91,7 @@ struct device_scale_set {
     9:device_couple gate,
     10:device_couple printer,
     11:device_meta scale,
+    12:device_meta card_reader,
 }
 
 struct device_gate_set{
@@ -136,6 +137,7 @@ struct running_rule {
     5:string date_ticket_prefix,
     6:string oem_name,
     7:i64 weight_turn,
+    8:string issue_card_path
 }
 
 struct device_run_time{
@@ -212,6 +214,7 @@ struct vehicle_order_info {
     23:string stuff_from,
     24:i64 reg_no,
     25:string continue_until,
+    26:double expect_weight,
 }
 
 struct order_search_cond {
@@ -242,7 +245,7 @@ service order_center {
     list<vehicle_order_info> search_order(1:order_search_cond cond) throws (1:gen_exp e),
     vehicle_order_info get_order(1:string order_number) throws (1:gen_exp e),
     list<vehicle_order_info> get_registered_order() throws (1:gen_exp e),
-    bool order_check_in(1:string order_number, 2:bool is_check_in, 3:string opt_name) throws (1:gen_exp e),
+    bool order_check_in(1:string order_number, 2:bool is_check_in, 3:string opt_name, 4:double expect_weight) throws (1:gen_exp e),
     bool order_call(1:string order_number, 2:bool is_call, 3:string opt_name) throws (1:gen_exp e),
     bool order_confirm(1:string order_number, 2:bool is_confirm, 3:string opt_name) throws(1:gen_exp e),
     bool order_set_seal_no(1:string order_number, 2:string seal_no) throws(1:gen_exp e),
@@ -294,4 +297,6 @@ service device_management {
     void confirm_scale(1:i64 sm_id) throws (1:gen_exp e),
     list<device_run_time> get_device_run_time() throws (1:gen_exp e),
     list<gate_sm_info> get_gate_sm_info() throws (1:gen_exp e),
+    string last_card_no(1:i64 card_reader_id) throws (1:gen_exp e),
+    oneway void push_card_no(1:i64 card_reader_id, 2:string card_no),
 }

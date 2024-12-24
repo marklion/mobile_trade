@@ -103,6 +103,19 @@
                         </fui-label>
                     </fui-col>
                 </fui-row>
+                <fui-white-space size="large"></fui-white-space>
+                <fui-row>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="需要填写期望重量"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.need_expect_weight" @change="change_need_expect_weight($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
+                </fui-row>
                 <fui-divider text="装卸区域配置"></fui-divider>
                 <view style="display: flex; flex-wrap:wrap;">
                     <fui-tag v-for="zone in item.drop_take_zones" :key="zone.id" :text="zone.name" theme="light" margin-right="24" :padding="['12rpx','20rpx']">
@@ -373,6 +386,12 @@ export default {
             await this.$send_req('/stuff/enter_weight', {
                 stuff_id: item.id,
                 need_enter_weight: event.detail.value
+            });
+        },
+        change_need_expect_weight: async function (event, item) {
+            await this.$send_req('/stuff/expect_weight_config', {
+                stuff_id: item.id,
+                need_expect_weight: event.detail.value
             });
         },
         change_need_sc: async function (event, item) {

@@ -1,6 +1,6 @@
 #include "rule_cli.h"
 #include "tabulate.hpp"
-void bdr(std::ostream &out, std::vector<std::string> _params)
+static void bdr(std::ostream &out, std::vector<std::string> _params)
 {
     rule_cli tmp;
     out << tmp.make_bdr() << std::endl;
@@ -131,6 +131,30 @@ void call_time_out(std::ostream &out, std::vector<std::string> _params)
         TRH_CLOSE();
     }
 }
+void set_issue_card_path(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 1)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            running_rule tmp;
+            client->get_rule(tmp);
+            tmp.issue_card_path = _params[0];
+            client->set_rule(tmp);
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
 static void clear(std::ostream &out, std::vector<std::string> _params)
 {
     if (_params.size() != 0)
@@ -164,6 +188,7 @@ std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
     root_menu->Insert(CLI_MENU_ITEM(set_zyzl_plugin), "设置掌易插件参数", {"主机地址", "调用凭证"});
     root_menu->Insert(CLI_MENU_ITEM(set_ticket_prefix), "设置磅单号前缀", {"前缀"});
     root_menu->Insert(CLI_MENU_ITEM(weight_turn_set), "设置称重轮数", {"轮数"});
+    root_menu->Insert(CLI_MENU_ITEM(set_issue_card_path), "设置发卡系统路径", {"发卡系统中间数据库路径"});
     root_menu->Insert(CLI_MENU_ITEM(clear), "清除配置");
 
     return root_menu;
@@ -199,6 +224,10 @@ std::string rule_cli::make_bdr()
     if (tmp.weight_turn != 0)
     {
         ret.push_back("weight_turn_set " + std::to_string(tmp.weight_turn));
+    }
+    if (tmp.issue_card_path.length() > 0)
+    {
+        ret.push_back("set_issue_card_path " + tmp.issue_card_path);
     }
 
     return util_join_string(ret, "\n");

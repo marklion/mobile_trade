@@ -256,6 +256,7 @@ module.exports = {
                 manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
                 checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
                 ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
+                need_expect_weight: { type: Boolean, mean: '是否需要预计重量', example: false },
             }
         },
         company: {
@@ -311,6 +312,7 @@ module.exports = {
         second_weight: { type: String, mean: '第二次计量', example: '-30° 40mpa' },
         first_weight_fileList: { type: String, mean: '第一次计量图片', example: 'uploads/1.png' },
         second_weight_fileList: { type: String, mean: '第二次计量图片', example: 'uploads/2.png' },
+        expect_weight: { type: Number, mean: '预计重量', example: 100 },
     },
     bidding_items: bidding_items,
     dev_data: {

@@ -13,7 +13,7 @@ public:
     virtual void search_order(std::vector<vehicle_order_info> &_return, const order_search_cond &cond);
     virtual void get_order(vehicle_order_info &_return, const std::string &order_number);
     virtual void get_registered_order(std::vector<vehicle_order_info> &_return);
-    virtual bool order_check_in(const std::string &order_number, const bool is_check_in, const std::string &opt_name);
+    virtual bool order_check_in(const std::string &order_number, const bool is_check_in, const std::string &opt_name, const double expect_weight);
     virtual bool order_call(const std::string &order_number, const bool is_call, const std::string &opt_name);
     virtual bool order_confirm(const std::string &order_number, const bool is_confirm, const std::string &opt_name);
     virtual bool order_set_seal_no(const std::string &order_number, const std::string &seal_no);

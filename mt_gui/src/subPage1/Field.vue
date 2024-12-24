@@ -16,6 +16,7 @@
                         <fui-text :text="item.driver.name" size="24"></fui-text>
                         <fui-text type="primary" :text="item.driver.phone" size="24" textType="mobile" @click="copy_text(item.driver.phone)"></fui-text>
                         <fui-text :text="'序号:' + item.register_number" size="24"></fui-text>
+                        <fui-text v-if="item.expect_weight > 0" size="24" :text="'期望重量:' + item.expect_weight"></fui-text>
                     </view>
                     <view slot="right-icon">
                         <fui-button btnSize="mini" v-if="!item.call_time" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
@@ -26,7 +27,7 @@
                         <view v-else>
                             <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
                             <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
-                            <fui-button btnSize="mini" text="检查" type="warning"  @click="nav_to_fc(item)"></fui-button>
+                            <fui-button btnSize="mini" text="检查" type="warning" @click="nav_to_fc(item)"></fui-button>
                             <fui-button btnSize="mini" v-if="item.stuff.manual_weight" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
                         </view>
                     </view>
@@ -100,7 +101,7 @@ export default {
             zones: [],
             zone_name: '',
             show_zone_select: false,
-            focus_plan:{},
+            focus_plan: {},
         };
     },
     methods: {

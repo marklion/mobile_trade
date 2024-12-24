@@ -103,6 +103,14 @@ class scale_state_clean : public abs_sm_state
     virtual std::string name() { return "清理"; }
 };
 
+class scale_state_issue_card:public abs_sm_state
+{
+    virtual void before_enter(abs_state_machine &_sm);
+    virtual void after_exit(abs_state_machine &_sm);
+    virtual std::unique_ptr<abs_sm_state> proc_event(abs_state_machine &_sm);
+    virtual std::string name() { return "发卡"; }
+};
+
 class scale_sm : public abs_state_machine
 {
 public:
@@ -119,6 +127,7 @@ public:
     void cast_common(const std::string &_content);
     void cast_enter_info();
     void cast_stop_stable();
+    void cast_issue_card();
     void cast_wait_scale();
     void cast_result();
     void cast_busy();
@@ -160,6 +169,8 @@ public:
     virtual void confirm_scale(const int64_t sm_id);
     virtual void get_device_run_time(std::vector<device_run_time> &_return);
     virtual void get_gate_sm_info(std::vector<gate_sm_info> &_return);
+    virtual void last_card_no(std::string &_return, const int64_t card_reader_id);
+    virtual void push_card_no(const int64_t card_reader_id, const std::string &card_no);
 
     void walk_zombie_process();
     void start_device_no_exp(int64_t id);

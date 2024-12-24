@@ -13,6 +13,7 @@ config_management_handler::config_management_handler()
         {"id_reader_driver", "/bin/id_reader_driver"},
         {"wr_style_scale", "/bin/wr_style_scale_driver"},
         {"wl_style_scale", "/bin/wl_style_scale_driver"},
+        {"card_reader_driver", "/bin/card_reader_driver"},
     };
 
     for (auto &itr : dmt_array)
@@ -321,6 +322,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->date_ticket_prefix = rule.date_ticket_prefix;
         er->oem_name = rule.oem_name;
         er->weight_turn = rule.weight_turn;
+        er->issue_card_path = rule.issue_card_path;
         ret = er->update_record();
     }
     else
@@ -333,6 +335,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         tmp.date_ticket_prefix = rule.date_ticket_prefix;
         tmp.oem_name = rule.oem_name;
         tmp.weight_turn = rule.weight_turn;
+        tmp.issue_card_path = rule.issue_card_path;
         ret = tmp.insert_record();
     }
     return ret;
@@ -355,6 +358,7 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.date_ticket_prefix = er->date_ticket_prefix;
         _return.oem_name = er->oem_name;
         _return.weight_turn = er->weight_turn;
+        _return.issue_card_path = er->issue_card_path;
     }
 }
 
@@ -456,6 +460,7 @@ void config_management_handler::db_2_rpc(sql_device_set &_db, device_scale_set &
     DEV_FROM_SET_TO_RPC(front_printer, _rpc.printer.front);
     DEV_FROM_SET_TO_RPC(back_printer, _rpc.printer.back);
     DEV_FROM_SET_TO_RPC(scale, _rpc.scale);
+    DEV_FROM_SET_TO_RPC(card_reader, _rpc.card_reader);
 }
 
 void config_management_handler::db_2_rpc(sql_device_set &_db, device_gate_set &_rpc)

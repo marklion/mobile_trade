@@ -1,6 +1,10 @@
 #include "rbac_cli.h"
 #include "tabulate.hpp"
-
+static void bdr(std::ostream &out, std::vector<std::string> _params)
+{
+    rbac_cli tmp;
+    out << tmp.make_bdr() << std::endl;
+}
 void show_users(std::ostream &out, std::vector<std::string> _params)
 {
     std::vector<rbac_user> tmp;
@@ -38,7 +42,15 @@ void add_user(std::ostream &out, std::vector<std::string> _params)
         try
         {
             rbac_user tmp;
-            tmp.md5_password = util_calcu_md5(_params[2]);
+            auto pwd_input = _params[2];
+            if (pwd_input.find("md5:") == 0)
+            {
+                tmp.md5_password = pwd_input.substr(4);
+            }
+            else
+            {
+                tmp.md5_password = util_calcu_md5(pwd_input);
+            }
             tmp.name = _params[0];
             tmp.phone = _params[1];
             client->add_user(tmp);
@@ -276,6 +288,7 @@ std::unique_ptr<cli::Menu> make_rabc_cli(const std::string &_menu_name)
 {
     auto root_menu = std::unique_ptr<cli::Menu>(new cli::Menu(_menu_name));
 
+    root_menu->Insert(CLI_MENU_ITEM(bdr), "列出配置");
     root_menu->Insert(CLI_MENU_ITEM(show_users), "查看用户");
     root_menu->Insert(CLI_MENU_ITEM(show_permission), "查看权限");
     root_menu->Insert(CLI_MENU_ITEM(show_roles), "查看角色");
@@ -297,5 +310,40 @@ rbac_cli::rbac_cli() : common_cli(make_rabc_cli("rbac"), "rbac")
 
 std::string rbac_cli::make_bdr()
 {
-    return std::string();
+    std::string ret;
+    THR_DEF_CIENT(rbac_center);
+    THR_CONNECT(rbac_center);
+    try
+    {
+        std::vector<rbac_user> users;
+        client->get_all_user(users);
+        for (auto &itr : users)
+        {
+            ret += "add_user " + itr.name + " " + itr.phone + " md5:" + itr.md5_password + "\n";
+        }
+        std::vector<rbac_role> roles;
+        client->get_all_roles(roles);
+        for (auto &itr : roles)
+        {
+            ret += "add_role " + itr.role_name + (itr.read_only ? " 1" : " 0") + "\n";
+            for (auto &su : itr.all_user)
+            {
+                ret += "add_user_to_role " + std::to_string(itr.id) + " " + std::to_string(su.id) + "\n";
+            }
+            for (auto &su : itr.author_modules)
+            {
+                ret += "add_perm_to_role " + std::to_string(itr.id) + " " + std::to_string(su.id) + "\n";
+            }
+            for (auto &su : itr.author_resouces)
+            {
+                ret += "add_perm_to_role " + std::to_string(itr.id) + " " + std::to_string(su.id) + "\n";
+            }
+        }
+    }
+    catch (const gen_exp &e)
+    {
+        ret = e.msg;
+    }
+    TRH_CLOSE();
+    return ret;
 }

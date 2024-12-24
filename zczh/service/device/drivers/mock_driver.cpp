@@ -19,6 +19,7 @@ public:
     long m_dev_id;
     bool is_gate_open = false;
     double scale_weight = 0;
+    std::string card_no;
     std::string id_number;
     std::string qr_content;
     std::string plate_no;
@@ -129,6 +130,16 @@ public:
         this->id_number = id_number;
         client->push_id_read(m_dev_id, id_number);
         THR_CALL_DM_END();
+    }
+    virtual void last_card_no(std::string &_return, const int64_t id_reader_id)
+    {
+        m_pub_log.log("读取最后一次刷卡卡号");
+        _return = card_no;
+        card_no = "";
+    }
+    virtual void push_card_no(const int64_t card_reader_id, const std::string &_card_no)
+    {
+        card_no = _card_no;
     }
 };
 

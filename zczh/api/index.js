@@ -158,6 +158,7 @@ const g_scale_set_info = {
         g_device_couple_format('qr_reader', '二维码阅读器'),
         g_device_couple_format('gate', '道闸'),
         g_device_couple_format('printer', '打印机'),
+        g_device_meta_format('card_reader', '读卡器'),
     ],
 }
 
@@ -834,7 +835,7 @@ const g_api_permisson = {
             if (!name) {
                 name = await request_rpc('rbac_center', 'get_name_by_token', [body.token]);
             }
-            return await request_rpc('order_center', 'order_check_in', [body.order_number, body.is_check_in, name]);
+            return await request_rpc('order_center', 'order_check_in', [body.order_number, body.is_check_in, name, body.expect_weight]);
         },
         help_info: {
             title: "车辆排号",
@@ -861,6 +862,12 @@ const g_api_permisson = {
                         mean: "操作人, 不存在或为空则记录为当前调用用户",
                         have_to: false,
                     },
+                    {
+                        name:'expect_weight',
+                        type:Number,
+                        mean:'预期重量',
+                        have_to:false,
+                    }
                 ]
             },
             result: {

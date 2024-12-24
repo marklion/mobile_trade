@@ -137,6 +137,7 @@ void device_management_handler::init_all_set()
         start_device_no_exp(itr.printer.back.id);
         start_device_no_exp(itr.printer.front.id);
         start_device_no_exp(itr.scale.id);
+        start_device_no_exp(itr.card_reader.id);
         sm_init_add(std::make_shared<scale_sm>(itr.id, this), itr.id);
     }
 }
@@ -640,6 +641,20 @@ void device_management_handler::get_gate_sm_info(std::vector<gate_sm_info> &_ret
         _return.push_back(tmp);
     }
 }
+void device_management_handler::last_card_no(std::string &_return, const int64_t card_reader_id)
+{
+    auto sp = get_status_from_map(card_reader_id);
+    if (sp)
+    {
+        THR_DEF_CIENT(device_management);
+        THR_CONNECT_DEV(device_management, sp->port);
+        client->last_card_no(_return, 0);
+        TRH_CLOSE();
+    }
+}
+void device_management_handler::push_card_no(const int64_t card_reader_id, const std::string &card_no)
+{
+}
 static bool isZombieProcess(pid_t pid)
 {
     int status;
@@ -996,6 +1011,11 @@ void scale_sm::cast_stop_stable()
     cast_common("未完全上磅");
 }
 
+void scale_sm::cast_issue_card()
+{
+    cast_common("请取卡后刷卡");
+}
+
 void scale_sm::cast_wait_scale()
 {
     cast_common("请等待");
@@ -1137,12 +1157,17 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 sm.weight_que.push_back(sm.cur_weight);
             }
             auto require_weight_count = 3;
+            bool need_issue_card = false;
             THR_CALL_BEGIN(config_management);
             running_rule tmp;
             client->get_rule(tmp);
             if (tmp.weight_turn > 0)
             {
                 require_weight_count = tmp.weight_turn;
+            }
+            if (tmp.issue_card_path.length() > 0)
+            {
+                need_issue_card = true;
             }
             THR_CALL_END();
             if (sm.weight_que.size() > require_weight_count)
@@ -1151,13 +1176,27 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 THR_CALL_BEGIN(order_center);
                 client->get_order(tmp, sm.order_number);
                 THR_CALL_END();
-                if (tmp.p_weight == 0 || tmp.confirm_info.operator_time.length() > 0)
+                if (tmp.p_weight == 0)
                 {
-                    ret.reset(new scale_state_clean());
+                    if (need_issue_card && tmp.expect_weight != 0)
+                    {
+                        ret.reset(new scale_state_issue_card());
+                    }
+                    else
+                    {
+                        ret.reset(new scale_state_clean());
+                    }
                 }
                 else
                 {
-                    sm.cast_need_confirm();
+                    if (tmp.confirm_info.operator_time.length() > 0)
+                    {
+                        ret.reset(new scale_state_clean());
+                    }
+                    else
+                    {
+                        sm.cast_need_confirm();
+                    }
                 }
             }
         }
@@ -1298,6 +1337,101 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
                 if (sm.cur_weight == 0)
                 {
                     ret.reset(new scale_state_idle());
+                }
+            }
+        }
+    }
+
+    return ret;
+}
+
+void scale_state_issue_card::before_enter(abs_state_machine &_sm)
+{
+    auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.cast_issue_card();
+    sm.start_scale_timer(5);
+}
+
+void scale_state_issue_card::after_exit(abs_state_machine &_sm)
+{
+    auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.stop_scale_timer();
+}
+
+bool issue_card(const std::string &_order_number, double _weight, const std::string &_card_no)
+{
+    bool ret = false;
+    vehicle_order_info tmp;
+    std::string host;
+
+    THR_CALL_BEGIN(order_center);
+    client->get_order(tmp, _order_number);
+    THR_CALL_END();
+
+    THR_CALL_BEGIN(config_management);
+    running_rule rule;
+    client->get_rule(rule);
+    host = rule.issue_card_path;
+    THR_CALL_END();
+    if (tmp.order_number.length() > 0 && host.length() > 0)
+    {
+        std::string cmd = "/conf/issue_card.sh ";
+        char sql[1048];
+        sprintf(
+            sql,
+            "'%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s'",
+            _card_no.c_str(),
+            tmp.plate_number.c_str(),
+            tmp.back_plate_number.c_str(),
+            tmp.company_name.c_str(),
+            tmp.driver_name.c_str(),
+            (int)(_weight * 1000),
+            (int)(tmp.expect_weight * 1000),
+            util_get_timestring().c_str(),
+            "0");
+        cmd += host + " \"" + std::string(sql) + "\"";
+        ret = (0 == system(cmd.c_str()));
+    }
+
+    return ret;
+}
+
+std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machine &_sm)
+{
+    auto &sm = dynamic_cast<scale_sm &>(_sm);
+    std::unique_ptr<abs_sm_state> ret;
+    if (_sm.tft == abs_state_machine::plate_cam ||
+        _sm.tft == abs_state_machine::id_reader ||
+        _sm.tft == abs_state_machine::qr_reader)
+    {
+        sm.cast_busy();
+    }
+    else if (sm.tft == abs_state_machine::manual_reset)
+    {
+        ret.reset(new scale_state_idle());
+    }
+    else if (_sm.tft == abs_state_machine::timer)
+    {
+        auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
+        if (set)
+        {
+            auto cr = set->get_parent<sql_device_meta>("card_reader");
+            if (cr)
+            {
+                std::string card_no;
+                THR_CALL_DM_BEGIN();
+                client->last_card_no(card_no, cr->get_pri_id());
+                THR_CALL_DM_END();
+                if (card_no.length() > 0)
+                {
+                    if (issue_card(sm.order_number, sm.cur_weight, card_no))
+                    {
+                        ret.reset(new scale_state_clean());
+                    }
+                    else
+                    {
+                        sm.cast_common("发卡失败");
+                    }
                 }
             }
         }

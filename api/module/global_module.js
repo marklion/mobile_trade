@@ -80,6 +80,9 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
     if (ret == '' && !(await exam_lib.plan_pass_exam(plan))) {
         ret = '未通过考试';
     }
+    if (ret == '' && plan.stuff.need_expect_weight && plan.expect_weight == 0) {
+        ret = '未设置预期重量';
+    }
     return ret;
 }
 module.exports = {
@@ -239,6 +242,37 @@ module.exports = {
             },
             func: async function (body, token) {
                 return await sc_lib.get_sc_driver_req(body.open_id, body.plan_id, body.pageNo);
+            },
+        },
+        driver_set_expect_weight:{
+            name: '司机设置预期重量',
+            description: '司机设置预期重量',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '司机open_id', example: 'oq5s-4k1d-4k1d-4k1d' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                expect_weight: { type: Number, have_to: true, mean: '预期重量', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (plan && plan.status != 3) {
+                    if (plan.driver.open_id == body.open_id) {
+                        plan.expect_weight = body.expect_weight;
+                        await plan.save();
+                    }
+                    else {
+                        throw { err_msg: '无法设置' };
+                    }
+                }
+                else {
+                    throw { err_msg: '无法设置' };
+                }
+                return { result: true };
             },
         },
         driver_upload_sc_content: {
@@ -1292,7 +1326,7 @@ module.exports = {
                             const headerOpts = { ...commonOpts, b: true, sz: '22', shd: { fill: 'D9EAD3' } };
                             const valueOpts = { ...commonOpts, sz: '22' };
                             let table = [
-                                [{ val: '安检项目名称', opts: headerOpts},{ val: '输入内容', opts: headerOpts }],
+                                [{ val: '安检项目名称', opts: headerOpts }, { val: '输入内容', opts: headerOpts }],
                             ];
                             doc.createP({ align: 'left' }).addText('基础信息', { font_size: 18 });
                             // 基础信息
