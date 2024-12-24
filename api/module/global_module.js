@@ -83,6 +83,9 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
     if (ret == '' && plan.stuff.need_expect_weight && plan.expect_weight == 0) {
         ret = '未设置预期重量';
     }
+    if (ret == '' && moment().diff(moment(plan.plan_time), 'days') > plan.stuff.delay_days) {
+        ret = '超过计划最晚签到时间';
+    }
     return ret;
 }
 module.exports = {
@@ -244,7 +247,7 @@ module.exports = {
                 return await sc_lib.get_sc_driver_req(body.open_id, body.plan_id, body.pageNo);
             },
         },
-        driver_set_expect_weight:{
+        driver_set_expect_weight: {
             name: '司机设置预期重量',
             description: '司机设置预期重量',
             need_rbac: false,

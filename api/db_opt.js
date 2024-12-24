@@ -334,6 +334,8 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             template_path: { type: DataTypes.STRING },
+            require_before_call: { type: DataTypes.BOOLEAN, defaultValue: false },
+            require_before_confirm: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         field_check_item: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

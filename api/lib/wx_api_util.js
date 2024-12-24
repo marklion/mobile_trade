@@ -474,8 +474,10 @@ module.exports = {
         let users = await company.getRbac_users();
         tar_array = tar_array.concat(await filter_related_users('bid', users));
         tar_array.forEach(async item => {
-            req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req }, item);
+            if (price != '隐藏') {
+                req.touser = this.openid_map.get_pub_openid(item);
+                send_wx_msg({ ...req }, item);
+            }
         });
     },
     bidding_success_msg: async function (bc) {

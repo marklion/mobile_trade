@@ -126,6 +126,12 @@ Add Item to FC Table
     ${req}  Create Dictionary  table_id=${table}[id]  name=${item_name}
     Req to Server    /sc/add_item2fc_table  ${token}  ${req}
 
+Set Requirement to FC
+    [Arguments]  ${table_name}  ${token}=${sc_admin_token}  ${require_before_call}=${True}  ${require_before_confirm}=${True}
+    ${table}  Search FC Table    ${table_name}
+    ${req}  Create Dictionary  table_id=${table}[id]  require_before_call=${require_before_call}  require_before_confirm=${require_before_confirm}
+    Req to Server    /sc/set_table_requirement    ${token}    ${req}
+
 Search FC Item
     [Arguments]  ${table_name}  ${item_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
     ${table}  Search FC Table    ${table_name}

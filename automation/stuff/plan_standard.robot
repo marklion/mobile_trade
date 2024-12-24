@@ -98,6 +98,28 @@ Driver Check In
     Check In A Plan  ${plan}
     Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1  ${True}
 
+Driver Check In with Delay
+    [Teardown]  Plan Reset
+    ${today}  Get Current Date  result_format=%Y-%m-%d
+    ${yesterday}  Subtract Time From Date    ${today}  1 day  result_format=%Y-%m-%d
+    ${the_day_before_yesterday}  Subtract Time From Date    ${today}  2 day  result_format=%Y-%m-%d
+    ${tomorrow}  Add Time To Date  ${today}  1 day  result_format=%Y-%m-%d
+    ${plan}  Prepare Plan For Check In    ${the_day_before_yesterday}
+    Check In A Plan    ${plan}  ${True}
+    Close A Plan    ${plan}
+    ${plan}  Prepare Plan For Check In    ${yesterday}
+    Check In A Plan    ${plan}
+    Cancel Check In Plan    ${plan}
+    Close A Plan    ${plan}
+    ${plan}  Prepare Plan For Check In    ${today}
+    Check In A Plan    ${plan}
+    Cancel Check In Plan    ${plan}
+    Close A Plan    ${plan}
+    ${plan}  Prepare Plan For Check In    ${tomorrow}
+    Check In A Plan    ${plan}  ${True}
+    Close A Plan    ${plan}
+
+
 Driver Set Expect Weight
     [Setup]  Set Stuff Need Expect Weight
     [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Need Expect Weight  expect_weight=${False}
@@ -531,3 +553,12 @@ Search By Plate Or Id
     Should Be Equal    ${p_resp}[result]    ${i_resp}[result]
     Should Be Equal  ${p_resp}[result]  ${expect_result}
 
+Prepare Plan For Check In
+    [Arguments]  ${plan_time}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  plan_time=${plan_time}
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    RETURN  ${plan}

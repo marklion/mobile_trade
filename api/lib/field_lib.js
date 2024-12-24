@@ -4,6 +4,7 @@ const wx_api_util = require('./wx_api_util');
 const { hook_plan } = require('./hook_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('./util_lib');
+const fc_lib = require('./fc_lib');
 let currentDay = moment().format('YYYY-MM-DD');
 let currentNumber = 0;
 function get_increased_number() {
@@ -93,15 +94,29 @@ module.exports = {
         await _plan.save();
     },
     handle_call_vehicle: async function (_plan) {
-        await hook_plan('call_vehicle', _plan);
-        _plan.call_time = moment().format('YYYY-MM-DD HH:mm:ss');
-        wx_api_util.call_vehicle_msg(_plan);
-        await _plan.save();
+        if (await fc_lib.should_run_action('call', _plan)) {
+            await hook_plan('call_vehicle', _plan);
+            _plan.call_time = moment().format('YYYY-MM-DD HH:mm:ss');
+            wx_api_util.call_vehicle_msg(_plan);
+            await _plan.save();
+        }
+        else {
+            throw { err_msg: '检查未通过' };
+        }
     },
     handle_confirm_vehicle: async function (_plan, is_confirm) {
-        _plan.confirmed = is_confirm;
-        await hook_plan('confirm_vehicle', _plan);
-        await _plan.save();
+        let has_permission = true;
+        if (is_confirm) {
+            has_permission = await fc_lib.should_run_action('confirm', _plan)
+        }
+        if (has_permission) {
+            _plan.confirmed = is_confirm;
+            await hook_plan('confirm_vehicle', _plan);
+            await _plan.save();
+        }
+        else {
+            throw { err_msg: '检查未通过' };
+        }
     },
     dev_opt: {
         get_device_status: async function (company) {

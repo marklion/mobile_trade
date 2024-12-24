@@ -230,6 +230,35 @@ FC Excute
     ${fc_plan_table}  Search FC Plan Table    ${test_plan}    t2
     Should Not Be Empty    ${fc_plan_table}[fc_plan_table][finish_time]
 
+FC Block Plan
+    [Setup]  Prepare FC Configured
+    [Teardown]  FC Reset
+    Check In A Plan    ${test_plan}
+    Set Requirement to FC    t1  require_before_call=${True}
+    Call A Plan    ${test_plan}  ${True}
+    Set FC Item Passed    ${test_plan}    t1    i11
+    Set FC Item Passed    ${test_plan}    t1    i12
+    Set FC Plan Table Finish    ${test_plan}    t1
+    Call A Plan    ${test_plan}  ${True}
+    Set FC Item Passed    ${test_plan}    t1    i13
+    Call A Plan    ${test_plan}
+    Confirm Vehicle    ${test_plan}
+    Confirm Vehicle    ${test_plan}  is_confirm=${False}
+    Set Requirement to FC    t1  require_before_call=${True}  require_before_confirm=${True}
+    Confirm Vehicle    ${test_plan}
+    Confirm Vehicle    ${test_plan}  is_confirm=${False}
+    Set Requirement to FC    t2  require_before_call=${True}  require_before_confirm=${True}
+    Confirm Vehicle    ${test_plan}  expect_fail=${True}
+    Set FC Item Passed    ${test_plan}    t2    i21
+    Set FC Item Passed    ${test_plan}    t2    i22
+    Set FC Item Passed    ${test_plan}    t2    i23
+    Set FC Item Passed    ${test_plan}    t2    i24
+    Set FC Plan Table Finish    ${test_plan}    t2
+    Confirm Vehicle    ${test_plan}
+    Confirm Vehicle    ${test_plan}  is_confirm=${False}
+    Cancel Check In Plan    ${test_plan}
+
+
 FC Excute Failure
     [Setup]  Prepare FC Configured
     [Teardown]  FC Reset

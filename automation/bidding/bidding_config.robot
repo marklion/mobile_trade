@@ -37,8 +37,6 @@ Bidding When Price Hide
     Customer Accept Bidding  ${joiners}[3][user_token]
     Move Bidding Date  ${False}
     Customer Price Out  ${joiners}[1][user_token]  ${100}
-    WxMsg Catch
-    WxMsg was recieved    opid1234    隐藏
     ${resp}  Req Get to Server  /bid/get_all_created  ${sc_admin_token}  biddings
     Should Be Equal As Numbers  ${resp}[0][bidding_turns][0][bidding_items][0][price]  0
     Customer Price Out  ${joiners}[2][user_token]  ${200}

@@ -68,7 +68,7 @@ Clean Up Companies And Users
 
 Add A Stuff To Sale
     [Arguments]  ${stuff_name}  ${stuff_comment}  ${expect_count}=${22}  ${token}=${sc_admin_token}
-    ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}
+    ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}  delay_days=${1}
     ${resp}  Req to Server  /stuff/fetch  ${token}  ${req}
     RETURN  ${resp}
 
@@ -325,6 +325,11 @@ Call A Plan
     [Arguments]  ${plan}  ${expect_fail}=${False}
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /scale/call_vehicle  ${sc_admin_token}  ${req}  ${expect_fail}
+
+Confirm Vehicle
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}  ${is_confirm}=${True}  ${expect_fail}=${False}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  is_confirm=${is_confirm}
+    Req to Server    /scale/confirm_vehicle    ${token}    ${req}  ${expect_fail}
 
 Deliver A Plan
     [Arguments]  ${plan}  ${count}
