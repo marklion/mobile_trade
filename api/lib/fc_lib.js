@@ -14,6 +14,46 @@ const fc_content = [
     sq.models.stuff,
 ];
 module.exports = {
+    should_run_action: async function (action, plan) {
+        let ret = true;
+        let requirement;
+        switch (action) {
+            case 'call':
+                requirement = 'require_before_call';
+                break;
+            case 'confirm':
+                requirement = 'require_before_confirm';
+                break;
+            default:
+                break;
+        }
+        if (requirement) {
+            let fc_plan_tables = await this.get_all_fc_plan_table(plan);
+            for (let index = 0; index < fc_plan_tables.length; index++) {
+                const element = fc_plan_tables[index];
+                if (element[requirement]) {
+                    if (!element.fc_plan_table.finish_time) {
+                        ret = false;
+                        break;
+                    }
+                    else {
+                        let all_pass = true;
+                        element.fc_plan_table.fc_check_results.forEach(item => {
+                            if (!item.pass_time) {
+                                all_pass = false;
+                            }
+                        })
+                        if (!all_pass) {
+                            ret = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        return ret;
+    },
     add_fc_table: async function (name, stuff_id) {
         let stuff = await sq.models.stuff.findByPk(stuff_id);
         let exist_fc_tables = await stuff.getField_check_tables({ where: { name: name } });
@@ -72,6 +112,12 @@ module.exports = {
         if (exist_fc) {
             await exist_fc.destroy();
         }
+    },
+    set_fc_table_requirement: async function (fc_id, before_call, before_confirm) {
+        let fc_table = await this.get_fc_table(fc_id);
+        fc_table.require_before_call = before_call;
+        fc_table.require_before_confirm = before_confirm;
+        await fc_table.save();
     },
     get_fc_plan_table: async function (plan_id, pageNo) {
         let plan = await sq.models.plan.findByPk(plan_id);

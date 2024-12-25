@@ -23,6 +23,8 @@ function fc_table_explain(has_plan = false) {
         id: { type: Number, mean: '表ID', example: 1 },
         name: { type: String, mean: '表名', example: '表名' },
         template_path: { type: String, mean: '模板', example: '模板' },
+        require_before_call: { type: Boolean, mean: '是否需要在叫号前完成', example: true },
+        require_before_confirm: { type: Boolean, mean: '是否需要在确认前完成', example: true },
         field_check_items: {
             type: Array, mean: '检查项', explain: {
                 id: { type: Number, mean: '检查项ID', example: 1 },
@@ -237,6 +239,28 @@ module.exports = {
                     throw { err_msg: '无权限' };
                 }
                 await fc_lib.upload_fc_table_template(body.table_id, body.template_path);
+                return { result: true };
+            },
+        },
+        set_table_requirement: {
+            name: '设置现场检查表需求',
+            description: '设置现场检查表需求',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                table_id: { type: Number, have_to: true, mean: '表ID', example: 1 },
+                require_before_call: { type: Boolean, have_to: true, mean: '是否需要在叫号前完成', example: true },
+                require_before_confirm: { type: Boolean, have_to: true, mean: '是否需要在确认前完成', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_table = await fc_lib.get_fc_table(body.table_id, true);
+                if (!await could_config_stuff(fc_table.stuff.id, token)) {
+                    throw { err_msg: '无权限' };
+                }
+                await fc_lib.set_fc_table_requirement(body.table_id, body.require_before_call, body.require_before_confirm);
                 return { result: true };
             },
         },

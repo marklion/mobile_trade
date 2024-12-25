@@ -36,6 +36,28 @@
                         <fui-button v-if="item.template_path" radius="0" btnSize="mini" type="purple" text="下载模板" @click="prepare_download_template(item.template_path)"></fui-button>
                         <fui-button radius="0" btnSize="mini" type="danger" text="删除表格" @click="prepare_del_table(item)"></fui-button>
                     </view>
+                    <fui-row>
+                        <fui-col :span="12">
+                            <fui-label>
+                                <fui-list-cell>
+                                    <view class="fui-list__cell">
+                                        <fui-text size="28" text="未通过不允许叫号"></fui-text>
+                                        <fui-switch :scaleRatio="0.7" :checked="item.require_before_call" @change="change_require_before_call($event,item)"></fui-switch>
+                                    </view>
+                                </fui-list-cell>
+                            </fui-label>
+                        </fui-col>
+                        <fui-col :span="12">
+                            <fui-label>
+                                <fui-list-cell>
+                                    <view class="fui-list__cell">
+                                        <fui-text size="28" text="未通过不允许确认出厂"></fui-text>
+                                        <fui-switch :scaleRatio="0.7" :checked="item.require_before_confirm" @change="change_require_before_confirm($event,item)"></fui-switch>
+                                    </view>
+                                </fui-list-cell>
+                            </fui-label>
+                        </fui-col>
+                    </fui-row>
                 </fui-card>
             </view>
         </view>
@@ -224,11 +246,26 @@ export default {
                 }
             });
         },
+        do_change_requirement: async function (item) {
+            await this.$send_req('/sc/set_table_requirement', {
+                table_id: item.id,
+                require_before_confirm: item.require_before_confirm,
+                require_before_call: item.require_before_call
+            });
+        },
+        change_require_before_confirm: async function (e, item) {
+            item.require_before_confirm = e.detail.value;
+            await this.do_change_requirement(item);
+        },
+        change_require_before_call: async function (e, item) {
+            item.require_before_call = e.detail.value;
+            await this.do_change_requirement(item);
+        },
         prepare_upload_template: async function (table) {
             let res = await wx.chooseMessageFile({
                 count: 1,
                 type: 'file',
-                extension: ['docx','doc'],
+                extension: ['docx', 'doc'],
             });
 
             // 获取文件路径
@@ -444,5 +481,12 @@ export default {
     display: flex;
     justify-content: space-between;
     padding: 0 40px;
+}
+
+.fui-list__cell {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 </style>
