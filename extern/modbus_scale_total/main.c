@@ -85,7 +85,7 @@ int start_sample_salver(modbus_t *ctx, int slave_id)
         {
             uint8_t query[MODBUS_TCP_MAX_ADU_LENGTH];
             int rc = modbus_receive(ctx, query);
-            if (rc >= 0 && query[0] == slave_id)
+            if (rc > 0 && query[0] == slave_id)
             {
                 if (query[1] == 3)
                 {
