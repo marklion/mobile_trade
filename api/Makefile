@@ -12,5 +12,5 @@ clean:
 	rm -rf $(DELIVER_PATH)
 	rm -rf $(SRC_DIR)/node_modules
 	rm -rf $(SRC_DIR)/gen_code
-
+	echo 
 .PHONY:all clean
