@@ -104,7 +104,8 @@
             </div>
             <div v-else>
                 <div v-permission="['sc']">
-                    <el-button type="primary" v-if="show_sc_exe" @click="show_sc_exe=false">执行安检</el-button>
+                    <el-button type="primary" v-if="show_sc_exe" @click="show_order_verify=true">审批</el-button>
+                    <el-button type="primary" v-if="show_sc_exe" @click="show_sc_exe=false">检查</el-button>
                 </div>
             </div>
         </vue-cell>
@@ -131,6 +132,14 @@
             <el-button type="primary" @click="update_plan">确 定</el-button>
         </span>
     </el-dialog>
+    <el-drawer destroy-on-close title="审批" 
+        :visible.sync="show_order_verify" 
+        :append-to-body="true"
+        @close="show_order_verify = false"
+        direction="rtl" 
+        size="60%">
+        <order-verify @refresh="show_order_verify = false" :plan="plan"></order-verify>     
+   </el-drawer>
 </div>
 </template>
 
@@ -140,12 +149,14 @@ import {
     VueCell
 } from 'vue-grd';
 import moment from 'moment';
+import OrderVerify from './OrderVerify.vue';
 export default {
     name: 'OrderDetail',
     components: {
         VueGrid,
         VueCell,
         'el-image-viewer': () => import('element-ui/packages/image/src/image-viewer'),
+        OrderVerify,
     },
     computed: {
         user_authorize: function () {
@@ -202,6 +213,7 @@ export default {
     },
     data: function () {
         return {
+            show_order_verify: false,
             show_sc_exe: true,
             update_input_rules: {
                 main_vehicle_plate: [{
@@ -242,6 +254,10 @@ export default {
         motived: Boolean,
     },
     methods: {
+        show_order_sc_panel: function(id){
+            this.show_order_verify = true;
+
+        },
         reorder_pics: function (id) {
             let ret = [];
             let before_array = [];

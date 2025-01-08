@@ -41,7 +41,7 @@ export default {
             this.for_search = false;
             this.refresh(1);
         },
-        do_search: function () {
+        do_search: async function () {
             this.for_search = true;
             this.search_page = 1;
             this.content = [];
@@ -49,6 +49,7 @@ export default {
             this.search_more();
         },
         search_more: async function () {
+            this.$emit('data_loading');
             let new_records = [];
             let fetch_ret = [];
             do {
@@ -74,6 +75,7 @@ export default {
             if (fetch_ret.length <= 0) {
                 this.search_finish = true;
             }
+            this.$emit('data_loaded', this.content);
         },
         search_fetch: async function () {
             let fetch_ret = [];
@@ -86,6 +88,7 @@ export default {
             return fetch_ret;
         },
         refresh: async function (pageNo) {
+            this.$emit('data_loading');
             if (!this.enable) {
                 this.total = 1;
                 this.content = [];
@@ -97,6 +100,7 @@ export default {
                 this.total = parseInt(resp.total / 20) + 1;
                 this.cur_page = pageNo;
             }
+            this.$emit('data_loaded', this.content);
         },
     },
     mounted: function () {
