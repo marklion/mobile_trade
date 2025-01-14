@@ -7,7 +7,7 @@
                 <template v-slot:default="slotProps">
                     <div slot="header" class="clearfix">
                         <span>安检结果</span>
-                        <el-button v-if="(slotProps.content.length > 0 && slotProps.content[0].passed_total)" type="success">通过</el-button>
+                        <el-button v-if="is_all_passed(slotProps.content)" type="success">通过</el-button>
                         <el-button v-else type="danger">未通过</el-button>
                     </div>
                     <el-table ref="sc_confirm" v-loading="loading" :data="slotProps.content" stripe style="width: 100%">
@@ -34,17 +34,26 @@
                             </template>
                         </el-table-column>
                         <el-table-column fixed="right" label="操作" width="120">
-                            <template slot-scope="scope" v-if="scope.row.sc_content">
-                                <el-button type="success" v-if="!scope.row.sc_content.passed" size="mini" @click="pass_sc(scope.row)">
-                                    通过
+                            <template slot-scope="scope">
+                                <el-button v-if="!scope.row.sc_content" type="primary" size="mini" @click="show_upload_form(scope.row)">
+                                    代传
                                 </el-button>
+                                <template v-else-if="!scope.row.sc_content.passed">
+                                    <el-button type="success" size="mini" @click="pass_sc(scope.row)">
+                                        通过
+                                    </el-button>
+                                    <el-button type="warning" size="mini" @click="prepare_reject_sc(scope.row)">
+                                        附言
+                                    </el-button>
+                                    <el-button type="danger" size="mini" @click="delete_sc(scope.row)">
+                                        删除
+                                    </el-button>
+                                </template>
                                 <el-button type="danger" v-else size="mini" @click="prepare_reject_sc(scope.row)">
                                     反审
                                 </el-button>
-                                <el-button type="warning" v-if="!scope.row.sc_content.passed" size="mini" @click="prepare_reject_sc(scope.row)">
-                                    附言
-                                </el-button>
                             </template>
+
                         </el-table-column>
                     </el-table>
 
@@ -68,6 +77,7 @@ import {
 } from 'vue-grd';
 import moment from 'moment';
 import page_content from './PageContent.vue';
+import upload_form from './UploadForm.vue';
 import {
     TableColumn
 } from 'element-ui';
@@ -95,14 +105,30 @@ export default {
     methods: {
         on_page_data_loaded(data) {
             this.loading = false;
-            console.log('子组件数据加载完成，数据为:', data);
-            // 在这里可以进行父组件相关的操作，如更新自身数据、触发其他方法等
+            // console.log('子组件数据加载完成，数据为:', data);
+        },
+        is_all_passed(contents) {
+            let result = true;
+            if (contents && contents.length > 0) {
+                for (let c of contents) {
+                    result &= c.sc_content && c.sc_content.passed;
+                    if (!result) {
+                        break;
+                    }
+                }
+            } else {
+                result = false;
+            }
+            return result;
         },
         expired_time_formatter(item) {
-            return item.need_expired ? item.sc_content.expired_time : '长期有效'
+            if (item.sc_content) {
+                return item.need_expired ? item.sc_content.expired_time : '长期有效'
+            } else {
+                return '';
+            }
         },
         sc_content_formatter(item, column, cellValue, key) {
-            console.log(item, key)
             if (item.sc_content) {
                 return item.sc_content[key] || "";
             } else {
@@ -110,7 +136,6 @@ export default {
             }
         },
         sc_status_string: function (item) {
-            console.log("status", item)
             let ret = {
                 text: '未上传',
                 type: 'warning'
@@ -135,22 +160,100 @@ export default {
         },
         pass_sc: async function (item, comment) {
             await this.$send_req('/sc/check', {
-                content_id: item.id,
+                content_id: item.sc_content.id,
                 comment: comment,
                 plan_id: this.plan.id
             });
             this.$refs.plans.refresh();
         },
-        prepare_reject_sc : async function(item){
+        prepare_reject_sc: async function (item) {
             this.$prompt('请输入附言', '驳回', {
                 inputPattern: /^.+$/,
                 inputErrorMessage: '必须提交附言'
-            }).then(async (value) => {
-                await this.pass_sc(item, value)
+            }).then(async (message) => {
+                await this.pass_sc(item, message.value)
+            }).catch(() => {
+                this.$message({
+                    type: "info",
+                    message: "放弃操作"
+                });
             })
+        },
+        delete_sc: async function (item) {
+            this.$confirm('确定要删除附件吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                await this.$send_req('/global/driver_delete_sc_content', {
+                    content_id: item.sc_content.id,
+                    open_id: ''
+                });
+                this.$nextTick(() => {
+                    this.$refs.plans.refresh();
+                    this.$message({
+                        type: 'success',
+                        message: '删除成功!'
+                    });
+                })
+            }).catch(() => {});
+        },
+        show_upload_form: function (item) {
+            const _this = this;
+            const h = this.$createElement;
+            const comp = h(upload_form, {
+                props: {
+                    item,
+                    plan: this.plan
+                }
+            })
+            this.$msgbox({
+                title: item.name,
+                message: comp,
+                showCancelButton: true,
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                beforeClose: (action, instance, done) => {
+                    const formIns = instance.$children.find(e => e.form);
+                    const form = formIns.$refs.form;
+                    try {
+                        if (action === 'confirm') {
+                            instance.confirmButtonLoading = true;
+                            instance.confirmButtonText = '执行中...';
+
+                            form.validate(async (verified, data) => {
+                                if (verified) {
+                                    //do form upload
+                                    let r = await _this.$send_req('/global/driver_upload_sc_content', form.model)
+                                    if (r.result) {
+                                        formIns.resetFormData();
+                                        _this.$refs.plans.refresh();
+                                        done();
+                                    } else {
+                                        _this.$message.error('提交服务器出现错误');
+                                    }
+                                }
+                                instance.confirmButtonLoading = false;
+                                instance.confirmButtonText = '确定';
+                            });
+                        } else {
+                            formIns.resetFormData();
+                            done();
+                        }
+                    } catch (e) {
+                        console.log('catch', e);
+                        instance.confirmButtonLoading = false;
+                        instance.confirmButtonText = '确定';
+                        done()
+                    }
+                }
+            }).then((action) => {
+
+            }).catch(e => {});
         }
     },
     mounted: async function () {
+        console.log('plan', this.plan)
         // this.init_contract();
 
     },
