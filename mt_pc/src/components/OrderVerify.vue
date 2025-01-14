@@ -62,10 +62,6 @@
             </page-content>
 
         </el-card>
-
-        <vue-cell width="12of12">
-            12
-        </vue-cell>
     </vue-grid>
 </div>
 </template>
