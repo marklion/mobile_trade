@@ -71,12 +71,9 @@ import {
     VueGrid,
     VueCell
 } from 'vue-grd';
-import moment from 'moment';
 import page_content from './PageContent.vue';
 import upload_form from './UploadForm.vue';
-import {
-    TableColumn
-} from 'element-ui';
+
 export default {
     name: 'OrderVerify',
     components: {
@@ -101,21 +98,12 @@ export default {
     methods: {
         on_page_data_loaded(data) {
             this.loading = false;
-            // console.log('子组件数据加载完成，数据为:', data);
         },
         is_all_passed(contents) {
-            let result = true;
-            if (contents && contents.length > 0) {
-                for (let c of contents) {
-                    result &= c.sc_content && c.sc_content.passed;
-                    if (!result) {
-                        break;
-                    }
-                }
-            } else {
-                result = false;
+            if (!contents || contents.length === 0) {
+                return false;
             }
-            return result;
+            return contents.every(c => c.sc_content && c.sc_content.passed);
         },
         expired_time_formatter(item) {
             if (item.sc_content) {
@@ -248,14 +236,7 @@ export default {
             }).catch(e => {});
         }
     },
-    mounted: async function () {
-        console.log('plan', this.plan)
-        // this.init_contract();
-
-    },
+    mounted: async function () {},
 }
 </script>
 
-<style scoped>
-
-</style>

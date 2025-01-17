@@ -20,10 +20,6 @@
 </template>
 
 <script>
-import moment from 'moment';
-import {
-    TableColumn
-} from 'element-ui';
 export default {
     name: 'UploadForm',
     components: {},
@@ -81,10 +77,6 @@ export default {
             this.dialogImageUrl = file.url;
             this.dialogVisible = true;
         },
-        handlePictureCardPreview(file) {
-            this.dialogImageUrl = file.url;
-            this.dialogVisible = true;
-        },
         handle_upload_result(resp, file, fileList) {
             this.form.attachment = resp;
         },
@@ -94,13 +86,8 @@ export default {
         }
     },
     mounted: async function () {
-        // console.log('表单启动', this.item)
-        // this.init_contract();
 
     },
 }
 </script>
 
-<style scoped>
-
-</style>
