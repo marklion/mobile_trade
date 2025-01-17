@@ -105,7 +105,7 @@
             <div v-else>
                 <div v-permission="['sc']">
                     <el-button type="primary" v-if="show_sc_exe" @click="show_order_verify=true">审批</el-button>
-                    <el-button type="primary" v-if="show_sc_exe" @click="show_sc_exe=false">检查</el-button>
+                    <el-button type="primary" v-if="show_sc_exe" @click="show_fc_execute=true">检查</el-button>
                 </div>
             </div>
         </vue-cell>
@@ -132,14 +132,12 @@
             <el-button type="primary" @click="update_plan">确 定</el-button>
         </span>
     </el-dialog>
-    <el-drawer destroy-on-close title="审批" 
-        :visible.sync="show_order_verify" 
-        :append-to-body="true"
-        @close="show_order_verify = false"
-        direction="rtl" 
-        size="60%">
-        <order-verify @refresh="show_order_verify = false" :plan="plan"></order-verify>     
-   </el-drawer>
+    <el-drawer destroy-on-close title="审批" :visible.sync="show_order_verify" :append-to-body="true" @close="show_order_verify = false" direction="rtl" size="60%">
+        <order-verify @refresh="show_order_verify = false" :plan="plan"></order-verify>
+    </el-drawer>
+    <el-drawer destroy-on-close title="检查" :visible.sync="show_fc_execute" :append-to-body="true" @close="show_fc_execute = false" direction="rtl" size="60%">
+        <fc-execute @refresh="show_fc_execute = false" :plan="plan"></fc-execute>
+    </el-drawer>
 </div>
 </template>
 
@@ -150,6 +148,7 @@ import {
 } from 'vue-grd';
 import moment from 'moment';
 import OrderVerify from './OrderVerify.vue';
+import FcExecute from './FcExecute.vue';
 export default {
     name: 'OrderDetail',
     components: {
@@ -157,6 +156,7 @@ export default {
         VueCell,
         'el-image-viewer': () => import('element-ui/packages/image/src/image-viewer'),
         OrderVerify,
+        FcExecute
     },
     computed: {
         user_authorize: function () {
@@ -214,6 +214,7 @@ export default {
     data: function () {
         return {
             show_order_verify: false,
+            show_fc_execute: false,
             show_sc_exe: true,
             update_input_rules: {
                 main_vehicle_plate: [{
@@ -254,7 +255,7 @@ export default {
         motived: Boolean,
     },
     methods: {
-        show_order_sc_panel: function(id){
+        show_order_sc_panel: function (id) {
             this.show_order_verify = true;
 
         },

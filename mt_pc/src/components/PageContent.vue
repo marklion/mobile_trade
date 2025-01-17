@@ -4,7 +4,7 @@
         <slot :content="content"></slot>
     </div>
     <el-button v-if="for_search" :disabled="search_finish" @click="search_more" type="primary">更多</el-button>
-    <el-pagination v-else layout="prev, pager, next" :current-page.sync="cur_page" :page-count="total" @current-change="refresh">
+    <el-pagination v-else layout="prev, pager, next" :current-page.sync="cur_page" :page-count="total" @current-change="refresh" :hide-on-single-page="true">
     </el-pagination>
 </div>
 </template>
