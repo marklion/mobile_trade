@@ -5,6 +5,7 @@ const wx_api_util = require('./wx_api_util');
 const officegen = require('officegen');
 const uuid = require('uuid');
 const fs = require('fs');
+const mcache = require('memory-cache');
 module.exports = {
     create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token, price_hide) {
         let sq = db_opt.get_sq();
@@ -187,7 +188,7 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
-    bid_price: async function (token, item_id, price) {
+    bid_price: async function (token, item_id, price, v_code) {
         let sq = db_opt.get_sq();
         let user = await rbac_lib.get_user_by_token(token);
         let item = await sq.models.bidding_item.findByPk(item_id, { include: [sq.models.bidding_turn] });
@@ -205,6 +206,11 @@ module.exports = {
             }
             if (price < bc.min || price > bc.max) {
                 throw { err_msg: '出价不在范围内' };
+            }
+            let cached_code = mcache.get(token);
+            mcache.del(token);
+            if(v_code !== cached_code){
+                throw {err_msg: '验证码错误'};
             }
             item.price = price;
             item.time = moment().format('YYYY-MM-DD HH:mm:ss');

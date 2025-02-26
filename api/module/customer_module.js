@@ -301,12 +301,13 @@ module.exports = {
             params: {
                 item_id: { type: Number, have_to: true, mean: '出价ID', example: 1 },
                 price: { type: Number, have_to: true, mean: '价格', example: 100 },
+                v_code: { type: String, have_to: true, mean: '验证码', example: 27 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true },
             },
             func: async function (body, token) {
-                await bidding_lib.bid_price(token, body.item_id, body.price);
+                await bidding_lib.bid_price(token, body.item_id, body.price, body.v_code);
                 return { result: true };
             },
         },

@@ -43,6 +43,10 @@
         <fui-section :title="focus_bi.bidding_turn.bidding_config.stuff.name + ' 总量：' + focus_bi.bidding_turn.bidding_config.total" :descr="'出价范围：' + focus_bi.bidding_turn.bidding_config.min + '~' +  focus_bi.bidding_turn.bidding_config.max"></fui-section>
         <fui-form ref="price" top="100">
             <fui-input label="出价" borderTop placeholder="请输入价格" v-model="price_req.price"></fui-input>
+            <fui-input label="验证码" borderTop placeholder="验证码" v-model="price_req.v_code">
+                <img :src="verifyPicUrl" alt="验证码图片" @click="get_verify_picture">
+            </fui-input>
+
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :show="show_price_confirm" @click="confirm_price" :buttons="price_confirm_button" v-if="show_price_confirm">
@@ -71,6 +75,7 @@ export default {
         }
 
         return {
+            verifyPicUrl: '',
             price_confirm_item: null,
             show_price_confirm: false,
             show_price: false,
@@ -78,6 +83,7 @@ export default {
             bi_list: [],
             price_req: {
                 price: '',
+                v_code: ''
             },
             could_price: function (sbi) {
                 let ret = false;
@@ -186,29 +192,52 @@ export default {
             this.price_confirm_item = sbi;
             this.show_price_confirm = true;
         },
+
         price: async function (detail) {
+            if (detail.index == 0) {
+                this.show_price = false;
+                this.price_req = {}
+            }
             if (detail.index == 1) {
                 let rules = [{
                     name: 'price',
                     rule: ['required', 'isAmount'],
                     msg: ['请输入出价', '请输入正确的价格格式']
+                }, {
+                    name: 'v_code',
+                    rule: ['required'],
+                    msg: ['请输入验证码']
                 }];
                 let val_ret = await this.$refs.price.validator({
                     price: this.price_req.price,
+                    v_code: this.price_req.v_code
                 }, rules);
                 if (!val_ret.isPassed) {
+                    await this.get_verify_picture();
                     return;
                 }
                 this.price_req.item_id = this.focus_bi.id;
                 this.price_req.price = parseFloat(this.price_req.price);
-                await this.$send_req('/customer/bidding_price', this.price_req);
-                uni.startPullDownRefresh();
+                try {
+                    await this.$send_req('/customer/bidding_price', this.price_req);
+                    this.show_price = false;
+                    uni.startPullDownRefresh();
+                } catch (err) {
+                    uni.showModal({
+                        title: '错误提示',
+                        content: err,
+                        showCancel: false
+                    });
+
+                } finally {
+                    await this.get_verify_picture();
+                }
             }
-            this.show_price = false;
         },
         prepare_price: function (sbi) {
             this.show_price = true;
             this.focus_bi = sbi;
+            this.get_verify_picture()
         },
         accept_bid: async function (sbi) {
             await this.$send_req('/customer/bidding_accept', {
@@ -228,6 +257,13 @@ export default {
         refresh_bi_list: function () {
             this.$refs.bi_list.refresh();
         },
+        get_verify_picture: async function () {
+            let result = await this.$send_req('/global/get_verify_pic', {
+                noise: 5,
+                isMath: true
+            });
+            this.verifyPicUrl = result.captchaBase64;
+        }
     },
     onPullDownRefresh: function () {
         this.refresh_bi_list();
