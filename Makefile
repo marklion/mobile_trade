@@ -36,6 +36,7 @@ mt_pc:prepare
 $(DELIVER_PATH):$(SUB_DIR)
 	[ -d $@ ] || mkdir $@
 	for component in $^;do [ -d $(SRC_DIR)/$$component/build ] && [ 'zczh' != $$component ] && cp -a $(SRC_DIR)/$$component/build/* $@/ || echo no_assert; done
+	cp -a $(SRC_DIR)/api/build/fonts $@
 
 $(SUB_DIR):
 	$(MAKE) -C $(SRC_DIR)/$@
