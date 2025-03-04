@@ -75,7 +75,7 @@ Customer Accept Bidding
     ${req}  Create Dictionary  item_id=${resp}[0][id]
     Req to Server  /customer/bidding_accept  ${token}  ${req}
 Customer Price Out
-    [Arguments]  ${token}  ${price}
+    [Arguments]  ${token}  ${price}  ${v_code}
     ${resp}  Req Get to Server  /customer/bidding_search  ${token}  items
     ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${price} v_code=${default_price_v_code}
     Req to Server  /customer/bidding_price  ${token}  ${req}
