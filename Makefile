@@ -17,7 +17,7 @@ cur_host=$(shell cat ${SRC_DIR}/last_host.txt)
 .SILENT:
 pack:all
 	date '+%Y-%m-%d %H:%M:%S' > $(DELIVER_PATH)/conf/version.txt
-	tar zcf mt_deliver.tar.gz -C $(DELIVER_PATH) conf api script automation mt_pc doc_site mt_gui
+	tar zcf mt_deliver.tar.gz -C $(DELIVER_PATH) conf api script automation mt_pc doc_site mt_gui fonts
 	cat $(SRC_DIR)/deploy.sh mt_deliver.tar.gz > $(DELIVER_PATH)/install.sh
 	chmod +x $(DELIVER_PATH)/install.sh
 	rm mt_deliver.tar.gz

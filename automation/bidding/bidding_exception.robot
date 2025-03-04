@@ -33,7 +33,7 @@ Cancle Bidding Turn
     Should Be True  ${resp}[0][bidding_turns][0][finish]
     Should Be Equal As Integers  ${resp}[0][status]  2
     ${resp}  Req Get to Server  /customer/bidding_search  ${joiners}[3][user_token]  items
-    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${12}
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${12} v_code=${default_price_v_code}
     Req to Server  /customer/bidding_price  ${joiners}[3][user_token]  ${req}  ${True}
 
 Confirm Bidding While Lose

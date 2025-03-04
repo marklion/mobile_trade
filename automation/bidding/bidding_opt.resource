@@ -5,6 +5,7 @@ Library  DateTime
 *** Variables ***
 ${total_joiner}  5
 @{joiners}
+${default_price_v_code}  abcd
 
 *** Keywords ***
 Prepare Four Costomers And One Sale
@@ -76,7 +77,7 @@ Customer Accept Bidding
 Customer Price Out
     [Arguments]  ${token}  ${price}
     ${resp}  Req Get to Server  /customer/bidding_search  ${token}  items
-    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${price}
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${price} v_code=${default_price_v_code}
     Req to Server  /customer/bidding_price  ${token}  ${req}
 
 Move Bidding Date

@@ -208,8 +208,9 @@ module.exports = {
                 throw { err_msg: '出价不在范围内' };
             }
             let cached_code = mcache.get(token);
+            let is_skip_verify = mcache.get("is_skip_verify");
             mcache.del(token);
-            if(v_code !== cached_code){
+            if(!is_skip_verify && v_code !== cached_code){
                 throw {err_msg: '验证码错误'};
             }
             item.price = price;

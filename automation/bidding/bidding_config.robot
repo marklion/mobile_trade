@@ -73,10 +73,10 @@ Give Out Price And Finish One Turn
     Customer Accept Bidding  ${joiners}[2][user_token]
     Customer Accept Bidding  ${joiners}[3][user_token]
     ${resp}  Req Get to Server  /customer/bidding_search  ${joiners}[1][user_token]  items
-    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100}
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100} v_code=${default_price_v_code}
     Req to Server  /customer/bidding_price  ${joiners}[2][user_token]  ${req}  ${True}
     ${resp}  Req Get to Server  /customer/bidding_search  ${joiners}[1][user_token]  items
-    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100}
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100} v_code=${default_price_v_code}
     Req to Server  /customer/bidding_price  ${joiners}[1][user_token]  ${req}  ${True}
 
     Move Bidding Date  ${False}
@@ -92,10 +92,10 @@ Give Out Price And Finish One Turn
     Should Be True  ${resp}[0][bidding_turns][0][finish]
 
     ${resp}  Req Get to Server  /customer/bidding_search  ${joiners}[1][user_token]  items
-    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100}
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100} v_code=${default_price_v_code}
     Req to Server  /customer/bidding_price  ${joiners}[1][user_token]  ${req}  ${True}
     ${resp}  Req Get to Server  /customer/bidding_search  ${joiners}[4][user_token]  items
-    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100}
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${100} v_code=${default_price_v_code}
     Req to Server  /customer/bidding_price  ${joiners}[4][user_token]  ${req}  ${True}
 
 Begin Next Turn

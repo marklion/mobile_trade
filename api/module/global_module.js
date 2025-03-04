@@ -1865,6 +1865,29 @@ module.exports = {
                     captchaBase64: `data:image/svg+xml;base64,${base64Data}`
                 };
             }
+        },
+        need_verify_pic : {
+            name : '是否开启竞价验证码',
+            description: '是否开启竞价验证码',
+            is_write: false,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                flag: {type: Boolean, have_to: false, mean: '是否开启竞价验证码', example: 'false = 关闭验证码校验， default = true'}
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true }
+            },
+            func: async function (body, token) {
+                const {
+                    flag = true
+                } = body;
+            
+                mcache.put('is_skip_verify', !body.flag);
+                return {
+                    result : true
+                };
+            }
         }
     },
 }
