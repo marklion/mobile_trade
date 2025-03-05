@@ -301,7 +301,7 @@ module.exports = {
             params: {
                 item_id: { type: Number, have_to: true, mean: '出价ID', example: 1 },
                 price: { type: Number, have_to: true, mean: '价格', example: 100 },
-                v_code: { type: String, have_to: true, mean: '验证码', example: 27 },
+                v_code: { type: String, have_to: true, mean: '验证码', example: '27' },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true },

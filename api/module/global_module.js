@@ -1833,12 +1833,12 @@ module.exports = {
             is_get_api: false,
             need_rbac: false,
             params: {
-                isMath: {type: Boolean, have_to: false, mean: '是否数学表达式', example: 'false， default = false'},
-                width: { type: Number, have_to: false, mean: '图片宽度', example: '100' },
-                height: { type: Number, have_to: false, mean: '图片高度', example: '30' },
-                mathMin: { type: Number, have_to: false, mean: '算式中的最小值', example: '1' },
-                mathMax: { type: Number, have_to: false, mean: '算式中的最大值', example: '100' },
-                noise : { type: Number, have_to: false, mean: '干扰数量', example: '3' },
+                isMath: {type: Boolean, have_to: false, mean: '是否数学表达式', example: false},
+                width: { type: Number, have_to: false, mean: '图片宽度', example: 100 },
+                height: { type: Number, have_to: false, mean: '图片高度', example: 30 },
+                mathMin: { type: Number, have_to: false, mean: '算式中的最小值', example: 1 },
+                mathMax: { type: Number, have_to: false, mean: '算式中的最大值', example: 100 },
+                noise : { type: Number, have_to: false, mean: '干扰数量', example: 3 },
             },
             result: {
                 captchaBase64: {type : String, mean: '验证码图片, 直接设置到img标签的url里', example : 'data:image/svg+xml;base64,PHN2ZyB4bWxulsbD0ibm9uZSIvPjwvc3ZnPg=='}
