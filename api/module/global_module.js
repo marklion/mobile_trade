@@ -1883,7 +1883,7 @@ module.exports = {
                     flag = true
                 } = body;
             
-                mcache.put('is_skip_verify', !body.flag);
+                mcache.put('is_skip_verify', !flag);
                 return {
                     result : true
                 };
