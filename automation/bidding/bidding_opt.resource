@@ -5,6 +5,7 @@ Library  DateTime
 *** Variables ***
 ${total_joiner}  5
 @{joiners}
+${default_price_v_code}  abcd
 
 *** Keywords ***
 Prepare Four Costomers And One Sale
@@ -74,9 +75,9 @@ Customer Accept Bidding
     ${req}  Create Dictionary  item_id=${resp}[0][id]
     Req to Server  /customer/bidding_accept  ${token}  ${req}
 Customer Price Out
-    [Arguments]  ${token}  ${price}
+    [Arguments]  ${token}  ${price}  ${v_code}=${default_price_v_code}
     ${resp}  Req Get to Server  /customer/bidding_search  ${token}  items
-    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${price}
+    ${req}  Create Dictionary  item_id=${resp}[0][id]  price=${price}  v_code=${v_code}
     Req to Server  /customer/bidding_price  ${token}  ${req}
 
 Move Bidding Date
@@ -120,3 +121,8 @@ Create Bidding Plan
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  token=${token}  exception=${exception}  bidding_id=${bc_id}
 
     RETURN  ${plan}
+
+Set Bidding Verify
+    [Arguments]  ${is_open}=${True}
+    ${req}  Create Dictionary  flag=${is_open}
+    Req to Server    /global/need_verify_pic    admin_token    ${req}

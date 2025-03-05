@@ -15,6 +15,8 @@ const fs = require('fs');
 const archiver = require('archiver');
 const uuid = require('uuid');
 const path = require('path');
+const svgCaptcha = require('svg-captcha');
+const mcache = require('memory-cache');
 
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
@@ -1824,6 +1826,68 @@ module.exports = {
                 }
             }
         },
-
+        get_verify_pic : {
+            name : '获取图片验证码',
+            description: '获取图片验证码',
+            is_write: false,
+            is_get_api: false,
+            need_rbac: false,
+            params: {
+                isMath: {type: Boolean, have_to: false, mean: '是否数学表达式', example: false},
+                width: { type: Number, have_to: false, mean: '图片宽度', example: 100 },
+                height: { type: Number, have_to: false, mean: '图片高度', example: 30 },
+                mathMin: { type: Number, have_to: false, mean: '算式中的最小值', example: 1 },
+                mathMax: { type: Number, have_to: false, mean: '算式中的最大值', example: 100 },
+                noise : { type: Number, have_to: false, mean: '干扰数量', example: 3 },
+            },
+            result: {
+                captchaBase64: {type : String, mean: '验证码图片, 直接设置到img标签的url里', example : 'data:image/svg+xml;base64,PHN2ZyB4bWxulsbD0ibm9uZSIvPjwvc3ZnPg=='}
+            },
+            func: async function (body, token) {
+                const {
+                    isMath = false,
+                    width = 150,
+                    height = 50,
+                    noise = 3,
+                    mathMin = 3,
+                    mathMax = 20
+                } = body;
+                let captcha;
+                if(isMath){
+                    captcha = svgCaptcha.createMathExpr({width, height, noise, mathMax, mathMin, color : true, background : '#cc9966'});
+                }else{
+                    captcha = svgCaptcha.create({width, height, noise, color : true, background : '#cc9966'});
+                }
+                mcache.put(token, captcha.text, 1000 * 60);
+                
+                const base64Data = Buffer.from(captcha.data).toString('base64');
+                return {
+                    captchaBase64: `data:image/svg+xml;base64,${base64Data}`
+                };
+            }
+        },
+        need_verify_pic : {
+            name : '是否开启竞价验证码',
+            description: '是否开启竞价验证码',
+            is_write: false,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                flag: {type: Boolean, have_to: false, mean: '是否开启竞价验证码', example: 'false = 关闭验证码校验， default = true'}
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true }
+            },
+            func: async function (body, token) {
+                const {
+                    flag = true
+                } = body;
+            
+                mcache.put('is_skip_verify', !flag);
+                return {
+                    result : true
+                };
+            }
+        }
     },
 }

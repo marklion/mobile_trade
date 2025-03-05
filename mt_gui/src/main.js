@@ -30,9 +30,12 @@ Vue.prototype.$send_req = function (_url, _data) {
           uni.showToast({
             title: data.err_msg,
             icon: 'none',
-            duration: 2000
+            duration: 2000,
+            success: () => {
+              // 可以在这里执行后续操作
+              reject(data.err_msg);
+            }
           });
-          reject(data.err_msg)
         }
         else {
           resolve(data.result)
