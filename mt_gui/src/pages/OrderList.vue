@@ -1440,7 +1440,7 @@ export default {
             this.seg = []
             if (this.$has_module('customer')) {
                 this.seg.push({
-                    name: '主动采购',
+                    name: '采购下单',
                     url: '/customer/order_buy_search',
                     cancel_url: '/customer/order_buy_cancel',
                     dup_url: '/customer/batch_copy',
@@ -1451,7 +1451,7 @@ export default {
             }
             if (this.$has_module('sale_management')) {
                 this.seg.push({
-                    name: '被动销售',
+                    name: '销售接单',
                     url: '/sale_management/order_search',
                     batch_url: '/sale_management/order_batch_confirm',
                     confirm_url: '/sale_management/order_sale_confirm',
@@ -1464,7 +1464,7 @@ export default {
             }
             if (this.$has_module('supplier')) {
                 this.seg.push({
-                    name: '主动销售',
+                    name: '销售下单',
                     url: '/supplier/order_sale_search',
                     cancel_url: '/supplier/order_sale_cancel',
                     dup_url: '/supplier/batch_copy',
@@ -1475,7 +1475,7 @@ export default {
             }
             if (this.$has_module('buy_management')) {
                 this.seg.push({
-                    name: '被动采购',
+                    name: '采购接单',
                     url: '/buy_management/order_search',
                     batch_url: '/buy_management/order_batch_confirm',
                     confirm_url: '/buy_management/order_buy_confirm',

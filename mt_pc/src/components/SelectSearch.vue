@@ -2,7 +2,7 @@
 <el-select :filterable="filterable" ref="select" :filter-method="search_item" v-permission="permission_array" v-model="filter_id" placeholder="请选择" @change="refresh">
     <page-content :search_input="search_input" :search_key="[item_label]" ref="filter" :body_key="body_key" :enable="should_enable" :req_url="get_url">
         <template v-slot:default="slotProps">
-            <el-option :label="first_item" :value="0"></el-option>
+            <el-option v-if="first_item" :label="first_item" :value="0"></el-option>
             <el-option v-for="item in slotProps.content" :key="item.id" :label="$getNestedProperty(item, item_label)" :value="$getNestedProperty(item, item_value)">
             </el-option>
         </template>
@@ -43,7 +43,7 @@ export default {
     data: function () {
         return {
             search_input: '',
-            filter_id: 0,
+            filter_id: this.first_item ? 0 : '',
             is_waiting: false,
         };
     },
@@ -53,11 +53,13 @@ export default {
         }
     },
     methods: {
-
         refresh: function () {
             this.$nextTick(() => {
                 this.$emit('refresh', this.value);
-                this.$emit('on-change', {name:this.$refs.select.selectedLabel, id:this.filter_id});
+                this.$emit('on-change', {
+                    name: this.$refs.select.selectedLabel,
+                    id: this.filter_id
+                });
                 this.$refs.filter.cancel_search();
             });
         },
