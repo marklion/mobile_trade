@@ -3,7 +3,6 @@
     <el-header height="50" style="padding-top: 20px;">
         <template>
             <el-button icon="el-icon-circle-plus" type="success" @click="show_stuff_fetch = true; is_update = false;clean_form()">新增物料</el-button>
-            <el-button :icon="view_type == 'card' ? 'el-icon-s-grid' : 'el-icon-s-data'" type="primary" @click="change_view_type()">{{ view_type == 'card' ? '卡片视图' : '表格视图' }}</el-button>
             <el-input placeholder="输入物料名称搜索" v-model="filter_string" clearable @clear="cancel_search" style="width: 300px;margin-left: 10px;">
                 <template #append>
                     <el-button type="primary" size="small" icon="el-icon-search" @click="do_search" @keyup.enter="do_search">搜索</el-button>
@@ -15,79 +14,7 @@
         <template>
             <page-content ref="stuff" body_key="stuff" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
                 <template v-slot:default="slotProps">
-                    <div v-if="view_type == 'card'" class="stuff_card_list">
-                        <div class="stuff_card_item" v-for="(item, index) in slotProps.content" :key="index">
-                            <el-card>
-                                <template #header>
-                                    <div style="display: flex; justify-content: space-between;">
-                                        <span>{{ item.name }}</span>
-                                        <span>￥{{ item.price }}</span>
-                                    </div>
-                                </template>
-                                <div style="display: flex;gap: 10px; flex-wrap: wrap; align-items: center;">
-                                    <el-tag v-if="item.comment" type="info">{{ item.comment }}</el-tag>
-                                    <el-tag v-if="item.expect_count" type="danger">期望单车装载量: {{ item.expect_count
-                                            }}</el-tag>
-                                    <el-tag v-if="item.close_time" type="warning">自动关闭时间点: {{ item.close_time
-                                            }}</el-tag>
-                                    <el-tag v-if="item.delay_days" type="danger">允许迟到{{ item.delay_days }}天</el-tag>
-                                    <el-tag v-if="item.use_for_buy" type="primary">用于采购</el-tag>
-                                    <el-tag v-if="item.change_last_minutes" type="info">{{ next_price_show(item)
-                                            }}</el-tag>
-                                    <el-tag v-else type="success">用于销售</el-tag>
-                                    <el-tag v-if="item.concern_fapiao" type="primary">关注发票</el-tag>
-                                </div>
-                                <el-divider></el-divider>
-                                <el-row style="display: flex; flex-wrap: nowrap; align-items: center;">
-                                    <el-button size="mini" @click="prepare_update(item)">修改</el-button>
-                                    <el-button size="mini" type="danger" @click="prepare_delete(item)">删除</el-button>
-                                    <el-button size="mini" type="warning" @click="prepare_change_price(item)">调价</el-button>
-                                    <el-button size="mini" type="info" @click="prepare_history(item)">调价历史</el-button>
-                                    <el-button v-if="!item.change_last_minutes" size="mini" type="success" @click="prepare_next_price(item)">定时调价</el-button>
-                                    <el-button v-else size="mini" type="success" @click="prepare_cancel_next_price(item)">取消定时调价</el-button>
-                                </el-row>
-                                <el-divider></el-divider>
-                                <el-row>
-                                    <el-col :span="12">
-                                        <el-switch v-model="item.need_sc" class="ml-2" inline-prompt active-text="需要安检" @change="change_need_sc($event, item)" />
-                                    </el-col>
-                                    <el-col :span="12">
-                                        <el-switch v-model="item.need_enter_weight" inline-prompt active-text="需要进厂前重量" @change="change_need_enter_weight($event, item)"></el-switch>
-                                    </el-col>
-                                </el-row>
-                                <el-divider></el-divider>
-                                <el-row>
-                                    <el-col :span="12">
-                                        <el-switch v-model="item.need_exam" inline-prompt active-text="需要考试" @change="change_need_exam($event, item)" />
-                                    </el-col>
-                                    <el-col :span="12">
-                                        <el-switch v-model="item.no_need_register" inline-prompt active-text="不用排号" @change="change_no_need_register($event, item)" />
-                                    </el-col>
-                                </el-row>
-                                <el-divider></el-divider>
-                                <el-row>
-                                    <el-col :span="12">
-                                        <el-switch v-model="item.checkout_delay" inline-prompt active-text="延迟结算" @change="change_checkout_delay($event, item)"></el-switch>
-                                    </el-col>
-                                    <el-col :span="12">
-                                        <el-switch v-model="item.manual_weight" inline-prompt active-text="手动计量" @change="change_manual_weight($event, item)"></el-switch>
-                                    </el-col>
-                                </el-row>
-                                <el-row>
-                                    <el-col :span="12">
-                                        <el-switch v-model="item.need_expect_weight" inline-prompt active-text="需要填写期望重量" @change="change_need_expect_weight($event, item)"></el-switch>
-                                    </el-col>
-                                </el-row>
-                                <el-divider content-position="center">装卸区域配置</el-divider>
-                                <div style="display: flex; flex-wrap: nowrap; align-items: center;">
-                                    <el-tag v-for="zone in item.drop_take_zones" :key="zone.id" closable @close="prepare_del_zone(zone.id)">{{
-                                                zone.name }}</el-tag>
-                                    <el-button size="mini" type="primary" @click="prepare_add_zone(item)">添加</el-button>
-                                </div>
-                            </el-card>
-                        </div>
-                    </div>
-                    <div v-else>
+                    <div>
                         <el-table :data="slotProps.content" style="width: 100%" border stripe :default-sort="{ prop: 'name', order: 'ascending' }">
                             <el-table-column prop="name" label="物料名称" width="120" align="center" sortable></el-table-column>
                             <el-table-column label="配置" width="100" align="center">
@@ -241,20 +168,32 @@
             </el-form>
         </el-dialog>
         <el-dialog :visible.sync="show_history" title="调价历史" @close="show_history = false">
-            <el-table :data="price_history_data">
-                <el-table-column prop="operator" label="操作人"></el-table-column>
-                <el-table-column prop="new_price" label="新价格"></el-table-column>
-                <el-table-column label="备注">
-                    <template slot-scope="scope">
-                        <el-tag type="info">{{ scope.row.comment }}</el-tag>
+            <div style="height: 65vh; overflow-y: auto;">
+                <el-input placeholder="搜索调价理由" v-model="history_filter_string">
+                    <div slot="suffix">
+                        <el-button type="primary" size="small" @click="history_do_search">搜索</el-button>
+                        <el-button type="danger" size="small" @click="history_cancel_search">清除</el-button>
+                    </div>
+                </el-input>
+                <page-content ref="history" body_key="histories" :search_input="history_filter_string" :search_key="['comment']" enable :req_body="stuff_for_history" req_url="/stuff/get_price_history">
+                    <template v-slot:default="slotProps">
+                        <el-table :data="slotProps.content">
+                            <el-table-column prop="operator" label="操作人"></el-table-column>
+                            <el-table-column prop="new_price" label="新价格"></el-table-column>
+                            <el-table-column label="备注">
+                                <template slot-scope="scope">
+                                    <el-tag type="info">{{ scope.row.comment }}</el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="时间">
+                                <template slot-scope="scope">
+                                    <el-tag type="danger">{{ scope.row.time }}</el-tag>
+                                </template>
+                            </el-table-column>
+                        </el-table>
                     </template>
-                </el-table-column>
-                <el-table-column label="时间">
-                    <template slot-scope="scope">
-                        <el-tag type="danger">{{ scope.row.time }}</el-tag>
-                    </template>
-                </el-table-column>
-            </el-table>
+                </page-content>
+            </div>
         </el-dialog>
     </el-main>
 </el-container>
@@ -263,9 +202,6 @@
 <script>
 import moment from 'moment';
 import PageContent from '../../components/PageContent.vue';
-import {
-    mapGetters
-} from 'vuex';
 export default {
     name: 'StuffConfig',
     components: {
@@ -273,6 +209,7 @@ export default {
     },
     data: function () {
         return {
+            history_filter_string: '',
             filter_string: '',
             price_profile: {
                 default_impact_plan: false,
@@ -319,7 +256,6 @@ export default {
             stuff_for_history: {
                 id: 0,
             },
-            price_history_data: [],
             stuff_data: [],
             show_close_time: false,
             today_date: moment().format('YYYY-MM-DD HH:mm'),
@@ -380,9 +316,6 @@ export default {
         }
     },
     mounted: async function () {},
-    computed: {
-        ...mapGetters(['view_type'])
-    },
     methods: {
         refresh_stuff: function () {
             let current_page = this.$refs.stuff.cur_page;
@@ -395,8 +328,12 @@ export default {
             this.filter_string = '';
             this.$refs.stuff.cancel_search();
         },
-        change_view_type: function () {
-            this.$store.dispatch('app/toggleViewType', this.view_type == 'card' ? 'table' : 'card');
+        history_do_search: function () {
+            this.$refs.history.do_search();
+        },
+        history_cancel_search: function () {
+            this.history_filter_string = '';
+            this.$refs.history.cancel_search();
         },
         prepare_del_zone: function (zone_id) {
             this.$confirm(`确定要删除吗？`, '提示', {
@@ -466,7 +403,7 @@ export default {
                 checkout_delay: event,
             });
         },
-        change_need_expect_weight:async function(event, item){
+        change_need_expect_weight: async function (event, item) {
             await this.$send_req('/stuff/expect_weight_config', {
                 stuff_id: item.id,
                 need_expect_weight: event
@@ -489,17 +426,6 @@ export default {
                 stuff_id: item.id,
                 need_sc: event
             });
-        },
-        get_price_history: async function (_pageNo, params) {
-            if (params[0] == 0) {
-                return [];
-            }
-            let ret = await this.$send_req('/stuff/get_price_history', {
-                pageNo: _pageNo,
-                stuff_id: params[0]
-            });
-
-            return ret.histories;
         },
         do_next_price: async function () {
             this.$refs.next_price_form.validate(async (valid) => {
@@ -536,8 +462,12 @@ export default {
         },
         prepare_history: async function (item) {
             this.show_history = true;
-            this.stuff_for_history = item
-            this.price_history_data = await this.get_price_history(0, [item.id]);
+            this.stuff_for_history = {
+                stuff_id: item.id
+            }
+            this.$nextTick(() => {
+                this.$refs.history.refresh(1);
+            });
         },
         change_price: async function () {
             this.$refs.change_price_form.validate(async (valid) => {
