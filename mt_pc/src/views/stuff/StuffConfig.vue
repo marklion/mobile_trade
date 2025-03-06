@@ -371,7 +371,7 @@ export default {
         },
         update_price_profile: async function () {
             this.price_profile = await this.$send_req('/sale_management/get_price_change_profile');
-            await this.init_price_profile();
+
         },
         set_company_qualification: async function () {
             await this.$send_req('/stuff/set_check_qualification', {
