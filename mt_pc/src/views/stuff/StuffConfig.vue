@@ -315,7 +315,9 @@ export default {
             }
         }
     },
-    mounted: async function () {},
+    mounted: async function () {
+        await this.update_price_profile();
+    },
     methods: {
         refresh_stuff: function () {
             let current_page = this.$refs.stuff.cur_page;
@@ -368,7 +370,7 @@ export default {
             this.show_zone_add = true;
         },
         update_price_profile: async function () {
-            await this.$send_req('/sale_management/set_price_change_profile', this.price_profile);
+            this.price_profile = await this.$send_req('/sale_management/get_price_change_profile');
             await this.init_price_profile();
         },
         set_company_qualification: async function () {
