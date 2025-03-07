@@ -153,6 +153,24 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/sc',
+    component: Layout,
+    name: 'Sc',
+    meta: {
+      title: '安检配置',
+      icon: 'el-icon-finished',
+      roles: ['sc']
+    },
+    children: [
+      {
+        path: 'license_check',
+        name: 'LicenseCheck',
+        component: () => import('@/views/sc/LicenseCheck'),
+        meta: { title: '证件要求', roles: ['sc'] }
+      },
+    ]
+  },
+  {
     path: '/field',
     component: Layout,
     name: 'Field',
@@ -189,7 +207,7 @@ export const asyncRoutes = [
     children: [
       {
         name: 'doc_site',
-        path:  process.env.REMOTE_HOST + '/help/',
+        path: process.env.REMOTE_HOST + '/help/',
         meta: { title: '帮助', icon: 'link' }
       }
     ]
