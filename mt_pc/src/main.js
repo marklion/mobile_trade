@@ -47,6 +47,15 @@ Vue.prototype.$make_file_url = function (url) {
   }
   return ret;
 }
+Vue.prototype.$download_file = function (url, fileName) {
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;  // 强制指定文件名
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 Vue.directive('permission', permission)
 
 new Vue({

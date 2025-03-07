@@ -168,6 +168,12 @@ export const asyncRoutes = [
         component: () => import('@/views/sc/LicenseCheck'),
         meta: { title: '证件要求', roles: ['sc'] }
       },
+      {
+        path: 'field_check',
+        name: 'FieldCheck',
+        component: () => import('@/views/sc/FieldCheck'),
+        meta: { title: '现场检查', roles: ['sc'] }
+      },
     ]
   },
   {
