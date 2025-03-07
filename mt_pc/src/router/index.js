@@ -188,6 +188,30 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/sc',
+    component: Layout,
+    name: 'Sc',
+    meta: {
+      title: '安检配置',
+      icon: 'el-icon-finished',
+      roles: ['sc']
+    },
+    children: [
+      {
+        path: 'license_check',
+        name: 'LicenseCheck',
+        component: () => import('@/views/sc/LicenseCheck'),
+        meta: { title: '证件要求', roles: ['sc'] }
+      },
+      {
+        path: 'field_check',
+        name: 'FieldCheck',
+        component: () => import('@/views/sc/FieldCheck'),
+        meta: { title: '现场检查', roles: ['sc'] }
+      },
+    ]
+  },
+  {
     path: '/field',
     component: Layout,
     name: 'Field',
