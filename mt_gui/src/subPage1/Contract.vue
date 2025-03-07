@@ -216,7 +216,7 @@ export default {
             this.seg = []
             if (this.$has_module('customer')) {
                 this.seg.push({
-                    name: '采购被签订',
+                    name: '采购参与',
                     get_url: '/customer/contract_get',
                     need_su: false,
                     motive: false,
@@ -237,7 +237,7 @@ export default {
             }
             if (this.$has_module('supplier')) {
                 this.seg.push({
-                    name: '销售被签订',
+                    name: '销售参与',
                     get_url: '/supplier/contract_get',
                     need_su: false,
                     motive: false,

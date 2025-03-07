@@ -99,26 +99,61 @@ export const asyncRoutes = [
     ]
   },
   {
-    path:'/stuff',
-    component:Layout,
-    name:'Stuff',
-    meta:{
-      title:'物料管理',
-      icon:'el-icon-goods',
-      roles:['stuff']
+    path: '/contract',
+    component: Layout,
+    redirect: 'noRedirect',
+    name: 'Contract',
+    meta: {
+      title: '合同管理',
+      icon: 'el-icon-document-checked',
+      roles: ['sale_management', 'buy_management', 'customer', 'supplier']
     },
-    children:[
+    children: [
+      {
+        path: 'contract_sold',
+        component: () => import('@/views/contract/ContractSold'),
+        name: 'contract_sold',
+        meta: { title: '销售合同签订', roles: ['sale_management'] }
+      },
+      {
+        path: 'contract_bought',
+        component: () => import('@/views/contract/ContractBought'),
+        name: 'contract_bought',
+        meta: { title: '采购合同签订', roles: ['buy_management'] }
+      }, {
+        path: 'contract_sale',
+        component: () => import('@/views/contract/ContractSale'),
+        name: 'contract_sale',
+        meta: { title: '销售合同参与', roles: ['supplier'] }
+      }, {
+        path: 'contract_buy',
+        component: () => import('@/views/contract/ContractBuy'),
+        name: 'contract_buy',
+        meta: { title: '采购合同参与', roles: ['customer'] }
+      },
+    ]
+  },
+  {
+    path: '/stuff',
+    component: Layout,
+    name: 'Stuff',
+    meta: {
+      title: '物料管理',
+      icon: 'el-icon-goods',
+      roles: ['stuff']
+    },
+    children: [
       {
         path: 'stuff_config',
         component: () => import('@/views/stuff/StuffConfig'),
         name: 'stuff_config',
-        meta: { title: '物料配置'}
+        meta: { title: '物料配置' }
       },
       {
         path: 'global_strategy',
         component: () => import('@/views/stuff/GlobalStrategy'),
         name: 'global_strategy',
-        meta: { title: '全局策略'}
+        meta: { title: '全局策略' }
       },
       {
         path: 'blacklist',
@@ -189,7 +224,7 @@ export const asyncRoutes = [
     children: [
       {
         name: 'doc_site',
-        path:  process.env.REMOTE_HOST + '/help/',
+        path: process.env.REMOTE_HOST + '/help/',
         meta: { title: '帮助', icon: 'link' }
       }
     ]

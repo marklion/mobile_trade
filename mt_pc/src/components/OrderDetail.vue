@@ -110,7 +110,7 @@
             </div>
         </vue-cell>
     </vue-grid>
-    <el-image-viewer :z-index="8888" v-if="show_pics" :on-close="show_pics=false" :url-list="pics">
+    <el-image-viewer :z-index="8888" v-if="show_pics" :on-close="close_preview" :url-list="pics">
     </el-image-viewer>
     <el-dialog append-to-body title="修改信息" :visible.sync="show_update" width="30%">
         <el-form ref="update_form" :model="update_req" label-width="80px" :rules="update_input_rules">
@@ -255,6 +255,9 @@ export default {
         motived: Boolean,
     },
     methods: {
+        close_preview: function () {
+            this.show_pics = false;
+        },
         show_order_sc_panel: function (id) {
             this.show_order_verify = true;
 
