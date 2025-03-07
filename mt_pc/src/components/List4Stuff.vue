@@ -1,5 +1,5 @@
 <template>
-<div>
+<div class="total_show_area">
     <div class="same_line">
         <el-tabs v-model="focus_stuff_id" @tab-click="refresh_list">
             <el-tab-pane v-for="single_stuff in all_stuff" :key="single_stuff.id" :label="single_stuff.name" :name="String(single_stuff.id)"></el-tab-pane>
@@ -97,5 +97,9 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.total_show_area {
+    padding: 20px;
 }
 </style>
