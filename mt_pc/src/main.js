@@ -50,6 +50,13 @@ Vue.prototype.$make_file_url = function (url) {
 Vue.prototype.$download_file = function (url, fileName) {
   const link = document.createElement('a');
   link.href = url;
+  let extern_name = url.split('.').pop();
+  if (fileName) {
+    fileName = fileName + '.' + extern_name;
+  }
+  else {
+    fileName = '未命名.' + extern_name;
+  }
   link.download = fileName;  // 强制指定文件名
   link.style.display = 'none';
   document.body.appendChild(link);

@@ -45,7 +45,7 @@
                         <el-button size="mini" type="primary">上传模板</el-button>
                     </el-upload>
                 </div>
-                <el-button size="mini" type="warning" @click="$download_file(scope.row.template_path, '下载模板.docx')">下载模板</el-button>
+                <el-button size="mini" type="warning" @click="$download_file(scope.row.template_path, '下载模板')">下载模板</el-button>
             </template>
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="300px">
