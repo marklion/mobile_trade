@@ -23,23 +23,30 @@
             </el-tab-pane>
             <el-tab-pane label="已关闭" name="3"></el-tab-pane>
         </el-tabs>
+        <el-dropdown v-if="order_selected.length > 0" size="small" split-button type="primary" @command="do_batch_operate">
+            {{order_selected.length}}条批量操作
+            <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item v-for="(single_action, index) in batch_operate_array" :key="index" :command="index">{{single_action.name}}</el-dropdown-item>
+            </el-dropdown-menu>
+        </el-dropdown>
         <div style="display:flex;">
             <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id" @refresh="refresh_order"></select-search>
             <select-search body_key="stuff" first_item="所有物料" get_url="/stuff/get_all" item_label="name" item_value="id" :permission_array="['stuff']" v-model="stuff_id" @refresh="refresh_order"></select-search>
-            <el-input placeholder="输入车号过滤" v-model="filter_string">
+            <el-input placeholder="输入车号过滤" v-model="filter_string" style="width: 250px;">
                 <div slot="suffix">
                     <el-button type="primary" size="small" @click="do_search">搜索</el-button>
                     <el-button type="danger" size="small" @click="cancel_search">清除</el-button>
                 </div>
             </el-input>
-            <el-date-picker style="width:450px" v-model="date_range" type="daterange" align="right" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions" @change="refresh_order">
+            <el-date-picker style="width:260px" v-model="date_range" type="daterange" align="right" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions" @change="refresh_order">
             </el-date-picker>
         </div>
     </div>
     <page-content ref="order" body_key="plans" :search_input="filter_string" :search_key="['main_vehicle.plate', 'behind_vehicle.plate']" :req_body="filter" :req_url="req_url" :enable="filter_ready">
         <template v-slot:default="slotProps">
-            <div style="height: 85vh">
-                <el-table :data="slotProps.content" style="width: 100%" stripe height="100%">
+            <div style="height: 80vh">
+                <el-table ref="order_table" :data="slotProps.content" style="width: 100%" stripe height="100%" @selection-change="record_selection">
+                    <el-table-column type="selection"></el-table-column>
                     <el-table-column min-width="170" v-if="motived" prop="stuff.company.name" label="接单公司">
                     </el-table-column>
                     <el-table-column min-width="170" v-else label="下单公司">
@@ -51,7 +58,14 @@
                     </el-table-column>
                     <el-table-column min-width="70" label="状态">
                         <template slot-scope="scope">
-                            {{status_string(scope.row.status)}}
+                            <div>
+                                {{status_string(scope.row.status)}}
+                            </div>
+                            <div v-if="scope.row.status == 3 && !scope.row.manual_close">
+                                <el-tag size="mini" type="primary">
+                                    装卸量:{{scope.row.count}}
+                                </el-tag>
+                            </div>
                         </template>
                     </el-table-column>
                     <el-table-column min-width="100" prop="plan_time" label="计划日期">
@@ -104,6 +118,7 @@ export default {
     },
     data: function () {
         return {
+            order_selected: [],
             show_plan_detail: false,
             focus_plan: {},
             stuff_id: 0,
@@ -157,6 +172,36 @@ export default {
                     }
                 }]
             },
+            batch_operate_array: [{
+                name: '批量确认',
+                url: this.is_buy ? '/buy_management/order_buy_confirm/' : '/sale_management/order_sale_confirm',
+            }, {
+                name: '批量验款',
+                url: '/sale_management/order_sale_pay'
+            }, {
+                name: '批量取消',
+                url: (() => {
+                    let ret = '';
+                    if (this.is_buy) {
+                        if (this.motived) {
+                            ret = '/supplier/order_sale_cancel';
+                        } else {
+                            ret = '/buy_management/close';
+                        }
+                    } else {
+                        if (this.motived) {
+                            ret = '/customer/order_buy_cancel';
+                        } else {
+                            ret = '/sale_management/close';
+                        }
+                    }
+                    return ret;
+                })()
+            }, {
+                name: '批量调价',
+                is_change_price: true,
+                url: '/stuff/change_price_by_plan'
+            }],
         };
     },
     props: {
@@ -165,6 +210,54 @@ export default {
         is_buy: Boolean,
     },
     methods: {
+        do_batch_operate: async function (_index) {
+            let opt = this.batch_operate_array[_index];
+            if (opt.is_change_price) {
+                this.$prompt('请输入新价格', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    inputPattern: /^\d+(\.\d{1,2})?$/,
+                }).then(async ({
+                    value
+                }) => {
+                    let unit_price = parseFloat(value);
+                    this.$prompt('请输入原因', '提示', {
+                        confirmButtonText: '确定',
+                        cancelButtonText: '取消',
+                    }).then(async ({
+                        value
+                    }) => {
+                        let plan_ids = this.order_selected.map(item => item.id);
+                        let plan_id_string = plan_ids.join(',');
+                        await this.$send_req(opt.url, {
+                            plan_id: plan_id_string,
+                            unit_price: unit_price,
+                            comment: value
+                        });
+                        this.$refs.order_table.clearSelection();
+                        this.refresh_order();
+                    });
+                });
+            } else {
+                this.$confirm('此操作将批量操作选中的订单, 是否继续?', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(async () => {
+                    for (let i = 0; i < this.order_selected.length; i++) {
+                        let order = this.order_selected[i];
+                        await this.$send_req(opt.url, {
+                            plan_id: order.id,
+                        });
+                    }
+                    this.$refs.order_table.clearSelection();
+                    this.refresh_order();
+                });
+            }
+        },
+        record_selection: function (val) {
+            this.order_selected = val;
+        },
         expend: function (plan) {
             this.focus_plan = plan;
             this.show_plan_detail = true;
@@ -254,8 +347,6 @@ export default {
 .filter_bar {
     display: flex;
     justify-content: space-between;
-    /* 使元素靠右排列 */
     align-items: center;
-    /* 垂直居中对齐 */
 }
 </style>
