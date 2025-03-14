@@ -169,7 +169,7 @@ export const asyncRoutes = [
     name: 'Bidding',
     meta: {
       title: '竞价管理',
-      icon: 'nested',
+      icon: 'el-icon-s-data',
       roles: ['bid', 'customer']
     },
     children: [
@@ -217,7 +217,7 @@ export const asyncRoutes = [
     name: 'Field',
     meta: {
       title: '现场管理',
-      icon: 'nested',
+      icon: 'el-icon-s-flag',
       roles: ['scale']
     },
     children: [
@@ -262,6 +262,23 @@ export const asyncRoutes = [
         component: () => import('@/views/export/ExportRecord'),
         meta: { title: '导出记录' }
       },
+    ]
+  },
+  {
+    path: '/system_config',
+    name: 'SystemConfig',
+    component: Layout,
+    meta: {
+      title: '系统配置',
+      icon: 'el-icon-s-grid',
+    },
+    children: [
+      {
+        path: 'rbac',
+        name: 'rbac',
+        component: () => import('@/views/Rbac'),
+        meta: { title: '权限配置', roles: ['rbac'] }
+      }
     ]
   },
   {
