@@ -2,7 +2,7 @@
 <div class="export_record_show">
     <page-content ref="export_record" body_key="records" enable req_url="/global/get_export_record">
         <template v-slot:default="slotProps">
-            <div style="height: 86vh">
+            <div style="height: 82vh">
                 <el-table ref="record_table" :data="slotProps.content" style="width: 100%" stripe height="100%">
                     <el-table-column prop="name" label="文件名称"></el-table-column>
                     <el-table-column prop="create_time" label="导出时间"></el-table-column>
@@ -45,6 +45,8 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+.export_record_show {
+    padding: 20px;
+}
 </style>

@@ -2,34 +2,34 @@
 <div class="export_execute_show">
     <h2>订单明细导出</h2>
     <vue-grid align="stretch">
-        <vue-cell v-for="(single_module, index) in all_module" :key="index" width="3of12">
-            <export-date :is_buy="single_module.is_buy" need_stuff need_company :export_name="single_module.module_name" @do_export="export_order($event, single_module.module)"></export-date>
+        <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
+            <export-date :is_buy="single_module.is_buy" :need_stuff="single_module.has_more_filter" :need_company="single_module.has_more_filter" :export_name="single_module.module_name" @do_export="export_order($event, single_module.module)"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
     <h2>磅单导出</h2>
     <vue-grid align="stretch">
-        <vue-cell v-for="(single_module, index) in all_module" :key="index" width="3of12">
+        <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
             <export-date :export_name="single_module.module_name" @do_export="export_ticket($event, single_module.module)"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
     <h2>安检登记表导出</h2>
     <vue-grid align="stretch">
-        <vue-cell v-for="(single_module, index) in all_module" :key="index" width="3of12">
+        <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
             <export-date :export_name="single_module.module_name" @do_export="export_sc($event, single_module.module)"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
     <h2>其他</h2>
     <vue-grid align="stretch">
-        <vue-cell width="4of12" v-if="$hasPermission('sale_management')">
+        <vue-cell class="cell_show" width="4of12" v-if="$hasPermission('sale_management')">
             <export-date export_name="执行率导出" @do_export="export_rate"></export-date>
         </vue-cell>
-        <vue-cell width="4of12" v-if="$hasPermission('cash')">
+        <vue-cell class="cell_show" width="4of12" v-if="$hasPermission('cash')">
             <export-date need_contract export_name="余额明细导出" @do_export="export_charge"></export-date>
         </vue-cell>
-        <vue-cell width="4of12" v-if="$hasPermission('sale_management')">
+        <vue-cell class="cell_show" width="4of12" v-if="$hasPermission('sale_management')">
             <export-date export_name="现场检查表" @do_export="export_fc"></export-date>
         </vue-cell>
     </vue-grid>
@@ -55,11 +55,13 @@ export default {
                     module: 'sale_management',
                     module_name: '销售接单',
                     is_buy: false,
+                    has_more_filter: true,
                 },
                 {
                     module: 'buy_management',
                     module_name: '采购接单',
                     is_buy: true,
+                    has_more_filter: true,
                 },
                 {
                     module: 'customer',
@@ -175,6 +177,21 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
+.export_execute_show {
+    padding: 20px;
+}
 
+.cell_show {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.cell_show:first-child {
+    padding-left: 0;
+}
+
+.cell_show:last-child {
+    padding-right: 0;
+}
 </style>
