@@ -242,6 +242,29 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/export',
+    component: Layout,
+    name: 'Export',
+    meta: {
+      title: '导出',
+      icon: 'el-icon-discount',
+    },
+    children: [
+      {
+        path: 'export_execute',
+        name: 'export_execute',
+        component: () => import('@/views/export/ExportExecute'),
+        meta: { title: '导出执行' }
+      },
+      {
+        path: 'export_record',
+        name: 'export_record',
+        component: () => import('@/views/export/ExportRecord'),
+        meta: { title: '导出记录' }
+      },
+    ]
+  },
+  {
     path: 'Help',
     name: 'Help',
     component: Layout,

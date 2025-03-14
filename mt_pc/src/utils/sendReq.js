@@ -14,9 +14,10 @@ export default {
             })
         } catch (error) {
             console.log(error);
+            throw error;
+        } finally {
+            li.close();
         }
-
-        li.close();
         return resp;
     }
 }
