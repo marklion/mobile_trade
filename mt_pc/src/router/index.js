@@ -99,6 +99,22 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/subPage',
+    component: Layout,
+    name: 'create',
+    children: [{
+      path: 'OrderCreate',
+      name: 'OrderCreate',
+      component: () => import('@/views/order/OrderCreate'),
+      meta:{
+        title:'下单',
+        icon:'el-icon-goods',
+        roles:['customer','supplier']
+      },
+      hidden: true
+    }]
+  },
+  {
     path:'/stuff',
     component:Layout,
     name:'Stuff',

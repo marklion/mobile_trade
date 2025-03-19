@@ -88,7 +88,7 @@ module.exports = {
     },
     get_stuff_on_sale: async function (_buy_company, pageNo) {
         let sq = db_opt.get_sq();
-        let stuffs = await sq.models.stuff.findAll({
+        return await sq.models.stuff.findAndCountAll({
             where: {
                 use_for_buy: false,
                 // '$contract.buyCompanyId$': _buy_company.id
@@ -108,9 +108,6 @@ module.exports = {
                 }
             ]
         });
-        let ret = stuffs;
-        let count = await sq.models.stuff.count();
-        return { rows: ret, count: count };
     },
     make_contract: async function (_buy_company, _sale_company, being_time, end_time, number, customer_code) {
         let sq = db_opt.get_sq();
