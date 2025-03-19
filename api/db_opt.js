@@ -184,6 +184,7 @@ let db_opt = {
             manual_weight:{type: DataTypes.BOOLEAN, defaultValue: false},
             ticket_prefix: { type: DataTypes.STRING },
             need_expect_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
+            stuff_code: { type: DataTypes.STRING },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -363,6 +364,9 @@ let db_opt = {
             ccurrencytypeid: { type: DataTypes.STRING },
             cbiztype_buy: { type: DataTypes.STRING },
             cdeptid_buy: { type: DataTypes.STRING },
+            cpurorganization:{ type: DataTypes.STRING },
+            idiscounttaxtype: { type: DataTypes.STRING },
+            ntaxrate_buy: { type: DataTypes.STRING },
         },
         u8c_order_info: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

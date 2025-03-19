@@ -69,6 +69,7 @@
                                             scope.row.concern_fapiao ? '是' : '否' }}</el-tag>
                                 </template>
                             </el-table-column>
+                            <el-table-column prop="stuff_code" label="物料编码" align="center"></el-table-column>
                             <el-table-column label="操作" fixed="right" width="300" align="center">
                                 <template slot-scope="scope">
                                     <el-button-group>
@@ -104,6 +105,9 @@
                 </el-form-item>
                 <el-form-item label="备注" prop="comment">
                     <el-input v-model="stuff_ready_fetch.comment"></el-input>
+                </el-form-item>
+                <el-form-item label="物料编码" prop="stuff_code">
+                    <el-input v-model="stuff_ready_fetch.stuff_code"></el-input>
                 </el-form-item>
                 <el-form-item label="期望单车装载量" prop="expect_count">
                     <el-input v-model="stuff_ready_fetch.expect_count"></el-input>
@@ -239,6 +243,7 @@ export default {
                 close_time: '',
                 delay_days: 0,
                 concern_fapiao: false,
+                stuff_code: '',
             },
             show_stuff_fetch: false,
             is_update: false,
@@ -519,6 +524,7 @@ export default {
                 close_time: item.close_time ? new Date(`2000-01-01T${item.close_time}`) : null,
                 delay_days: item.delay_days,
                 concern_fapiao: item.concern_fapiao,
+                stuff_code: item.stuff_code,
             }
             this.show_stuff_fetch = true;
             this.is_update = true;

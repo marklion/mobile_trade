@@ -5,6 +5,8 @@ const moment = require('moment');
 const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const { default: axios } = require('axios');
+const util_lib = require('./util_lib');
+const httpsAgent = require('https').Agent;
 module.exports = {
     charge: async function (_token, _contract_id, _cash_increased, _comment) {
         let user = await rbac_lib.get_user_by_token(_token);
@@ -134,7 +136,7 @@ module.exports = {
         }
     },
     req2u8c: async function (u8c_config, url, req) {
-        let ret = undefined;
+        let ret = {};
         try {
             let resp = await axios.post(u8c_config.url + url, req, {
                 headers: {
@@ -151,27 +153,128 @@ module.exports = {
             if (resp.data.status == "success") {
                 ret = JSON.parse(resp.data.data);
             }
+            else {
+                ret = { err_msg: JSON.stringify(resp.data) };
+            }
         } catch (error) {
             console.log(error);
             ret.err_msg = JSON.stringify(error);
         }
         return ret;
     },
-    execute_u8c_oi:async function(u8c_oi) {
+
+    make_sale_order_children: function (plans) {
+        let ret = [];
+
+        for (let plan of plans) {
+            ret.push({
+                cinventoryid: plan.stuff.stuff_code,
+                nnumber: plan.count,
+                noriginalcurprice: plan.unit_price,
+            });
+        }
+
+        return ret;
+    },
+    make_buy_order_children: function (plans, idiscounttaxtype, ntaxrate) {
+        let ret = [];
+
+        for (let plan of plans) {
+            ret.push({
+                cmangid: plan.stuff.stuff_code,
+                nordernum: plan.count,
+                norgtaxprice: plan.unit_price,
+                idiscounttaxtype: idiscounttaxtype,
+                ntaxrate: parseFloat(ntaxrate)
+            });
+        }
+
+        return ret;
+    },
+
+    make_req_url_from_oi: async function (u8c_oi) {
+        let ret = undefined;
+        if (u8c_oi.plans.length >= 0) {
+            let u8c_config = await u8c_oi.company.getU8c_config();
+            let company = u8c_oi.plans[0].company;
+            let is_buy = u8c_oi.plans[0].is_buy;
+            let contract = undefined;
+            if (is_buy) {
+                contract = (await u8c_oi.company.getBuy_contracts({
+                    where: {
+                        saleCompanyId: company.id,
+                    },
+                }))[0];
+            }
+            else {
+                contract = (await u8c_oi.company.getSale_contracts({
+                    where: {
+                        buyCompanyId: company.id,
+                    },
+                }))[0];
+            }
+            if (is_buy) {
+                ret = {
+                    req: {
+                        puordervo: [{
+                            parentvo: {
+                                pk_corp: u8c_config.corpid,
+                                dorderdate: moment().format('YYYY-MM-DD'),
+                                cbiztype: u8c_config.cbiztype_buy,
+                                cpurorganization: cpurorganization,
+                                cvendormangid: contract.customer_code,
+                                cdeptid: u8c_config.cdeptid_buy,
+                            },
+                            childrenvo: this.make_buy_order_children(u8c_oi.plans, u8c_config.idiscounttaxtype, u8c_config.ntaxrate_buy),
+                        }]
+                    },
+                    url: '/u8cloud/api/pu/order/saveapprove',
+                };
+            }
+            else {
+                ret = {
+                    req: {
+                        saleorder: [{
+                            parentvo: {
+                                cbiztype: u8c_config.cbiztype_sale,
+                                ccustomerid: contract.customer_code,
+                                cdeptid: u8c_config.cdeptid_sale,
+                                csalecorpid: u8c_config.csalecorpid,
+                                ccalbodyid: u8c_config.ccalbodyid,
+                                creceiptcorpid: contract.customer_code,
+                                ndiscountrate: 100,
+                                ccurrencytypeid: u8c_config.ccurrencytypeid,
+                            },
+                            childrenvo: this.make_sale_order_children(u8c_oi.plans),
+                        }],
+                    },
+                    url: '/u8cloud/api/so/saleorder/saveapprove',
+                }
+            }
+        }
+        return ret;
+    },
+
+    execute_u8c_oi: async function (u8c_oi) {
         u8c_oi.is_running = true;
         await u8c_oi.save();
-        setTimeout(async () => {
+        if (u8c_oi.plans.length >= 0) {
+            let req_url = await this.make_req_url_from_oi(u8c_oi);
+            let resp = await this.req2u8c(await u8c_oi.company.getU8c_config(), req_url.url, req_url.req);
             u8c_oi.is_running = false;
-            u8c_oi.run_log = moment().format('YYYY-MM-DD HH:mm:ss') + '执行成功';
+            u8c_oi.run_log = "url:" + req_url.url + "\nreq:" + JSON.stringify(req_url.req) + "\nresp:" + JSON.stringify(resp);
+            if (resp.err_msg) {
+                u8c_oi.error_msg = resp.err_msg;
+            }
             await u8c_oi.save();
-        }, 30000);
+        }
     },
-    create_u8c_record:async function(operator, plans, company) {
+    create_u8c_record: async function (operator, plans, company) {
         let new_u8c_oi = await db_opt.get_sq().models.u8c_order_info.create({
             operator: operator,
             time: moment().format('YYYY-MM-DD HH:mm:ss'),
         });
-        for (let itr in plans) {
+        for (let itr of plans) {
             if (await itr.getU8c_order_info() == undefined) {
                 await itr.setU8c_order_info(new_u8c_oi);
             }
@@ -181,23 +284,27 @@ module.exports = {
         }
         else {
             await new_u8c_oi.setCompany(company);
-            this.execute_u8c_oi();
+            new_u8c_oi.plans = await new_u8c_oi.getPlans({
+                include: [db_opt.get_sq().models.company, db_opt.get_sq().models.stuff]
+            });
+            new_u8c_oi.company = company;
+            this.execute_u8c_oi(new_u8c_oi);
         }
     },
     sync2u8c: async function (operator, plans, company) {
         let sale_plans = {};
         let buy_plans = {};
         plans.sort((a, b) => {
-            if (a.stuff.company.id < b.stuff.company.id) {
+            if (a.company.id < b.company.id) {
                 return -1;
             }
-            if (a.stuff.company.id > b.stuff.company.id) {
+            if (a.company.id > b.company.id) {
                 return 1;
             }
             return 0;
         });
         plans.forEach(plan => {
-            let company = plan.stuff.company;
+            let company = plan.company;
             let plan_list = undefined;
             if (plan.is_buy) {
                 plan_list = buy_plans[company.id];
@@ -239,5 +346,40 @@ module.exports = {
             ret.count = await company.countU8c_order_infos();
         }
         return ret;
+    },
+    get_unsynced_plans: async function (token, pageNo) {
+        let sq = db_opt.get_sq();
+        let company = await rbac_lib.get_company_by_token(token);
+        let stuff_or = [];
+        let where_condition = {
+            [db_opt.Op.and]: [
+                {
+                    status: 3,
+                    u8cOrderInfoId: null,
+                    manual_close: false,
+                }
+            ]
+        };
+        let stuff = await company.getStuff({ paranoid: false });
+        for (let index = 0; index < stuff.length; index++) {
+            const element = stuff[index];
+            stuff_or.push({ stuffId: element.id });
+        }
+        where_condition[db_opt.Op.and].push({
+            [db_opt.Op.or]: stuff_or
+        });
+        let search_condition = {
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            offset: pageNo * 20,
+            limit: 20,
+            where: where_condition,
+            include: util_lib.plan_detail_include(),
+        };
+        let count = await sq.models.plan.count({ where: where_condition });
+        let plans = await sq.models.plan.findAll(search_condition);
+        return {
+            total: count,
+            plans: plans,
+        };
     },
 };

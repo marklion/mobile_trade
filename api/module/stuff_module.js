@@ -32,6 +32,7 @@ module.exports = {
                 close_time: { type: String, have_to: false, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, have_to: false, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, have_to: false, mean: '关注发票', example: false },
+                stuff_code:{type:String,have_to:false,mean:'物料编码',example:'物料编码'}
             },
             result: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -45,10 +46,11 @@ module.exports = {
                 close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
+                stuff_code:{type:String,mean:'物料编码',example:'物料编码'}
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao);
+                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao, body.stuff_code);
             }
         },
         get_all: {
@@ -75,6 +77,7 @@ module.exports = {
                         delay_days: { type: Number, mean: '延迟天数', example: 1 },
                         need_exam: { type: Boolean, mean: '是否需要考试', example: false },
                         concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
+                        stuff_code:{type:String,mean:'物料编码',example:'物料编码'},
                         checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
                         drop_take_zones: {
                             type: Array, mean: '装卸货区域', explain: {

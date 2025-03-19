@@ -328,4 +328,32 @@ module.exports = {
         zczh_back_token: { type: String, have_to: false, mean: '卓创账户后端token', example: 'zczh_back_token_example' },
         zc_phone: { type: String, have_to: false, mean: '卓创电话', example: 'zc_phone_example' },
     },
+    u8c_config_detail:function(is_param) {
+        let ret = {
+            system_code: { type: String, have_to: true, mean: '系统代码', example: 'u8c' },
+            usercode:{type:String,have_to:true,mean:'用户代码',example:'usercode'},
+            password:{type:String,have_to:true,mean:'密码',example:'password'},
+            url:{type:String,have_to:true,mean:'url',example:'url'},
+            corpid:{type:String,have_to:true,mean:'公司ID',example:'corpid'},
+            cbiztype_sale:{type:String,have_to:true,mean:'销售流程id',example:'cbiztype_sale'},
+            cdeptid_sale:{type:String,have_to:true,mean:'销售部门id',example:'cdeptid_sale'},
+            csalecorpid:{type:String,have_to:true,mean:'销售组织id',example:'csalecorpid'},
+            ccalbodyid:{type:String,have_to:true,mean:'库存组织id',example:'ccalbodyid'},
+            ccurrencytypeid:{type:String,have_to:true,mean:'币种id',example:'ccurrencytypeid'},
+            cbiztype_buy:{type:String,have_to:true,mean:'采购流程id',example:'cbiztype_buy'},
+            cdeptid_buy:{type:String,have_to:true,mean:'采购部门id',example:'cdeptid_buy'},
+            cpurorganization:{type:String,have_to:true,mean:'采购组织id',example:'cpurorganization'},
+            idiscounttaxtype: { type: String, have_to: true, mean: '扣税类别', example: 'idiscounttaxtype' },
+            ntaxrate_buy: { type: String, have_to: true, mean: '采购税率', example: 'ntaxrate_buy' },
+        };
+        if (!is_param)
+        {
+            for (let key in ret)
+            {
+                delete ret[key].have_to;
+            }
+        }
+
+        return ret;
+    },
 }

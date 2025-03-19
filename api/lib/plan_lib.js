@@ -35,7 +35,7 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days, concern_fapiao) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days, concern_fapiao, stuff_code) {
         let sq = db_opt.get_sq();
         if (use_for_buy == undefined) {
             use_for_buy = false;
@@ -54,6 +54,7 @@ module.exports = {
             stuff_found[0].close_time = close_time;
             stuff_found[0].delay_days = delay_days;
             stuff_found[0].concern_fapiao = concern_fapiao;
+            stuff_found[0].stuff_code = stuff_code;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
