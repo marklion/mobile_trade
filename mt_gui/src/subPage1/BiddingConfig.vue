@@ -82,7 +82,13 @@ export default {
                     name: 'stuff_name',
                     rule: ['required'],
                     msg: ['选择物料']
-                }, {
+                },
+                {
+                    name: 'pay_first',
+                    rule: ['isAmount'],
+                    msg: ['请输入正确的押金格式']
+                },
+                {
                     name: 'total',
                     rule: ['required', 'isAmount'],
                     msg: ['输入总量', '请输入正确的总量格式']
@@ -99,6 +105,7 @@ export default {
                     total: this.new_bc.total,
                     total_turn: this.new_bc.total_turn,
                     price_hide: this.new_bc.price_hide,
+                    pay_first: this.new_bc.pay_first,
                 }, rules);
                 if (!val_ret.isPassed) {
                     return;
@@ -114,6 +121,7 @@ export default {
                 this.new_bc.min = parseFloat(this.new_bc.min);
                 this.new_bc.total = parseFloat(this.new_bc.total);
                 this.new_bc.total_turn = parseInt(this.new_bc.total_turn);
+                this.new_bc.pay_first = parseFloat(this.new_bc.pay_first);
                 await this.$send_req('/bid/create', this.new_bc);
                 uni.startPullDownRefresh();
             }
