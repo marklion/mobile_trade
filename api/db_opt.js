@@ -184,6 +184,7 @@ let db_opt = {
             manual_weight:{type: DataTypes.BOOLEAN, defaultValue: false},
             ticket_prefix: { type: DataTypes.STRING },
             need_expect_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
+            stuff_code: { type: DataTypes.STRING },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -349,6 +350,32 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             pass_time: { type: DataTypes.STRING },
         },
+        u8c_config: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            system_code: { type: DataTypes.STRING },
+            usercode: { type: DataTypes.STRING },
+            password: { type: DataTypes.STRING },
+            url: { type: DataTypes.STRING },
+            corpid: { type: DataTypes.STRING },
+            cbiztype_sale: { type: DataTypes.STRING },
+            cdeptid_sale: { type: DataTypes.STRING },
+            csalecorpid: { type: DataTypes.STRING },
+            ccalbodyid: { type: DataTypes.STRING },
+            ccurrencytypeid: { type: DataTypes.STRING },
+            cbiztype_buy: { type: DataTypes.STRING },
+            cdeptid_buy: { type: DataTypes.STRING },
+            cpurorganization:{ type: DataTypes.STRING },
+            idiscounttaxtype: { type: DataTypes.STRING },
+            ntaxrate_buy: { type: DataTypes.STRING },
+        },
+        u8c_order_info: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            run_log: { type: DataTypes.TEXT },
+            error_msg: { type: DataTypes.TEXT },
+            operator: { type: DataTypes.STRING },
+            time: { type: DataTypes.STRING },
+            is_running: { type: DataTypes.BOOLEAN, defaultValue: false },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -480,6 +507,14 @@ let db_opt = {
         _sq.models.fc_plan_table.hasMany(_sq.models.fc_check_result);
         _sq.models.fc_check_result.belongsTo(_sq.models.field_check_item);
         _sq.models.field_check_item.hasMany(_sq.models.fc_check_result);
+
+        _sq.models.company.hasOne(_sq.models.u8c_config);
+        _sq.models.u8c_config.belongsTo(_sq.models.company);
+        _sq.models.plan.belongsTo(_sq.models.u8c_order_info);
+        _sq.models.u8c_order_info.hasMany(_sq.models.plan);
+        _sq.models.u8c_order_info.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.u8c_order_info);
+
     },
     install: async function () {
         console.log('run install');

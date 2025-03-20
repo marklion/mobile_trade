@@ -278,6 +278,12 @@ export const asyncRoutes = [
         name: 'rbac',
         component: () => import('@/views/Rbac'),
         meta: { title: '权限配置', roles: ['rbac'] }
+      },
+      {
+        path: 'u8c',
+        name: 'u8c',
+        component: () => import('@/views/u8c'),
+        meta: { title: 'u8c同步', roles: ['u8c'] }
       }
     ]
   },
