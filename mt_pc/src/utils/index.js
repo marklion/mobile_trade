@@ -2,6 +2,15 @@
  * Created by PanJiaChen on 16/11/18.
  */
 
+export function getRegexp(type){
+  const regs = {
+    carPlateCommon : /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[A-HJ-NP-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]{1}$/,
+    carPlateNewEnergy : /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[A-HJ-NP-Z]{1}(([0-9]{5}[DF])|([DF][A-HJ-NP-Z0-9][0-9]{4}))$/,
+    Chinese : /^[\u4e00-\u9fa5]+$/,
+    ChineseMobile : /^1[3-9]\d{9}$/
+  }
+  return regs[type]
+}
 /**
  * Parse the time to string
  * @param {(Object|string|number)} time

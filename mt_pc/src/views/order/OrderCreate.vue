@@ -4,92 +4,194 @@
     <div class="dashboard-text">query: <span v-for="p in query" :key="p">{{ p }},</span></div>
 
     <div class="dashboard-text"> {{ query.stuff_name }}</div>
-    <el-form ref="form" :model="form" label-width="80px">
+    <el-form ref="plan" :model="plan" :rules="order_rules" label-width="80px">
         <el-form-item label="买方">
-            <el-input v-model="form.name"></el-input>
+            <el-input v-model="buyer_name" disabled></el-input>
+            <div class="sub-title" v-if="bidding_id != 0">竞价成功发起</div>
         </el-form-item>
+
         <el-form-item label="卖方">
-            <el-select v-model="form.region" placeholder="请选择活动区域">
-                <el-option label="区域一" value="shanghai"></el-option>
-                <el-option label="区域二" value="beijing"></el-option>
-            </el-select>
+            <el-input v-model="saler_name" disabled></el-input>
         </el-form-item>
 
-        <u-cell title="买方" :value="buyer_name" :label="(bidding_id == 0)?'':'竞价成功发起'"></u-cell>
-        <u-cell title="卖方" :is_link="saler_name == '(未指定)'" :value="saler_name?saler_name:'(未指定)'" @click="show_select_company= true"></u-cell>
+        <el-form-item label="计划日期" prop="plan_time">
+            <el-date-picker v-model="plan.plan_time" type="date" placeholder="选择日期" value-format="yyyy-MM-dd">
+            </el-date-picker>
+        </el-form-item>
 
+        <div v-if="type_define.is_sale">
+            <el-form-item label="用途" prop="use_for">
+                <el-select v-model="plan.use_for" placeholder="请选择">
+                    <el-option v-for="item in use_for_array" :key="item" :label="item" :value="item">
+                    </el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="卸车地点" prop="drop_address">
+                <el-cascader v-model="plan.drop_address" placeholder="请选择，可搜索" :options="getRegion()" filterable></el-cascader>
+            </el-form-item>
+        </div>
+        <div v-else>
+            <el-form-item label="单价" prop="price">
+                <el-input placeholder="请输入单价" v-model="plan.price"></el-input>
+            </el-form-item>
+            <el-form-item label="连续派车" prop="is_repeat">
+                <el-switch v-model="plan.is_repeat"></el-switch>
+            </el-form-item>
+            <el-form-item label="我要代提" >
+                <el-switch v-model="is_proxy" @change="onProxyChange"></el-switch>
+            </el-form-item>
+        </div>
+        <el-form-item label="承运公司">
+            <el-input v-model="plan.trans_company_name" placeholder="请输入承运公司"></el-input>
+        </el-form-item>
 
+        <el-radio-group v-model="add_type">
+            <el-radio-button label="single" icon="el-icon-plus"><i class="el-icon-plus"></i> 新增车辆</el-radio-button>
+            <el-radio-button label="team" icon="el-icon-truck"><i class="el-icon-truck"></i> 选择车队</el-radio-button>
+            <el-radio-button label="batch" icon="el-icon-upload2"><i class="el-icon-upload2"></i> 批量导入</el-radio-button>
+        </el-radio-group>
 
+        <el-card v-if="add_type == 'single'" class="add_vehicle_card">
+            <el-form ref="v_form" :model="new_vehicle" :rules="rules" label-width="80px">
+                <el-form-item label="选择">
+                    <el-select v-model="new_vehicle_select" filterable placeholder="选择历史记录" @change="vehicle_selected">
+                        <el-option v-for="item in data2show" :key="item.search_cond" :label="item.search_cond" :value="item">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="主车牌" prop="main_vehicle_plate">
+                    <el-input v-model="new_vehicle.main_vehicle_plate"></el-input>
+                </el-form-item>
+                <el-form-item label="挂车牌" prop="behind_vehicle_plate">
+                    <el-input v-model="new_vehicle.behind_vehicle_plate"></el-input>
+                </el-form-item>
+                <el-form-item label="司机姓名" prop="driver_name">
+                    <el-input v-model="new_vehicle.driver_name"></el-input>
+                </el-form-item>
+                <el-form-item label="司机电话" prop="driver_phone">
+                    <el-input v-model="new_vehicle.driver_phone"></el-input>
+                </el-form-item>
+                <el-form-item label="备注">
+                    <el-input v-model="new_vehicle.comment"></el-input>
+                </el-form-item>
+                <el-button type="primary" style="width : 100%" @click="add_vehicle">添加</el-button>
+            </el-form>
+        </el-card>
+        <el-card v-if="add_type == 'team'" class="add_vehicle_card">
+            <el-form ref="vt_form" label-width="80px">
+                <el-form-item label="选择车队">
+                    <el-select v-model="new_vt_select" filterable placeholder="选择车队" @change="vehicle_team_selected">
+                        <el-option v-for="item in all_vt_list" :key="item.id" :label="`${item.name} - ${item.vehicle_sets.length}辆`" :value="item">
+                        </el-option>
+                    </el-select>
+                </el-form-item>
+            </el-form>
+        </el-card>
+        <el-card v-if="add_type == 'batch'" class="add_vehicle_card">
 
+            <el-form ref="vb_form" :model="new_vehicle" :rules="rules" label-width="80px">
+                <el-form-item label="选择文件">
+                    <el-upload class="upload-demo" ref="upload" :limit="1" accept=".xls,.xlsx" action="https://jsonplaceholder.typicode.com/posts/" :file-list="fileList" :before-upload="handlerBeforeUpload" :auto-upload="true">
+                        <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
+                        
+                        <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
+                    </el-upload>
+                </el-form-item>
+                <el-form-item label="主车牌" prop="main_vehicle_plate" hidden>
+                    <el-input v-model="new_vehicle.main_vehicle_plate"></el-input>
+                </el-form-item>
+                <el-form-item label="挂车牌" prop="behind_vehicle_plate" hidden>
+                    <el-input v-model="new_vehicle.behind_vehicle_plate"></el-input>
+                </el-form-item>
+                <el-form-item label="司机姓名" prop="driver_name" hidden>
+                    <el-input v-model="new_vehicle.driver_name"></el-input>
+                </el-form-item>
+                <el-form-item label="司机电话" prop="driver_phone" hidden>
+                    <el-input v-model="new_vehicle.driver_phone"></el-input>
+                </el-form-item>
+                <el-form-item label="备注" hidden>
+                    <el-input v-model="new_vehicle.comment"></el-input>
+                </el-form-item>
+            </el-form>
+        </el-card>
 
-        <el-form-item label="活动时间">
-            <el-col :span="11">
-                <el-date-picker type="date" placeholder="选择日期" v-model="form.date1" style="width: 100%;"></el-date-picker>
-            </el-col>
-            <el-col class="line" :span="2">-</el-col>
-            <el-col :span="11">
-                <el-time-picker placeholder="选择时间" v-model="form.date2" style="width: 100%;"></el-time-picker>
-            </el-col>
-        </el-form-item>
-        <el-form-item label="即时配送">
-            <el-switch v-model="form.delivery"></el-switch>
-        </el-form-item>
-        <el-form-item label="活动性质">
-            <el-checkbox-group v-model="form.type">
-                <el-checkbox label="美食/餐厅线上活动" name="type"></el-checkbox>
-                <el-checkbox label="地推活动" name="type"></el-checkbox>
-                <el-checkbox label="线下主题活动" name="type"></el-checkbox>
-                <el-checkbox label="单纯品牌曝光" name="type"></el-checkbox>
-            </el-checkbox-group>
-        </el-form-item>
-        <el-form-item label="特殊资源">
-            <el-radio-group v-model="form.resource">
-                <el-radio label="线上品牌商赞助"></el-radio>
-                <el-radio label="线下场地免费"></el-radio>
-            </el-radio-group>
-        </el-form-item>
-        <el-form-item label="活动形式">
-            <el-input type="textarea" v-model="form.desc"></el-input>
-        </el-form-item>
-        <el-form-item>
-            <el-button type="primary" @click="onSubmit">立即创建</el-button>
-            <el-button>取消</el-button>
-        </el-form-item>
+        <el-table :data="vehicles" style="width: 100%" max-height="250">
+            <el-table-column fixed prop="main_vehicle.plate" label="主车牌">
+            </el-table-column>
+            <el-table-column prop="behind_vehicle.plate" label="挂车牌">
+            </el-table-column>
+            <el-table-column prop="driver.name" label="司机姓名">
+            </el-table-column>
+            <el-table-column prop="driver.phone" label="司机电话">
+            </el-table-column>
+            <el-table-column prop="comment" label="备注">
+            </el-table-column>
+            <el-table-column fixed="right" label="操作" width="120">
+                <template slot-scope="scope">
+                    <el-button @click.native.prevent="deleteRow(scope.$index, vehicles)" type="text" size="small">
+                        删除
+                    </el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+        <!-- 
+        </div>
+        <div v-else>
+            <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
+                <fui-input placeholder="请输入单价" v-model="plan.price"></fui-input>
+            </fui-form-item>
+            <fui-form-item label="连续派车" :padding="[0,'18px']" prop="is_repeat">
+                <u-switch v-model="plan.is_repeat"></u-switch>
+            </fui-form-item> -->
     </el-form>
+
+    <el-button type="primary" @click="onSubmit">提交</el-button>
+
 </div>
 </template>
 
 <script>
 import {
     mapGetters
-} from 'vuex'
+} from 'vuex';
+import moment from 'moment';
+import {
+    pcTextArr
+} from "element-china-area-data";
 
 export default {
     name: 'Dashboard',
     computed: {
         ...mapGetters([
             'name',
+            'company_name',
             'roles'
         ])
     },
     data() {
         return {
+            fileList: [],
+
+            add_type: 'single',
             query: {},
-            form: {
-                name: '',
-                region: '',
-                date1: '',
-                date2: '',
-                delivery: false,
-                type: [],
-                resource: '',
-                desc: ''
+
+            order_rules: {
+                plan_time: [{
+                    required: true,
+                    message: '请选择计划日期',
+                    trigger: 'blur'
+                }],
+                drop_address: [{
+                    required: true,
+                    message: '请选择卸车地点',
+                    trigger: 'blur'
+                }],
+                use_for: [{
+                    required: true,
+                    message: '请选择用途',
+                    trigger: 'blur'
+                }]
             },
-
-
-
-
-
 
             bidding_id: 0,
             show_import: false,
@@ -100,6 +202,7 @@ export default {
                 text: '下载模板',
             }],
             all_vt_list: [],
+            new_vt_select: null,
             show_add_vt: false,
             notice_show: false,
             notice: '',
@@ -113,7 +216,7 @@ export default {
                 is_sale: true,
             },
             data2show: [],
-            show_pick_vehicles: false,
+            new_vehicle_select: null,
             new_vehicle: {
                 main_vehicle_plate: '',
                 behind_vehicle_plate: '',
@@ -121,26 +224,50 @@ export default {
                 driver_phone: '',
                 comment: '',
             },
-            rules: [{
-                    name: "main_vehicle_plate",
-                    rule: ["required", "isCarNo"],
-                    msg: ["请输入主车牌", "请输入正确的主车牌"]
-                },
-                {
-                    name: "behind_vehicle_plate",
-                    rule: ["isCarNo"],
-                    msg: ["请输入正确的挂车牌"]
-                },
-                {
-                    name: "driver_name",
-                    rule: ["required", "isChinese"],
-                    msg: ["请输入司机姓名", "请输入正确的司机姓名"]
-                }, {
-                    name: "driver_phone",
-                    rule: ["required", "isMobile"],
-                    msg: ["请输入司机电话", "请输入正确的手机号"]
-                },
-            ],
+            rules: {
+                main_vehicle_plate: [{
+                        required: true,
+                        message: '请输入主车牌',
+                        trigger: 'blur'
+                    },
+                    {
+                        validator: this.carNoValidator,
+                        message: '请输入正确的车牌号码',
+                        trigger: 'blur'
+                    },
+                ],
+                behind_vehicle_plate: [
+
+                    {
+                        validator: this.carNoValidator,
+                        message: '请输入正确的车牌号码',
+                        trigger: 'blur'
+                    },
+                ],
+                driver_name: [{
+                        required: true,
+                        message: '请输入司机姓名',
+                        trigger: 'blur'
+                    },
+                    {
+                        pattern: /^[\u4e00-\u9fa5·]{2,10}$/, 
+                        message: '请输入正确的司机姓名',
+                        trigger: 'blur'
+                    }
+                ],
+                driver_phone: [{
+                        required: true,
+                        message: '请输入司机电话',
+                        trigger: 'blur'
+                    },
+                    {
+                        pattern: /^1[3-9]\d{9}$/,
+                        message: '请输入正确的手机号码',
+                        trigger: 'blur'
+                    }
+                ]
+
+            },
             show_add_vehicle: false,
             address: [],
             show_plan_time: false,
@@ -150,7 +277,7 @@ export default {
             ],
             plan: {
                 comment: "",
-                drop_address: "",
+                drop_address: [],
                 plan_time: "",
                 stuff_id: 0,
                 use_for: "",
@@ -168,24 +295,317 @@ export default {
         }
     },
     methods: {
-        onSubmit() {
-            console.log('submit!');
-        }
+        onProxyChange(is_proxy){
+            this.is_proxy = is_proxy;
+            let tmp = this.plan.trans_company_name;
+            this.plan.trans_company_name = this.saler_name;
+            this.saler_name = tmp;
+        
+        },
+        deleteRow(index, rows) {
+            console.log(index, rows)
+            rows.splice(index, 1);
+        },
+        async handlerBeforeUpload(file) {
+            try {
+                let ar = await this.convert_excel2array(file.arrayBuffer());
+                let importInfo = {
+                    successCount: 0,
+                    errorCount: 0,
+                    totalCount: ar.length
+                };
+                const processedData = await Promise.all(ar.map(async (element) => {
+                    try {
+                        console.log(element);
+                        console.log(this.$refs.vb_form);
+                        this.new_vehicle = {
+                            ...this.new_vehicle,
+                            ...element
+                        };
+                        await this.$nextTick();
+                        await this.$refs.vb_form.validate(); //校验失败抛异常，此处
+
+                        this.$refs.vb_form.resetFields();
+                        try {
+                            const [mv, bv, dr] = await Promise.all([
+                                this.$send_req(this.type_define.vh_fetch_url, {
+                                    plate: element.main_vehicle_plate
+                                }),
+                                this.$send_req(this.type_define.vh_fetch_url, {
+                                    plate: element.behind_vehicle_plate
+                                }),
+                                this.$send_req(this.type_define.dr_fetch_url, {
+                                    phone: element.driver_phone,
+                                    name: element.driver_name
+                                })
+                            ]);
+
+                            importInfo.successCount++;
+                            return {
+                                main_vehicle: {
+                                    id: mv.id,
+                                    plate: element.main_vehicle_plate
+                                },
+                                behind_vehicle: {
+                                    id: bv.id,
+                                    plate: element.behind_vehicle_plate
+                                },
+                                driver: {
+                                    id: dr.id,
+                                    name: element.driver_name,
+                                    phone: element.driver_phone
+                                },
+                                comment: element.comment || '文件导入',
+
+                            };
+                        } catch (error) {
+                            console.error('error:', error);
+                            importInfo.errorCount++;
+                            return null;
+                        }
+
+                    } catch (e) {
+                        console.log('e', e)
+                        importInfo.errorCount++;
+                        return null;
+                    }
+
+                }));
+                this.vehicles.unshift(...processedData.filter(item => item !== null));
+                this.$message({
+                    message: `成功导入${importInfo.successCount}条,失败${importInfo.errorCount}条`,
+                    type: 'success',
+                    duration: 5000
+                });
+            } catch (error) {
+                console.error('Import failed:', error);
+                this.$message({
+                    message: '导入失败，请重试',
+                    type: 'warning',
+                    duration: 5000
+                });
+            } finally {
+                this.add_type = '';
+                return false; //实际上不上传
+            }
+        },
+        convert_excel2array: async function (file_content) {
+            const Excel = require('exceljs');
+            let wb = new Excel.Workbook();
+            let workbook = await wb.xlsx.load(file_content)
+            let ws = workbook.getWorksheet(1);
+            let ret = [];
+            const regStrReplace = /[\t\s]/g;
+            ws.eachRow(function (row, rowNumber) {
+                if (rowNumber != 1) {
+                    ret.push({
+                        main_vehicle_plate: row.getCell(1).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        behind_vehicle_plate: row.getCell(2).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        driver_name: row.getCell(3).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace, ''),
+                        // 模板最后一列放备注信息
+                        comment: row.getCell(row.cellCount).text.replaceAll(regStrReplace, ''),
+                    })
+                }
+            });
+            return ret;
+        },
+        download_temple: async function () {
+            uni.downloadFile({
+                url: this.$convert_attach_url('/uploads/模板1.xlsx'),
+                success: (res) => {
+                    const filePath = res.tempFilePath
+                    uni.openDocument({
+                        filePath: filePath,
+                        showMenu: true,
+                    })
+                },
+                fail: (res) => {
+                    console.log(res);
+                }
+            })
+        },
+        onSubmit: async function () {
+
+            // rules.push({
+            //     name: 'price',
+            //     rule: ['isAmount'],
+            //     msg: ['请填写正确的单价']
+            // });
+            console.log(this.vehicles)
+            try {
+                await this.$refs.plan.validate();
+                if (this.vehicles.length == 0) {
+                    this.$message({
+                        message: "请添加车辆",
+                        type: 'danger',
+                        duration: 5000
+                    })
+                    return;
+                }
+                if (this.plan.price) {
+                    this.plan.price = parseFloat(this.plan.price);
+                }
+                for (let index = 0; index < this.vehicles.length; index++) {
+                    let ele = this.vehicles[index];
+                    let req = {
+                        ...this.plan,
+                        drop_address : this.plan.drop_address.join('-'),
+                        main_vehicle_id: ele.main_vehicle.id,
+                        behind_vehicle_id: ele.behind_vehicle.id,
+                        driver_id: ele.driver.id,
+                        is_proxy: this.is_proxy,
+                        bidding_id: this.bidding_id,
+                        comment: ele.comment,
+                    };
+                    if (req.is_proxy) {
+                        req.proxy_company_name = this.saler_name;
+                    }
+                    await this.$send_req(this.type_define.order_create_url, req);
+
+                    
+                }
+                console.log('/order/order_' + (this.type_define.is_sale ? "buy" : "sale"))
+                    this.$router.push('/order/order_' + (this.type_define.is_sale ? "buy" : "sale"));
+            } catch (err) {
+                console.log(err)
+            } finally {
+
+            }
+        },
+        getRegion() {
+            return pcTextArr;
+        },
+        get_vehicles: async function (pair_get_url = this.type_define.pair_get_url) {
+
+            let res = await this.$send_req(pair_get_url, {});
+            let vt = await this.$send_req('/global/get_vehicle_team', {
+                // pageNo: 0
+            });
+            const vehicles = vt.vehicle_teams.flatMap(team =>
+                team.vehicle_sets.map(set => ({
+                    behind_vehicle_plate: set.behind_vehicle.plate,
+                    driver_name: set.driver.name,
+                    driver_phone: set.driver.phone,
+                    main_vehicle_plate: set.main_vehicle.plate
+                }))
+            );
+            let mergedPairs = [...res.pairs, ...vehicles];
+
+            const uniquePairs = Array.from(new Set(mergedPairs.map(JSON.stringify))).map(JSON.parse);
+
+            res.pairs = mergedPairs
+
+            res.pairs.forEach(ele => {
+                ele.search_cond = `${ele.main_vehicle_plate}-${ele.behind_vehicle_plate}-${ele.driver_name}-${ele.driver_phone}`;
+            });
+            console.log(1, res.pairs);
+
+            this.data2show = res.pairs;
+            return res.pairs;
+        },
+        get_vt_list: async function () {
+            let res = await this.$send_req('/global/get_vehicle_team', {});
+            this.all_vt_list = res.vehicle_teams;
+        },
+        vehicle_selected: function () {
+            this.new_vehicle = this.new_vehicle_select;
+            this.new_vehicle_select = null;
+        },
+        add_vehicle: async function () {
+            this.$refs.v_form.validate(async valid => {
+                try {
+                    if (valid) {
+                        let mv = await this.$send_req(this.type_define.vh_fetch_url, {
+                            plate: this.new_vehicle.main_vehicle_plate,
+                        });
+                        let bv = await this.$send_req(this.type_define.vh_fetch_url, {
+                            plate: this.new_vehicle.behind_vehicle_plate,
+                        });
+                        let dr = await this.$send_req(this.type_define.dr_fetch_url, {
+                            phone: this.new_vehicle.driver_phone,
+                            name: this.new_vehicle.driver_name,
+                        });
+                        this.vehicles.unshift({
+                            main_vehicle: {
+                                id: mv.id,
+                                plate: this.new_vehicle.main_vehicle_plate,
+                            },
+                            behind_vehicle: {
+                                id: bv.id,
+                                plate: this.new_vehicle.behind_vehicle_plate,
+                            },
+                            driver: {
+                                id: dr.id,
+                                name: this.new_vehicle.driver_name,
+                                phone: this.new_vehicle.driver_phone,
+                            },
+                            comment: this.new_vehicle.comment,
+                        });
+
+                        this.$refs.v_form.resetFields();
+                        this.add_type = null;
+                    } else {
+                        console.log('error submit!!');
+                        return false;
+                    }
+                } catch (err) {
+                    console.log('error', err)
+                }
+            })
+        },
+
+        isCarNo: function (carNo) {
+            // 定义普通燃油车车牌的正则表达式
+            const regularPlatePattern = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[A-HJ-NP-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]{1}$/;
+            // 定义新能源车牌的正则表达式
+            const newEnergyPlatePattern = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[A-HJ-NP-Z]{1}(([0-9]{5}[DF])|([DF][A-HJ-NP-Z0-9][0-9]{4}))$/;
+            // 先检查是否符合普通燃油车车牌格式
+            if (regularPlatePattern.test(carNo)) {
+                return true;
+            }
+            // 再检查是否符合新能源车牌格式
+            if (newEnergyPlatePattern.test(carNo)) {
+                return true;
+            }
+            return false;
+        },
+        carNoValidator: function (rule, carNo, callback) {
+            if (!this.isCarNo(carNo)) {
+                callback(rule.message);
+            } else {
+                callback();
+            }
+        },
+        vehicle_team_selected: async function (vt) {
+            let vs = vt.vehicle_sets;
+            vs.forEach(ele => {
+                this.vehicles.unshift({
+                    main_vehicle: ele.main_vehicle,
+                    behind_vehicle: ele.behind_vehicle,
+                    driver: ele.driver,
+                    comment: '',
+                });
+            });
+            console.log(1, this.vehicles);
+            this.new_vt_select = null;
+            this.add_type = '';
+        },
     },
     async mounted() {
         this.query = this.$route.query
 
-        this.plan.stuff_id = parseInt(options.stuff_id);
+        this.plan.stuff_id = parseInt(this.query.stuff_id);
         if (this.query.bidding_id) {
             this.bidding_id = parseInt(this.query.bidding_id);
         }
         this.stuff_name = this.query.stuff_name;
         this.saler_name = this.query.company_name;
         this.company_id = parseInt(this.query.company_id);
-        this.buyer_name = uni.getStorageSync('self_info').company;
+        this.buyer_name = this.company_name;
         let tmp_date = new Date();
         tmp_date.setDate(tmp_date.getDate() + 1);
-        this.default_time = utils.dateFormatter(tmp_date, 'y-m-d', 4, false);
+        this.default_time = new moment(tmp_date).format('YYYY-MM-DD');
         if (this.query.is_buy == 'true') {
             this.type_define = {
                 vh_fetch_url: '/supplier/fetch_vehicle',
@@ -200,6 +620,8 @@ export default {
         let resp = await this.$send_req('/global/get_notice', {
             company_id: this.company_id
         });
+        this.get_vehicles();
+        this.get_vt_list();
         this.notice = resp.notice;
         if (this.notice) {
             this.notice_show = true;
@@ -219,5 +641,9 @@ export default {
         font-size: 30px;
         line-height: 46px;
     }
+}
+
+.add_vehicle_card {
+    width: 400px
 }
 </style>

@@ -25,8 +25,17 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre3 libpcre3-dev libx
 RUN ./nginx_upload_install.sh
 COPY lib/* /lib
 RUN apt update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-multilib build-essential module-assistant
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libmodbus-dev gdb
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential module-assistant
+
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "amd64" ]; then \
+    apt-get install -y gcc-multilib; \
+  elif [ "$TARGETARCH" = "arm64" ]; then \
+    apt-get install -y gcc-aarch64-linux-gnu; \
+  fi
+
+
+# RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libmodbus-dev gdb
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libmodbus-dev nodejs
 RUN npm install -g pm2
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y vim valgrind
@@ -47,5 +56,13 @@ RUN npm install --global sqlite3
 RUN npm install --global puppeteer
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libatk1.0-0 libatk-bridge2.0-0 libgbm-dev libxdamage1
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt install -y mysql-client
-RUN wget https://github.com/gohugoio/hugo/releases/download/v0.139.0/hugo_extended_0.139.0_linux-amd64.deb
-RUN dpkg -i hugo_extended_0.139.0_linux-amd64.deb
+
+# RUN if [ "$TARGETARCH" = "amd64" ]; then \
+# wget --no-check-certificate -O hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.139.0/hugo_extended_0.139.0_linux-amd64.deb;\
+#   elif [ "$TARGETARCH" = "arm64" ]; then \
+# wget --no-check-certificate -O hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.139.0/hugo_extended_0.139.0_linux-arm64.deb;\
+#   fi
+
+RUN wget --no-check-certificate -O hugo.deb https://github.com/gohugoio/hugo/releases/download/v0.139.0/hugo_extended_0.139.0_linux-arm64.deb
+RUN dpkg -i hugo.deb || apt-get -f install
+

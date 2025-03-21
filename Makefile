@@ -1,7 +1,8 @@
 SHELL=/bin/bash
 SRC_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 DELIVER_PATH=$(SRC_DIR)/build
-SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc zczh doc_site
+# SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc zczh doc_site
+SUB_DIR=api conf script automation lag_rpc mt_gui mt_pc doc_site
 BUILD_MODE=build
 ENV_REMOTE_HOST=
 ENV_REMOTE_MOBILE_HOST=$(ENV_REMOTE_HOST)/mobile/\#
