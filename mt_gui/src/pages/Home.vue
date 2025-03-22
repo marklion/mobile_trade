@@ -252,6 +252,7 @@ export default {
         },
 
         init_data_brief: async function () {
+            // 生成查询条件的函数
             let cond = function (day_offset, status) {
                 let date = new Date();
                 date.setDate(date.getDate() + day_offset);
@@ -263,53 +264,88 @@ export default {
                     only_count: true,
                 };
             };
+
+            // 发送请求获取订单数量的函数
             let get_count = async (url, cond) => {
-                return (await this.$send_req(url, cond)).total
-            }
+                return (await this.$send_req(url, cond)).total;
+            };
+
+            // 生成图表数据的函数
             let make_data = async (url, title, subtitle) => {
-                let db = {
-                    today_unfinish_count: await get_count(url, cond(0, 1)) + await get_count(url, cond(0, 2)),
-                    today_finished_count: await get_count(url, cond(0, 3)),
+                try {
+                    // 生成需要查询的日期和状态组合
+                    const offsets = [0, -1, 1];
+                    const statuses = [1, 2, 3];
+                    const promises = [];
 
-                    yst_unfinish_count: await get_count(url, cond(-1, 1)) + await get_count(url, cond(-1, 2)),
-                    yst_finished_count: await get_count(url, cond(-1, 3)),
+                    // 为每个日期和状态组合生成查询请求
+                    offsets.forEach(offset => {
+                        statuses.forEach(status => {
+                            promises.push(get_count(url, cond(offset, status)));
+                        });
+                    });
 
-                    tmr_unfinish_count: await get_count(url, cond(1, 1)) + await get_count(url, cond(1, 2)),
-                    tmr_finished_count: await get_count(url, cond(1, 3)),
+                    // 并发执行所有请求
+                    const results = await Promise.all(promises);
+
+                    // 解析结果并计算各时间段的订单数量
+                    let db = {
+                        today_unfinish_count: results[0] + results[1],
+                        today_finished_count: results[2],
+                        yst_unfinish_count: results[3] + results[4],
+                        yst_finished_count: results[5],
+                        tmr_unfinish_count: results[6] + results[7],
+                        tmr_finished_count: results[8]
+                    };
+
+                    // 返回图表配置和数据
+                    return {
+                        opts: this.chart_opt(title, subtitle),
+                        chartData: {
+                            categories: ['昨日', '今日', '明日'],
+                            series: [{
+                                    name: '订单总数',
+                                    data: [
+                                        db.yst_unfinish_count + db.yst_finished_count,
+                                        db.today_unfinish_count + db.today_finished_count,
+                                        db.tmr_unfinish_count + db.tmr_finished_count
+                                    ]
+                                },
+                                {
+                                    name: '已完成',
+                                    color: '#1890ff',
+                                    data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
+                                }
+                            ]
+                        }
+                    };
+                } catch (err) {
+                    console.log("页面数据初始化异常", err);
+                    // 发生错误时返回 null 或默认数据
+                    return null;
                 }
-                return {
-                    opts: this.chart_opt(title, subtitle),
-                    chartData: {
-                        categories: ['昨日', '今日', '明日'],
-                        series: [{
-                                name: '订单总数',
-                                data: [db.yst_unfinish_count + db.yst_finished_count, db.today_unfinish_count + db.today_finished_count, db.tmr_unfinish_count + db.tmr_finished_count]
-                            },
-                            {
-                                name: '已完成',
-                                color: '#1890ff',
-                                data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
-                            }
-                        ],
-                    },
-                }
-            }
-            let tmp = []
+            };
+
+            let tmp = [];
+            // 根据模块权限生成不同模块的图表数据
             if (this.$has_module('customer')) {
-                tmp.push(await make_data('/customer/order_buy_search', '我方下单', '采购'))
+                tmp.push(await make_data('/customer/order_buy_search', '我方下单', '采购'));
             }
             if (this.$has_module('buy_management')) {
-                tmp.push(await make_data('/buy_management/order_search', '对方下单', '采购'))
+                tmp.push(await make_data('/buy_management/order_search', '对方下单', '采购'));
             }
             if (this.$has_module('supplier')) {
-                tmp.push(await make_data('/supplier/order_sale_search', '我方下单', '销售'))
+                tmp.push(await make_data('/supplier/order_sale_search', '我方下单', '销售'));
             }
             if (this.$has_module('sale_management')) {
-                tmp.push(await make_data('/sale_management/order_search', '对方下单', '销售'))
+                tmp.push(await make_data('/sale_management/order_search', '对方下单', '销售'));
             }
             this.charts = []
             tmp.forEach((item, index) => {
-                this.$set(this.charts, index, JSON.parse(JSON.stringify(item)))
+                // 过滤掉可能的 null 值
+                if(item !== null){
+                    this.$set(this.charts, index, JSON.parse(JSON.stringify(item)))
+                }
             });
         },
         init_notice: async function () {
@@ -321,8 +357,8 @@ export default {
         },
         init_brief_info: async function () {
             this.self_info = uni.getStorageSync('self_info');
-            await this.init_data_brief();
-            await this.init_notice();
+            this.init_data_brief();
+            this.init_notice();
             if (this.$refs.sb_list)
                 this.$refs.sb_list.refresh();
             if (this.$refs.ss_list)
@@ -330,15 +366,16 @@ export default {
         },
     },
     onPullDownRefresh: async function () {
-        await this.init_brief_info();
-        await this.init_statistic();
+        //只需要调用，无需等待结果
+        this.init_brief_info();
+        this.init_statistic();
         uni.stopPullDownRefresh();
         this.$refs.noticeBar.getNoticeData();
     },
     onLoad: async function () {
-
-        await this.init_brief_info()
-        await this.init_statistic()
+        //只需要调用，无需等待结果
+        this.init_brief_info()
+        this.init_statistic()
     },
 }
 </script>
