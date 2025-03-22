@@ -50,74 +50,74 @@
         <el-col :span="12">
 
             <el-radio-group v-model="add_type" style="margin-top: 20px;">
-            <el-radio-button label="single" icon="el-icon-plus"><i class="el-icon-plus"></i> 新增车辆</el-radio-button>
-            <el-radio-button label="team" icon="el-icon-truck"><i class="el-icon-truck"></i> 选择车队</el-radio-button>
-            <el-radio-button label="batch" icon="el-icon-upload2"><i class="el-icon-upload2"></i> 批量导入</el-radio-button>
-        </el-radio-group>
-        <el-button type="primary" @click="onSubmit" style="float:right; margin-top: 20px;">提交订单</el-button>
-        <el-card v-if="add_type == 'single'" class="add_vehicle_card">
-            <el-form ref="v_form" :model="new_vehicle" :rules="rules" label-width="80px">
-                <el-form-item label="选择">
-                    <el-select v-model="new_vehicle_select" filterable placeholder="选择历史记录" @change="vehicle_selected">
-                        <el-option v-for="item in data2show" :key="item.search_cond" :label="item.search_cond" :value="item">
-                        </el-option>
-                    </el-select>
-                </el-form-item>
-                <el-form-item label="主车牌" prop="main_vehicle_plate">
-                    <el-input v-model="new_vehicle.main_vehicle_plate"></el-input>
-                </el-form-item>
-                <el-form-item label="挂车牌" prop="behind_vehicle_plate">
-                    <el-input v-model="new_vehicle.behind_vehicle_plate"></el-input>
-                </el-form-item>
-                <el-form-item label="司机姓名" prop="driver_name">
-                    <el-input v-model="new_vehicle.driver_name"></el-input>
-                </el-form-item>
-                <el-form-item label="司机电话" prop="driver_phone">
-                    <el-input v-model="new_vehicle.driver_phone"></el-input>
-                </el-form-item>
-                <el-form-item label="备注">
-                    <el-input v-model="new_vehicle.comment"></el-input>
-                </el-form-item>
-                <el-button type="primary" style="width : 100%" @click="add_vehicle">添加</el-button>
-            </el-form>
-        </el-card>
-        <el-card v-if="add_type == 'team'" class="add_vehicle_card">
-            <el-form ref="vt_form" label-width="80px">
-                <el-form-item label="选择车队">
-                    <el-select v-model="new_vt_select" filterable placeholder="选择车队" @change="vehicle_team_selected">
-                        <el-option v-for="item in all_vt_list" :key="item.id" :label="`${item.name} - ${item.vehicle_sets.length}辆`" :value="item">
-                        </el-option>
-                    </el-select>
-                </el-form-item>
-            </el-form>
-        </el-card>
-        <el-card v-if="add_type == 'batch'" class="add_vehicle_card">
+                <el-radio-button label="single" icon="el-icon-plus"><i class="el-icon-plus"></i> 新增车辆</el-radio-button>
+                <el-radio-button label="team" icon="el-icon-truck"><i class="el-icon-truck"></i> 选择车队</el-radio-button>
+                <el-radio-button label="batch" icon="el-icon-upload2"><i class="el-icon-upload2"></i> 批量导入</el-radio-button>
+            </el-radio-group>
+            <el-button type="primary" @click="onSubmit" style="float:right; margin-top: 20px;">提交订单</el-button>
+            <el-card v-if="add_type == 'single'" class="add_vehicle_card">
+                <el-form ref="v_form" :model="new_vehicle" :rules="rules" label-width="80px">
+                    <el-form-item label="选择">
+                        <el-select v-model="new_vehicle_select" filterable placeholder="选择历史记录" @change="vehicle_selected">
+                            <el-option v-for="item in data2show" :key="item.search_cond" :label="item.search_cond" :value="item">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                    <el-form-item label="主车牌" prop="main_vehicle_plate">
+                        <el-input v-model="new_vehicle.main_vehicle_plate"></el-input>
+                    </el-form-item>
+                    <el-form-item label="挂车牌" prop="behind_vehicle_plate">
+                        <el-input v-model="new_vehicle.behind_vehicle_plate"></el-input>
+                    </el-form-item>
+                    <el-form-item label="司机姓名" prop="driver_name">
+                        <el-input v-model="new_vehicle.driver_name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="司机电话" prop="driver_phone">
+                        <el-input v-model="new_vehicle.driver_phone"></el-input>
+                    </el-form-item>
+                    <el-form-item label="备注">
+                        <el-input v-model="new_vehicle.comment"></el-input>
+                    </el-form-item>
+                    <el-button type="primary" style="width : 100%" @click="add_vehicle">添加</el-button>
+                </el-form>
+            </el-card>
+            <el-card v-if="add_type == 'team'" class="add_vehicle_card">
+                <el-form ref="vt_form" label-width="80px">
+                    <el-form-item label="选择车队">
+                        <el-select v-model="new_vt_select" filterable placeholder="选择车队" @change="vehicle_team_selected">
+                            <el-option v-for="item in all_vt_list" :key="item.id" :label="`${item.name} - ${item.vehicle_sets.length}辆`" :value="item">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
+                </el-form>
+            </el-card>
+            <el-card v-if="add_type == 'batch'" class="add_vehicle_card">
 
-            <el-form ref="vb_form" :model="new_vehicle" :rules="rules" label-width="80px">
-                <el-form-item label="选择文件">
-                    <el-upload class="upload-demo" ref="upload" :limit="1" accept=".xls,.xlsx" action="https://jsonplaceholder.typicode.com/posts/" :file-list="fileList" :before-upload="handlerBeforeUpload" :auto-upload="true">
-                        <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-                        <el-button size="small" type="default" style="margin-left: 10px;" @click="doDownloadTemplate">下载模版</el-button>
-                        <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
-                    </el-upload>
-                </el-form-item>
-                <el-form-item label="主车牌" prop="main_vehicle_plate" hidden>
-                    <el-input v-model="new_vehicle.main_vehicle_plate"></el-input>
-                </el-form-item>
-                <el-form-item label="挂车牌" prop="behind_vehicle_plate" hidden>
-                    <el-input v-model="new_vehicle.behind_vehicle_plate"></el-input>
-                </el-form-item>
-                <el-form-item label="司机姓名" prop="driver_name" hidden>
-                    <el-input v-model="new_vehicle.driver_name"></el-input>
-                </el-form-item>
-                <el-form-item label="司机电话" prop="driver_phone" hidden>
-                    <el-input v-model="new_vehicle.driver_phone"></el-input>
-                </el-form-item>
-                <el-form-item label="备注" hidden>
-                    <el-input v-model="new_vehicle.comment"></el-input>
-                </el-form-item>
-            </el-form>
-        </el-card>
+                <el-form ref="vb_form" :model="new_vehicle" :rules="rules" label-width="80px">
+                    <el-form-item label="选择文件">
+                        <el-upload class="upload-demo" ref="upload" :limit="1" accept=".xls,.xlsx" action="https://jsonplaceholder.typicode.com/posts/" :file-list="fileList" :before-upload="handlerBeforeUpload" :auto-upload="true">
+                            <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
+                            <el-button size="small" type="default" style="margin-left: 10px;" @click="doDownloadTemplate">下载模版</el-button>
+                            <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
+                        </el-upload>
+                    </el-form-item>
+                    <el-form-item label="主车牌" prop="main_vehicle_plate" hidden>
+                        <el-input v-model="new_vehicle.main_vehicle_plate"></el-input>
+                    </el-form-item>
+                    <el-form-item label="挂车牌" prop="behind_vehicle_plate" hidden>
+                        <el-input v-model="new_vehicle.behind_vehicle_plate"></el-input>
+                    </el-form-item>
+                    <el-form-item label="司机姓名" prop="driver_name" hidden>
+                        <el-input v-model="new_vehicle.driver_name"></el-input>
+                    </el-form-item>
+                    <el-form-item label="司机电话" prop="driver_phone" hidden>
+                        <el-input v-model="new_vehicle.driver_phone"></el-input>
+                    </el-form-item>
+                    <el-form-item label="备注" hidden>
+                        <el-input v-model="new_vehicle.comment"></el-input>
+                    </el-form-item>
+                </el-form>
+            </el-card>
         </el-col>
     </el-row>
     <el-row>
@@ -141,15 +141,6 @@
             </el-table-column>
         </el-table>
     </el-row>
-    
-
-        
-
-        
-
-    
-
-    
 
 </div>
 </template>
@@ -158,7 +149,7 @@
 import {
     mapGetters
 } from 'vuex';
-import moment from 'moment';
+
 import {
     pcTextArr
 } from "element-china-area-data";
@@ -380,10 +371,9 @@ export default {
                     type: 'warning',
                     duration: 5000
                 });
-            } finally {
-                this.add_type = '';
-                return false; //实际上不上传
             }
+            this.add_type = '';
+            return false; //实际上不上传
         },
         convert_excel2array: async function (file_content) {
             const Excel = require('exceljs');
@@ -423,8 +413,7 @@ export default {
                 if (this.plan.price) {
                     this.plan.price = parseFloat(this.plan.price);
                 }
-                for (let index = 0; index < this.vehicles.length; index++) {
-                    let ele = this.vehicles[index];
+                for (let ele of this.vehicles) {
                     let req = {
                         ...this.plan,
                         drop_address: this.plan.drop_address.join('-'),
@@ -443,9 +432,12 @@ export default {
                 }
                 this.$router.push('/order/order_' + (this.type_define.is_sale ? "buy" : "sale"));
             } catch (err) {
+                this.$message({
+                    type: 'danger',
+                    message: '订单创建失败: ' + err.message,
+                    duration: 5000
+                })
                 console.log(err)
-            } finally {
-
             }
         },
         getRegion() {
@@ -464,8 +456,6 @@ export default {
                 }))
             );
             let mergedPairs = [...res.pairs, ...vehicles];
-
-            const uniquePairs = Array.from(new Set(mergedPairs.map(JSON.stringify))).map(JSON.parse);
 
             res.pairs = mergedPairs
 
@@ -530,16 +520,10 @@ export default {
             // 定义普通燃油车车牌的正则表达式
             const regularPlatePattern = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[A-HJ-NP-Z]{1}[A-HJ-NP-Z0-9]{4}[A-HJ-NP-Z0-9挂学警港澳]{1}$/;
             // 定义新能源车牌的正则表达式
-            const newEnergyPlatePattern = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[A-HJ-NP-Z]{1}(([0-9]{5}[DF])|([DF][A-HJ-NP-Z0-9][0-9]{4}))$/;
+            const newEnergyPlatePattern = /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼]{1}[A-HJ-NP-Z]{1}((\d{5}[DF])|([DF][A-HJ-NP-Z0-9]\d{4}))$/;
             // 先检查是否符合普通燃油车车牌格式
-            if (regularPlatePattern.test(carNo)) {
-                return true;
-            }
             // 再检查是否符合新能源车牌格式
-            if (newEnergyPlatePattern.test(carNo)) {
-                return true;
-            }
-            return false;
+            return regularPlatePattern.test(carNo) || newEnergyPlatePattern.test(carNo);
         },
         carNoValidator: function (rule, carNo, callback) {
             if (!this.isCarNo(carNo)) {

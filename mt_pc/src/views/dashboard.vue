@@ -252,7 +252,7 @@ export default {
             };
         },
         init_statistic: async function () {
-            if (this.$hasPermission('sale_management') == false) {
+            if (!this.$hasPermission('sale_management')) {
                 return
             }
             this.stat_loading = true;
@@ -344,7 +344,7 @@ export default {
             });
         },
         init_notice: async function () {
-            if (this.$hasPermission('stuff') == false) {
+            if (!this.$hasPermission('stuff')) {
                 return
             }
             let res = await this.$send_req('/stuff/get_notice');
@@ -353,10 +353,10 @@ export default {
         init_brief_info: async function () {
             this.init_data_brief();
             this.init_notice();
-            // if (this.$refs.sb_list)
-            //     this.$refs.sb_list.refresh();
-            // if (this.$refs.ss_list)
-            //     this.$refs.ss_list.refresh();
+            if (this.$refs.sb_page)
+                this.$refs.sb_page.refresh();
+            if (this.$refs.ss_page)
+                this.$refs.ss_page.refresh();
         },
         module_filter: function (role) {
             return this.$hasPermission(role);
