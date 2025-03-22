@@ -456,9 +456,8 @@ export default {
                 }))
             );
             let mergedPairs = [...res.pairs, ...vehicles];
-
-            res.pairs = mergedPairs
-
+            res.pairs = Array.from(new Set(mergedPairs.map(JSON.stringify))).map(JSON.parse);
+            
             res.pairs.forEach(ele => {
                 ele.search_cond = `${ele.main_vehicle_plate}-${ele.behind_vehicle_plate}-${ele.driver_name}-${ele.driver_phone}`;
             });

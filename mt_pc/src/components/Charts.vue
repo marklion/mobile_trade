@@ -30,7 +30,7 @@
         chartOption: {
             deep: true,
             handler(newOption) {
-              console.log("watch",newOption)
+              
                 if (this.chart) {
                     this.chart.setOption(newOption);
                 }
@@ -43,8 +43,6 @@
         const chartDom = this.$refs.chart;
         // 初始化ECharts实例
         this.chart = echarts.init(chartDom);
-        // 配置图表选项
-        console.log("op", this.chartOption);
         // 使用配置项显示图表
         this.chart.setOption(this.chartOption);
       },
