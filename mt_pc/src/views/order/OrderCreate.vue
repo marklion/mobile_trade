@@ -38,9 +38,9 @@
                     <el-form-item label="连续派车" prop="is_repeat">
                         <el-switch v-model="plan.is_repeat"></el-switch>
                     </el-form-item>
-                    <el-form-item label="我要代提">
+                    <!-- <el-form-item label="我要代提">
                         <el-switch v-model="is_proxy" @change="onProxyChange"></el-switch>
-                    </el-form-item>
+                    </el-form-item> -->
                 </div>
                 <el-form-item label="承运公司">
                     <el-input v-model="plan.trans_company_name" placeholder="请输入承运公司"></el-input>
@@ -284,6 +284,41 @@ export default {
             vehicles: []
         }
     },
+    async mounted() {
+        this.query = this.$route.query
+
+        this.plan.stuff_id = parseInt(this.query.stuff_id)
+        if (this.query.bidding_id) {
+            this.bidding_id = parseInt(this.query.bidding_id)
+        }
+        this.stuff_name = this.query.stuff_name
+        this.saler_name = this.query.company_name
+        this.company_id = parseInt(this.query.company_id)
+        this.buyer_name = this.company_name
+        const tmp_date = new Date()
+        tmp_date.setDate(tmp_date.getDate() + 1)
+
+        if (this.query.is_buy == 'true') {
+            this.type_define = {
+                vh_fetch_url: '/supplier/fetch_vehicle',
+                dr_fetch_url: '/supplier/fetch_driver',
+                order_create_url: '/supplier/order_sale_create',
+                pair_get_url: '/supplier/get_vehicle_pair',
+                is_sale: false,
+            }
+            this.saler_name = this.buyer_name;
+            this.buyer_name = this.query.company_name;
+        }
+        const resp = await this.$send_req('/global/get_notice', {
+            company_id: this.company_id
+        });
+        this.get_vehicles();
+        this.get_vt_list();
+        this.notice = resp.notice;
+        if (this.notice) {
+            this.notice_show = true;
+        }
+    },
     methods: {
         onProxyChange(is_proxy) {
             this.is_proxy = is_proxy;
@@ -457,7 +492,7 @@ export default {
             );
             let mergedPairs = [...res.pairs, ...vehicles];
             res.pairs = Array.from(new Set(mergedPairs.map(JSON.stringify))).map(JSON.parse);
-            
+
             res.pairs.forEach(ele => {
                 ele.search_cond = `${ele.main_vehicle_plate}-${ele.behind_vehicle_plate}-${ele.driver_name}-${ele.driver_phone}`;
             });
@@ -476,13 +511,13 @@ export default {
             this.$refs.v_form.validate(async valid => {
                 try {
                     if (valid) {
-                        let mv = await this.$send_req(this.type_define.vh_fetch_url, {
+                        const mv = await this.$send_req(this.type_define.vh_fetch_url, {
                             plate: this.new_vehicle.main_vehicle_plate,
                         });
-                        let bv = await this.$send_req(this.type_define.vh_fetch_url, {
+                        const bv = await this.$send_req(this.type_define.vh_fetch_url, {
                             plate: this.new_vehicle.behind_vehicle_plate,
                         });
-                        let dr = await this.$send_req(this.type_define.dr_fetch_url, {
+                        const dr = await this.$send_req(this.type_define.dr_fetch_url, {
                             phone: this.new_vehicle.driver_phone,
                             name: this.new_vehicle.driver_name,
                         });
@@ -528,12 +563,12 @@ export default {
             if (!this.isCarNo(carNo)) {
                 callback(rule.message);
             } else {
-                //此处必须有，去掉会发生奇怪错误
+                // 此处必须有，去掉会发生奇怪错误
                 callback();
             }
         },
         vehicle_team_selected: async function (vt) {
-            let vs = vt.vehicle_sets;
+            const vs = vt.vehicle_sets;
             vs.forEach(ele => {
                 this.vehicles.unshift({
                     main_vehicle: ele.main_vehicle,
@@ -545,43 +580,7 @@ export default {
             this.new_vt_select = null;
             this.add_type = '';
         },
-    },
-    async mounted() {
-        this.query = this.$route.query
-
-        this.plan.stuff_id = parseInt(this.query.stuff_id);
-        if (this.query.bidding_id) {
-            this.bidding_id = parseInt(this.query.bidding_id);
-        }
-        this.stuff_name = this.query.stuff_name;
-        this.saler_name = this.query.company_name;
-        this.company_id = parseInt(this.query.company_id);
-        this.buyer_name = this.company_name;
-        let tmp_date = new Date();
-        tmp_date.setDate(tmp_date.getDate() + 1);
-
-        if (this.query.is_buy == 'true') {
-            this.type_define = {
-                vh_fetch_url: '/supplier/fetch_vehicle',
-                dr_fetch_url: '/supplier/fetch_driver',
-                order_create_url: '/supplier/order_sale_create',
-                pair_get_url: '/supplier/get_vehicle_pair',
-                is_sale: false,
-            }
-            this.saler_name = this.buyer_name;
-            this.buyer_name = this.query.company_name;
-        }
-        let resp = await this.$send_req('/global/get_notice', {
-            company_id: this.company_id
-        });
-        this.get_vehicles();
-        this.get_vt_list();
-        this.notice = resp.notice;
-        if (this.notice) {
-            this.notice_show = true;
-        }
     }
-
 }
 </script>
 
