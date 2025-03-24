@@ -25,16 +25,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libpcre3 libpcre3-dev libx
 RUN ./nginx_upload_install.sh
 COPY lib/* /lib
 RUN apt update
-RUN DEBIAN_FRONTEND=noninteractive apt-get install -y build-essential module-assistant
-
-ARG TARGETARCH
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
-    apt-get install -y gcc-multilib; \
-  elif [ "$TARGETARCH" = "arm64" ]; then \
-    apt-get install -y gcc-aarch64-linux-gnu; \
-  fi
-
-
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y gcc-multilib build-essential module-assistant
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libmodbus-dev gdb
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y libmodbus-dev nodejs
 RUN npm install -g pm2
