@@ -440,6 +440,7 @@ module.exports = {
                     plan_time: moment().add(day_offset, 'days').format('YYYY-MM-DD'), stuffId: {
                         [db_opt.Op.in]: [],
                     },
+                    is_buy: false
                 };
                 let stuff = await company.getStuff({ where: { use_for_buy: false } });
                 for (let index = 0; index < stuff.length; index++) {
