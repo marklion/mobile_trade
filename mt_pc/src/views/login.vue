@@ -8,13 +8,16 @@
             <span class="svg-container">
                 <svg-icon icon-class="user" />
             </span>
-            <el-input ref="phone" v-model="loginForm.phone" placeholder="手机号" name="phone" type="text" tabindex="1" auto-complete="on" />
+            <el-input ref="phone" v-model="loginForm.phone" placeholder="手机号" name="phone" type="text" tabindex="0" auto-complete="on" />
         </el-form-item>
         <el-form-item prop="password">
             <span class="svg-container">
                 <svg-icon icon-class="password" />
             </span>
-            <el-input :key="passwordType" ref="password" v-model="loginForm.password" :type="passwordType" placeholder="密码" name="password" tabindex="2" auto-complete="on" @keyup.enter.native="handleLogin" />
+            <el-popover placement="right" trigger="hover">
+                <img src="@/assets/login_prompt.jpg" style="width: 70%; height: 70%;" alt="密码提示">
+                <el-input slot="reference" :key="passwordType" ref="password" v-model="loginForm.password" :type="passwordType" placeholder="密码" name="password" tabindex="-1" auto-complete="on" @keyup.enter.native="handleLogin" />
+            </el-popover>
             <span class="show-pwd" @click="showPwd">
                 <svg-icon :icon-class="passwordType === 'password' ? 'eye' : 'eye-open'" />
             </span>
@@ -41,7 +44,7 @@ export default {
             }
         }
         return {
-            help_url:function() {
+            help_url: function () {
                 return process.env.REMOTE_HOST + '/help/'
             },
             loginForm: {
