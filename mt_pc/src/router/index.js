@@ -284,6 +284,12 @@ export const asyncRoutes = [
         name: 'u8c',
         component: () => import('@/views/u8c'),
         meta: { title: 'u8c同步', roles: ['u8c'] }
+      },
+      {
+        path: 'wx_msg',
+        name: 'wx_msg',
+        component: () => import('@/views/admin/WxMsgConfig'),
+        meta: { title: '通知配置', roles: ['global'] }
       }
     ]
   },
@@ -295,10 +301,10 @@ export const asyncRoutes = [
       path: 'OrderCreate',
       name: 'OrderCreate',
       component: () => import('@/views/order/OrderCreate'),
-      meta:{
-        title:'下单',
-        icon:'el-icon-goods',
-        roles:['customer','supplier']
+      meta: {
+        title: '下单',
+        icon: 'el-icon-goods',
+        roles: ['customer', 'supplier']
       },
       hidden: true
     }]
