@@ -37,7 +37,7 @@ export default {
                 plan_status: '',
                 call_vehicle: '',
                 scale_msg: "",
-                biddng_status: '',
+                bidding_status: '',
                 sc_status: '',
             },
         }
@@ -63,7 +63,7 @@ export default {
                 case 'scale_msg':
                     ret = '称重消息';
                     break;
-                case 'biddng_status':
+                case 'bidding_status':
                     ret = '竞价状态';
                     break;
                 case 'sc_status':

@@ -361,7 +361,7 @@ module.exports = {
             plan_status: { type: String, have_to: true, mean: '计划状态', example: 'plan_status' },
             call_vehicle: { type: String, have_to: true, mean: '叫车', example: 'call_vehicle' },
             scale_msg: { type: String, have_to: true, mean: '称重', example: 'scale_msg' },
-            biddng_status: { type: String, have_to: true, mean: '竞价状态', example: 'biddng_status' },
+            bidding_status: { type: String, have_to: true, mean: '竞价状态', example: 'bidding_status' },
             sc_status: { type: String, have_to: true, mean: '安检状态', example: 'sc_status' },
         };
         if (!is_param)

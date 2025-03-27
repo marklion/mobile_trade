@@ -355,12 +355,12 @@ module.exports = {
 
         return ret;
     },
-    get_tempate_id: async function (key) {
+    get_template_id: async function (key) {
         let ret = {
             plan_status: '',
             call_vehicle: '',
             scale_msg: "",
-            biddng_status: '',
+            bidding_status: '',
             sc_status: '',
         };
         const filePath = path.resolve('/database/wx_msg_config.json');
@@ -381,7 +381,7 @@ module.exports = {
     },
     send_plan_status_msg: async function (plan) {
         let req = {
-            template_id: await this.get_tempate_id('plan_status'),
+            template_id: await this.get_template_id('plan_status'),
             // miniprogram: {
             //     appid: appid,
             //     pagepath: 'pages/OrderList'
@@ -402,7 +402,7 @@ module.exports = {
     },
     call_vehicle_msg: async function (plan) {
         let req = {
-            template_id: await this.get_tempate_id('call_vehicle'),
+            template_id: await this.get_template_id('call_vehicle'),
             // miniprogram: {
             //     appid: appid,
             //     pagepath: 'pages/OrderList'
@@ -424,7 +424,7 @@ module.exports = {
     },
     plan_scale_msg: async function (plan) {
         let req = {
-            template_id: await this.get_tempate_id('scale_msg'),
+            template_id: await this.get_template_id('scale_msg'),
             data: {
                 thing4: {
                     value: plan.stuff.name,
@@ -461,7 +461,7 @@ module.exports = {
     },
     bidding_start_msg: async function (bidding_name, begin_time, user_open_id) {
         let req = {
-            template_id: await this.get_tempate_id('biddng_status'),
+            template_id: await this.get_template_id('bidding_status'),
             data: {
                 first: {
                     value: '竞价开始',
@@ -481,7 +481,7 @@ module.exports = {
         let stuff = await bc.getStuff()
         let bidding_name = bc.comment + stuff.name;
         let req = {
-            template_id: await this.get_tempate_id('biddng_status'),
+            template_id: await this.get_template_id('bidding_status'),
             data: {
                 first: {
                     value: '出价',
@@ -509,7 +509,7 @@ module.exports = {
         let stuff = await bc.getStuff()
         let bidding_name = bc.comment + stuff.name;
         let req = {
-            template_id: await this.get_tempate_id('biddng_status'),
+            template_id: await this.get_template_id('bidding_status'),
             data: {
                 first: {
                     value: '恭喜您，中标了',
@@ -529,7 +529,7 @@ module.exports = {
         let stuff = await bc.getStuff()
         let bidding_name = bc.comment + stuff.name;
         let req = {
-            template_id: await this.get_tempate_id('biddng_status'),
+            template_id: await this.get_template_id('bidding_status'),
             data: {
                 first: {
                     value: '竞价结束',
@@ -566,7 +566,7 @@ module.exports = {
     send_sc_check_msg_to_driver: async function (check_msg, order_id, openId) {
         await send_wx_msg({
             touser: openId,
-            template_id: await this.get_tempate_id('sc_status'),
+            template_id: await this.get_template_id('sc_status'),
             data: {
                 const2: { value: check_msg },
                 character_string1: { value: order_id.toString() }
@@ -575,7 +575,7 @@ module.exports = {
     },
     send_sc_check_msg_to_checker: async function (check_msg, order_id, company) {
         let req = {
-            template_id: await this.get_tempate_id('sc_status'),
+            template_id: await this.get_template_id('sc_status'),
             data: {
                 const2: { value: check_msg },
                 character_string1: { value: order_id.toString() }

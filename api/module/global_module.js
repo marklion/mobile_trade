@@ -1898,7 +1898,7 @@ module.exports = {
             params: {},
             result: api_param_result_define.wx_msg_template_define(false),
             func: async function () {
-                ret = await wx_api_util.get_tempate_id();
+                let ret = await wx_api_util.get_template_id();
                 return ret;
             }
         },
