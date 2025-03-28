@@ -1,25 +1,30 @@
 *** Settings ***
 Resource  ../stuff/stuff_opt.resource
 Resource  ../safe_check/sc_opt.resource
-Suite Setup  Prepare For Msg Test
+Suite Setup  Run Keywords  Prepare For Msg Test  AND  Init Wx Msg Config
 Suite Teardown  Clean Up Msg Test
 
 *** Variables ***
 ${mv}
 ${bv}
 ${dv}
+${plan_status}  ps
+${call_vehicle}  cv
+${scale_msg}  sm
+${bidding_status}  bs
+${sc_status}  ss
 
 *** Test Cases ***
 Plan Create Msg
     [Teardown]  Plan Reset
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
-    Msg Verify    opid1234    qn42DMtvKzNMpOw1wz0DHTqAOPO9PiYDBzI3vz6Laxg
+    Msg Verify    opid1234    ${plan_status}
 
 Plan Confirm Msg
     [Teardown]  Plan Reset
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan  ${plan}
-    Msg Verify    2233    qn42DMtvKzNMpOw1wz0DHTqAOPO9PiYDBzI3vz6Laxg
+    Msg Verify    2233    ${plan_status}
 
 Plan Deliver Msg
     [Teardown]  Plan Reset
@@ -27,7 +32,7 @@ Plan Deliver Msg
     Confirm A Plan  ${plan}
     Manual Pay A Plan    ${plan}
     Deliver A Plan  ${plan}  ${23}
-    Msg Verify    2233    qn42DMtvKzNMpOw1wz0DHTqAOPO9PiYDBzI3vz6Laxg
+    Msg Verify    2233    ${plan_status}
 
 Call Vehicle Msg
     [Teardown]  Plan Reset
@@ -36,7 +41,7 @@ Call Vehicle Msg
     Manual Pay A Plan    ${plan}
     Check In A Plan    ${plan}
     Call A Plan    ${plan}
-    Msg Verify  open_id_for_test  foumgWCOdHirOuI8mi28M1XNtyRDqfU9n4pLsX5AMxM
+    Msg Verify  open_id_for_test  ${call_vehicle}
 
 Ticket Msg
     [Teardown]  Plan Reset
@@ -47,8 +52,8 @@ Ticket Msg
     Call A Plan    ${plan}
     Deliver A Plan  ${plan}  ${23}
     WxMsg Catch
-    WxMsg was recieved    open_id_for_test    86yW1daS1NNjQzkrogRe_cc4dqGNVWI-iTcOJX0K6Rk
-    WxMsg was recieved    2233    86yW1daS1NNjQzkrogRe_cc4dqGNVWI-iTcOJX0K6Rk
+    WxMsg was recieved    open_id_for_test    ${scale_msg}
+    WxMsg was recieved    2233    ${scale_msg}
 
 SC Check Msg
     [Setup]  Enable Stuff SC  ${test_stuff}[id]
@@ -60,11 +65,11 @@ SC Check Msg
     FOR  ${itr}  IN  @{resp}
         Driver Upload SC Content  ${plan}  ${itr}[id]
     END
-    Msg Verify    opid1234    2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8
+    Msg Verify    opid1234    ${sc_status}
     Check Pass SC Status By Index  ${plan}  0
-    Msg Verify    open_id_for_test   2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8
+    Msg Verify    open_id_for_test   ${sc_status}
     Check Pass SC Status By Index  ${plan}  0  ${False}
-    Msg Verify    open_id_for_test   2TU7PD2S7qJ1PaJBsodFe5chMQ_ncO8rZeoq_He3hi8
+    Msg Verify    open_id_for_test   ${sc_status}
 
 *** Keywords ***
 Prepare For Msg Test
@@ -86,3 +91,7 @@ Msg Verify
     [Arguments]  ${open_id}  ${msg_id}
     WxMsg Catch
     WxMsg was recieved    ${open_id}    ${msg_id}
+
+Init Wx Msg Config
+    ${req}  Create Dictionary  plan_status=${plan_status}  call_vehicle=${call_vehicle}  scale_msg=${scale_msg}  bidding_status=${bidding_status}  sc_status=${sc_status}
+    Req to Server    /global/set_wx_msg_config    admin_token    ${req}

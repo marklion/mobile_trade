@@ -1859,7 +1859,7 @@ module.exports = {
                     captcha = svgCaptcha.create({width, height, noise, color : true, background : '#cc9966'});
                 }
                 mcache.put(token, captcha.text, 1000 * 60);
-                
+
                 const base64Data = Buffer.from(captcha.data).toString('base64');
                 return {
                     captchaBase64: `data:image/svg+xml;base64,${base64Data}`
@@ -1882,12 +1882,46 @@ module.exports = {
                 const {
                     flag = true
                 } = body;
-            
+
                 mcache.put('is_skip_verify', !flag);
                 return {
                     result : true
                 };
             }
-        }
+        },
+        get_wx_msg_config:{
+            name:'获取微信消息配置',
+            description: '获取微信消息配置',
+            is_write: false,
+            is_get_api: false,
+            need_rbac: true,
+            params: {},
+            result: api_param_result_define.wx_msg_template_define(false),
+            func: async function () {
+                let ret = await wx_api_util.get_template_id();
+                return ret;
+            }
+        },
+        set_wx_msg_config:{
+            name:'设置微信消息配置',
+            description: '设置微信消息配置',
+            is_write: true,
+            is_get_api: false,
+            need_rbac: true,
+            params: api_param_result_define.wx_msg_template_define(true),
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true }
+            },
+            func:async function(body, token) {
+                const filePath = path.resolve('/database/wx_msg_config.json');
+                try {
+                    await fs.promises.writeFile(filePath, JSON.stringify(body, null, 2), 'utf-8');
+                    return { result: true };
+                } catch (error) {
+                    console.error('写入微信消息配置文件失败:', error);
+                    return { result: false };
+                }
+            },
+        },
     },
 }

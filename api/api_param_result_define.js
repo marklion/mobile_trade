@@ -356,4 +356,21 @@ module.exports = {
 
         return ret;
     },
+    wx_msg_template_define:function(is_param) {
+        let ret = {
+            plan_status: { type: String, have_to: true, mean: '计划状态', example: 'plan_status' },
+            call_vehicle: { type: String, have_to: true, mean: '叫车', example: 'call_vehicle' },
+            scale_msg: { type: String, have_to: true, mean: '称重', example: 'scale_msg' },
+            bidding_status: { type: String, have_to: true, mean: '竞价状态', example: 'bidding_status' },
+            sc_status: { type: String, have_to: true, mean: '安检状态', example: 'sc_status' },
+        };
+        if (!is_param)
+        {
+            for (let key in ret)
+            {
+                delete ret[key].have_to;
+            }
+        }
+        return ret;
+    },
 }
