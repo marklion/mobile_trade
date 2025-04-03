@@ -44,7 +44,7 @@
         <fui-form ref="price" top="100">
             <fui-input label="出价" borderTop placeholder="请输入价格" v-model="price_req.price"></fui-input>
             <fui-input label="验证码" borderTop placeholder="验证码" v-model="price_req.v_code">
-                <img :src="verifyPicUrl" alt="验证码图片" @click="get_verify_picture">
+                <img class="captchaImg" :src="verifyPicUrl" alt="验证码图片" @click="get_verify_picture">
             </fui-input>
 
         </fui-form>
@@ -260,7 +260,7 @@ export default {
         get_verify_picture: async function () {
             let result = await this.$send_req('/global/get_verify_pic', {
                 noise: 5,
-                isMath: true
+                isMath: false,
             });
             this.verifyPicUrl = result.captchaBase64;
         }
@@ -278,5 +278,9 @@ export default {
     border-radius: 10px;
     /* 添加圆角 */
     margin-bottom: 20px;
+}
+
+.captchaImg {
+    width: 40%
 }
 </style>
