@@ -1856,7 +1856,7 @@ module.exports = {
                 if(isMath){
                     captcha = svgCaptcha.createMathExpr({width, height, noise, mathMax, mathMin, color : true, background : '#cc9966'});
                 }else{
-                    captcha = svgCaptcha.create({width, height, noise, color : true, background : '#cc9966'});
+                    captcha = svgCaptcha.create({width, height, noise, color : true, background : '#cc9966', ignoreChars:'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ10'});
                 }
                 mcache.put(token, captcha.text, 1000 * 60);
 
