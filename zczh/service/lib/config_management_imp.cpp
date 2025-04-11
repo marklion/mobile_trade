@@ -14,6 +14,7 @@ config_management_handler::config_management_handler()
         {"wr_style_scale", "/bin/wr_style_scale_driver"},
         {"wl_style_scale", "/bin/wl_style_scale_driver"},
         {"card_reader_driver", "/bin/card_reader_driver"},
+        {"tld_style_scale", "/bin/tld_style_scale_driver"},
     };
 
     for (auto &itr : dmt_array)

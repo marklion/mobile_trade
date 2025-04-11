@@ -76,6 +76,8 @@ public:
     {
     }
 
+    virtual void clear_card_no(const int64_t card_reader_id) {}
+
     virtual void push_card_no(const int64_t card_reader_id, const std::string &card_no)
     {
     }

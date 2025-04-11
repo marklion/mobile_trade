@@ -299,4 +299,5 @@ service device_management {
     list<gate_sm_info> get_gate_sm_info() throws (1:gen_exp e),
     string last_card_no(1:i64 card_reader_id) throws (1:gen_exp e),
     oneway void push_card_no(1:i64 card_reader_id, 2:string card_no),
+    oneway void clear_card_no(1:i64 card_reader_id),
 }

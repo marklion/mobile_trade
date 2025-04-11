@@ -171,6 +171,7 @@ public:
     virtual void get_gate_sm_info(std::vector<gate_sm_info> &_return);
     virtual void last_card_no(std::string &_return, const int64_t card_reader_id);
     virtual void push_card_no(const int64_t card_reader_id, const std::string &card_no);
+    virtual void clear_card_no(const int64_t card_reader_id);
 
     void walk_zombie_process();
     void start_device_no_exp(int64_t id);

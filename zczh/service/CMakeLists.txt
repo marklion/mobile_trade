@@ -21,6 +21,7 @@ add_executable(id_reader_driver ./device/drivers/id_reader.cpp)
 add_executable(wr_style_scale_driver ./device/drivers/wr_style_scale.cpp)
 add_executable(wl_style_scale_driver ./device/drivers/wl_style_scale.cpp)
 add_executable(card_reader_driver ./device/drivers/card_reader.cpp)
+add_executable(tld_style_scale_driver ./device/drivers/tld_style_scale.cpp)
 
 find_library(IDL_LIB libzh_idl.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
 find_library(DB_LIB libsqlite_orm.so ${PRJ_INTERNAL_BUILD}/lib ../base/build/lib)
@@ -40,3 +41,4 @@ target_link_libraries(id_reader_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTI
 target_link_libraries(wr_style_scale_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
 target_link_libraries(wl_style_scale_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
 target_link_libraries(card_reader_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)
+target_link_libraries(tld_style_scale_driver pthread thrift ${IDL_LIB} ${DB_LIB} ${UTIL_LIB} rpc_lib)

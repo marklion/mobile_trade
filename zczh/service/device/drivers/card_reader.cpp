@@ -1,16 +1,11 @@
 #include "../driver.h"
 #include <fstream>
+#include <fcntl.h>
 std::string g_dev_ip;
 zh_vcom_link *com_inter = nullptr;
 
-std::string read_line_from_file(const std::string &_file_name)
+std::string read_line_from_file(int fd)
 {
-    int fd = open(_file_name.c_str(), O_RDONLY | O_NONBLOCK);
-    if (fd == -1)
-    {
-        throw std::runtime_error("Failed to open file descriptor");
-    }
-
     std::string line;
     char buffer[256];
     ssize_t bytesRead;
@@ -24,12 +19,10 @@ std::string read_line_from_file(const std::string &_file_name)
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
                 // 非阻塞模式下没有数据可读，返回空字符串
-                close(fd);
                 return "";
             }
             else
             {
-                close(fd);
                 throw std::runtime_error("Failed to read from file descriptor");
             }
         }
@@ -41,9 +34,9 @@ std::string read_line_from_file(const std::string &_file_name)
         else
         {
             buffer[bytesRead] = '\0';
-            for (ssize_t i = 0; i < bytesRead; ++i)
+            for (ssize_t i = 1; i < bytesRead; ++i)
             {
-                if (buffer[i] == '\n')
+                if (buffer[i] == '\r')
                 {
                     endOfLine = true;
                     line.append(buffer, i);
@@ -56,18 +49,38 @@ std::string read_line_from_file(const std::string &_file_name)
             }
         }
     }
-
-    close(fd);
-    return line;
+    return line.substr(1);
 }
 class card_reader_driver : public common_driver
 {
 public:
     std::string last_card_no_read;
     using common_driver::common_driver;
-
+    int m_sel_fd = -1;
     virtual void init_all_set()
     {
+        std::function<void(const std::string &)> log_func = [&](const std::string &_msg)
+        {
+            m_log.err(_msg);
+        };
+        auto fd = util_connect_to_device_tcp_server(g_dev_ip, 30204, &log_func);
+        if (fd >= 0)
+        {
+            m_sel_fd = fd;
+            int flags = fcntl(m_sel_fd, F_GETFL, 0);
+            if (flags == -1)
+            {
+                perror("fcntl(F_GETFL) failed");
+                return;
+            }
+
+            // 添加非阻塞标志
+            if (fcntl(m_sel_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+            {
+                perror("fcntl(F_SETFL) failed");
+                return;
+            }
+        }
         timer_wheel_add_node(
             2,
             [this](void *)
@@ -75,7 +88,8 @@ public:
                 std::string card_no;
                 try
                 {
-                    card_no = read_line_from_file(com_inter->get_pts());
+                    card_no = read_line_from_file(m_sel_fd);
+                    m_log.log("read card no: %s", card_no.c_str());
                 }
                 catch (const std::runtime_error &e)
                 {
@@ -108,6 +122,10 @@ public:
             last_card_no_read = "";
         }
     }
+
+    virtual void clear_card_no(const int64_t card_reader_id) {
+        last_card_no_read = "";
+    }
 };
 
 int main(int argc, char **argv)
@@ -133,7 +151,6 @@ int main(int argc, char **argv)
                   << '\n';
         return -1;
     }
-    com_inter = new zh_vcom_link(g_dev_ip, 30204);
     auto pd = new card_reader_driver("card_reader_driver" + std::to_string(self_id), self_id);
     pd->init_all_set();
     common_driver::start_driver(run_port, pd);

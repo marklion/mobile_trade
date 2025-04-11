@@ -655,6 +655,17 @@ void device_management_handler::last_card_no(std::string &_return, const int64_t
 void device_management_handler::push_card_no(const int64_t card_reader_id, const std::string &card_no)
 {
 }
+void device_management_handler::clear_card_no(const int64_t card_reader_id)
+{
+    auto sp = get_status_from_map(card_reader_id);
+    if (sp)
+    {
+        THR_DEF_CIENT(device_management);
+        THR_CONNECT_DEV(device_management, sp->port);
+        client->clear_card_no(0);
+        TRH_CLOSE();
+    }
+}
 static bool isZombieProcess(pid_t pid)
 {
     int status;
@@ -1106,8 +1117,6 @@ void scale_state_scale::before_enter(abs_state_machine &_sm)
 
 void scale_state_scale::after_exit(abs_state_machine &_sm)
 {
-    auto &sm = dynamic_cast<scale_sm &>(_sm);
-    sm.cast_result();
 }
 
 std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_sm)
@@ -1265,6 +1274,7 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
 void scale_state_clean::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.cast_result();
     THR_CALL_BEGIN(order_center);
     client->order_push_weight(sm.order_number, sm.cur_weight, "自动");
     THR_CALL_END();
@@ -1350,6 +1360,19 @@ void scale_state_issue_card::before_enter(abs_state_machine &_sm)
     auto &sm = dynamic_cast<scale_sm &>(_sm);
     sm.cast_issue_card();
     sm.start_scale_timer(5);
+
+    auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
+    if (set)
+    {
+        auto cr = set->get_parent<sql_device_meta>("card_reader");
+        if (cr)
+        {
+            std::string card_no;
+            THR_CALL_DM_BEGIN();
+            client->clear_card_no(cr->get_pri_id());
+            THR_CALL_DM_END();
+        }
+    }
 }
 
 void scale_state_issue_card::after_exit(abs_state_machine &_sm)
@@ -1379,7 +1402,8 @@ bool issue_card(const std::string &_order_number, double _weight, const std::str
         char sql[1048];
         sprintf(
             sql,
-            "'%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s'",
+            "'%s','%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s'",
+            tmp.order_number.c_str(),
             _card_no.c_str(),
             tmp.plate_number.c_str(),
             tmp.back_plate_number.c_str(),
@@ -1387,8 +1411,7 @@ bool issue_card(const std::string &_order_number, double _weight, const std::str
             tmp.driver_name.c_str(),
             (int)(_weight * 1000),
             (int)(tmp.expect_weight * 1000),
-            util_get_timestring().c_str(),
-            "0");
+            util_get_timestring().c_str());
         cmd += host + " \"" + std::string(sql) + "\"";
         ret = (0 == system(cmd.c_str()));
     }
