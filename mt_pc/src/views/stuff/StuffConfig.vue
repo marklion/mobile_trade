@@ -27,6 +27,7 @@
                                             <el-switch v-model="scope.row.no_need_register" inline-prompt active-text="不用排号" @change="change_no_need_register($event, scope.row)" />
                                             <el-switch v-model="scope.row.checkout_delay" inline-prompt active-text="延迟结算" @change="change_checkout_delay($event, scope.row)"></el-switch>
                                             <el-switch v-model="scope.row.manual_weight" inline-prompt active-text="手动计量" @change="change_manual_weight($event, scope.row)"></el-switch>
+                                            <el-switch v-model="scope.row.need_expect_weight" inline-prompt active-text="需要填写期望重量" @change="change_expect_weight($event,scope.row)"></el-switch>
                                         </div>
                                         <el-button slot="reference" size="mini" type="primary">配置</el-button>
                                     </el-popover>
@@ -432,6 +433,12 @@ export default {
             await this.$send_req('/stuff/sc_config', {
                 stuff_id: item.id,
                 need_sc: event
+            });
+        },
+        change_expect_weight: async function (event, item) {
+            await this.$send_req('/stuff/expect_weight_config', {
+                stuff_id: item.id,
+                need_expect_weight: event
             });
         },
         do_next_price: async function () {
