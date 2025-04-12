@@ -80,35 +80,23 @@ module.exports = {
         return ret;
     },
     export_cash_history: async function (token, contract_id, begin_time, end_time) {
-        let sq = db_opt.get_sq();
         if (!end_time.includes(':')) {
             end_time += ' 23:59:59';
         }
         let company = await rbac_lib.get_company_by_token(token);
         let contract = await db_opt.get_sq().models.contract.findByPk(contract_id);
         if (company && contract && (await company.hasSale_contract(contract) || await company.hasBuy_contract(contract))) {
-            let resp = await contract.getBalance_histories({
-                where: {
-                    [db_opt.Op.and]: [
-                        sq.where(sq.fn('TIMESTAMP', sq.col('time')), {
-                            [db_opt.Op.gte]: sq.fn('TIMESTAMP', begin_time)
-                        }),
-                        sq.where(sq.fn('TIMESTAMP', sq.col('time')), {
-                            [db_opt.Op.lte]: sq.fn('TIMESTAMP', end_time)
-                        }),
-                    ]
-                }
-            });
+            let resp = await this.getBalanceHistoryWithAfterValue(contract, begin_time, end_time);
             let json = [];
             resp.forEach(item => {
                 json.push({
                     time: item.time,
                     operator: item.operator,
                     comment: item.comment,
-                    cash_increased: item.cash_increased
+                    cash_increased: item.cash_increased,
+                    balanceAfter: item.balanceAfter
                 })
             });
-
             let workbook = new ExcelJS.Workbook();
             let worksheet = workbook.addWorksheet((await contract.getBuy_company()).name);
             worksheet.columns = [{
@@ -127,9 +115,14 @@ module.exports = {
                 header: '余额增加',
                 key: 'cash_increased',
                 width: 20
+            }, {
+                header:'变化后余额',
+                key: 'balanceAfter',
+                width: 20
             }];
             worksheet.addRows(json);
             worksheet.getColumn('cash_increased').numFmt = '0.00';
+            worksheet.getColumn('balanceAfter').numFmt = '0.00';
             let file_name = '/uploads/balance' + uuid.v4() + '.xlsx';
             await workbook.xlsx.writeFile('/database' + file_name);
             return file_name;
@@ -382,4 +375,39 @@ module.exports = {
             plans: plans,
         };
     },
+    getBalanceHistoryWithAfterValue: async function (contract, begin_time, end_time) {
+        let sq = db_opt.get_sq();
+
+        const currentBalance = contract.balance;
+        let resp = await contract.getBalance_histories({
+            attributes: [
+                'id',
+                'time',
+                'operator',
+                'comment',
+                'cash_increased',
+                [sq.literal(
+                    `ROUND(${currentBalance} - (
+                        SELECT COALESCE(SUM(cash_increased), 0)
+                        FROM balance_history AS bh
+                        WHERE bh.id > balance_history.id AND bh.contractId = balance_history.contractId
+                    )
+                    , 2)`
+                ), 'balanceAfter']
+            ],
+            where: {
+                [db_opt.Op.and]: [
+                    sq.where(sq.fn('TIMESTAMP', sq.col('time')), {
+                        [db_opt.Op.gte]: sq.fn('TIMESTAMP', begin_time)
+                    }),
+                    sq.where(sq.fn('TIMESTAMP', sq.col('time')), {
+                        [db_opt.Op.lte]: sq.fn('TIMESTAMP', end_time)
+                    }),
+                ]
+            },
+            raw: true,
+            order: [['id', 'DESC']],
+        });
+        return resp;
+    }
 };
