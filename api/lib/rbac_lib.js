@@ -1,3 +1,4 @@
+const { where } = require('sequelize');
 const db_opt = require('../db_opt');
 const moment = require('moment');
 
@@ -346,6 +347,23 @@ module.exports = {
             count = await sq.models.rbac_module.count();
         }
         return { count, rows: ret };
+    },
+    get_all_users: async function (_company, _pageNo) {
+        let sq = db_opt.get_sq();
+        let users = [];
+        let count = 0;
+        let condition = {
+            where:{"company_id":_company.id},
+            order: [['id', 'ASC']],
+            limit: 20,
+            offset: _pageNo * 20,
+        };
+        if (_company) {
+            users = await sq.models.rbac_user.findAll(condition);
+            console.log(user)
+            count = await sq.models.rbac_user.count({where:{"company_id":_company}});
+        }
+        return { count, rows: users }
     },
     user_login: async function (_phone) {
         let ret = '';

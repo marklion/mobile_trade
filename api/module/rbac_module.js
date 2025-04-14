@@ -5,10 +5,35 @@ module.exports = {
     name: 'rbac',
     description: '权限管理',
     methods: {
+        module_get_company_all_user:{
+            name: '获取所有所属公司用户',
+            description: '获取所有所属公司用户',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                company_id: { type: Number, have_to: true, mean: '公司id', example: 123 },
+            },
+            result: {
+                all_user: {
+                    type: Array, mean: '用户列表',
+                    explain: {
+                        id: { type: Number, mean: '用户id', example: 123 },
+                        name: { type: String, mean: '用户姓名', example: 'user_example' },
+                        phone: { type: String, mean: '用户手机号', example: '12345678901' },
+                    }
+                },
+            },
+            func: async (body, token) => {
+                let company = await rbac_lib.get_company_by_token(token);
+                console.log('company', company);
+                let { count, rows } = await rbac_lib.get_all_users(company, body.pageNo);
+                return { all_role: rows, total: count };
+            },
+            
+        },
         role_get_all: {
             name: '获取所有角色',
             description: '获取所有角色',
-
             is_write: false,
             is_get_api: true,
             params: {},
@@ -47,7 +72,6 @@ module.exports = {
         module_get_all: {
             name: '获取所有模块',
             description: '获取所有模块',
-
             is_write: false,
             is_get_api: true,
             params: {},
