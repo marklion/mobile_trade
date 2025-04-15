@@ -872,5 +872,48 @@ module.exports = {
                 }
             }
         },
+        get_verify_pay_config: {
+            name: '获取验款配置',
+            description: '获取验款配置',
+            is_write: false,
+            is_get_api: false,
+            params: {
+            },
+            result: {
+                verify_pay_by_cash: {
+                    type: Boolean, mean: '是否由cash模块验款', example: true
+                },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let ret = {
+                    verify_pay_by_cash: false
+                }
+                if (company) {
+                    ret.verify_pay_by_cash = company.verify_pay_by_cash;
+                }
+                return ret;
+            },
+        },
+        set_verify_pay_config: {
+            name: '设置验款配置',
+            description: '设置验款配置',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                verify_pay_by_cash: { type: Boolean, have_to: true, mean: '是否由cash模块验款', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.verify_pay_by_cash = body.verify_pay_by_cash;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
     }
 }

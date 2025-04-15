@@ -380,7 +380,12 @@ export default {
         },
         pay_plan: async function () {
             await this.ask_confirm('验款');
-            await this.opt_plan('/sale_management/order_sale_pay')
+            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+            let url_prefix = '/sale_management';
+            if (verify_pay_by_cash) {
+                url_prefix = '/cash'
+            }
+            await this.opt_plan(url_prefix + '/order_sale_pay')
         },
         rollback_plan: async function () {
             let reason = await this.ask_reason('回退');

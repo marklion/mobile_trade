@@ -110,6 +110,7 @@ let db_opt = {
             pressure_config: { type: DataTypes.BOOLEAN, defaultValue: false },
             check_qualification: { type: DataTypes.BOOLEAN, defaultValue: false },
             qualification_expiration_date: { type: DataTypes.STRING(20) },
+            verify_pay_by_cash:{ type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

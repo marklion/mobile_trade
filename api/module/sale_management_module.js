@@ -66,6 +66,10 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company.verify_pay_by_cash) {
+                    throw { err_msg: '无权限，需要余额管理权限才能验款' }
+                }
                 await plan_lib.manual_pay_plan(body.plan_id, token);
                 return { result: true };
             },
@@ -544,7 +548,7 @@ module.exports = {
                 }
             }
         },
-        add_delegate_contract:{
+        add_delegate_contract: {
             name: '添加代销合同',
             description: '添加代销合同',
             is_write: true,
@@ -571,7 +575,7 @@ module.exports = {
                 return ret;
             }
         },
-        del_delegate_contract:{
+        del_delegate_contract: {
             name: '删除代销合同',
             description: '删除代销合同',
             is_write: true,
@@ -598,7 +602,7 @@ module.exports = {
                 return ret;
             }
         },
-        change_plan_delegate:{
+        change_plan_delegate: {
             name: '修改订单代理',
             description: '修改订单代理',
             is_write: true,

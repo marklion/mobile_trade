@@ -140,6 +140,9 @@
         <u-cell title="检查对方资质">
             <u-switch slot="value" v-model="qualification_check" @change="set_company_qualification"></u-switch>
         </u-cell>
+        <u-cell title="验款权限改为余额管理">
+            <u-switch slot="value" v-model="verify_pay_by_cash" @change="set_verify_pay_config"></u-switch>
+        </u-cell>
     </view>
     <view v-else-if="cur_seg == 2">
         <BlackList ref="blacklist_ref" />
@@ -273,6 +276,7 @@ export default {
             show_close_time: false,
             today_date: utils.dateFormatter(new Date(), 'y-m-d h:i', 4, false),
             qualification_check: false,
+            verify_pay_by_cash: false,
             add_zone_stuff_id: 0,
             show_zone_add: false,
             zone_req: {
@@ -341,6 +345,15 @@ export default {
                 enable: this.qualification_check
             });
             await this.get_company_qualification();
+        },
+        set_verify_pay_config: async function () {
+            await this.$send_req('/stuff/set_verify_pay_config', {
+                verify_pay_by_cash: this.verify_pay_by_cash
+            });
+            await this.get_verify_pay_config();
+        },
+        get_verify_pay_config: async function () {
+            this.verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
         },
         get_company_qualification: async function () {
             let ret = await this.$send_req('/stuff/get_check_qualification', {});
@@ -576,6 +589,7 @@ export default {
     onLoad: function () {
         this.init_price_profile();
         this.get_company_qualification();
+        this.get_verify_pay_config();
     }
 }
 </script>

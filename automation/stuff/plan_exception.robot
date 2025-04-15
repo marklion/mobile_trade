@@ -423,9 +423,41 @@ Manual Weight Without Count
     Should Be Equal    ${new_balance}    ${cur_balance}
     Check New Status And History  ${plan}  2  验款
 
+Pay Plan by Different Role
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Pay Verify Role  ${False}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${cash_user}  Add User Only Having Cash
+    ${sale_user}  Add User Only Having Sale
+    Confirm A Plan  ${plan}
 
+    Manual Pay A Plan    ${plan}  ${sale_user}
+    Rollback Plan    ${plan}
+
+    Manual Pay A Plan    ${plan}  ${sale_user}  ${True}  ${True}
+    Manual Pay A Plan    ${plan}  ${cash_user}  ${True}  ${True}
+    Manual Pay A Plan    ${plan}  ${cash_user}  ${False}  ${True}
+
+    Set Pay Verify Role  ${True}
+    Manual Pay A Plan    ${plan}  ${cash_user}  ${True}
+    Rollback Plan    ${plan}
+
+    Manual Pay A Plan    ${plan}  ${cash_user}  ${False}  ${True}
+    Manual Pay A Plan    ${plan}  ${sale_user}  ${True}  ${True}
+    Manual Pay A Plan    ${plan}  ${sale_user}  ${False}  ${True}
 
 *** Keywords ***
+Add User Only Having Cash
+    ${user_token}  New User Login    19911  ${sale_company}[name]  19911opid  cash_user
+    Add Module To User    ${sc_admin_token}    19911    cash  ${False}  cash_only
+    RETURN  ${user_token}
+
+Add User Only Having Sale
+    ${user_token}  New User Login    19912  ${sale_company}[name]  19912opid  sale_user
+    Add Module To User    ${sc_admin_token}    19912    sale_management  ${False}  sale_only
+    RETURN  ${user_token}
 Update Failed
     [Arguments]  ${plan}
     ${bv_new}  Search behind Vehicle by Index  333
@@ -520,11 +552,11 @@ Manual Weight A Plan With Count
     ${req}  Create Dictionary  plan_id=${plan}[id]  count=${1000}
     Req to Server  /scale/manual_weight  ${token}  ${req}
     ${cur_plan}  Get Plan By Id  ${plan}[id]
-    Should Be Equal As Integers  ${cur_plan}[status]  3 
+    Should Be Equal As Integers  ${cur_plan}[status]  3
 
 Manual Weight A Plan Without Count
     [Arguments]  ${plan}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan}[id]   count=${0}
     Req to Server  /scale/manual_weight  ${token}  ${req}
     ${cur_plan}  Get Plan By Id  ${plan}[id]
-    Should Be Equal As Integers  ${cur_plan}[status]  2 
+    Should Be Equal As Integers  ${cur_plan}[status]  2
