@@ -1,4 +1,3 @@
-const { where } = require('sequelize');
 const db_opt = require('../db_opt');
 const moment = require('moment');
 

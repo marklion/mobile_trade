@@ -25,8 +25,7 @@ export default {
         filterable: Boolean,
         item_label: String,
         item_value: String,
-        value: [Number,String],
-        params:Object
+        value: [String, Number],
     },
     computed: {
         should_enable: function () {
@@ -57,9 +56,9 @@ export default {
     methods: {
         refresh: function () {
             this.$nextTick(() => {
-                this.$emit('refresh', this);
+                this.$emit('refresh', this.id);
                 this.$emit('on-change', {
-                    name: this.$refs.select.search_item,
+                    name: this.$refs.select.selectedLabel,
                     id: this.filter_id
                 });
                 this.$refs.filter.cancel_search();

@@ -83,7 +83,6 @@
 </template>
 
 <script>
-import { mapState } from 'vuex';
 import PageContent from '../components/PageContent.vue'
 import SelectSearch from '../components/SelectSearch.vue';
 export default {
@@ -109,10 +108,7 @@ export default {
         return {
             new_user_phone:'',
             selected_module_id: 0,
-            selected_user_id: 0,
             focus_role_id: 0,
-            add_user_diag: false,
-            add_user_phone: '',
             new_role: {
                 name: '',
                 description: '',
