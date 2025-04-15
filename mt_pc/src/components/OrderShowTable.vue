@@ -92,6 +92,13 @@
     <el-drawer destroy-on-close title="计划详情" :visible.sync="show_plan_detail" direction="rtl" size="70%">
         <order-detail :motived="motived" :plan="focus_plan" @refresh="show_plan_detail= false; refresh_order()"></order-detail>
     </el-drawer>
+    <el-dialog append-to-body title="设置代理" :visible.sync="delegate_show" width="30%">
+        <select-search body_key="delegates" get_url="/stuff/get_delegates" item_label="name" item_value="id" :permission_array="['sale_management', 'buy_management']" v-model="delegate_id"></select-search>
+        <span slot="footer">
+            <el-button @click="delegate_show= false">取 消</el-button>
+            <el-button type="primary" @click="set_delegate">确 定</el-button>
+        </span>
+    </el-dialog>
 </div>
 </template>
 
@@ -118,6 +125,8 @@ export default {
     },
     data: function () {
         return {
+            delegate_show: false,
+            delegate_id: 0,
             order_selected: [],
             show_plan_detail: false,
             focus_plan: {},
@@ -201,6 +210,10 @@ export default {
                 name: '批量调价',
                 is_change_price: true,
                 url: '/stuff/change_price_by_plan'
+            }, {
+                name: '批量代理',
+                is_set_delegate: true,
+                url: '/sale_management/change_plan_delegate'
             }],
         };
     },
@@ -210,6 +223,18 @@ export default {
         is_buy: Boolean,
     },
     methods: {
+        set_delegate: async function () {
+            for (let i = 0; i < this.order_selected.length; i++) {
+                let order = this.order_selected[i];
+                await this.$send_req('/sale_management/change_plan_delegate', {
+                    plan_id: order.id,
+                    delegate_id: this.delegate_id,
+                });
+            }
+            this.delegate_show = false;
+            this.$refs.order_table.clearSelection();
+            this.refresh_order();
+        },
         do_batch_operate: async function (_index) {
             let opt = this.batch_operate_array[_index];
             if (opt.is_change_price) {
@@ -238,6 +263,8 @@ export default {
                         this.refresh_order();
                     });
                 });
+            } else if (opt.is_set_delegate) {
+                this.delegate_show = true;
             } else {
                 this.$confirm('此操作将批量操作选中的订单, 是否继续?', '提示', {
                     confirmButtonText: '确定',

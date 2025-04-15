@@ -376,6 +376,11 @@ let db_opt = {
             time: { type: DataTypes.STRING },
             is_running: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
+        delegate:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            code: { type: DataTypes.STRING },
+        }
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -515,6 +520,12 @@ let db_opt = {
         _sq.models.u8c_order_info.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.u8c_order_info);
 
+        _sq.models.delegate.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.delegate);
+        _sq.models.delegate.hasMany(_sq.models.contract);
+        _sq.models.contract.belongsTo(_sq.models.delegate);
+        _sq.models.delegate.hasMany(_sq.models.plan);
+        _sq.models.plan.belongsTo(_sq.models.delegate);
     },
     install: async function () {
         console.log('run install');

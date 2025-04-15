@@ -38,6 +38,10 @@ async function get_ticket_func(body, token) {
     if (!plan) {
         plan = orig_plan;
     }
+    let delegate_name = ''
+    if (plan.delegate) {
+        delegate_name = plan.delegate.name
+    }
     return {
         id: plan.id,
         company_name: plan.company.name,
@@ -55,8 +59,9 @@ async function get_ticket_func(body, token) {
         is_buy: plan.is_buy,
         trans_company_name: plan.trans_company_name,
         stuff_name: plan.stuff.name,
-        fw_info:plan.first_weight,
-        sw_info:plan.second_weight,
+        fw_info: plan.first_weight,
+        sw_info: plan.second_weight,
+        delegate_name: delegate_name,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
@@ -1826,22 +1831,22 @@ module.exports = {
                 }
             }
         },
-        get_verify_pic : {
-            name : '获取图片验证码',
+        get_verify_pic: {
+            name: '获取图片验证码',
             description: '获取图片验证码',
             is_write: false,
             is_get_api: false,
             need_rbac: false,
             params: {
-                isMath: {type: Boolean, have_to: false, mean: '是否数学表达式', example: false},
+                isMath: { type: Boolean, have_to: false, mean: '是否数学表达式', example: false },
                 width: { type: Number, have_to: false, mean: '图片宽度', example: 100 },
                 height: { type: Number, have_to: false, mean: '图片高度', example: 30 },
                 mathMin: { type: Number, have_to: false, mean: '算式中的最小值', example: 1 },
                 mathMax: { type: Number, have_to: false, mean: '算式中的最大值', example: 100 },
-                noise : { type: Number, have_to: false, mean: '干扰数量', example: 3 },
+                noise: { type: Number, have_to: false, mean: '干扰数量', example: 3 },
             },
             result: {
-                captchaBase64: {type : String, mean: '验证码图片, 直接设置到img标签的url里', example : 'data:image/svg+xml;base64,PHN2ZyB4bWxulsbD0ibm9uZSIvPjwvc3ZnPg=='}
+                captchaBase64: { type: String, mean: '验证码图片, 直接设置到img标签的url里', example: 'data:image/svg+xml;base64,PHN2ZyB4bWxulsbD0ibm9uZSIvPjwvc3ZnPg==' }
             },
             func: async function (body, token) {
                 const {
@@ -1853,10 +1858,10 @@ module.exports = {
                     mathMax = 20
                 } = body;
                 let captcha;
-                if(isMath){
-                    captcha = svgCaptcha.createMathExpr({width, height, noise, mathMax, mathMin, color : true, background : '#cc9966'});
-                }else{
-                    captcha = svgCaptcha.create({width, height, noise, color : true, background : '#cc9966', ignoreChars:'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ10'});
+                if (isMath) {
+                    captcha = svgCaptcha.createMathExpr({ width, height, noise, mathMax, mathMin, color: true, background: '#cc9966' });
+                } else {
+                    captcha = svgCaptcha.create({ width, height, noise, color: true, background: '#cc9966', ignoreChars: 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ10' });
                 }
                 mcache.put(token, captcha.text, 1000 * 60);
 
@@ -1866,14 +1871,14 @@ module.exports = {
                 };
             }
         },
-        need_verify_pic : {
-            name : '是否开启竞价验证码',
+        need_verify_pic: {
+            name: '是否开启竞价验证码',
             description: '是否开启竞价验证码',
             is_write: false,
             is_get_api: false,
             need_rbac: true,
             params: {
-                flag: {type: Boolean, have_to: false, mean: '是否开启竞价验证码', example: 'false = 关闭验证码校验， default = true'}
+                flag: { type: Boolean, have_to: false, mean: '是否开启竞价验证码', example: 'false = 关闭验证码校验， default = true' }
             },
             result: {
                 result: { type: Boolean, mean: '设置结果', example: true }
@@ -1885,12 +1890,12 @@ module.exports = {
 
                 mcache.put('is_skip_verify', !flag);
                 return {
-                    result : true
+                    result: true
                 };
             }
         },
-        get_wx_msg_config:{
-            name:'获取微信消息配置',
+        get_wx_msg_config: {
+            name: '获取微信消息配置',
             description: '获取微信消息配置',
             is_write: false,
             is_get_api: false,
@@ -1902,8 +1907,8 @@ module.exports = {
                 return ret;
             }
         },
-        set_wx_msg_config:{
-            name:'设置微信消息配置',
+        set_wx_msg_config: {
+            name: '设置微信消息配置',
             description: '设置微信消息配置',
             is_write: true,
             is_get_api: false,
@@ -1912,7 +1917,7 @@ module.exports = {
             result: {
                 result: { type: Boolean, mean: '设置结果', example: true }
             },
-            func:async function(body, token) {
+            func: async function (body, token) {
                 const filePath = path.resolve('/database/wx_msg_config.json');
                 try {
                     await fs.promises.writeFile(filePath, JSON.stringify(body, null, 2), 'utf-8');

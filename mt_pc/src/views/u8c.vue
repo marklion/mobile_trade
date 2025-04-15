@@ -11,6 +11,8 @@
                     <el-table-column type="selection"></el-table-column>
                     <el-table-column min-width="170" prop="company.name" label="下单公司">
                     </el-table-column>
+                    <el-table-column min-width="170" prop="delegate.name" label="代理公司">
+                    </el-table-column>
                     <el-table-column min-width="50" prop="stuff.name" label="物料">
                     </el-table-column>
                     <el-table-column min-width="100" prop="plan_time" label="计划日期">

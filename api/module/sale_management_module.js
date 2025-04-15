@@ -4,6 +4,7 @@ const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const common = require('./common');
 const moment = require('moment');
+const util_lib = require('../lib/util_lib');
 module.exports = {
     name: 'sale_management',
     description: '销售管理',
@@ -541,6 +542,101 @@ module.exports = {
                     default_impact_plan: company.price_impact_plan,
                     hide_impact_selector: company.hide_impact_selector,
                 }
+            }
+        },
+        add_delegate_contract:{
+            name: '添加代销合同',
+            description: '添加代销合同',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                delegate_id: { type: Number, have_to: true, mean: '代理ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let ret = { result: false };
+                let company = await rbac_lib.get_company_by_token(token);
+                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
+                let delegate = await db_opt.get_sq().models.delegate.findByPk(body.delegate_id);
+                if (contract && delegate && company && await company.hasSale_contract(contract)) {
+                    if (await delegate.hasContract(contract)) {
+                        throw { err_msg: '已经添加过了' }
+                    }
+                    await delegate.addContract(contract);
+                    ret.result = true;
+                }
+                return ret;
+            }
+        },
+        del_delegate_contract:{
+            name: '删除代销合同',
+            description: '删除代销合同',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                delegate_id: { type: Number, have_to: true, mean: '代理ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let ret = { result: false };
+                let company = await rbac_lib.get_company_by_token(token);
+                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
+                let delegate = await db_opt.get_sq().models.delegate.findByPk(body.delegate_id);
+                if (contract && delegate && company && await company.hasSale_contract(contract)) {
+                    if (!await delegate.hasContract(contract)) {
+                        throw { err_msg: '没有添加过' }
+                    }
+                    await delegate.removeContract(contract);
+                    ret.result = true;
+                }
+                return ret;
+            }
+        },
+        change_plan_delegate:{
+            name: '修改订单代理',
+            description: '修改订单代理',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                delegate_id: { type: Number, have_to: false, mean: '代理ID', example: 1 },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let ret = { result: false };
+                let company = await rbac_lib.get_company_by_token(token);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (plan.stuff.company.id == company.id) {
+                    let delegate = await db_opt.get_sq().models.delegate.findByPk(body.delegate_id);
+                    if (delegate) {
+                        await plan.setDelegate(delegate);
+                    }
+                    else {
+                        await plan.setDelegate(null);
+                    }
+                    let last_archive = await plan.getArchive_plan();
+                    if (last_archive) {
+                        await last_archive.destroy();
+                        plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                        let content = plan.toJSON();
+                        await plan.createArchive_plan({ content: JSON.stringify(content) });
+                    }
+
+                    ret.result = true;
+                }
+                else {
+                    throw { err_msg: '没有权限' }
+                }
+
+                return ret;
             }
         },
     },

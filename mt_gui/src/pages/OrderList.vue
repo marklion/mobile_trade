@@ -175,7 +175,8 @@
                             </module-filter>
                         </view>
                         <view slot="label">
-                            <fui-text v-if="focus_plan.status == 3 && !focus_plan.manual_close" type="primary" text="查看磅单" :size="28" decoration="underline" @click="go_to_ticket"></fui-text>
+                            <fui-text v-if="focus_plan.status == 3 && !focus_plan.manual_close" type="primary" text="查看磅单" :size="28" decoration="underline" @click="go_to_ticket(false)"></fui-text>
+                            <fui-text v-if="focus_plan.status == 3 && !focus_plan.manual_close && focus_plan.delegate" type="primary" text="内部磅单" :size="28" decoration="underline" @click="go_to_ticket(true)"></fui-text>
                         </view>
                     </u-cell>
                 </u-cell-group>
@@ -973,9 +974,9 @@ export default {
         prepare_choose_company: function () {
             this.choose_company_show = true;
         },
-        go_to_ticket: function () {
+        go_to_ticket: function (is_internal) {
             uni.navigateTo({
-                url: '/pages/Ticket?id=' + this.focus_plan.id
+                url: '/pages/Ticket?id=' + this.focus_plan.id + '&is_internal=' + is_internal
             });
         },
         batch_confirm: async function () {

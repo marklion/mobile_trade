@@ -495,6 +495,13 @@ module.exports = {
             if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
                 plan.status = 1;
                 plan.checkout_delay = plan.stuff.checkout_delay;
+                let delegate = undefined;
+                if (contracts.length == 1) {
+                    delegate = await contracts[0].getDelegate();
+                }
+                if (delegate) {
+                    await plan.setDelegate(delegate);
+                }
                 await plan.save();
                 wx_api_util.send_plan_status_msg(plan);
                 await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
@@ -598,7 +605,7 @@ module.exports = {
                 else {
                     plan.status = 0;
                     rollback_content = '回退确认';
-                    if(plan.register_time){
+                    if (plan.register_time) {
                         await field_lib.handle_cancel_check_in(plan);
                     }
                 }
@@ -617,8 +624,8 @@ module.exports = {
                 else {
                     plan.status = 1;
                     rollback_content = '回退验款';
-                    if(plan.register_time){
-                       await field_lib.handle_cancel_check_in(plan);
+                    if (plan.register_time) {
+                        await field_lib.handle_cancel_check_in(plan);
                     }
                 }
             } else if (plan.status == 3) {
@@ -1240,8 +1247,8 @@ module.exports = {
                 plan_time: element.plan_time,
                 p_time: element.p_time,
                 m_time: element.m_time,
-                mv: (element.main_vehicle?element.main_vehicle.plate:''),
-                bv: (element.behind_vehicle?element.behind_vehicle.plate:''),
+                mv: (element.main_vehicle ? element.main_vehicle.plate : ''),
+                bv: (element.behind_vehicle ? element.behind_vehicle.plate : ''),
                 driver_name: element.driver.name,
                 driver_phone: element.driver.phone,
                 p_weight: this.place_hold(element.p_weight, 0),
