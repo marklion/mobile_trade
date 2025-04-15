@@ -353,18 +353,17 @@ module.exports = {
         let users = [];
         let count = 0;
         let condition = {
-            where:{"companyId":_company.id},
             order: [['id', 'ASC']],
             limit: 20,
             offset: _pageNo * 20,
         };
         if (_company && _company.id) {
             users = await _company.getRbac_users(condition);
-            count = await _company.countRbac_users(condition);
+            count = await _company.countRbac_users();
         }
         else {
             users = await sq.models.rbac_user.findAll(condition);
-            count = await sq.models.rbac_user.count(condition);
+            count = await sq.models.rbac_user.count();
         }
         
         let rows = [];

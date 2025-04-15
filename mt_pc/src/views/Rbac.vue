@@ -48,7 +48,7 @@
         </template>
     </page-content>
     <el-dialog title="新增用户" :visible.sync="add_user_diag" width="30%">
-        <select-search body_key="all_user" get_url="/rbac/module_get_company_all_user" :params="{companyId:current_company_id}" item_label="name" item_value="phone" v-model="new_user_phone" :permission_array="['rbac']"></select-search>
+        <select-search body_key="all_user" get_url="/rbac/module_get_company_all_user"  item_label="name" item_value="phone" v-model="new_user_phone" :permission_array="['rbac']"></select-search>
         <span slot="footer">
             <el-button @click="add_user_diag = false">取消</el-button>
             <el-button type="primary" @click="confirm_add_user">确定</el-button>
@@ -93,7 +93,6 @@ export default {
         "select-search": SelectSearch
     },
     computed: {
-        ...mapState('user', ['id']), 
         add_module_diag: {
             get() {
                 return this.focus_role_id != 0;
@@ -104,9 +103,6 @@ export default {
                 }
             }
         },
-        current_company_id() {
-            return this.id;
-        }
 
     },
     data: function () {
