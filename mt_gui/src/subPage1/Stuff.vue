@@ -7,7 +7,7 @@
                 <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
                     <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
                     <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time" theme="plain" originLeft :scaleRatio="0.8" type="warning"></fui-tag>
+                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time + '(' +(item.close_today?'当日':'前日') + ')'" theme="plain" originLeft :scaleRatio="0.8" type="warning"></fui-tag>
                     <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
                     <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
                     <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
@@ -167,6 +167,9 @@
             <fui-form-item label="关注发票">
                 <u-switch v-model="stuff_ready_fetch.concern_fapiao"></u-switch>
             </fui-form-item>
+            <fui-form-item label="当日关闭">
+                <u-switch v-model="stuff_ready_fetch.close_today"></u-switch>
+            </fui-form-item>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :show="show_delete" v-if="show_delete" :descr="'确定要删除' + item_for_delete.name + '吗？'" @click="delete_stuff">
@@ -250,6 +253,7 @@ export default {
                 close_time: '',
                 delay_days: 0,
                 concern_fapiao: false,
+                close_today: false,
             },
             show_stuff_fetch: false,
             is_update: false,
@@ -517,6 +521,7 @@ export default {
                 close_time: item.close_time,
                 delay_days: item.delay_days,
                 concern_fapiao: item.concern_fapiao,
+                close_today: item.close_today,
             }
             this.show_stuff_fetch = true;
             this.is_update = true;
@@ -570,6 +575,7 @@ export default {
             close_time: '',
             delay_days: 0,
             concern_fapiao: false,
+            close_today: false,
         }
         uni.stopPullDownRefresh();
     },

@@ -57,7 +57,12 @@
                             <el-table-column prop="comment" show-overflow-tooltip label="备注" width="120" align="center"></el-table-column>
                             <el-table-column prop="expect_count" label="期望单车装载量" width="150" align="center" sortable></el-table-column>
                             <el-table-column prop="delay_days" label="允许迟到天数" width="150" align="center" sortable></el-table-column>
-                            <el-table-column prop="close_time" label="自动关闭时间点" width="150" align="center" sortable></el-table-column>
+                            <el-table-column label="自动关闭时间点" width="150" align="center" sortable>
+                                <template slot-scope="scope">
+                                    <span v-if="scope.row.close_time">{{ scope.row.close_time }}({{scope.row.close_today?'当日':'前日'}})</span>
+                                    <span v-else>不关闭</span>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="use_for_buy" label="用于采购" width="100" align="center">
                                 <template slot-scope="scope">
                                     <el-tag :type="scope.row.use_for_buy ? 'success' : 'info'">{{
@@ -118,6 +123,7 @@
                 </el-form-item>
                 <el-form-item label="自动关闭时间点" prop="close_time">
                     <el-time-picker v-model="stuff_ready_fetch.close_time" format="HH:mm" placeholder="选择时间，不填就是不关闭" :default-value="new Date('2000-01-01T01:00:00')"></el-time-picker>
+                    <el-switch v-model="stuff_ready_fetch.close_today" active-text="关闭当日" inactive-text="关闭前日"></el-switch>
                 </el-form-item>
                 <el-form-item label="用于采购" prop="use_for_buy">
                     <el-switch v-model="stuff_ready_fetch.use_for_buy"></el-switch>
@@ -245,6 +251,7 @@ export default {
                 delay_days: 0,
                 concern_fapiao: false,
                 stuff_code: '',
+                close_today: false,
             },
             show_stuff_fetch: false,
             is_update: false,
@@ -532,6 +539,7 @@ export default {
                 delay_days: item.delay_days,
                 concern_fapiao: item.concern_fapiao,
                 stuff_code: item.stuff_code,
+                close_today: item.close_today
             }
             this.show_stuff_fetch = true;
             this.is_update = true;
