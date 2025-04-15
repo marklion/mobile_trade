@@ -102,11 +102,11 @@ export default {
                 }
             }
         },
-
     },
     data: function () {
         return {
             new_user_phone:'',
+            add_user_diag: false,
             selected_module_id: 0,
             focus_role_id: 0,
             new_role: {
@@ -169,7 +169,6 @@ export default {
             });
         },
         add_user: function (row) {
-            
             this.add_user_diag = true; 
             this.current_role_id = row.id; 
         },
