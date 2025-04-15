@@ -46,11 +46,12 @@ module.exports = {
                 close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
-                stuff_code:{type:String,mean:'物料编码',example:'物料编码'}
+                stuff_code:{type:String,mean:'物料编码',example:'物料编码'},
+                close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao, body.stuff_code);
+                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao, body.stuff_code, body.close_today);
             }
         },
         get_all: {
@@ -88,6 +89,7 @@ module.exports = {
                         manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
                         ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                         need_expect_weight: { type: Boolean, mean: '是否需要期望重量', example: false },
+                        close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
                     }
                 },
             },

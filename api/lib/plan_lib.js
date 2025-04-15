@@ -35,7 +35,7 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days, concern_fapiao, stuff_code) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days, concern_fapiao, stuff_code, close_today) {
         let sq = db_opt.get_sq();
         if (use_for_buy == undefined) {
             use_for_buy = false;
@@ -55,6 +55,7 @@ module.exports = {
             stuff_found[0].delay_days = delay_days;
             stuff_found[0].concern_fapiao = concern_fapiao;
             stuff_found[0].stuff_code = stuff_code;
+            stuff_found[0].close_today = close_today;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }
@@ -1451,6 +1452,9 @@ module.exports = {
             }
             if (close_time.length > 0) {
                 let expired_day = moment().subtract(1 + delay_days, 'days').format('YYYY-MM-DD');
+                if (stuff.close_today) {
+                    expired_day = moment().subtract(delay_days, 'days').format('YYYY-MM-DD');
+                }
                 if (moment().isAfter(moment(close_time, 'HH:mm'))) {
                     let plans = await element.getPlans({
                         where: {
