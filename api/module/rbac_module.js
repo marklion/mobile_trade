@@ -11,7 +11,7 @@ module.exports = {
             is_write: false,
             is_get_api: true,
             params: {
-                company_id: { type: Number, have_to: true, mean: '公司id', example: 123 },
+                companyId: { type: Number, have_to: true, mean: '公司id', example: 123 },
             },
             result: {
                 all_user: {
@@ -26,8 +26,8 @@ module.exports = {
             func: async (body, token) => {
                 let company = await rbac_lib.get_company_by_token(token);
                 console.log('company', company);
-                let { count, rows } = await rbac_lib.get_all_users(company, body.pageNo);
-                return { all_role: rows, total: count };
+                let { count, rows } = await rbac_lib.get_all_users(company.id, body.pageNo);
+                return { all_user: rows, total: count };
             },
             
         },

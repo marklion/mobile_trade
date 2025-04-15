@@ -48,7 +48,7 @@
         </template>
     </page-content>
     <el-dialog title="新增用户" :visible.sync="add_user_diag" width="30%">
-        <select-search body_key="all_user" get_url="/rbac/module_get_company_all_user" :params="{company_id:current_company_id}" item_label="description" item_value="id" v-model="selected_user_id" :permission_array="['rbac']"></select-search>
+        <select-search body_key="all_user" get_url="/rbac/module_get_company_all_user" :params="{companyId:current_company_id}" item_label="name" item_value="phone" v-model="new_user_phone" :permission_array="['rbac']"></select-search>
         <span slot="footer">
             <el-button @click="add_user_diag = false">取消</el-button>
             <el-button type="primary" @click="confirm_add_user">确定</el-button>
@@ -83,6 +83,7 @@
 </template>
 
 <script>
+import { mapState } from 'vuex';
 import PageContent from '../components/PageContent.vue'
 import SelectSearch from '../components/SelectSearch.vue';
 export default {
@@ -92,6 +93,7 @@ export default {
         "select-search": SelectSearch
     },
     computed: {
+        ...mapState('user', ['id']), 
         add_module_diag: {
             get() {
                 return this.focus_role_id != 0;
@@ -102,10 +104,14 @@ export default {
                 }
             }
         },
+        current_company_id() {
+            return this.id;
+        }
+
     },
     data: function () {
         return {
-            current_company_id: 156,
+            new_user_phone:'',
             selected_module_id: 0,
             selected_user_id: 0,
             focus_role_id: 0,
@@ -171,21 +177,31 @@ export default {
             });
         },
         add_user: function (row) {
-            this.new_user_phone = ''; 
+            
             this.add_user_diag = true; 
             this.current_role_id = row.id; 
         },
         confirm_add_user: async function () {
-            if (!/^1[3456789]\d{9}$/.test(this.new_user_phone)) {
-                this.$message.error('手机号格式不正确');
-                return;
-            }
+        if (!this.new_user_phone) {
+            this.$message.error('手机号不能为空');
+            return;
+        }
+        if (!this.current_role_id) {
+            this.$message.error('角色 ID 缺失');
+            return;
+        }
+        try {
             await this.$send_req('/rbac/bind_role2user', {
                 phone: this.new_user_phone,
                 role_id: this.current_role_id,
             });
-            this.add_user_diag = false; 
-            this.refresh_roles(); 
+            this.$message.success('用户绑定成功');
+            this.add_user_diag = false;
+            this.refresh_roles();
+        } catch (error) {
+            console.error('绑定用户失败:', error);
+            this.$message.error('绑定用户失败');
+        }
         },
         add_module: async function () {
             if (this.selected_module_id == 0) {

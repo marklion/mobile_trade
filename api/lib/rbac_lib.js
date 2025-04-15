@@ -353,15 +353,29 @@ module.exports = {
         let users = [];
         let count = 0;
         let condition = {
-            where:{"company_id":_company.id},
+            where:{"companyId":_company.id},
             order: [['id', 'ASC']],
             limit: 20,
             offset: _pageNo * 20,
         };
-        if (_company) {
+        if (_company && _company.id) {
+            users = await _company.getRbac_users(condition);
+            count = await _company.countRbac_users(condition);
+        }
+        else {
             users = await sq.models.rbac_user.findAll(condition);
-            console.log(user)
-            count = await sq.models.rbac_user.count({where:{"company_id":_company}});
+            count = await sq.models.rbac_user.count(condition);
+        }
+        
+        let rows = [];
+        for (let index = 0; index < users.length; index++) {
+            let element = users[index];
+            let user = element.toJSON();
+            user.roles = [];
+            (await element.getRbac_roles()).forEach((itr) => {
+                user.roles.push(itr.toJSON());
+            });
+            rows.push(user);
         }
         return { count, rows: users }
     },
