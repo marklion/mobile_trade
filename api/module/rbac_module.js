@@ -23,7 +23,6 @@ module.exports = {
             },
             func: async (body, token) => {
                 let company = await rbac_lib.get_company_by_token(token);
-                console.log('company', company);
                 let { count, rows } = await rbac_lib.get_all_users(company, body.pageNo);
                 return { all_user: rows, total: count };
             },

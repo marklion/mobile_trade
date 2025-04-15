@@ -195,7 +195,6 @@ export default {
             this.add_user_diag = false;
             this.refresh_roles();
         } catch (error) {
-            console.error('绑定用户失败:', error);
             this.$message.error('绑定用户失败');
         }
         },
