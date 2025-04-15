@@ -68,10 +68,18 @@ export default {
         } else if (options.scene) {
             plan_id = parseInt(decodeURIComponent(query.scene))
         }
+
         this.id = plan_id;
         let ticket = await this.$send_req('/global/get_ticket', {
             id: plan_id
         });
+        if (ticket.delegate_name) {
+            if (options.is_internal && options.is_internal == 'true') {
+                ticket.company_name = ticket.delegate_name;
+            } else {
+                ticket.order_company_name = ticket.delegate_name;
+            }
+        }
         this.main_vehicle_plate = ticket.plate;
         let dec_title = '出厂';
         if (ticket.is_buy) {

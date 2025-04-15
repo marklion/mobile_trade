@@ -167,6 +167,7 @@ module.exports = {
         stuff_name: { type: String, mean: '货物名', example: 'stuff_name_example' },
         fw_info: { type: String, mean: '一次计量输入信息', example: 'fw_info_example' },
         sw_info: { type: String, mean: '二次计量输入信息', example: 'sw_info_example' },
+        delegate_name: { type: String, mean: '代理公司名称', example: 'delegate_name_example' },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },
@@ -313,6 +314,13 @@ module.exports = {
         first_weight_fileList: { type: String, mean: '第一次计量图片', example: 'uploads/1.png' },
         second_weight_fileList: { type: String, mean: '第二次计量图片', example: 'uploads/2.png' },
         expect_weight: { type: Number, mean: '预计重量', example: 100 },
+        delegate: {
+            type: Object, mean: '代理信息', explain: {
+                id: { type: Number, mean: 'ID', example: 1 },
+                name: { type: String, mean: '代理公司名称', example: '委托名称' },
+                code: { type: String, mean: '委托编号', example: '委托编号' },
+            }
+        }
     },
     bidding_items: bidding_items,
     dev_data: {
@@ -328,35 +336,33 @@ module.exports = {
         zczh_back_token: { type: String, have_to: false, mean: '卓创账户后端token', example: 'zczh_back_token_example' },
         zc_phone: { type: String, have_to: false, mean: '卓创电话', example: 'zc_phone_example' },
     },
-    u8c_config_detail:function(is_param) {
+    u8c_config_detail: function (is_param) {
         let ret = {
             system_code: { type: String, have_to: true, mean: '系统代码', example: 'u8c' },
-            usercode:{type:String,have_to:true,mean:'用户代码',example:'usercode'},
-            password:{type:String,have_to:true,mean:'密码',example:'password'},
-            url:{type:String,have_to:true,mean:'url',example:'url'},
-            corpid:{type:String,have_to:true,mean:'公司ID',example:'corpid'},
-            cbiztype_sale:{type:String,have_to:true,mean:'销售流程id',example:'cbiztype_sale'},
-            cdeptid_sale:{type:String,have_to:true,mean:'销售部门id',example:'cdeptid_sale'},
-            csalecorpid:{type:String,have_to:true,mean:'销售组织id',example:'csalecorpid'},
-            ccalbodyid:{type:String,have_to:true,mean:'库存组织id',example:'ccalbodyid'},
-            ccurrencytypeid:{type:String,have_to:true,mean:'币种id',example:'ccurrencytypeid'},
-            cbiztype_buy:{type:String,have_to:true,mean:'采购流程id',example:'cbiztype_buy'},
-            cdeptid_buy:{type:String,have_to:true,mean:'采购部门id',example:'cdeptid_buy'},
-            cpurorganization:{type:String,have_to:true,mean:'采购组织id',example:'cpurorganization'},
+            usercode: { type: String, have_to: true, mean: '用户代码', example: 'usercode' },
+            password: { type: String, have_to: true, mean: '密码', example: 'password' },
+            url: { type: String, have_to: true, mean: 'url', example: 'url' },
+            corpid: { type: String, have_to: true, mean: '公司ID', example: 'corpid' },
+            cbiztype_sale: { type: String, have_to: true, mean: '销售流程id', example: 'cbiztype_sale' },
+            cdeptid_sale: { type: String, have_to: true, mean: '销售部门id', example: 'cdeptid_sale' },
+            csalecorpid: { type: String, have_to: true, mean: '销售组织id', example: 'csalecorpid' },
+            ccalbodyid: { type: String, have_to: true, mean: '库存组织id', example: 'ccalbodyid' },
+            ccurrencytypeid: { type: String, have_to: true, mean: '币种id', example: 'ccurrencytypeid' },
+            cbiztype_buy: { type: String, have_to: true, mean: '采购流程id', example: 'cbiztype_buy' },
+            cdeptid_buy: { type: String, have_to: true, mean: '采购部门id', example: 'cdeptid_buy' },
+            cpurorganization: { type: String, have_to: true, mean: '采购组织id', example: 'cpurorganization' },
             idiscounttaxtype: { type: String, have_to: true, mean: '扣税类别', example: 'idiscounttaxtype' },
             ntaxrate_buy: { type: String, have_to: true, mean: '采购税率', example: 'ntaxrate_buy' },
         };
-        if (!is_param)
-        {
-            for (let key in ret)
-            {
+        if (!is_param) {
+            for (let key in ret) {
                 delete ret[key].have_to;
             }
         }
 
         return ret;
     },
-    wx_msg_template_define:function(is_param) {
+    wx_msg_template_define: function (is_param) {
         let ret = {
             plan_status: { type: String, have_to: true, mean: '计划状态', example: 'plan_status' },
             call_vehicle: { type: String, have_to: true, mean: '叫车', example: 'call_vehicle' },
@@ -364,10 +370,8 @@ module.exports = {
             bidding_status: { type: String, have_to: true, mean: '竞价状态', example: 'bidding_status' },
             sc_status: { type: String, have_to: true, mean: '安检状态', example: 'sc_status' },
         };
-        if (!is_param)
-        {
-            for (let key in ret)
-            {
+        if (!is_param) {
+            for (let key in ret) {
                 delete ret[key].have_to;
             }
         }

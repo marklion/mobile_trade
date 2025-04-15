@@ -16,7 +16,8 @@ module.exports = {
                         model: db_opt.get_sq().models.bidding_config
                     }]
                 }]
-            }
+            },
+            {model: db_opt.get_sq().models.delegate, paranoid: false},
         ];
     },
     get_single_plan_by_id: async function (_plan_id) {

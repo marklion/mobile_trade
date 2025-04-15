@@ -50,7 +50,7 @@ module.exports = {
                     });
                     let search_condition = {
                         where: where_condition,
-                        include: [sq.models.company]
+                        include: [sq.models.company, sq.models.delegate]
                     };
                     plans = await sq.models.plan.findAll(search_condition);
                 }
@@ -58,10 +58,20 @@ module.exports = {
                     for (let plan_id of body.plan_ids) {
                         let plan = await db_opt.get_sq().models.plan.findByPk(plan_id.id);
                         plan.company = await plan.getCompany();
+                        plan.delegate = await plan.getDelegate();
                         plans.push(plan);
                     }
                 }
-
+                plans.forEach((itr)=>{
+                    if (itr.delegate)
+                    {
+                        itr.company = {
+                            id:-itr.delegate.id,
+                            name:itr.delegate.name,
+                            code:itr.delegate.code,
+                        }
+                    }
+                });
                 await cash_lib.sync2u8c(user.name, plans, company);
                 return { result: true };
             },

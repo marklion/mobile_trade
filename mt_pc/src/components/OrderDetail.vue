@@ -26,6 +26,8 @@
                     <template slot="title">
                         计划信息
                         <el-button type="text" @click="preview_company_attach">查看双方资质</el-button>
+                        <el-tag closable v-if="plan.delegate" type="primary" @close="cancel_delegate">{{plan.delegate.name}}</el-tag>
+                        <el-button v-else type="primary" icon="el-icon-plus" circle @click="show_delegate_diag = true"></el-button>
                     </template>
                     <template slot="extra">
                         当前状态:{{status_string}}
@@ -112,6 +114,13 @@
     </vue-grid>
     <el-image-viewer :z-index="8888" v-if="show_pics" :on-close="close_preview" :url-list="pics">
     </el-image-viewer>
+    <el-dialog append-to-body title="设置代理" :visible.sync="show_delegate_diag" width="30%">
+        <select-search body_key="delegates" get_url="/stuff/get_delegates" item_label="name" item_value="id" :permission_array="['sale_management', 'buy_management']" v-model="delegate_id"></select-search>
+        <span slot="footer">
+            <el-button @click="show_delegate_diag= false">取 消</el-button>
+            <el-button type="primary" @click="set_delegate">确 定</el-button>
+        </span>
+    </el-dialog>
     <el-dialog append-to-body title="修改信息" :visible.sync="show_update" width="30%">
         <el-form ref="update_form" :model="update_req" label-width="80px" :rules="update_input_rules">
             <el-form-item label="主车号">
@@ -149,6 +158,7 @@ import {
 import moment from 'moment';
 import OrderVerify from './OrderVerify.vue';
 import FcExecute from './FcExecute.vue';
+import SelectSearch from './SelectSearch.vue';
 export default {
     name: 'OrderDetail',
     components: {
@@ -156,7 +166,8 @@ export default {
         VueCell,
         'el-image-viewer': () => import('element-ui/packages/image/src/image-viewer'),
         OrderVerify,
-        FcExecute
+        FcExecute,
+        "select-search": SelectSearch,
     },
     computed: {
         user_authorize: function () {
@@ -213,6 +224,7 @@ export default {
     },
     data: function () {
         return {
+            show_delegate_diag: false,
             show_order_verify: false,
             show_fc_execute: false,
             show_sc_exe: true,
@@ -248,6 +260,7 @@ export default {
                 comment: '',
             },
             show_update: false,
+            delegate_id: 0,
         }
     },
     props: {
@@ -255,6 +268,25 @@ export default {
         motived: Boolean,
     },
     methods: {
+        cancel_delegate: function () {
+            this.$confirm('确定要取消代理吗？', '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning'
+            }).then(async () => {
+                await this.$send_req('/sale_management/change_plan_delegate', {
+                    plan_id: this.plan.id
+                });
+                this.$emit('refresh');
+            }).catch(() => {});
+        },
+        set_delegate: async function () {
+            await this.$send_req('/sale_management/change_plan_delegate', {
+                plan_id: this.plan.id,
+                delegate_id: this.delegate_id,
+            });
+            this.$emit('refresh');
+        },
         close_preview: function () {
             this.show_pics = false;
         },

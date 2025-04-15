@@ -194,20 +194,28 @@ module.exports = {
             let company = u8c_oi.plans[0].company;
             let is_buy = u8c_oi.plans[0].is_buy;
             let contract = undefined;
-            if (is_buy) {
-                contract = (await u8c_oi.company.getBuy_contracts({
-                    where: {
-                        saleCompanyId: company.id,
-                    },
-                }))[0];
+            if (company.code) {
+                contract = {
+                    customer_code: company.code,
+                }
             }
             else {
-                contract = (await u8c_oi.company.getSale_contracts({
-                    where: {
-                        buyCompanyId: company.id,
-                    },
-                }))[0];
+                if (is_buy) {
+                    contract = (await u8c_oi.company.getBuy_contracts({
+                        where: {
+                            saleCompanyId: company.id,
+                        },
+                    }))[0];
+                }
+                else {
+                    contract = (await u8c_oi.company.getSale_contracts({
+                        where: {
+                            buyCompanyId: company.id,
+                        },
+                    }))[0];
+                }
             }
+
             if (is_buy) {
                 ret = {
                     req: {
@@ -280,8 +288,18 @@ module.exports = {
         else {
             await new_u8c_oi.setCompany(company);
             new_u8c_oi.plans = await new_u8c_oi.getPlans({
-                include: [db_opt.get_sq().models.company, db_opt.get_sq().models.stuff]
+                include: [db_opt.get_sq().models.company, db_opt.get_sq().models.stuff, db_opt.get_sq().models.delegate]
             });
+            new_u8c_oi.plans.forEach((itr) => {
+                if (itr.delegate) {
+                    itr.company = {
+                        id: -itr.delegate.id,
+                        name: itr.delegate.name,
+                        code: itr.delegate.code,
+                    }
+                }
+            }
+            );
             new_u8c_oi.company = company;
             this.execute_u8c_oi(new_u8c_oi);
         }

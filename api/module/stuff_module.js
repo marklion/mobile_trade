@@ -755,6 +755,122 @@ module.exports = {
                 await stuff.save();
                 return { result: true };
             }
-        }
+        },
+        add_delegate:{
+            name:'添加代理',
+            description:'添加代理',
+            is_write:true,
+            is_get_api:false,
+            params:{
+                name:{type:String,have_to:true,mean:'代理名称',example:'代理名称'},
+                code:{type:String,have_to:true,mean:'代理编码',example:'代理编码'},
+            },
+            result:{
+                result:{type:Boolean,mean:'结果',example:true}
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let exist = await company.getDelegates({
+                    where: {
+                        [db_opt.Op.or]: [
+                            {
+                                code: body.code
+                            },
+                            {
+                                name: body.name
+                            }
+                        ]
+                    }
+                });
+                if (exist.length == 1)
+                {
+                    throw { err_msg: '代理已存在' };
+                }
+                await company.createDelegate({
+                    name: body.name,
+                    code: body.code
+                });
+                return { result: true };
+            }
+        },
+        del_delegate:{
+            name:'删除代理',
+            description:'删除代理',
+            is_write:true,
+            is_get_api:false,
+            params:{
+                id:{type:Number,have_to:true,mean:'代理ID',example:1},
+            },
+            result:{
+                result:{type:Boolean,mean:'结果',example:true}
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let delegate = await company.getDelegates({
+                    where: {
+                        id: body.id
+                    }
+                });
+                if (delegate.length == 1)
+                {
+                    await delegate[0].destroy();
+                }
+                return { result: true };
+            }
+        },
+        get_delegates: {
+            name: '获取代理',
+            description: '获取代理',
+            is_write: false,
+            is_get_api: true,
+            params: {
+            },
+            result: {
+                delegates: {
+                    type: Array, mean: '代理列表', explain: {
+                        id: { type: Number, mean: '代理ID', example: 1 },
+                        name: { type: String, mean: '代理名称', example: '代理名称' },
+                        code: { type: String, mean: '代理编码', example: '代理编码' },
+                        contracts: {
+                            type: Array, mean: '合同列表', explain: {
+                                id: { type: Number, mean: '合同ID', example: 1 },
+                                buy_company: {
+                                    type: Object, mean: '买方公司', explain: {
+                                        id: { type: Number, mean: '公司ID', example: 1 },
+                                        name: { type: String, mean: '公司名称', example: '公司名称' }
+                                    }
+                                },
+                            }
+                        }
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let company = await rbac_lib.get_company_by_token(token);
+                let ret = await sq.models.delegate.findAndCountAll({
+                    where: {
+                        companyId: company.id
+                    },
+                    limit: 20,
+                    offset: body.pageNo * 20,
+                    order: [['id', 'DESC']],
+                    include:{
+                        model: sq.models.contract,
+                        as: 'contracts',
+                        include: [
+                            {
+                                model: sq.models.company,
+                                as: 'buy_company'
+                            }
+                        ]
+                    }
+                });
+                return {
+                    delegates: ret.rows,
+                    total: ret.count
+                }
+            }
+        },
     }
 }
