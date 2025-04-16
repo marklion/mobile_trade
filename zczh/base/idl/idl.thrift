@@ -138,6 +138,7 @@ struct running_rule {
     6:string oem_name,
     7:i64 weight_turn,
     8:string issue_card_path
+    9:bool gate_strict,
 }
 
 struct device_run_time{
