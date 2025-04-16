@@ -347,6 +347,36 @@ module.exports = {
         }
         return { count, rows: ret };
     },
+    get_all_users: async function (_company, _pageNo) {
+        let sq = db_opt.get_sq();
+        let users = [];
+        let count = 0;
+        let condition = {
+            order: [['id', 'ASC']],
+            limit: 20,
+            offset: _pageNo * 20,
+        };
+        if (_company && _company.id) {
+            users = await _company.getRbac_users(condition);
+            count = await _company.countRbac_users();
+        }
+        else {
+            users = await sq.models.rbac_user.findAll(condition);
+            count = await sq.models.rbac_user.count();
+        }
+        
+        let rows = [];
+        for (let index = 0; index < users.length; index++) {
+            let element = users[index];
+            let user = element.toJSON();
+            user.roles = [];
+            (await element.getRbac_roles()).forEach((itr) => {
+                user.roles.push(itr.toJSON());
+            });
+            rows.push(user);
+        }
+        return { count, rows: users }
+    },
     user_login: async function (_phone) {
         let ret = '';
         let sq = db_opt.get_sq();

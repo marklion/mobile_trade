@@ -47,7 +47,13 @@
             </div>
         </template>
     </page-content>
-
+    <el-dialog title="新增用户" :visible.sync="add_user_diag" width="30%">
+        <select-search body_key="all_user" get_url="/rbac/module_get_company_all_user"  item_label="name" item_value="phone" v-model="new_user_phone" :permission_array="['rbac']"></select-search>
+        <span slot="footer">
+            <el-button @click="add_user_diag = false">取消</el-button>
+            <el-button type="primary" @click="confirm_add_user">确定</el-button>
+        </span>
+    </el-dialog>
     <el-dialog title="新增角色" :visible.sync="create_role_diag" width="50%">
         <el-form :model="new_role" ref="new_role" :rules="new_role_rules">
             <el-form-item label="角色名称" prop="name">
@@ -72,6 +78,7 @@
             <el-button type="primary" @click="add_module">确定</el-button>
         </span>
     </el-dialog>
+    
 </div>
 </template>
 
@@ -98,6 +105,8 @@ export default {
     },
     data: function () {
         return {
+            new_user_phone:'',
+            add_user_diag: false,
             selected_module_id: 0,
             focus_role_id: 0,
             new_role: {
@@ -160,20 +169,29 @@ export default {
             });
         },
         add_user: function (row) {
-            this.$prompt('请输入用户手机号', '提示', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                inputPattern: /^1[3456789]\d{9}$/,
-                inputErrorMessage: '手机号格式不正确'
-            }).then(async ({
-                value
-            }) => {
-                await this.$send_req('/rbac/bind_role2user', {
-                    phone: value,
-                    role_id: row.id
-                });
-                this.refresh_roles();
+            this.add_user_diag = true; 
+            this.current_role_id = row.id; 
+        },
+        confirm_add_user: async function () {
+        if (!this.new_user_phone) {
+            this.$message.error('手机号不能为空');
+            return;
+        }
+        if (!this.current_role_id) {
+            this.$message.error('角色 ID 缺失');
+            return;
+        }
+        try {
+            await this.$send_req('/rbac/bind_role2user', {
+                phone: this.new_user_phone,
+                role_id: this.current_role_id,
             });
+            this.$message.success('用户绑定成功');
+            this.add_user_diag = false;
+            this.refresh_roles();
+        } catch (error) {
+            this.$message.error('绑定用户失败');
+        }
         },
         add_module: async function () {
             if (this.selected_module_id == 0) {
