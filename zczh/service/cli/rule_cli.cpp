@@ -155,6 +155,30 @@ void set_issue_card_path(std::ostream &out, std::vector<std::string> _params)
         TRH_CLOSE();
     }
 }
+static void set_gate_strict(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 0)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            running_rule tmp;
+            client->get_rule(tmp);
+            tmp.gate_strict = true;
+            client->set_rule(tmp);
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
 static void clear(std::ostream &out, std::vector<std::string> _params)
 {
     if (_params.size() != 0)
@@ -189,6 +213,7 @@ std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
     root_menu->Insert(CLI_MENU_ITEM(set_ticket_prefix), "设置磅单号前缀", {"前缀"});
     root_menu->Insert(CLI_MENU_ITEM(weight_turn_set), "设置称重轮数", {"轮数"});
     root_menu->Insert(CLI_MENU_ITEM(set_issue_card_path), "设置发卡系统路径", {"发卡系统中间数据库路径"});
+    root_menu->Insert(CLI_MENU_ITEM(set_gate_strict), "设置大门严格模式");
     root_menu->Insert(CLI_MENU_ITEM(clear), "清除配置");
 
     return root_menu;
@@ -228,6 +253,10 @@ std::string rule_cli::make_bdr()
     if (tmp.issue_card_path.length() > 0)
     {
         ret.push_back("set_issue_card_path " + tmp.issue_card_path);
+    }
+    if (tmp.gate_strict)
+    {
+        ret.push_back("set_gate_strict");
     }
 
     return util_join_string(ret, "\n");

@@ -395,19 +395,10 @@ void device_management_handler::push_id_read(const int64_t id_id, const std::str
                     std::string result = "未找到车辆信息";
                     if (!set->is_scale)
                     {
-                        if (enter_direct)
+                        result = gate_proc_id_plate(id_number, plate_no, enter_direct, *set);
+                        if (result.empty())
                         {
-                            THR_CALL_BEGIN(order_center);
-                            if (client->check_pass_permit("", id_number))
-                            {
-                                result = "";
-                                plate_no = "允许通过";
-                            }
-                            THR_CALL_END();
-                        }
-                        else
-                        {
-                            result = "";
+                            plate_no = "允许通过";
                         }
                     }
                     else
@@ -469,19 +460,7 @@ void device_management_handler::push_plate_read(const int64_t plate_cam_id, cons
                     std::string result = "未找到车辆信息";
                     if (!set->is_scale)
                     {
-                        if (enter_direct)
-                        {
-                            THR_CALL_BEGIN(order_center);
-                            if (client->check_pass_permit(plate_no, ""))
-                            {
-                                result = "";
-                            }
-                            THR_CALL_END();
-                        }
-                        else
-                        {
-                            result = "";
-                        }
+                        result = gate_proc_id_plate("", plate_no, enter_direct, *set);
                     }
                     else
                     {
@@ -778,6 +757,45 @@ void device_management_handler::sm_run_in_scale(int64_t sm_id, std::function<voi
     {
     }
     pthread_mutex_unlock(&map_lock);
+}
+
+std::string device_management_handler::gate_proc_id_plate(const std::string &_id, const std::string &_plate, bool _is_enter, sql_device_set &_set)
+{
+    std::string ret;
+    bool is_strict = false;
+    THR_CALL_BEGIN(config_management);
+    running_rule tmp;
+    client->get_rule(tmp);
+    is_strict = tmp.gate_strict;
+    THR_CALL_END();
+    if (is_strict)
+    {
+        auto plate = _plate;
+        if (plate.empty())
+        {
+            plate = get_plate_no_by_id(_id);
+        }
+        std::string order_number;
+        ret = _set.should_handle_income_plate(plate, order_number);
+    }
+    else
+    {
+        if (_is_enter)
+        {
+            THR_CALL_BEGIN(order_center);
+            if (client->check_pass_permit(_plate, _id))
+            {
+                ret = "";
+            }
+            THR_CALL_END();
+        }
+        else
+        {
+            ret = "";
+        }
+    }
+
+    return ret;
 }
 
 #define GOTHROUGH_EACH_SET(x, y)                                 \

@@ -324,6 +324,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->oem_name = rule.oem_name;
         er->weight_turn = rule.weight_turn;
         er->issue_card_path = rule.issue_card_path;
+        er->gate_strict = rule.gate_strict;
         ret = er->update_record();
     }
     else
@@ -360,6 +361,7 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.oem_name = er->oem_name;
         _return.weight_turn = er->weight_turn;
         _return.issue_card_path = er->issue_card_path;
+        _return.gate_strict = er->gate_strict;
     }
 }
 
