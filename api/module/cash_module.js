@@ -1,5 +1,7 @@
 const cash_lib = require('../lib/cash_lib');
 const common = require('./common');
+const plan_lib = require('../lib/plan_lib');
+const rbac_lib = require('../lib/rbac_lib');
 module.exports = {
     name: 'cash',
     description: '余额管理',
@@ -71,6 +73,25 @@ module.exports = {
                 });
             },
         },
-
+        order_sale_pay: {
+            name: '手工验款',
+            description: '手工验款',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company.verify_pay_by_cash) {
+                    throw { err_msg: '无权限，需要销售管理权限才能验款' }
+                }
+                await plan_lib.manual_pay_plan(body.plan_id, token);
+                return { result: true };
+            },
+        },
     }
 }

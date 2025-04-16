@@ -8,6 +8,8 @@
             </el-switch>
             <el-switch v-model="qualification_check" active-text="检查对方资质" @change="set_company_qualification">
             </el-switch>
+            <el-switch v-model="verify_pay_by_cash" active-text="验款权限设为余额管理" @change="set_verify_pay_config">
+            </el-switch>
         </el-main>
     </el-container>
     <h3>代理配置</h3>
@@ -100,11 +102,13 @@ export default {
             },
             qualification_check: false,
             create_delegate: false,
+            verify_pay_by_cash: false,
         }
     },
     mounted() {
         this.init_price_profile();
         this.get_company_qualification();
+        this.get_verify_pay_config();
     },
     methods: {
         del_delegate_contract: async function (contract_id, delegate_id) {
@@ -185,6 +189,15 @@ export default {
         get_company_qualification: async function () {
             let ret = await this.$send_req('/stuff/get_check_qualification', {});
             this.qualification_check = ret.enable;
+        },
+        get_verify_pay_config: async function () {
+            this.verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+        },
+        set_verify_pay_config: async function () {
+            await this.$send_req('/stuff/set_verify_pay_config', {
+                verify_pay_by_cash: this.verify_pay_by_cash
+            });
+            await this.get_verify_pay_config();
         },
         update_price_profile: async function () {
             await this.$send_req('/sale_management/set_price_change_profile', this.price_profile);

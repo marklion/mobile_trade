@@ -293,9 +293,13 @@ Confirm A Plan
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server  /sale_management/order_sale_confirm  ${token}  ${req}
 Manual Pay A Plan
-    [Arguments]  ${plan}  ${token}=${sc_admin_token}
+    [Arguments]  ${plan}  ${token}=${sc_admin_token}  ${to_cash}=${False}  ${should_fail}=${False}
     ${req}  Create Dictionary  plan_id=${plan}[id]
-    Req to Server  /sale_management/order_sale_pay  ${token}  ${req}
+    ${url_prefix}  Set Variable  /sale_management
+    IF  $to_cash == True
+        ${url_prefix}  Set Variable  /cash
+    END
+    Req to Server  ${url_prefix}/order_sale_pay  ${token}  ${req}  ${should_fail}
 Plan Enter
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]  is_exit=${False}
@@ -471,3 +475,8 @@ Get Charge History
     ${req}  Create Dictionary  contract_id=${contract_id}  begin_time=${yesterday}  end_time=${tomorrow}
     ${resp}  Req Get to Server  /cash/history  ${token}  histories  ${-1}  &{req}
     RETURN  ${resp}
+
+Set Pay Verify Role
+    [Arguments]  ${is_cash}
+    ${req}  Create Dictionary  verify_pay_by_cash=${is_cash}
+    Req to Server  /stuff/set_verify_pay_config  ${sc_admin_token}  ${req}

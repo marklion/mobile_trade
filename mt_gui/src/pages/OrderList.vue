@@ -168,7 +168,7 @@
                                 <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
                                 <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
                                 <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
-                                <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_xxx_confirm('/sale_management/order_sale_pay', '验款')"></fui-button>
+                                <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
                             </module-filter>
                             <module-filter require_module="scale">
                                 <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
@@ -489,7 +489,7 @@ export default {
                     url: this.cur_confirm_url,
                 }, {
                     text: '批量验款',
-                    url: '/sale_management/order_sale_pay'
+                    url: '',
                 }, {
                     text: '批量取消',
                     url: this.cur_close_url ? this.cur_close_url : this.cur_cancel_url,
@@ -764,6 +764,14 @@ export default {
 
     },
     methods: {
+        get_pay_url: async function () {
+            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+            let url_prefix = '/sale_management';
+            if (verify_pay_by_cash) {
+                url_prefix = '/cash'
+            }
+            return url_prefix + '/order_sale_pay';
+        },
         parse_weight_urls: function (urls) {
             if (!urls)
                 return [];
@@ -805,10 +813,14 @@ export default {
                 }
             }
             try {
-
+                let url = e.url;
+                if (e.text == '批量验款')
+                {
+                    url = await this.get_pay_url();
+                }
                 for (let index = 0; index < this.plan_selected.length; index++) {
                     const element = this.plan_selected[index];
-                    this.$send_req(e.url, {
+                    this.$send_req(url, {
                         plan_id: element,
                     }).catch((error) => {
                         console.log(error)
@@ -1243,6 +1255,9 @@ export default {
                 uni.startPullDownRefresh();
             }
             this.show_rollback_confirm = false;
+        },
+        prepare_pay_confirm: async function (info) {
+            this.prepare_xxx_confirm(await this.get_pay_url(), info);
         },
         prepare_xxx_confirm: function (url, info) {
             this.show_xxx_confirm = true;

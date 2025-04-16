@@ -186,7 +186,8 @@ export default {
                 url: this.is_buy ? '/buy_management/order_buy_confirm/' : '/sale_management/order_sale_confirm',
             }, {
                 name: '批量验款',
-                url: '/sale_management/order_sale_pay'
+                url: '',
+                is_pay: true,
             }, {
                 name: '批量取消',
                 url: (() => {
@@ -223,6 +224,14 @@ export default {
         is_buy: Boolean,
     },
     methods: {
+        get_pay_url: async function () {
+            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+            let url_prefix = '/sale_management';
+            if (verify_pay_by_cash) {
+                url_prefix = '/cash'
+            }
+            return url_prefix + '/order_sale_pay';
+        },
         set_delegate: async function () {
             for (let i = 0; i < this.order_selected.length; i++) {
                 let order = this.order_selected[i];
@@ -271,9 +280,13 @@ export default {
                     cancelButtonText: '取消',
                     type: 'warning'
                 }).then(async () => {
+                    let url = opt.url;
+                    if (opt.is_pay) {
+                        url = await this.get_pay_url();
+                    }
                     for (let i = 0; i < this.order_selected.length; i++) {
                         let order = this.order_selected[i];
-                        await this.$send_req(opt.url, {
+                        await this.$send_req(url, {
                             plan_id: order.id,
                         });
                     }

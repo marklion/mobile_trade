@@ -142,19 +142,19 @@ New User Login
     RETURN  ${token}
 
 Add Module To User
-    [Arguments]  ${token}  ${phone}  ${module_name}  ${read_only}=${False}
+    [Arguments]  ${token}  ${phone}  ${module_name}  ${read_only}=${False}  ${self_defined_role_name}=""
     FOR  ${itr}  IN RANGE  4
         IF  $itr == 0 or $itr == 1
-            Add Role  ${token}  role_name_${itr}  ${True}
+            Add Role  ${token}  ${self_defined_role_name}role_name_${itr}  ${True}
         ELSE
-            Add Role  ${token}  role_name_${itr}
+            Add Role  ${token}  ${self_defined_role_name}role_name_${itr}
         END
     END
     ${ran_role}  Evaluate  random.randint(2, 3)
     IF  $read_only
         ${ran_role}  Evaluate  random.randint(0, 1)
     END
-    ${role_added}  Get Role By Name  ${token}  role_name_${ran_role}
+    ${role_added}  Get Role By Name  ${token}  ${self_defined_role_name}role_name_${ran_role}
     Bind Role To Module  ${token}  ${role_added}[name]  ${module_name}
     Bind Role To User  ${token}  ${role_added}[name]  ${phone}
 
