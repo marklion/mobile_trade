@@ -713,6 +713,7 @@ module.exports = {
                     let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
                     if (arrears <= 0) {
                         plan.status = 2;
+                        plan.arrears = 0;
                         await plan.save();
                         await this.rp_history_pay(plan, '自动');
                         plan4next = plan;
@@ -782,6 +783,7 @@ module.exports = {
             if (seal_no) {
                 plan.seal_no = seal_no;
             }
+            plan.arrears = 0;
             await plan.save();
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);
             if (!plan.checkout_delay) {
