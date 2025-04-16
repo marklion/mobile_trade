@@ -150,6 +150,7 @@ let db_opt = {
             second_weight_fileList: { type: DataTypes.TEXT, defaultValue: '' },
             dup_info:{type: DataTypes.STRING},
             expect_weight: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('expect_weight') },
+            arrears: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('arrears')},
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

@@ -194,6 +194,7 @@ module.exports = {
         plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
         unit_price: { type: Number, mean: '单价', example: 1 },
         status: { type: Number, mean: '状态', example: 1 },
+        arrears: { type: Number, mean: '欠款额', example: 10.00}, 
         comment: { type: String, mean: '备注', example: '备注' },
         from_bidding: { type: Boolean, mean: '是否来自竞价', example: true },
         count: { type: Number, mean: '数量', example: 1 },
