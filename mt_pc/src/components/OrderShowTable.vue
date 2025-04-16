@@ -58,6 +58,11 @@
                     </el-table-column>
                     <el-table-column min-width="70" label="状态">
                         <template slot-scope="scope">
+                            <div v-if="scope.row.status == 1">
+                                <el-tag size="mini" type="primary">
+                                    欠:{{scope.row.arrears}}
+                                </el-tag>
+                            </div>
                             <div>
                                 {{status_string(scope.row.status)}}
                             </div>

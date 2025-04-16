@@ -67,6 +67,7 @@
                         <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.count && item.count != 0" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
+                        <fui-tag v-if="item.status == 1" theme="plain" :text="'欠款额:' + item.arrears" :scaleRatio="0.8" type="primary"></fui-tag>
                     </view>
                     <template slot="label">
                         <view>

@@ -705,11 +705,16 @@ module.exports = {
                         },
                     });
                     let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
+                    let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
                     if ((cur_balance - already_verified_cash) >= one_vehicle_cost) {
                         plan.status = 2;
                         await plan.save();
                         await this.rp_history_pay(plan, '自动');
                         plan4next = plan;
+                    }else{
+                        plan.arrears  = arrears;
+                        console.log('arrears------------------------>', arrears);
+                        await plan.save();
                     }
                 }
             });
