@@ -157,7 +157,12 @@ module.exports = {
         }
     },
     contractOutOfDate: function (endDate) {
-        return moment(endDate).diff(moment().format('YYYY-MM-DD'), 'days') < 1;
+        let ret = false;
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (dateRegex.test(endDate) && moment(endDate).diff(moment().format('YYYY-MM-DD'), 'days') < 1){
+            ret = true;
+        }
+        return ret
     },
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
@@ -706,14 +711,13 @@ module.exports = {
                     });
                     let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
                     let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
-                    if ((cur_balance - already_verified_cash) >= one_vehicle_cost) {
+                    if (arrears <= 0) {
                         plan.status = 2;
                         await plan.save();
                         await this.rp_history_pay(plan, '自动');
                         plan4next = plan;
                     }else{
                         plan.arrears  = arrears;
-                        console.log('arrears------------------------>', arrears);
                         await plan.save();
                     }
                 }
