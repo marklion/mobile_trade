@@ -56,7 +56,7 @@ export default {
     methods: {
         refresh: function () {
             this.$nextTick(() => {
-                this.$emit('refresh', this.id);
+                this.$emit('refresh', this.value);
                 this.$emit('on-change', {
                     name: this.$refs.select.selectedLabel,
                     id: this.filter_id
