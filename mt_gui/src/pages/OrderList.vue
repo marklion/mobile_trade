@@ -150,6 +150,7 @@
                                 <module-filter require_module="cash">
                                     {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}
                                 </module-filter>
+                                <fui-tag v-if="focus_plan.status == 1 && focus_plan.arrears > 0" theme="plain" :text="'欠款额:' + focus_plan.arrears" :scaleRatio="0.8" type="warning"></fui-tag>
                             </view>
                             <view slot="right-icon">
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
