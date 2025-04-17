@@ -325,6 +325,8 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->weight_turn = rule.weight_turn;
         er->issue_card_path = rule.issue_card_path;
         er->gate_strict = rule.gate_strict;
+        er->max_j_weight = rule.max_j_weight;
+        er->max_m_weight = rule.max_m_weight;
         ret = er->update_record();
     }
     else
@@ -338,6 +340,8 @@ bool config_management_handler::set_rule(const running_rule &rule)
         tmp.oem_name = rule.oem_name;
         tmp.weight_turn = rule.weight_turn;
         tmp.issue_card_path = rule.issue_card_path;
+        tmp.max_j_weight = rule.max_j_weight;
+        tmp.max_m_weight = rule.max_m_weight;
         ret = tmp.insert_record();
     }
     return ret;
@@ -362,6 +366,8 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.weight_turn = er->weight_turn;
         _return.issue_card_path = er->issue_card_path;
         _return.gate_strict = er->gate_strict;
+        _return.max_j_weight = er->max_j_weight;
+        _return.max_m_weight = er->max_m_weight;
     }
 }
 
