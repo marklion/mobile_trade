@@ -167,6 +167,8 @@ module.exports = {
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
                 stuff_id: { type: Number, have_to: false, mean: '物料ID', example: 12 },
                 company_id: { type: Number, have_to: false, mean: '公司ID', example: 22 },
+                p_time: { type: String, have_to: false, mean: '皮重时间', example: '2020-01-01 22:22:22' },
+                m_time: { type: String, have_to: false, mean: '毛重时间', example: '2020-01-01 22:22:22' },
             },
             result: {
                 result: { type: Boolean, mean: '导出结果', example: true },
