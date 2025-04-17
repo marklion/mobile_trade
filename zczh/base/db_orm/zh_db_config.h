@@ -409,6 +409,8 @@ public:
     long weight_turn = 0;
     std::string issue_card_path;
     long gate_strict = 0;
+    double max_m_weight = 0;
+    double max_j_weight = 0;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -422,6 +424,8 @@ public:
         ret.push_back(sqlite_orm_column("weight_turn", sqlite_orm_column::INTEGER, &weight_turn));
         ret.push_back(sqlite_orm_column("issue_card_path", sqlite_orm_column::STRING, &issue_card_path));
         ret.push_back(sqlite_orm_column("gate_strict", sqlite_orm_column::INTEGER, &gate_strict));
+        ret.push_back(sqlite_orm_column("max_m_weight", sqlite_orm_column::REAL, &max_m_weight));
+        ret.push_back(sqlite_orm_column("max_j_weight", sqlite_orm_column::REAL, &max_j_weight));
 
         return ret;
     }

@@ -136,6 +136,8 @@ public:
     void record_scale_end();
     void print_ticket();
     void trigger_cam_plate();
+    bool is_over_weight(double _p_weight = 0);
+    void cast_is_over_weight(double _p_weight);
 };
 
 class device_management_handler : public device_managementIf
@@ -180,7 +182,7 @@ public:
     void sm_trigger(int64_t sm_id, std::function<bool(abs_state_machine &_sm)> update_func);
     void sm_run_in_scale(int64_t sm_id, std::function<void(abs_state_machine &_sm)> runner);
 
-    std::string gate_proc_id_plate(const std::string &_id,const std::string &_plate, bool _is_enter, sql_device_set &_set);
+    std::string gate_proc_id_plate(const std::string &_id, const std::string &_plate, bool _is_enter, sql_device_set &_set);
 
     static int64_t get_same_side_device(int64_t _input_id, const std::string &_type);
     static int64_t get_diff_side_device(int64_t _input_id, const std::string &_type);

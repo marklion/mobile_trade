@@ -1093,6 +1093,38 @@ void scale_sm::trigger_cam_plate()
     THR_CALL_END();
 }
 
+bool scale_sm::is_over_weight(double _p_weight)
+{
+    bool ret = false;
+    double max_m_weight = 0;
+    double max_j_weight = 0;
+    THR_CALL_BEGIN(config_management);
+    running_rule tmp;
+    client->get_rule(tmp);
+    max_j_weight = tmp.max_j_weight;
+    max_m_weight = tmp.max_m_weight;
+    THR_CALL_END();
+
+    if (_p_weight > 0 && cur_weight > _p_weight)
+    {
+        if (max_m_weight > 0 && cur_weight > max_m_weight)
+        {
+            ret = true;
+        }
+        else if (max_j_weight > 0 && (cur_weight - _p_weight) > max_j_weight)
+        {
+            ret = true;
+        }
+    }
+
+    return ret;
+}
+
+void scale_sm::cast_is_over_weight(double _p_weight)
+{
+    cast_common("超重了, 皮重:" + util_double_to_string(_p_weight) + "吨, 毛重:" + util_double_to_string(cur_weight) + "吨, 净重:" + util_double_to_string(cur_weight - _p_weight) + "吨");
+}
+
 void scale_state_idle::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
@@ -1203,26 +1235,33 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 THR_CALL_BEGIN(order_center);
                 client->get_order(tmp, sm.order_number);
                 THR_CALL_END();
-                if (tmp.p_weight == 0)
+                if (sm.is_over_weight(tmp.p_weight))
                 {
-                    if (need_issue_card && tmp.expect_weight != 0)
-                    {
-                        ret.reset(new scale_state_issue_card());
-                    }
-                    else
-                    {
-                        ret.reset(new scale_state_clean());
-                    }
+                    sm.cast_is_over_weight(tmp.p_weight);
                 }
                 else
                 {
-                    if (tmp.confirm_info.operator_time.length() > 0)
+                    if (tmp.p_weight == 0)
                     {
-                        ret.reset(new scale_state_clean());
+                        if (need_issue_card && tmp.expect_weight != 0)
+                        {
+                            ret.reset(new scale_state_issue_card());
+                        }
+                        else
+                        {
+                            ret.reset(new scale_state_clean());
+                        }
                     }
                     else
                     {
-                        sm.cast_need_confirm();
+                        if (tmp.confirm_info.operator_time.length() > 0)
+                        {
+                            ret.reset(new scale_state_clean());
+                        }
+                        else
+                        {
+                            sm.cast_need_confirm();
+                        }
                     }
                 }
             }

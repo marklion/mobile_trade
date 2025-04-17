@@ -139,6 +139,8 @@ struct running_rule {
     7:i64 weight_turn,
     8:string issue_card_path
     9:bool gate_strict,
+    10:double max_m_weight,
+    11:double max_j_weight,
 }
 
 struct device_run_time{

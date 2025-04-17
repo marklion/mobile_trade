@@ -179,6 +179,33 @@ static void set_gate_strict(std::ostream &out, std::vector<std::string> _params)
         TRH_CLOSE();
     }
 }
+
+static void set_max_weight(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 2)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            running_rule tmp;
+            client->get_rule(tmp);
+            tmp.max_m_weight = atof(_params[0].c_str());
+            tmp.max_j_weight = atof(_params[1].c_str());
+            client->set_rule(tmp);
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
+
 static void clear(std::ostream &out, std::vector<std::string> _params)
 {
     if (_params.size() != 0)
@@ -214,6 +241,7 @@ std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
     root_menu->Insert(CLI_MENU_ITEM(weight_turn_set), "设置称重轮数", {"轮数"});
     root_menu->Insert(CLI_MENU_ITEM(set_issue_card_path), "设置发卡系统路径", {"发卡系统中间数据库路径"});
     root_menu->Insert(CLI_MENU_ITEM(set_gate_strict), "设置大门严格模式");
+    root_menu->Insert(CLI_MENU_ITEM(set_max_weight), "设置最大重量", {"最大毛重", "最大净重"});
     root_menu->Insert(CLI_MENU_ITEM(clear), "清除配置");
 
     return root_menu;
@@ -257,6 +285,10 @@ std::string rule_cli::make_bdr()
     if (tmp.gate_strict)
     {
         ret.push_back("set_gate_strict");
+    }
+    if (tmp.max_m_weight != 0 || tmp.max_j_weight != 0)
+    {
+        ret.push_back("set_max_weight " + std::to_string(tmp.max_m_weight) + " " + std::to_string(tmp.max_j_weight));
     }
 
     return util_join_string(ret, "\n");
