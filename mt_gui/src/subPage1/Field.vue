@@ -21,7 +21,7 @@
                     <view slot="right-icon">
                         <fui-button btnSize="mini" v-if="!item.call_time" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
                         <view v-else-if="!item.enter_time">
-                            <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
+                            <fui-button v-if="item.manual_weight === 1" btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
                             <fui-button btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
                         </view>
                         <view v-else>
