@@ -322,8 +322,7 @@ module.exports = {
         let count = await model.count({ where: where_condition });
         if (!search_condition.only_count) {
             let plans = await model.findAll(search_condition);
-            for (let index = 0; index < plans.length; index++) {
-                const element = plans[index];
+            for (const element of plans) {
                 result.push(await processFn(element));
             }
         }
