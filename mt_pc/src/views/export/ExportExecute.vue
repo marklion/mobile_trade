@@ -3,7 +3,7 @@
     <h2>订单明细导出</h2>
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
-            <export-date :is_buy="single_module.is_buy" :need_stuff="single_module.has_more_filter" :need_company="single_module.has_more_filter" :export_name="single_module.module_name" @do_export="export_order($event, single_module.module)"></export-date>
+            <export-date :is_need_pm_time="true" :is_buy="single_module.is_buy" :need_stuff="single_module.has_more_filter" :need_company="single_module.has_more_filter" :export_name="single_module.module_name" @do_export="export_order($event, single_module.module)"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
@@ -105,6 +105,8 @@ export default {
                     end_time: filter.end_time,
                     stuff_id: filter.stuff_id,
                     company_id: filter.company_id,
+                    m_start_time: filter.m_start_time,
+                    m_end_time: filter.m_end_time
                 });
                 this.show_export_success();
             } catch (error) {
