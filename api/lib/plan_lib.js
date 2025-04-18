@@ -303,20 +303,31 @@ module.exports = {
             return { isDuplicate: false, message: '' };
         }
     },
-    async processPlan(element, replacePlanFn) {
+    processPlan: async function (element, replacePlanFn) {
         let arc_p = await replacePlanFn(element);
+        setDuplicateInfoAndCompany(element);
+        return arc_p || element;
+    },
+    setDuplicateInfoAndCompany(element) {
         element.duplicateInfo = {
             isDuplicate: element.dup_info && element.dup_info.length > 0,
             message: element.dup_info ? element.dup_info : ''
         };
-        if (arc_p) {
-            return arc_p;
-        } else {
-            if (!element.company) {
-                element.company = { name: '(司机选择)' };
-            }
-            return element;
+        if (!element.company) {
+            element.company = { name: '(司机选择)' };
         }
+    },
+    searchPlans: async function (model, where_condition, search_condition, processFn) {
+        let result = [];
+        let count = await model.count({ where: where_condition });
+        if (!search_condition.only_count) {
+            let plans = await model.findAll(search_condition);
+            for (let index = 0; index < plans.length; index++) {
+                const element = plans[index];
+                result.push(await processFn(element));
+            }
+        }
+        return { rows: result, count: count };
     },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -327,20 +338,10 @@ module.exports = {
             limit: 20,
             where: where_condition,
             include: util_lib.plan_detail_include(),
-
         };
-        let result = [];
-        let count = await user.countPlans({ where: where_condition });
-        if (!_condition.only_count) {
-            let bought_plans = await user.getPlans(search_condition);
-
-            for (let index = 0; index < bought_plans.length; index++) {
-                const element = bought_plans[index];
-                result.push(await processPlan(element, this.replace_plan2archive.bind(this)));
-            }
-        }
-
-        return { rows: result, count: count };
+        return await searchPlans(user, where_condition, search_condition, async (element) => {
+            return await processPlan(element, this.replace_plan2archive.bind(this));
+        });
     },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -362,16 +363,9 @@ module.exports = {
             where: where_condition,
             include: util_lib.plan_detail_include(),
         };
-        let result = [];
-        let count = await sq.models.plan.count({ where: where_condition });
-        if (!_condition.only_count) {
-            let sold_plans = await sq.models.plan.findAll(search_condition);
-            for (let index = 0; index < sold_plans.length; index++) {
-                const element = sold_plans[index];
-                result.push(await processPlan(element, this.replace_plan2archive.bind(this)));
-            }
-        }
-        return { rows: result, count: count };
+        return await searchPlans(user, where_condition, search_condition, async (element) => {
+            return await processPlan(element, this.replace_plan2archive.bind(this));
+        });
     },
     update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address) {
         let sq = db_opt.get_sq();
@@ -867,12 +861,14 @@ module.exports = {
     rp_history_close: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '关闭');
         let plan = await util_lib.get_single_plan_by_id(_plan.id);
+        await updateArchivePlan(plan);
+    },
+    updateArchivePlan: async function (plan) {
         let last_archive = await plan.getArchive_plan();
         if (last_archive) {
             await last_archive.destroy();
         }
         let content = plan.toJSON();
-        content.sc_info = (await sc_lib.get_sc_status_by_plan(plan)).reqs;
         if (!content.company) {
             content.company = { name: '(司机选择)' };
         }
@@ -881,15 +877,7 @@ module.exports = {
     rp_history_cancel: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '取消');
         let plan = await util_lib.get_single_plan_by_id(_plan.id);
-        let last_archive = await plan.getArchive_plan();
-        if (last_archive) {
-            await last_archive.destroy();
-        }
-        let content = plan.toJSON();
-        if (!content.company) {
-            content.company = { name: '(司机选择)' };
-        }
-        await plan.createArchive_plan({ content: JSON.stringify(content) });
+        await updateArchivePlan(plan);
     },
     rp_history_price_change: async function (_plan, _operator, _new_price) {
         await this.record_plan_history(_plan, _operator, '价格变为:' + _new_price);
@@ -1166,24 +1154,27 @@ module.exports = {
             }
         });
     },
+    buildTimeCondition(body, sq) {
+        return [
+            sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
+            }),
+            sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
+            }),
+            sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
+                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
+            }),
+            sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
+                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
+            }),
+        ];
+    },
     filter_plan4user: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
         let cond = {
-            [db_opt.Op.and]: [
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
-                }),
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
-                }),
-                sq.where(sq. fn('TIMESTAMP', sq. col('m_time')), {
-                    [db_opt.Op.gte]: sq. fn( 'TIMESTAMP', body.m_start_time)
-                }),
-                sq.where(sq. fn( 'TIMESTAMP', sq. col('m_time')), {
-                    [db_opt. Op. lte]: sq. fn( 'TIMESTAMP', body.m_end_time)
-                }),
-            ],
-        }
+            [db_opt.Op.and]: buildTimeCondition(body, sq),
+        };
         if (is_buy) {
             cond.is_buy = true;
         }
@@ -1196,22 +1187,7 @@ module.exports = {
     },
     filter_plan4manager: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
-        let cond = {
-            [db_opt.Op.and]: [
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
-                }),
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
-                }),
-                sq.where(sq. fn('TIMESTAMP', sq. col('m_time')), {
-                    [db_opt.Op.gte]: sq. fn( 'TIMESTAMP', body.m_start_time)
-                }),
-                sq.where(sq. fn( 'TIMESTAMP', sq. col('m_time')), {
-                    [db_opt. Op. lte]: sq. fn( 'TIMESTAMP', body.m_end_time)
-                }),
-            ]
-        }
+        buildTimeCondition(body, sq);
         if (body.stuff_id) {
             cond.stuffId = body.stuff_id
         }
