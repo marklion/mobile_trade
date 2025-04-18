@@ -1189,7 +1189,13 @@ module.exports = {
                 sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
                     [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
                 }),
-            ]
+                sq.where(sq. fn('TIMESTAMP', sq. col('m_time')), {
+                    [db_opt.Op.gte]: sq. fn( 'TIMESTAMP', body.m_start_time)
+                }),
+                sq.where(sq. fn( 'TIMESTAMP', sq. col('m_time')), {
+                    [db_opt. Op. lte]: sq. fn( 'TIMESTAMP', body.m_end_time)
+                }),
+            ],
         }
         if (is_buy) {
             cond.is_buy = true;
@@ -1210,6 +1216,12 @@ module.exports = {
                 }),
                 sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
                     [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
+                }),
+                sq.where(sq. fn('TIMESTAMP', sq. col('m_time')), {
+                    [db_opt.Op.gte]: sq. fn( 'TIMESTAMP', body.m_start_time)
+                }),
+                sq.where(sq. fn( 'TIMESTAMP', sq. col('m_time')), {
+                    [db_opt. Op. lte]: sq. fn( 'TIMESTAMP', body.m_end_time)
                 }),
             ]
         }

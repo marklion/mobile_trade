@@ -5,13 +5,13 @@
             <span>{{export_name}}</span>
         </div>
         <div>
-            <el-date-picker style="width:260px" v-model="date_range" type="daterange" align="right" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions">
+            <el-date-picker style="width:350px" v-model="date_range" type="daterange" align="right" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions">
             </el-date-picker>
         </div>
         <div v-if="is_need_pm_time">
             <el-time-picker
             is-range
-            v-model="pm_time"
+            v-model="selected_time"
             range-separator="至"
             start-placeholder="开始时间"
             end-placeholder="结束时间"
@@ -75,14 +75,14 @@ export default {
         }
     },
     data: function () {
-        const now = new Date(); // 当前时间
+        const now = new Date(); 
         const oneSecondLater = new Date(now.getTime() + 1000);
         return {
             contract_id: 0,
             company_id: 0,
             stuff_id: 0,
             date_range: '',
-            pm_time: [now, oneSecondLater],
+            selected_time: [now, oneSecondLater],
             filter: {
                 start_time: '',
                 end_time: '',
@@ -130,18 +130,17 @@ export default {
             return this.filter;
         },
         do_export: async function () {
-            let pm_time = this.pm_time.map(time => moment(time).format('HH:mm:ss'))
-            console.log('pm_time', pm_time);
+            let selected_time = this.selected_time.map(time => moment(time).format('HH:mm:ss'))
             let filter = {};
             this.get_date_range();
             filter.start_time = this.filter.start_time;
             filter.end_time = this.filter.end_time;
-            if(pm_time){
-                filter.p_time = this.filter.start_time + " " + pm_time[0];
-                filter.m_time = this.filter.end_time + " " + pm_time[1];
+            if(selected_time){
+                filter.m_start_time = this.filter.start_time + " " + selected_time[0];
+                filter.m_end_time = this.filter.end_time + " " + selected_time[1];
             }else{
-                filter.p_time = this.filter.start_time + " 00:00:00";
-                filter.m_time = this.filter.end_time + " 23:59:59";
+                filter.m_start_time = this.filter.start_time + " 00:00:00";
+                filter.m_end_time = this.filter.end_time + " 23:59:59";
             }
             if (this.need_company && this.company_id) {
                 filter.company_id = this.company_id;
@@ -152,7 +151,6 @@ export default {
             if (this.need_contract && this.contract_id) {
                 filter.contract_id = this.contract_id;
             }
-            console.log('filter', filter);
             this.$emit('do_export', filter);
         },
     },

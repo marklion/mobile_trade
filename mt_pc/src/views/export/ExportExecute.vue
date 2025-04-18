@@ -105,8 +105,8 @@ export default {
                     end_time: filter.end_time,
                     stuff_id: filter.stuff_id,
                     company_id: filter.company_id,
-                    p_time: filter.p_time,
-                    m_time: filter.m_time
+                    m_start_time: filter.m_start_time,
+                    m_end_time: filter.m_end_time
                 });
                 this.show_export_success();
             } catch (error) {
