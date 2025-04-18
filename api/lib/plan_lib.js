@@ -303,6 +303,21 @@ module.exports = {
             return { isDuplicate: false, message: '' };
         }
     },
+    async processPlan(element, replacePlanFn) {
+        let arc_p = await replacePlanFn(element);
+        element.duplicateInfo = {
+            isDuplicate: element.dup_info && element.dup_info.length > 0,
+            message: element.dup_info ? element.dup_info : ''
+        };
+        if (arc_p) {
+            return arc_p;
+        } else {
+            if (!element.company) {
+                element.company = { name: '(司机选择)' };
+            }
+            return element;
+        }
+    },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
@@ -321,21 +336,7 @@ module.exports = {
 
             for (let index = 0; index < bought_plans.length; index++) {
                 const element = bought_plans[index];
-                let arc_p = await this.replace_plan2archive(element);
-                element.duplicateInfo = {
-                    isDuplicate: element.dup_info && element.dup_info.length > 0,
-                    message: element.dup_info?element.dup_info:''
-                };
-                if (arc_p) {
-                    result.push(arc_p);
-                }
-                else {
-                    if (!element.company) {
-                        element.company = { name: '(司机选择)' };
-                    }
-                    result.push(element);
-                }
-
+                result.push(await processPlan(element, this.replace_plan2archive.bind(this)));
             }
         }
 
@@ -367,23 +368,9 @@ module.exports = {
             let sold_plans = await sq.models.plan.findAll(search_condition);
             for (let index = 0; index < sold_plans.length; index++) {
                 const element = sold_plans[index];
-                let arc_p = await this.replace_plan2archive(element);
-                element.duplicateInfo = {
-                    isDuplicate: element.dup_info && element.dup_info.length > 0,
-                    message: element.dup_info?element.dup_info:''
-                };
-                if (arc_p) {
-                    result.push(arc_p);
-                }
-                else {
-                    if (!element.company) {
-                        element.company = { name: '(司机选择)' };
-                    }
-                    result.push(element);
-                }
+                result.push(await processPlan(element, this.replace_plan2archive.bind(this)));
             }
         }
-
         return { rows: result, count: count };
     },
     update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address) {
