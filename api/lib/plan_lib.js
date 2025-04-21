@@ -873,7 +873,7 @@ module.exports = {
     rp_history_close: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '关闭');
         let plan = await util_lib.get_single_plan_by_id(_plan.id);
-        await updateArchivePlan(plan);
+        await this.updateArchivePlan(plan);
     },
     updateArchivePlan: async function (plan) {
         let last_archive = await plan.getArchive_plan();
@@ -890,7 +890,7 @@ module.exports = {
     rp_history_cancel: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '取消');
         let plan = await util_lib.get_single_plan_by_id(_plan.id);
-        await updateArchivePlan(plan);
+        await this.updateArchivePlan(plan);
     },
     rp_history_price_change: async function (_plan, _operator, _new_price) {
         await this.record_plan_history(_plan, _operator, '价格变为:' + _new_price);
