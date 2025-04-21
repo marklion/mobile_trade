@@ -317,16 +317,29 @@ module.exports = {
             element.company = { name: '(司机选择)' };
         }
     },
-    searchPlans: async function (user, where_condition, search_condition, processFn) {
-        let result = [];
-        let count = await user.countPlans({ where: where_condition });
+    searchPlansByModel: async function (model, where_condition, search_condition, processFn, isUserModel = false) {
+    let result = [];
+    let count;
+    if (isUserModel) {
+        count = await model.countPlans({ where: where_condition });
         if (!search_condition.only_count) {
-            let plans = await user.getPlans(search_condition);
+            let plans = await model.getPlans(search_condition);
             for (const element of plans) {
                 result.push(await processFn(element));
             }
         }
-        return { rows: result, count: count };
+    } else {
+        let sq = db_opt.get_sq();
+        count = await sq.models.plan.count({ where: where_condition });
+        if (!search_condition.only_count) {
+            let plans = await sq.models.plan.findAll(search_condition);
+            for (const element of plans) {
+                result.push(await processFn(element));
+            }
+        }
+    }
+
+    return { rows: result, count: count };
     },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -338,14 +351,21 @@ module.exports = {
             where: where_condition,
             include: util_lib.plan_detail_include(),
         };
-        return await this.searchPlans(user, where_condition, search_condition, async (element) => {
-            return await processPlan(element, this.replace_plan2archive.bind(this));
-        });
+        return await this.searchPlansByModel(user, where_condition, search_condition, async (element) => {
+            let arc_p = await this.replace_plan2archive(element);
+            element.duplicateInfo = {
+                isDuplicate: element.dup_info && element.dup_info.length > 0,
+                message: element.dup_info ? element.dup_info : '',
+            };
+            if (!arc_p && !element.company) {
+                element.company = { name: '(司机选择)' };
+            }
+            return arc_p || element;
+        }, true); 
     },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
-
         let stuff_or = [];
         let stuff = await _company.getStuff({ paranoid: false });
         for (let index = 0; index < stuff.length; index++) {
@@ -353,7 +373,7 @@ module.exports = {
             stuff_or.push({ stuffId: element.id });
         }
         where_condition[db_opt.Op.and].push({
-            [db_opt.Op.or]: stuff_or
+            [db_opt.Op.or]: stuff_or,
         });
         let search_condition = {
             order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
@@ -362,9 +382,17 @@ module.exports = {
             where: where_condition,
             include: util_lib.plan_detail_include(),
         };
-        return await this.searchPlans(_company, where_condition, search_condition, async (element) => {
-            return await processPlan(element, this.replace_plan2archive.bind(this));
-        });
+        return await this.searchPlansByModel(_company, where_condition, search_condition, async (element) => {
+            let arc_p = await this.replace_plan2archive(element);
+            element.duplicateInfo = {
+                isDuplicate: element.dup_info && element.dup_info.length > 0,
+                message: element.dup_info ? element.dup_info : '',
+            };
+            if (!arc_p && !element.company) {
+                element.company = { name: '(司机选择)' };
+            }
+            return arc_p || element;
+        }, false); 
     },
     update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address) {
         let sq = db_opt.get_sq();
