@@ -1207,7 +1207,7 @@ module.exports = {
         }
         if (body.company_id) {
             cond.companyId = body.company_id
-        }1
+        }
         if (is_buy) {
             cond.is_buy = true;
         }
