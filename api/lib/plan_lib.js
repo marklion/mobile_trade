@@ -317,11 +317,11 @@ module.exports = {
             element.company = { name: '(司机选择)' };
         }
     },
-    searchPlans: async function (model, where_condition, search_condition, processFn) {
+    searchPlans: async function (user, where_condition, search_condition, processFn) {
         let result = [];
-        let count = await model.count({ where: where_condition });
+        let count = await user.countPlans({ where: where_condition });
         if (!search_condition.only_count) {
-            let plans = await model.findAll(search_condition);
+            let plans = await user.getPlans(search_condition);
             for (const element of plans) {
                 result.push(await processFn(element));
             }
@@ -338,7 +338,7 @@ module.exports = {
             where: where_condition,
             include: util_lib.plan_detail_include(),
         };
-        return await searchPlans(user, where_condition, search_condition, async (element) => {
+        return await this.searchPlans(user, where_condition, search_condition, async (element) => {
             return await processPlan(element, this.replace_plan2archive.bind(this));
         });
     },
@@ -362,7 +362,7 @@ module.exports = {
             where: where_condition,
             include: util_lib.plan_detail_include(),
         };
-        return await searchPlans(user, where_condition, search_condition, async (element) => {
+        return await this.searchPlans(_company, where_condition, search_condition, async (element) => {
             return await processPlan(element, this.replace_plan2archive.bind(this));
         });
     },
@@ -868,6 +868,7 @@ module.exports = {
             await last_archive.destroy();
         }
         let content = plan.toJSON();
+        content.sc_info = (await sc_lib.get_sc_status_by_plan(plan)).reqs;
         if (!content.company) {
             content.company = { name: '(司机选择)' };
         }
@@ -1172,7 +1173,7 @@ module.exports = {
     filter_plan4user: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
         let cond = {
-            [db_opt.Op.and]: buildTimeCondition(body, sq),
+            [db_opt.Op.and]: this.buildTimeCondition(body, sq),
         };
         if (is_buy) {
             cond.is_buy = true;
@@ -1186,7 +1187,9 @@ module.exports = {
     },
     filter_plan4manager: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
-        buildTimeCondition(body, sq);
+        let cond = {
+            [db_opt.Op.and]: this.buildTimeCondition(body, sq),
+        };
         if (body.stuff_id) {
             cond.stuffId = body.stuff_id
         }
@@ -1204,7 +1207,7 @@ module.exports = {
         }
         if (body.company_id) {
             cond.companyId = body.company_id
-        }
+        }1
         if (is_buy) {
             cond.is_buy = true;
         }
