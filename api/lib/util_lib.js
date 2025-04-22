@@ -17,7 +17,15 @@ module.exports = {
                     }]
                 }]
             },
-            {model: db_opt.get_sq().models.delegate, paranoid: false},
+            { model: db_opt.get_sq().models.delegate, paranoid: false },
+            {
+                model: db_opt.get_sq().models.plan_sct_info, paranoid: false,
+                include: [{
+                    model: db_opt.get_sq().models.sct_scale_item,
+                }],
+                separate: true,
+                order:[['id', 'ASC']]
+            },
         ];
     },
     get_single_plan_by_id: async function (_plan_id) {

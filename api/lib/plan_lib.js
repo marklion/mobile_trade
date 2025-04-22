@@ -9,7 +9,7 @@ const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
 const fc_lib = require('./fc_lib');
-const {Mutex} = require('async-mutex');
+const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 module.exports = {
     close_a_plan: async function (plan, token) {
@@ -159,7 +159,7 @@ module.exports = {
     contractOutOfDate: function (endDate) {
         let ret = false;
         const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-        if (dateRegex.test(endDate) && moment(endDate).diff(moment().format('YYYY-MM-DD'), 'days') < 1){
+        if (dateRegex.test(endDate) && moment(endDate).diff(moment().format('YYYY-MM-DD'), 'days') < 1) {
             ret = true;
         }
         return ret
@@ -305,29 +305,29 @@ module.exports = {
     },
     // 通用搜索函数
     searchPlansByModel: async function (model, where_condition, search_condition, replacePlanFn, isUserModel = false) {
-    let result = [];
-    let count;
-    // 根据模型类型选择查询方法
-    if (isUserModel) {
-        count = await model.countPlans({ where: where_condition });
-        if (!search_condition.only_count) {
-            let plans = await model.getPlans(search_condition);
-            for (const element of plans) {
-                result.push(await this.processPlan(element, replacePlanFn));
+        let result = [];
+        let count;
+        // 根据模型类型选择查询方法
+        if (isUserModel) {
+            count = await model.countPlans({ where: where_condition });
+            if (!search_condition.only_count) {
+                let plans = await model.getPlans(search_condition);
+                for (const element of plans) {
+                    result.push(await this.processPlan(element, replacePlanFn));
+                }
+            }
+        } else {
+            let sq = db_opt.get_sq();
+            count = await sq.models.plan.count({ where: where_condition });
+            if (!search_condition.only_count) {
+                let plans = await sq.models.plan.findAll(search_condition);
+                for (const element of plans) {
+                    result.push(await this.processPlan(element, replacePlanFn));
+                }
             }
         }
-    } else {
-        let sq = db_opt.get_sq();
-        count = await sq.models.plan.count({ where: where_condition });
-        if (!search_condition.only_count) {
-            let plans = await sq.models.plan.findAll(search_condition);
-            for (const element of plans) {
-                result.push(await this.processPlan(element, replacePlanFn));
-            }
-        }
-    }
 
-    return { rows: result, count: count };
+        return { rows: result, count: count };
     },
     processPlan: async function (element, replacePlanFn) {
         let arc_p = await replacePlanFn(element);
@@ -357,27 +357,27 @@ module.exports = {
         return await this.searchPlansByModel(user, where_condition, search_condition, this.replace_plan2archive.bind(this), true);
     },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
-    let sq = db_opt.get_sq();
-    let where_condition = this.make_plan_where_condition(_condition, is_buy);
+        let sq = db_opt.get_sq();
+        let where_condition = this.make_plan_where_condition(_condition, is_buy);
 
-    let stuff_or = [];
-    let stuff = await _company.getStuff({ paranoid: false });
-    for (let index = 0; index < stuff.length; index++) {
-        const element = stuff[index];
-        stuff_or.push({ stuffId: element.id });
-    }
-    where_condition[db_opt.Op.and].push({
-        [db_opt.Op.or]: stuff_or,
-    });
+        let stuff_or = [];
+        let stuff = await _company.getStuff({ paranoid: false });
+        for (let index = 0; index < stuff.length; index++) {
+            const element = stuff[index];
+            stuff_or.push({ stuffId: element.id });
+        }
+        where_condition[db_opt.Op.and].push({
+            [db_opt.Op.or]: stuff_or,
+        });
 
-    let search_condition = {
-        order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
-        offset: _pageNo * 20,
-        limit: 20,
-        where: where_condition,
-        include: util_lib.plan_detail_include(),
-    };
-    return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+        let search_condition = {
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            offset: _pageNo * 20,
+            limit: 20,
+            where: where_condition,
+            include: util_lib.plan_detail_include(),
+        };
+        return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
     },
     update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address) {
         let sq = db_opt.get_sq();
@@ -513,6 +513,9 @@ module.exports = {
             }
             else {
                 throw { err_msg: plan.company.name + '的报计划人未授权' };
+            }
+            if (plan.stuff.manual_weight) {
+                await this.prepare_sct_value(plan);
             }
         }, force);
     },
@@ -710,8 +713,8 @@ module.exports = {
                         await plan.save();
                         await this.rp_history_pay(plan, '自动');
                         plan4next = plan;
-                    }else{
-                        plan.arrears  = arrears;
+                    } else {
+                        plan.arrears = arrears;
                         await plan.save();
                     }
                 }
@@ -1606,5 +1609,18 @@ module.exports = {
             }
         });
         return blacklist != null;
-    }
+    },
+    prepare_sct_value: async function (plan) {
+        let sq = db_opt.get_sq();
+        let all_ssi = await plan.stuff.getSct_scale_items({order: [['id', 'ASC']]});
+        for (let index = 0; index < all_ssi.length; index++) {
+            const element = all_ssi[index];
+            let sct_info = await plan.getPlan_sct_infos({ where: { sctScaleItemId: element.id } });
+            if (sct_info.length == 0) {
+                let new_psi = await sq.models.plan_sct_info.create({ value: '' });
+                await new_psi.setPlan(plan);
+                await new_psi.setSct_scale_item(element);
+            }
+        }
+    },
 };

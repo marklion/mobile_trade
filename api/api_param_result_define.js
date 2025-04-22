@@ -120,6 +120,19 @@ const bidding_items = {
         }
     }
 };
+const plan_sct_infos = {
+    type: Array, mean: '结构化计量信息', explain: {
+        id: { type: Number, mean: 'ID', example: 1 },
+        value: { type: String, mean: '值', example: '值' },
+        sct_scale_item: {
+            type: Object, mean: '结构化计量项', explain: {
+                id: { type: Number, mean: 'ID', example: 1 },
+                name: { type: String, mean: '名称', example: '名称' },
+                type: { type: String, mean: '类型', example: '类型' },
+            }
+        }
+    }
+};
 
 module.exports = {
     exam_paper_info: exam_paper_info,
@@ -168,6 +181,7 @@ module.exports = {
         fw_info: { type: String, mean: '一次计量输入信息', example: 'fw_info_example' },
         sw_info: { type: String, mean: '二次计量输入信息', example: 'sw_info_example' },
         delegate_name: { type: String, mean: '代理公司名称', example: 'delegate_name_example' },
+        plan_sct_infos: plan_sct_infos,
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },
@@ -189,12 +203,13 @@ module.exports = {
     sc_req_detail: sc_req_detail,
 
 
+
     plan_detail_define: {
         id: { type: Number, mean: '计划ID', example: 1 },
         plan_time: { type: String, mean: '计划时间', example: '2020-01-01 12:00:00' },
         unit_price: { type: Number, mean: '单价', example: 1 },
         status: { type: Number, mean: '状态', example: 1 },
-        arrears: { type: Number, mean: '欠款额', example: 10.00}, 
+        arrears: { type: Number, mean: '欠款额', example: 10.00 },
         comment: { type: String, mean: '备注', example: '备注' },
         from_bidding: { type: Boolean, mean: '是否来自竞价', example: true },
         count: { type: Number, mean: '数量', example: 1 },
@@ -322,7 +337,8 @@ module.exports = {
                 name: { type: String, mean: '代理公司名称', example: '委托名称' },
                 code: { type: String, mean: '委托编号', example: '委托编号' },
             }
-        }
+        },
+        plan_sct_infos: plan_sct_infos,
     },
     bidding_items: bidding_items,
     dev_data: {

@@ -117,3 +117,31 @@ Change Stuff Price And Check
     ${resp}  Req Get to Server  /stuff/get_price_history  ${sc_admin_token}  histories  ${-1}  &{req}
     Should Contain  ${resp}[0][comment]  test_change
 
+Sct Scale Item Test
+    [Teardown]  Stuff Reset
+    ${new_stuff}  Add A Stuff To Sale  st1  asdfa
+    ${stuff_id}  Set Variable  ${new_stuff}[id]
+    ${all_items}  Get Sct Scale Item    ${stuff_id}
+    Should Be Empty    ${all_items}
+
+    Add Sct Scale Item    ${stuff_id}    ssi1
+    Add Sct Scale Item    ${stuff_id}    ssi2
+    Add Sct Scale Item    ${stuff_id}    ssi2
+
+    ${all_items}  Get Sct Scale Item    ${stuff_id}
+    Length Should Be  ${all_items}  2
+    Should Be Equal As Strings    ${all_items}[1][name]    ssi2
+    Should Be Equal As Strings    ${all_items}[0][name]    ssi1
+
+    Update Sct Scale Item    ${all_items}[1][id]    nssi
+    ${all_items}  Get Sct Scale Item    ${stuff_id}
+    Length Should Be  ${all_items}  2
+    Should Be Equal As Strings    ${all_items}[1][name]    nssi
+    Should Be Equal As Strings    ${all_items}[0][name]    ssi1
+
+    Del Sct Scale Item    ${all_items}[0][id]
+    ${all_items}  Get Sct Scale Item    ${stuff_id}
+    Length Should Be  ${all_items}  1
+    Should Be Equal As Strings    ${all_items}[0][name]    nssi
+
+

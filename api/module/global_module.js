@@ -62,6 +62,7 @@ async function get_ticket_func(body, token) {
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,
+        plan_sct_infos:plan.plan_sct_infos,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
