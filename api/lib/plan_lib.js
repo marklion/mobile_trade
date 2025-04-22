@@ -303,6 +303,46 @@ module.exports = {
             return { isDuplicate: false, message: '' };
         }
     },
+    // 通用搜索函数
+    searchPlansByModel: async function (model, where_condition, search_condition, replacePlanFn, isUserModel = false) {
+    let result = [];
+    let count;
+    // 根据模型类型选择查询方法
+    if (isUserModel) {
+        count = await model.countPlans({ where: where_condition });
+        if (!search_condition.only_count) {
+            let plans = await model.getPlans(search_condition);
+            for (const element of plans) {
+                result.push(await this.processPlan(element, replacePlanFn));
+            }
+        }
+    } else {
+        let sq = db_opt.get_sq();
+        count = await sq.models.plan.count({ where: where_condition });
+        if (!search_condition.only_count) {
+            let plans = await sq.models.plan.findAll(search_condition);
+            for (const element of plans) {
+                result.push(await this.processPlan(element, replacePlanFn));
+            }
+        }
+    }
+
+    return { rows: result, count: count };
+    },
+    processPlan: async function (element, replacePlanFn) {
+        let arc_p = await replacePlanFn(element);
+        this.setDuplicateInfoAndCompany(element);
+        return arc_p || element;
+    },
+    setDuplicateInfoAndCompany: function (element) {
+        element.duplicateInfo = {
+            isDuplicate: element.dup_info && element.dup_info.length > 0,
+            message: element.dup_info ? element.dup_info : '',
+        };
+        if (!element.company) {
+            element.company = { name: '(司机选择)' };
+        }
+    },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
@@ -312,79 +352,32 @@ module.exports = {
             limit: 20,
             where: where_condition,
             include: util_lib.plan_detail_include(),
-
         };
-        let result = [];
-        let count = await user.countPlans({ where: where_condition });
-        if (!_condition.only_count) {
-            let bought_plans = await user.getPlans(search_condition);
 
-            for (let index = 0; index < bought_plans.length; index++) {
-                const element = bought_plans[index];
-                let arc_p = await this.replace_plan2archive(element);
-                element.duplicateInfo = {
-                    isDuplicate: element.dup_info && element.dup_info.length > 0,
-                    message: element.dup_info?element.dup_info:''
-                };
-                if (arc_p) {
-                    result.push(arc_p);
-                }
-                else {
-                    if (!element.company) {
-                        element.company = { name: '(司机选择)' };
-                    }
-                    result.push(element);
-                }
-
-            }
-        }
-
-        return { rows: result, count: count };
+        return await this.searchPlansByModel(user, where_condition, search_condition, this.replace_plan2archive.bind(this), true);
     },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
-        let sq = db_opt.get_sq();
-        let where_condition = this.make_plan_where_condition(_condition, is_buy);
+    let sq = db_opt.get_sq();
+    let where_condition = this.make_plan_where_condition(_condition, is_buy);
 
-        let stuff_or = [];
-        let stuff = await _company.getStuff({ paranoid: false });
-        for (let index = 0; index < stuff.length; index++) {
-            const element = stuff[index];
-            stuff_or.push({ stuffId: element.id });
-        }
-        where_condition[db_opt.Op.and].push({
-            [db_opt.Op.or]: stuff_or
-        });
-        let search_condition = {
-            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
-            offset: _pageNo * 20,
-            limit: 20,
-            where: where_condition,
-            include: util_lib.plan_detail_include(),
-        };
-        let result = [];
-        let count = await sq.models.plan.count({ where: where_condition });
-        if (!_condition.only_count) {
-            let sold_plans = await sq.models.plan.findAll(search_condition);
-            for (let index = 0; index < sold_plans.length; index++) {
-                const element = sold_plans[index];
-                let arc_p = await this.replace_plan2archive(element);
-                element.duplicateInfo = {
-                    isDuplicate: element.dup_info && element.dup_info.length > 0,
-                    message: element.dup_info?element.dup_info:''
-                };
-                if (arc_p) {
-                    result.push(arc_p);
-                }
-                else {
-                    if (!element.company) {
-                        element.company = { name: '(司机选择)' };
-                    }
-                    result.push(element);
-                }
-            }
-        }
+    let stuff_or = [];
+    let stuff = await _company.getStuff({ paranoid: false });
+    for (let index = 0; index < stuff.length; index++) {
+        const element = stuff[index];
+        stuff_or.push({ stuffId: element.id });
+    }
+    where_condition[db_opt.Op.and].push({
+        [db_opt.Op.or]: stuff_or,
+    });
 
-        return { rows: result, count: count };
+    let search_condition = {
+        order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+        offset: _pageNo * 20,
+        limit: 20,
+        where: where_condition,
+        include: util_lib.plan_detail_include(),
+    };
+    return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
     },
     update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address) {
         let sq = db_opt.get_sq();
@@ -880,6 +873,9 @@ module.exports = {
     rp_history_close: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '关闭');
         let plan = await util_lib.get_single_plan_by_id(_plan.id);
+        await this.updateArchivePlan(plan);
+    },
+    updateArchivePlan: async function (plan) {
         let last_archive = await plan.getArchive_plan();
         if (last_archive) {
             await last_archive.destroy();
@@ -894,15 +890,7 @@ module.exports = {
     rp_history_cancel: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '取消');
         let plan = await util_lib.get_single_plan_by_id(_plan.id);
-        let last_archive = await plan.getArchive_plan();
-        if (last_archive) {
-            await last_archive.destroy();
-        }
-        let content = plan.toJSON();
-        if (!content.company) {
-            content.company = { name: '(司机选择)' };
-        }
-        await plan.createArchive_plan({ content: JSON.stringify(content) });
+        await this.updateArchivePlan(plan);
     },
     rp_history_price_change: async function (_plan, _operator, _new_price) {
         await this.record_plan_history(_plan, _operator, '价格变为:' + _new_price);
@@ -1179,18 +1167,36 @@ module.exports = {
             }
         });
     },
+    buildTimeCondition(body, sq) {
+        const conditions = [
+            sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
+            }),
+            sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
+            }),
+        ];
+        if (body.m_start_time) {
+            conditions.push(
+                sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
+                })
+            );
+        }
+        if (body.m_end_time) {
+            conditions.push(
+                sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
+                })
+            );
+        }
+        return conditions;
+    },
     filter_plan4user: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
         let cond = {
-            [db_opt.Op.and]: [
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
-                }),
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
-                }),
-            ]
-        }
+            [db_opt.Op.and]: this.buildTimeCondition(body, sq),
+        };
         if (is_buy) {
             cond.is_buy = true;
         }
@@ -1204,15 +1210,8 @@ module.exports = {
     filter_plan4manager: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
         let cond = {
-            [db_opt.Op.and]: [
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
-                }),
-                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
-                }),
-            ]
-        }
+            [db_opt.Op.and]: this.buildTimeCondition(body, sq),
+        };
         if (body.stuff_id) {
             cond.stuffId = body.stuff_id
         }
