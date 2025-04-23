@@ -77,7 +77,6 @@ export default {
     },
     onLoad: async function (options) {
         let a = await this.fetchReplaceField();
-        console.log(a);
         let plan_id = 0
         if (options.id) {
             plan_id = parseInt(options.id)
@@ -124,7 +123,6 @@ export default {
                 value: ticket.behind_plate
             }, ],
         };
-        console.log(this.ticket_content);
         if (ticket.fw_info) {
             this.ticket_content.list.push({
                 label: this.global_replace.replace_fw_info || '一次计量',
