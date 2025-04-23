@@ -116,6 +116,53 @@
                         </fui-label>
                     </fui-col>
                 </fui-row>
+                <fui-white-space size="large"></fui-white-space>
+                <view>
+                    <fui-row>
+                        <fui-col :span="24">
+                            <fui-label>
+                                <fui-list-cell>
+                                    <view class="fui-list__cell">
+                                        <fui-text size="28" text="第二单位配置"></fui-text>
+                                        <fui-input 
+                                            v-model="item.second_unit" 
+                                            placeholder="请输入单位"
+                                            style="flex: 1; margin-left: 20rpx;"
+                                        />
+                                    </view>
+                                </fui-list-cell>
+                            </fui-label>
+                        </fui-col>
+                    </fui-row>
+                    <fui-row>
+                        <fui-col :span="24">
+                            <fui-label>
+                                <fui-list-cell>
+                                    <view class="fui-list__cell">
+                                        <fui-text size="28" text="系数配置"></fui-text>
+                                        <fui-input-number
+                                            v-model="item.coefficient"
+                                            :digit="2"
+                                            :step="0.1"
+                                            :value="1.00"
+                                            :min="0"
+                                            :max="999999"
+                                            style="flex: 1; margin-left: 20rpx;"
+                                        />
+                                    </view>
+                                </fui-list-cell>
+                            </fui-label>
+                        </fui-col>
+                    </fui-row>
+                    <view class="btn-wrapper">
+                        <fui-button 
+                            text="保存配置" 
+                            type="primary" 
+                            btnSize="medium"
+                            @click="set_scunit_coe_configuration(item)"
+                        />
+                    </view>
+                </view>
                 <fui-divider text="装卸区域配置"></fui-divider>
                 <view style="display: flex; flex-wrap:wrap;">
                     <fui-tag v-for="zone in item.drop_take_zones" :key="zone.id" :text="zone.name" theme="light" margin-right="24" :padding="['12rpx','20rpx']">
@@ -411,6 +458,34 @@ export default {
                 need_expect_weight: event.detail.value
             });
         },
+        set_scunit_coe_configuration: async function(item) {
+            try {
+                if (!item || !item.id) {
+                    uni.showToast({
+                        title: '参数错误',
+                        icon: 'none'
+                    });
+                    return;
+                }
+                await this.$send_req('/stuff/set_unit_coefficient', {
+                    stuff_id: item.id,
+                    unit_coefficient: {
+                        second_unit: item.second_unit || '',  
+                        coefficient: item.coefficient || 0 
+                    }
+                });
+                uni.showToast({
+                    title: '保存成功',
+                    icon: 'success'
+                });
+                uni.startPullDownRefresh();
+            } catch (error) {
+                uni.showToast({
+                    title: error.message || '保存失败',
+                    icon: 'none'
+                });
+            }
+        },
         change_need_sc: async function (event, item) {
             await this.$send_req('/stuff/sc_config', {
                 stuff_id: item.id,
@@ -612,5 +687,10 @@ export default {
     display: flex;
     align-items: center;
     padding: 6rpx 0 4rpx 24rpx;
+}
+.btn-wrapper {
+    padding: 20rpx;
+    display: flex;
+    justify-content: center;
 }
 </style>

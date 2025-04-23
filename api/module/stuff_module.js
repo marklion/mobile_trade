@@ -7,10 +7,15 @@ async function change_stuff_single_switch(stuff_id, switch_name, switch_value, t
     let company = await rbac_lib.get_company_by_token(token);
     let stuff = await sq.models.stuff.findByPk(stuff_id);
     if (stuff && company && await company.hasStuff(stuff)) {
-        stuff[switch_name] = switch_value;
+        if (typeof switch_value === 'object' && switch_value !== null && switch_name === 'unit_coefficient') {
+            for (const [key, value] of Object.entries(switch_value)) {
+                stuff[key] = value;
+            }
+        } else {
+            stuff[switch_name] = switch_value;
+        }
         await stuff.save();
-    }
-    else {
+    } else {
         throw { err_msg: '货物不存在' };
     }
     return { result: true };
@@ -90,6 +95,10 @@ module.exports = {
                         ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                         need_expect_weight: { type: Boolean, mean: '是否需要期望重量', example: false },
                         close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
+                        second_unit: { type: String, mean: '第二单位', example: '千克' },
+                        second_unit_configuration: { type: Boolean, mean: '是否配置第二单位', example: false },
+                        coefficient: { type: Number, mean: '系数', example: 1.0 },
+                        coefficient_configuration: { type: Boolean, mean: '是否配置系数', example: false },
                         add_base: { type: String, mean: '自增基础', example: 'day' },
                         sct_scale_items: {
                             type: Array, mean: '结构化计量项', explain: {
@@ -239,6 +248,56 @@ module.exports = {
             func: async function (body, token) {
                 return await change_stuff_single_switch(body.stuff_id, 'need_expect_weight', body.need_expect_weight, token);
             },
+        },
+        set_unit_coefficient:{
+            name: '基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',
+            description: '基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                unit_coefficient:{type:Object,have_to:true,mean:'基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',explain:{
+                    second_unit: { type: String, have_to: true, mean: '是基于物料增加第二单位配置（字符串）', example: '千克' },
+                    coefficient: { type: Number, have_to: true, mean: '基于物料增加系数配置（浮点数）', example: 1.0 },
+                },
+            }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                
+                if (!body.unit_coefficient || typeof body.unit_coefficient !== 'object') {
+                    throw new Error('参数错误');
+                }
+                if (body.unit_coefficient.second_unit !== null && 
+                    body.unit_coefficient.second_unit !== undefined && 
+                    body.unit_coefficient.second_unit !== '') {
+                    if (typeof body.unit_coefficient.second_unit !== 'string') {
+                        throw new Error ('第二单位必须是字符串类型' );
+                    }
+                    if (body.unit_coefficient.second_unit.length > 10) {
+                        throw new Error('第二单位长度不能超过10个字符' );
+                    }
+                } else {
+                    body.unit_coefficient.second_unit = null;
+                }
+                if (body.unit_coefficient.coefficient !== null && 
+                    body.unit_coefficient.coefficient !== undefined && 
+                    body.unit_coefficient.coefficient !== '') {
+                    let coeff = Number(body.unit_coefficient.coefficient);
+                    if (isNaN(coeff)) {
+                        throw new Error('系数必须是数字' );
+                    }
+                    if (coeff < 0 || coeff > 999999) {
+                        throw new Error('系数必须在0-999999之间' );
+                    }
+                    body.unit_coefficient.coefficient = coeff;
+                } else {
+                    body.unit_coefficient.coefficient = 1.00;
+                }
+                return await change_stuff_single_switch(body.stuff_id, 'unit_coefficient', body.unit_coefficient, token);
+            }
         },
         manual_weight_config: {
             name: '配置货物是否需要手动计量',

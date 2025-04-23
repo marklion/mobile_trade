@@ -28,6 +28,37 @@
                                             <el-switch v-model="scope.row.checkout_delay" inline-prompt active-text="延迟结算" @change="change_checkout_delay($event, scope.row)"></el-switch>
                                             <el-switch v-model="scope.row.manual_weight" inline-prompt active-text="手动计量" @change="change_manual_weight($event, scope.row)"></el-switch>
                                             <el-switch v-model="scope.row.need_expect_weight" inline-prompt active-text="需要填写期望重量" @change="change_expect_weight($event,scope.row)"></el-switch>
+                                            <div class="unit-input-group">
+                                                <div class="input-item">
+                                                    <span class="unit-label">第二单位配置:</span>
+                                                    <el-input                                                        
+                                                        v-model="scope.row.second_unit" 
+                                                        placeholder="例:千克" 
+                                                        size="small"
+                                                        clearable
+                                                        @change="validateUnitInput"
+                                                    />
+                                                </div>
+                                                <div class="input-item">
+                                                    <span class="unit-label">系数配置:</span>
+                                                    <el-input-number                                                      
+                                                        v-model="scope.row.coefficient"
+                                                        placeholder="例:1.00"
+                                                        :precision="2"
+                                                        :step="0.1"
+                                                        :min="0"
+                                                        :max="999999"
+                                                        size="small"
+                                                        controls-position="right"
+                                                    />
+                                                </div>
+                                                <el-button 
+                                                    type="primary" 
+                                                    size="small"
+                                                    :loading="saving"
+                                                    @click="set_scunit_coe_configuration(scope.row)"
+                                                >保存配置</el-button>
+                                            </div>
                                         </div>
                                         <el-button slot="reference" size="mini" type="primary">配置</el-button>
                                     </el-popover>
@@ -560,6 +591,30 @@ export default {
                 need_expect_weight: event
             });
         },
+        set_scunit_coe_configuration: async function(item) {
+            try {
+                if (item.second_unit && typeof item.second_unit !== 'string') {
+                    this.$message.error('第二单位必须是字符串类型');
+                    return;
+                }
+                if (item.coefficient && (typeof item.coefficient !== 'number' || isNaN(item.coefficient))) {
+                    this.$message.error('系数必须是数字类型');
+                    return;
+                }
+                await this.$send_req('/stuff/set_unit_coefficient', {
+                    stuff_id: item.id,
+                    unit_coefficient: {
+                        second_unit: item.second_unit || '',
+                        coefficient: parseFloat(item.coefficient || 0)
+                    }
+                });
+                this.$message.success('配置保存成功');
+                this.refresh_stuff();
+
+            } catch (error) {
+                this.$message.error('保存失败：' + error.message);
+            }
+        },
         do_next_price: async function () {
             this.$refs.next_price_form.validate(async (valid) => {
                 if (!valid) {
@@ -695,5 +750,34 @@ export default {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+.unit-input-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 15px;
+    background-color: #f5f7fa;
+    border-radius: 4px;
+}
+
+.input-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.unit-label {
+    font-size: 14px;
+    color: #606266;
+    white-space: nowrap;
+}
+
+.el-input, .el-input-number {
+    width: 120px;
+}
+
+.el-button {
+    margin-left: auto;
 }
 </style>

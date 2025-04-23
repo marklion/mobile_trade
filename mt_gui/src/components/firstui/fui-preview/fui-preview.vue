@@ -12,6 +12,11 @@
 			</view>
 			<view :style="{background:borderColor,left:hdLeft+'rpx',right:hdRight+'rpx'}" class="fui-preview__border"
 				:class="{'fui-preview__border-color':!borderColor}"></view>
+			<view class="fui-preview__unit-info" v-if="pvd['second_unit'] && pvd['coefficient']">
+					<text class="fui-unit-text">
+						{{(Number(pvd['coefficient']) * Number(pvd[value])).toFixed(2)}} {{pvd['second_unit']}}
+					</text>
+			</view>
 		</view>
 		<view class="fui-preview__bd" v-if="pvd[list] && pvd[list].length>0"
 			:style="{paddingLeft:padding+'rpx',paddingRight:padding+'rpx'}">
@@ -205,7 +210,7 @@
 				this.handleFileds()
 			}
 		},
-		created() {
+		created() {	
 			this.initData(this.previewData)
 		},
 		data() {
@@ -557,5 +562,14 @@
 		/* #ifdef H5 */
 		cursor: not-allowed;
 		/* #endif */
+	}
+	.fui-preview__unit-info {
+		margin-top: 16rpx;
+		padding: 4rpx 0;
+	}
+
+	.fui-unit-text {
+		font-size: 35rpx;
+		color: #666;
 	}
 </style>

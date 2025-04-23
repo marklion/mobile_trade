@@ -37,7 +37,7 @@ async function get_ticket_func(body, token) {
     let plan = await plan_lib.replace_plan2archive(orig_plan)
     if (!plan) {
         plan = orig_plan;
-    }
+    }   
     let delegate_name = ''
     if (plan.delegate) {
         delegate_name = plan.delegate.name
@@ -60,6 +60,8 @@ async function get_ticket_func(body, token) {
         is_buy: plan.is_buy,
         trans_company_name: plan.trans_company_name,
         stuff_name: plan.stuff.name,
+        coefficient: plan.stuff.coefficient,
+        second_unit: plan.stuff.second_unit,
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,

@@ -186,6 +186,8 @@ module.exports = {
         replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
         replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' },
         plan_sct_infos: plan_sct_infos,
+        second_unit: { type: String, mean: '第二单位', example: '吨' },
+        coefficient: { type: Number, mean: '换算系数', example: 1 },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },

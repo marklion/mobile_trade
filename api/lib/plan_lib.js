@@ -248,6 +248,8 @@ module.exports = {
                 ret = JSON.parse(archive_plan.content);
                 ret.stuff.concern_fapiao = _plan.stuff.concern_fapiao;
                 ret.fapiao_delivered = _plan.fapiao_delivered;
+                ret.stuff.coefficient = _plan.stuff.coefficient;
+                ret.stuff.second_unit = _plan.stuff.second_unit;
             }
         }
 
