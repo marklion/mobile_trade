@@ -19,6 +19,7 @@ export default {
         return {
             title: '',
             ticket_content: {},
+            global_replace: {},
             qr_code: '',
             stamp_path: '',
             id: 0,
@@ -30,6 +31,19 @@ export default {
         }
     },
     methods: {
+        async fetchReplaceField() {
+            try {
+                const response = await this.$send_req('/stuff/get_replace_field', {});
+                if (response) {
+                    this.global_replace = response.replace_form || {};
+                }
+                return this.global_replace;
+            } catch (error) {
+                console.error('获取替换字段失败:', error);
+                this.$message.error('获取替换字段失败');
+                return null;
+            }
+        },
         download_pic: async function () {
             let resp = await this.$send_req('/global/download_ticket', {
                 id: this.id
@@ -62,6 +76,8 @@ export default {
 
     },
     onLoad: async function (options) {
+        let a = await this.fetchReplaceField();
+        console.log(a);
         let plan_id = 0
         if (options.id) {
             plan_id = parseInt(options.id)
@@ -87,9 +103,9 @@ export default {
         }
         this.qr_code = ticket.qr_code;
         this.stamp_path = ticket.stamp_path;
-        this.title = ticket.order_company_name + dec_title + (ticket.replace_weighingSheet || '称重单');
+        this.title = ticket.order_company_name + dec_title + (this.global_replace.replace_weighingSheet || '称重单');
         this.ticket_content = {
-            label: ticket.replace_count || '装载量',
+            label: this.global_replace.replace_count || '装载量',
             value: utils.moneyFormatter(ticket.count),
             list: [{
                 label: '物料',
@@ -108,15 +124,16 @@ export default {
                 value: ticket.behind_plate
             }, ],
         };
+        console.log(this.ticket_content);
         if (ticket.fw_info) {
             this.ticket_content.list.push({
-                label: ticket.replace_fw_info || '一次计量',
+                label: this.global_replace.replace_fw_info || '一次计量',
                 value: ticket.fw_info,
             });
         }
         if (ticket.sw_info) {
             this.ticket_content.list.push({
-                label: ticket.replace_sw_info || '二次计量',
+                label: this.global_replace.replace_sw_info || '二次计量',
                 value: ticket.sw_info,
             });
         }

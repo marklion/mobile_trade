@@ -68,6 +68,13 @@ let db_opt = {
             prefer_order_begin_offset: { type: DataTypes.INTEGER, defaultValue: 0 },
             prefer_order_end_offset: { type: DataTypes.INTEGER, defaultValue: 1 },
         },
+        global_replace_form : { 
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            replace_weighingSheet: { type: DataTypes.STRING,  default: '称重单' },
+            replace_count: { type: DataTypes.STRING, default: '载重量替换文字' },
+            replace_fw_info: { type: DataTypes.STRING, default: '载重量替换文字' },
+            replace_sw_info: { type: DataTypes.STRING, default: '载重量替换文字' },
+            },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
@@ -469,6 +476,8 @@ let db_opt = {
         _sq.models.vehicle_team.hasMany(_sq.models.vehicle_set);
 
         _sq.models.option_answer.belongsTo(_sq.models.question);
+        _sq.models.global_replace_form.belongsTo(_sq.models.company);
+        _sq.models.company.hasOne(_sq.models.global_replace_form);
         _sq.models.question.hasMany(_sq.models.option_answer);
         _sq.models.question.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.question);

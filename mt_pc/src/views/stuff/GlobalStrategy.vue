@@ -145,8 +145,21 @@ export default {
         this.init_price_profile();
         this.get_company_qualification();
         this.get_verify_pay_config();
+        this.fetchReplaceField();
     },
     methods: {
+        async fetchReplaceField() {
+            try {
+                const ret = await this.$send_req('/stuff/get_replace_field');
+                console.log('获取替换字段:', ret);
+                if (ret && ret.replace_form) {
+                this.replace_form = ret.replace_form;
+                }
+            } catch (error) {
+                console.error('获取替换字段失败:', error);
+                this.$message.error('获取替换字段失败');
+            }
+        },
         del_delegate_contract: async function (contract_id, delegate_id) {
             if (await this.$confirm('此操作将永久删除该合同, 是否继续?', '提示', {
                     type: 'warning'
@@ -255,7 +268,7 @@ export default {
         },
         onSaveReplace: async function () {
             console.log(this.replace_form);
-            await this.$send_req('/global/set_replace_field', { 
+            await this.$send_req('/stuff/set_replace_field', { 
                 replace_form: { 
                     replace_weighingSheet: this.replace_form.replace_weighingSheet || '称重单',
                     replace_count: this.replace_form.replace_count || '装载量',
