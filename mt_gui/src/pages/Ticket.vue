@@ -87,9 +87,9 @@ export default {
         }
         this.qr_code = ticket.qr_code;
         this.stamp_path = ticket.stamp_path;
-        this.title = ticket.order_company_name + dec_title + '称重单';
+        this.title = ticket.order_company_name + dec_title + (ticket.replace_weighingSheet || '称重单');
         this.ticket_content = {
-            label: '装载量',
+            label: ticket.replace_count || '装载量',
             value: utils.moneyFormatter(ticket.count),
             list: [{
                 label: '物料',
@@ -110,13 +110,13 @@ export default {
         };
         if (ticket.fw_info) {
             this.ticket_content.list.push({
-                label: '一次计量',
+                label: ticket.replace_fw_info || '一次计量',
                 value: ticket.fw_info,
             });
         }
         if (ticket.sw_info) {
             this.ticket_content.list.push({
-                label: '二次计量',
+                label: ticket.replace_sw_info || '二次计量',
                 value: ticket.sw_info,
             });
         }

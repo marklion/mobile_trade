@@ -17,7 +17,12 @@ const uuid = require('uuid');
 const path = require('path');
 const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
-
+global.ticketReplaceFields = {
+    replace_weighingSheet: '称重单',
+    replace_count: '装载量',
+    replace_fw_info: '一次计量',
+    replace_sw_info: '二次计量'
+};
 async function do_web_cap(url, file_name) {
     await captureWebsite.default.file(url, file_name, {
         emulateDevice: 'iPhone X',
@@ -42,6 +47,12 @@ async function get_ticket_func(body, token) {
     if (plan.delegate) {
         delegate_name = plan.delegate.name
     }
+    const replaceFields = global.ticketReplaceFields || {
+        replace_weighingSheet: '称重单',
+        replace_count: '装载量',
+        replace_fw_info: '一次计量',
+        replace_sw_info: '二次计量'
+    };
     return {
         id: plan.id,
         company_name: plan.company.name,
@@ -62,6 +73,7 @@ async function get_ticket_func(body, token) {
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,
+        ...replaceFields,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
@@ -1928,5 +1940,35 @@ module.exports = {
                 }
             },
         },
+        set_replace_field: {
+            name: '设置磅单替换字段',
+            is_write: false,
+            is_get_api: false,
+            params: { 
+                replace_form : { type: Object, have_to: true, mean: '替换表单', explain: {
+                    replace_weighingSheet: { type: String, have_to: true, mean: '磅单替换表单', example: '磅单替换表单' },
+                    replace_count: { type: String, have_to: true, mean: '载重量替换文字', example: '载重量替换文字' },
+                    replace_fw_info: { type: String, have_to: true, mean: '一次称重替换文字', example: '一次称重替换文字' },
+                    replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' }
+                    } 
+                } 
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司不匹配' };
+                }
+                global.ticketReplaceFields = {
+                    replace_weighingSheet: body.replace_form.replace_weighingSheet,
+                    replace_count: body.replace_form.replace_count,
+                    replace_fw_info: body.replace_form.replace_fw_info,
+                    replace_sw_info: body.replace_form.replace_sw_info
+                };
+                return { result: true };
+            }
+        }
     },
 }
