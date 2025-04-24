@@ -195,6 +195,7 @@ let db_opt = {
             need_expect_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
             stuff_code: { type: DataTypes.STRING },
             close_today: { type: DataTypes.BOOLEAN, defaultValue: false },
+            add_base:{type: DataTypes.STRING},
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

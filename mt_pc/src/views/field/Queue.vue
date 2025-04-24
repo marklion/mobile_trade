@@ -64,7 +64,7 @@
                             </template>
                             <template v-else-if="!scope.row.enter_time">
                                 <el-button size="mini" type="danger" @click="prepare_pass_vehicle(scope.row)">过号</el-button>
-                                <el-button v-if="scope.row.stuff.manual_weight === 1" size="mini" type="primary" @click="prepare_enter_vehicle(scope.row)">进厂</el-button>
+                                <el-button v-if="scope.row.stuff.manual_weight" size="mini" type="primary" @click="prepare_enter_vehicle(scope.row)">进厂</el-button>
                             </template>
                             <template v-else>
                                 <el-button size="mini" type="warning" @click="prepare_confirm_vehicle(scope.row)">装卸货</el-button>

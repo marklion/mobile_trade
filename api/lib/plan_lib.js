@@ -14,6 +14,7 @@ const mutex = new Mutex();
 module.exports = {
     close_a_plan: async function (plan, token) {
         plan.status = 3;
+        plan.arrears = 0;
         await plan.save();
         wx_api_util.plan_scale_msg(plan);
         await this.rp_history_checkout(plan, (await rbac_lib.get_user_by_token(token)).name);
@@ -763,6 +764,48 @@ module.exports = {
         await new_plan.save();
         await this.confirm_single_plan(new_plan.id, token, true);
     },
+    generate_ticket_no: async function (plan, external_ticket_no) {
+        let ret = '';
+        if (external_ticket_no && external_ticket_no.length > 0 && !plan.stuff.ticket_prefix) {
+            ret = external_ticket_no;
+        }
+        else {
+            let add_base = 'day';
+            if (plan.stuff.add_base) {
+                add_base = plan.stuff.add_base;
+            }
+            const prefix = plan.stuff.ticket_prefix ? plan.stuff.ticket_prefix : 'TK';
+            const date = moment().format('YYYYMMDD');
+            let vehicle_count = await plan.stuff.countPlans({
+                where: {
+                    ticket_no: {
+                        [db_opt.Op.ne]: null
+                    },
+                    count: {
+                        [db_opt.Op.ne]: 0
+                    },
+                    [db_opt.Op.or]: [
+                        {
+                            m_time: {
+                                [db_opt.Op.gte]: moment().startOf(add_base).format('YYYY-MM-DD HH:mm:ss'),
+                                [db_opt.Op.lte]: moment().endOf(add_base).format('YYYY-MM-DD HH:mm:ss')
+                            }
+                        },
+                        {
+                            p_time: {
+                                [db_opt.Op.gte]: moment().startOf(add_base).format('YYYY-MM-DD HH:mm:ss'),
+                                [db_opt.Op.lte]: moment().endOf(add_base).format('YYYY-MM-DD HH:mm:ss')
+                            }
+                        }
+                    ]
+                }
+            });
+            cur_day_no = vehicle_count + 1;
+            const countStr = cur_day_no ? cur_day_no.toString().padStart(4, '0') : '0000';
+            ret = `${prefix}${date}${countStr}`;
+        }
+        return ret;
+    },
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
         let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
         let status_req = 2;
@@ -770,7 +813,6 @@ module.exports = {
             status_req = 1;
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
-            plan.ticket_no = (ticket_no ? ticket_no : (moment().format('YYYYMMDDHHmmss') + _plan_id));
             plan.count = _count;
             plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.p_weight = p_weight;
@@ -779,16 +821,15 @@ module.exports = {
             if (seal_no) {
                 plan.seal_no = seal_no;
             }
-            plan.arrears = 0;
             await plan.save();
-            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no);
             if (!plan.checkout_delay) {
                 await this.close_a_plan(plan, _token);
             }
         });
     },
     manual_deliver_plan: async function (_plan, _token) {
-        await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name);
+        await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name, "");
         if (!_plan.checkout_delay) {
             await this.close_a_plan(_plan, _token);
         }
@@ -858,7 +899,11 @@ module.exports = {
     rp_history_exit: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '撤销进厂');
     },
-    rp_history_deliver: async function (_plan, _operator) {
+    rp_history_deliver: async function (_plan, _operator, _ticket_no) {
+        if (_plan.count > 0) {
+            _plan.ticket_no = await this.generate_ticket_no(_plan, _ticket_no);
+            await _plan.save();
+        }
         await this.record_plan_history(_plan, _operator, '发车');
     },
     rp_history_checkout: async function (_plan, _operator) {

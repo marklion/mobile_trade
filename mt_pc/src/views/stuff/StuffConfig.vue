@@ -63,6 +63,18 @@
                                     <span v-else>不关闭</span>
                                 </template>
                             </el-table-column>
+                            <el-table-column label="磅单前缀" width="200">
+                                <template slot-scope="scope">
+                                    <el-input v-model="scope.row.ticket_prefix" size="mini">
+                                        <template slot="prepend">前缀</template>
+                                        <el-button size="mini" type="text" slot="append" @click="set_ticket_prefix(scope.row)">保存</el-button>
+                                    </el-input>
+                                    <el-input v-model="scope.row.add_base" size="mini">
+                                        <template slot="prepend">自增</template>
+                                        <el-button size="mini" type="text" slot="append" @click="set_add_base(scope.row)">保存</el-button>
+                                    </el-input>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="use_for_buy" label="用于采购" width="100" align="center">
                                 <template slot-scope="scope">
                                     <el-tag :type="scope.row.use_for_buy ? 'success' : 'info'">{{
@@ -354,6 +366,20 @@ export default {
         await this.update_price_profile();
     },
     methods: {
+        set_add_base: async function (stuff) {
+            await this.$send_req('/stuff/set_add_base', {
+                stuff_id: stuff.id,
+                add_base: stuff.add_base
+            });
+            this.refresh_stuff();
+        },
+        set_ticket_prefix: async function (stuff) {
+            await this.$send_req('/stuff/set_ticket_prefix', {
+                stuff_id: stuff.id,
+                ticket_prefix: stuff.ticket_prefix
+            });
+            this.refresh_stuff();
+        },
         change_sct_type: async function (sct) {
             let new_type = sct.type;
             if (new_type == 'datetime') {

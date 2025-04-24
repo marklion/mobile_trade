@@ -90,6 +90,7 @@ module.exports = {
                         ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                         need_expect_weight: { type: Boolean, mean: '是否需要期望重量', example: false },
                         close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
+                        add_base: { type: String, mean: '自增基础', example: 'day' },
                         sct_scale_items: {
                             type: Array, mean: '结构化计量项', explain: {
                                 id: { type: Number, mean: 'ID', example: 1 },
@@ -759,16 +760,30 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
                 ticket_prefix: { type: String, have_to: true, mean: '前缀', example: 'SDJL' }
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                stuff.ticket_prefix = body.ticket_prefix;
-                await stuff.save();
-                return { result: true };
+                return await change_stuff_single_switch(body.stuff_id, 'ticket_prefix', body.ticket_prefix, token);
+            }
+        },
+        set_add_base: {
+            name: '设置自增基础',
+            description: '设置自增基础',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                add_base: { type: String, have_to: true, mean: '自增基础', example: 'day' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'add_base', body.add_base, token);
             }
         },
         add_delegate: {
