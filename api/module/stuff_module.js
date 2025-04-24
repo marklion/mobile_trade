@@ -885,6 +885,79 @@ module.exports = {
                 }
             }
         },
+        set_replace_field: {
+            name: '设置磅单替换字段',
+            is_write: false,
+            is_get_api: false,
+            params: { 
+                replace_form : { type: Object, have_to: true, mean: '替换表单', explain: {
+                    replace_weighingSheet: { type: String, have_to: true, mean: '磅单替换表单', example: '磅单替换表单' },
+                    replace_count: { type: String, have_to: true, mean: '载重量替换文字', example: '载重量替换文字' },
+                    replace_fw_info: { type: String, have_to: true, mean: '一次称重替换文字', example: '一次称重替换文字' },
+                    replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' }
+                    } 
+                } 
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司不匹配' };
+                }
+                let sq = db_opt.get_sq();
+                let replace_content = await sq.models.global_replace_form.findOne({ where: { companyId: company.id } });
+                if (!replace_content) {
+                    replace_content = await sq.models.global_replace_form.create({
+                        companyId: company.id,
+                        replace_weighingSheet: body.replace_form.replace_weighingSheet,
+                        replace_count: body.replace_form.replace_count,
+                        replace_fw_info: body.replace_form.replace_fw_info,
+                        replace_sw_info: body.replace_form.replace_sw_info
+                    });
+                } else {
+                    replace_content.replace_weighingSheet = body.replace_form.replace_weighingSheet;
+                    replace_content.replace_count = body.replace_form.replace_count;
+                    replace_content.replace_fw_info = body.replace_form.replace_fw_info;
+                    replace_content.replace_sw_info = body.replace_form.replace_sw_info;
+                    await replace_content.save(); 
+                }
+                
+                return { result: true };
+            }
+        },
+        get_replace_field: {
+            name: '获取磅单替换字段',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                replace_form : { type: Object, mean: '替换表单', explain: {
+                    replace_weighingSheet: { type: String, mean: '磅单替换表单', example: '磅单替换表单' },
+                    replace_count: { type: String, mean: '载重量替换文字', example: '载重量替换文字' },
+                    replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
+                    replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' }
+                    } 
+                } 
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司不匹配' };
+                }
+                let sq = db_opt.get_sq();
+                let replace_content = await sq.models.global_replace_form.findOne({ where: { companyId: company.id } });
+                return {
+                    replace_form: {
+                        replace_weighingSheet: replace_content ? replace_content.replace_weighingSheet : '称重单',
+                        replace_count: replace_content ? replace_content.replace_count : '装载量',
+                        replace_fw_info: replace_content ? replace_content.replace_fw_info : '一次计量',
+                        replace_sw_info: replace_content ? replace_content.replace_sw_info : '二次计量'
+                    }
+                };
+            }
+        },
         get_verify_pay_config: {
             name: '获取验款配置',
             description: '获取验款配置',

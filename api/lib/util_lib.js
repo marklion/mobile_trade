@@ -2,12 +2,27 @@ const db_opt = require('../db_opt')
 module.exports = {
     plan_detail_include() {
         return [
-            { model: db_opt.get_sq().models.company, paranoid: false },
+            { 
+                model: db_opt.get_sq().models.company, 
+                include: [db_opt.get_sq().models.global_replace_form], 
+                paranoid: false 
+            },
             { model: db_opt.get_sq().models.rbac_user, paranoid: false },
             { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.driver, paranoid: false },
-            { model: db_opt.get_sq().models.stuff, include: [db_opt.get_sq().models.company, db_opt.get_sq().models.drop_take_zone], paranoid: false },
+            { 
+                model: db_opt.get_sq().models.stuff, 
+                include: [
+                    { 
+                        model: db_opt.get_sq().models.company, 
+                        include: [db_opt.get_sq().models.global_replace_form], 
+                        paranoid: false 
+                    }, 
+                    db_opt.get_sq().models.drop_take_zone
+                ], 
+                paranoid: false 
+            },
             { model: db_opt.get_sq().models.plan_history, paranoid: false, separate: true, order: [[db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('time')), 'ASC'], ['id', 'ASC']] },
             {
                 model: db_opt.get_sq().models.bidding_item, paranoid: false, include: [{

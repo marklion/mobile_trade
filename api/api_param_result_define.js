@@ -181,6 +181,10 @@ module.exports = {
         fw_info: { type: String, mean: '一次计量输入信息', example: 'fw_info_example' },
         sw_info: { type: String, mean: '二次计量输入信息', example: 'sw_info_example' },
         delegate_name: { type: String, mean: '代理公司名称', example: 'delegate_name_example' },
+        replace_weighingSheet: { type: String, mean: '磅单替换表单', example: '磅单替换表单' },
+        replace_count: { type: String, mean: '载重量替换文字', example: '载重量替换文字' },
+        replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
+        replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' },
         plan_sct_infos: plan_sct_infos,
     },
     device_status_define: {
