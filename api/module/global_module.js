@@ -42,7 +42,7 @@ async function get_ticket_func(body, token) {
     if (plan.delegate) {
         delegate_name = plan.delegate.name
     }
-
+    
     return {
         id: plan.id,
         company_name: plan.company.name,
@@ -63,6 +63,10 @@ async function get_ticket_func(body, token) {
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,
+        replace_weighingSheet:plan.stuff.company.global_replace_form.replace_weighingSheet || '称重单',
+        replace_count: plan.stuff.company.global_replace_form.replace_count || '装载量',
+        replace_fw_info: plan.stuff.company.global_replace_form.replace_fw_info || '一次计量',
+        replace_sw_info: plan.stuff.company.global_replace_form.replace_sw_info || '二次计量',
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {

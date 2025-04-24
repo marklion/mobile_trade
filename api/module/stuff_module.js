@@ -937,25 +937,14 @@ module.exports = {
                 }
                 let sq = db_opt.get_sq();
                 let replace_content = await sq.models.global_replace_form.findOne({ where: { companyId: company.id } });
-                if (!replace_content) {
-                    return {
-                        replace_form : {
-                            replace_weighingSheet : '称重单',
-                            replace_count : '载重量',
-                            replace_fw_info : '一次计量',
-                            replace_sw_info : '二次计量'
-                        }
+                return {
+                    replace_form: {
+                        replace_weighingSheet: replace_content ? replace_content.replace_weighingSheet : '称重单',
+                        replace_count: replace_content ? replace_content.replace_count : '装载量',
+                        replace_fw_info: replace_content ? replace_content.replace_fw_info : '一次计量',
+                        replace_sw_info: replace_content ? replace_content.replace_sw_info : '二次计量'
                     }
-                } else {
-                    return {
-                        replace_form : {
-                            replace_weighingSheet : replace_content.replace_weighingSheet,
-                            replace_count : replace_content.replace_count,
-                            replace_fw_info : replace_content.replace_fw_info,
-                            replace_sw_info : replace_content.replace_sw_info
-                        }
-                    }
-                }
+                };
             }
         },
         get_verify_pay_config: {

@@ -150,7 +150,7 @@ export default {
     methods: {
         async fetchReplaceField() {
             try {
-                const ret = await this.$send_req('/stuff/get_replace_field');
+                const ret = await this.$send_req('/stuff/get_replace_field',{});
                 console.log('获取替换字段:', ret);
                 if (ret && ret.replace_form) {
                 this.replace_form = ret.replace_form;
@@ -267,23 +267,19 @@ export default {
             }
         },
         onSaveReplace: async function () {
-            console.log(this.replace_form);
-            await this.$send_req('/stuff/set_replace_field', { 
+            let res = await this.$send_req('/stuff/set_replace_field', { 
                 replace_form: { 
                     replace_weighingSheet: this.replace_form.replace_weighingSheet || '称重单',
                     replace_count: this.replace_form.replace_count || '装载量',
                     replace_fw_info: this.replace_form.replace_fw_info || '一次计量',
                     replace_sw_info: this.replace_form.replace_sw_info || '二次计量'
                 }
-                }).then((res) => {
+                });
             if (res) {
                 this.$message.success('保存成功');
             } else {
                 this.$message.error('保存失败');
             }
-        }).catch((err) => {
-            this.$message.error('保存失败');
-        });
         }
     }
 }
