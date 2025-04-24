@@ -353,6 +353,33 @@ Auto Uncheck In
     ${plan}  Get Plan By Id  ${plan_id}
     Should Not Be Empty    ${plan}[register_time]
 
+Input And Check Sct Info
+    [Teardown]  Plan Reset
+    Set Stuff Manual Weight
+    Add Sct Scale Item    ${test_stuff}[id]    ssi1
+    Add Sct Scale Item    ${test_stuff}[id]    ssi2
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan_id}  Get From Dictionary  ${plan}  id  id
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan    ${plan}
+    ${plan}  Get Plan By Id    ${plan}[id]
+    ${psi}  Get From Dictionary    ${plan}    plan_sct_infos    abc
+    Length Should Be    ${psi}    2
+    Should Be Empty   ${psi}[0][value]
+    Should Be Equal As Strings    ${psi}[1][sct_scale_item][name]    ssi2
+    Input Plan Sct Info    ${plan_id}    ${psi}[0][id]    abc
+    Input Plan Sct Info    ${plan_id}    ${psi}[1][id]    def
+    ${plan}  Get Plan By Id    ${plan}[id]
+    ${psi}  Get From Dictionary    ${plan}    plan_sct_infos    abc
+    Length Should Be    ${psi}    2
+    Should Be Equal As Strings    ${psi}[0][value]  abc
+    Should Be Equal As Strings    ${psi}[1][value]  def
+
+
+
 *** Keywords ***
 Verify Order Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}

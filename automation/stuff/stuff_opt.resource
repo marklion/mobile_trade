@@ -480,3 +480,38 @@ Set Pay Verify Role
     [Arguments]  ${is_cash}
     ${req}  Create Dictionary  verify_pay_by_cash=${is_cash}
     Req to Server  /stuff/set_verify_pay_config  ${sc_admin_token}  ${req}
+
+Add Sct Scale Item
+    [Arguments]  ${stuff_id}  ${item_name}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  name=${item_name}
+    Req to Server    /stuff/add_sct_scale_item    ${token}    ${req}
+
+Update Sct Scale Item
+    [Arguments]  ${item_id}  ${item_name}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${item_id}  name=${item_name}
+    Req to Server    /stuff/update_sct_scale_item    ${token}    ${req}
+Del Sct Scale Item
+    [Arguments]  ${item_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${item_id}
+    Req to Server    /stuff/del_sct_scale_item    ${token}    ${req}
+Get Sct Scale Item
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
+    ${resp}  Set Variable
+    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${token}  stuff
+    FOR    ${element}    IN    @{stuffs_found}
+        IF  ${element}[id] == ${stuff_id}
+            ${resp}  Get From Dictionary    ${element}    sct_scale_items    abc
+            Exit For Loop
+        END
+    END
+    RETURN  ${resp}
+
+Set Stuff Manual Weight
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${is_manual_weight}=${True}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  manual_weight=${is_manual_weight}
+    Req to Server    /stuff/manual_weight_config    ${token}    ${req}
+
+Input Plan Sct Info
+    [Arguments]  ${plan_id}  ${psi_id}  ${value}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan_id}  psi_id=${psi_id}  value=${value}
+    Req to Server    /scale/input_psi_info    ${token}    ${req}

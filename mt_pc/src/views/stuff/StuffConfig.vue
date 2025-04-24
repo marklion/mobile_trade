@@ -15,7 +15,7 @@
             <page-content ref="stuff" body_key="stuff" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
                 <template v-slot:default="slotProps">
                     <div>
-                        <el-table :data="slotProps.content" style="width: 100%" border stripe :default-sort="{ prop: 'name', order: 'ascending' }">
+                        <el-table :data="slotProps.content" style="width: 100%" stripe :default-sort="{ prop: 'name', order: 'ascending' }">
                             <el-table-column prop="name" label="物料名称" width="120" align="center" sortable></el-table-column>
                             <el-table-column label="配置" width="100" align="center">
                                 <template slot-scope="scope">
@@ -76,6 +76,28 @@
                                 </template>
                             </el-table-column>
                             <el-table-column prop="stuff_code" label="物料编码" align="center"></el-table-column>
+                            <el-table-column label="结构化手动计量" type="expand" width="150">
+                                <template #default="scope">
+                                    <el-table :data="scope.row.sct_scale_items" size="mini" style="padding-left: 50px;">
+                                        <el-table-column prop="name" label="名称" width="150"></el-table-column>
+                                        <el-table-column label="类型" width="250">
+                                            <template slot-scope="sub_scope">
+                                                <el-tag size="mini" type="primary">{{sub_scope.row.type=='datetime'?'时间日期':'输入'}}</el-tag>
+                                                <el-button type="text" size="mini" @click="change_sct_type(sub_scope.row)">切换</el-button>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column label="操作" width="200">
+                                            <template slot="header">
+                                                <el-button size="mini" type="success" @click="add_sct(scope.row.id)">新增</el-button>
+                                            </template>
+                                            <template slot-scope="sub_scope">
+                                                <el-button size="mini" type="warning" @click="update_sct(sub_scope.row)">修改</el-button>
+                                                <el-button size="mini" type="danger" @click="delete_sct(sub_scope.row.id)">删除</el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </template>
+                            </el-table-column>
                             <el-table-column label="操作" fixed="right" width="300" align="center">
                                 <template slot-scope="scope">
                                     <el-button-group>
@@ -332,6 +354,70 @@ export default {
         await this.update_price_profile();
     },
     methods: {
+        change_sct_type: async function (sct) {
+            let new_type = sct.type;
+            if (new_type == 'datetime') {
+                new_type = 'string';
+            } else {
+                new_type = 'datetime';
+            }
+            await this.$send_req('/stuff/update_sct_scale_item', {
+                id: sct.id,
+                name: sct.name,
+                type: new_type
+            })
+            this.refresh_stuff();
+        },
+        add_sct: async function (stuff_id) {
+            try {
+                let input_value = (await this.$prompt('请输入结构化手动计量名称', '结构化手动计量名称', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    inputPattern: /^.+$/,
+                    inputErrorMessage: '请输入结构化手动计量名称'
+                })).value;
+                await this.$send_req('/stuff/add_sct_scale_item ', {
+                    stuff_id: stuff_id,
+                    name: input_value
+                })
+                this.refresh_stuff();
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        delete_sct: async function (sct_id) {
+            try {
+                await this.$confirm('确定要删除吗？', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                await this.$send_req('/stuff/del_sct_scale_item', {
+                    id: sct_id
+                })
+                this.refresh_stuff();
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        update_sct: async function (sct) {
+            try {
+                let input_value = (await this.$prompt('请输入结构化手动计量名称', '结构化手动计量名称', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    inputPattern: /^.+$/,
+                    inputErrorMessage: '请输入结构化手动计量名称'
+                })).value;
+                await this.$send_req('/stuff/update_sct_scale_item', {
+                    id: sct.id,
+                    name: input_value,
+                    type: sct.type
+                })
+                this.refresh_stuff();
+            } catch (error) {
+                console.log(error);
+            }
+        },
         refresh_stuff: function () {
             let current_page = this.$refs.stuff.cur_page;
             this.$refs.stuff.refresh(current_page);

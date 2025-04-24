@@ -32,7 +32,7 @@ module.exports = {
                 close_time: { type: String, have_to: false, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, have_to: false, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, have_to: false, mean: '关注发票', example: false },
-                stuff_code:{type:String,have_to:false,mean:'物料编码',example:'物料编码'}
+                stuff_code: { type: String, have_to: false, mean: '物料编码', example: '物料编码' }
             },
             result: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -46,7 +46,7 @@ module.exports = {
                 close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
-                stuff_code:{type:String,mean:'物料编码',example:'物料编码'},
+                stuff_code: { type: String, mean: '物料编码', example: '物料编码' },
                 close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
             },
             func: async function (body, token) {
@@ -78,7 +78,7 @@ module.exports = {
                         delay_days: { type: Number, mean: '延迟天数', example: 1 },
                         need_exam: { type: Boolean, mean: '是否需要考试', example: false },
                         concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
-                        stuff_code:{type:String,mean:'物料编码',example:'物料编码'},
+                        stuff_code: { type: String, mean: '物料编码', example: '物料编码' },
                         checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
                         drop_take_zones: {
                             type: Array, mean: '装卸货区域', explain: {
@@ -90,6 +90,13 @@ module.exports = {
                         ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                         need_expect_weight: { type: Boolean, mean: '是否需要期望重量', example: false },
                         close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
+                        sct_scale_items: {
+                            type: Array, mean: '结构化计量项', explain: {
+                                id: { type: Number, mean: 'ID', example: 1 },
+                                name: { type: String, mean: '名称', example: '名称' },
+                                type:{ type: String, mean: '类型', example: '类型' },
+                            }
+                        },
                     }
                 },
             },
@@ -102,7 +109,13 @@ module.exports = {
                             order: [['id', 'ASC']],
                             offset: body.pageNo * 20,
                             limit: 20,
-                            include: [{ model: sq.models.drop_take_zone }]
+                            include: [{ model: sq.models.drop_take_zone },
+                            {
+                                model: sq.models.sct_scale_item,
+                                separate: true,
+                                order: [['id', 'ASC']]
+                            }
+                            ]
                         }
                     ), total: await company.countStuff()
                 };
@@ -210,7 +223,7 @@ module.exports = {
                 return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token);
             },
         },
-        expect_weight_config:{
+        expect_weight_config: {
             name: '配置货物是否需要期望重量',
             description: '配置货物是否需要期望重量',
             is_write: true,
@@ -758,17 +771,17 @@ module.exports = {
                 return { result: true };
             }
         },
-        add_delegate:{
-            name:'添加代理',
-            description:'添加代理',
-            is_write:true,
-            is_get_api:false,
-            params:{
-                name:{type:String,have_to:true,mean:'代理名称',example:'代理名称'},
-                code:{type:String,have_to:true,mean:'代理编码',example:'代理编码'},
+        add_delegate: {
+            name: '添加代理',
+            description: '添加代理',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '代理名称', example: '代理名称' },
+                code: { type: String, have_to: true, mean: '代理编码', example: '代理编码' },
             },
-            result:{
-                result:{type:Boolean,mean:'结果',example:true}
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
@@ -784,8 +797,7 @@ module.exports = {
                         ]
                     }
                 });
-                if (exist.length == 1)
-                {
+                if (exist.length == 1) {
                     throw { err_msg: '代理已存在' };
                 }
                 await company.createDelegate({
@@ -795,16 +807,16 @@ module.exports = {
                 return { result: true };
             }
         },
-        del_delegate:{
-            name:'删除代理',
-            description:'删除代理',
-            is_write:true,
-            is_get_api:false,
-            params:{
-                id:{type:Number,have_to:true,mean:'代理ID',example:1},
+        del_delegate: {
+            name: '删除代理',
+            description: '删除代理',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '代理ID', example: 1 },
             },
-            result:{
-                result:{type:Boolean,mean:'结果',example:true}
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
@@ -813,8 +825,7 @@ module.exports = {
                         id: body.id
                     }
                 });
-                if (delegate.length == 1)
-                {
+                if (delegate.length == 1) {
                     await delegate[0].destroy();
                 }
                 return { result: true };
@@ -857,7 +868,7 @@ module.exports = {
                     limit: 20,
                     offset: body.pageNo * 20,
                     order: [['id', 'DESC']],
-                    include:{
+                    include: {
                         model: sq.models.contract,
                         as: 'contracts',
                         include: [
@@ -913,6 +924,105 @@ module.exports = {
                 if (company) {
                     company.verify_pay_by_cash = body.verify_pay_by_cash;
                     await company.save();
+                }
+                return { result: true };
+            }
+        },
+        add_sct_scale_item: {
+            name: '设置结构化计量称重项',
+            description: '设置结构化计量称重项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                name: { type: String, have_to: true, mean: '结构化计量称重项', example: '称重项' },
+                type: { type: String, have_to: false, mean: '称重项类型', example: 'weight' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
+                if (stuff.length == 1) {
+                    stuff = stuff[0];
+                    let type = body.type || 'string';
+                    let exist = await stuff.getSct_scale_items({ where: { name: body.name } });
+                    if (exist.length == 0) {
+                        let item = await sq.models.sct_scale_item.create({
+                            name: body.name,
+                            type:type,
+                        });
+                        await item.setStuff(stuff);
+                    }
+                }
+                else {
+                    throw { err_msg: '物料不存在' };
+                }
+                return { result: true };
+            }
+        },
+        update_sct_scale_item: {
+            name: '更新结构化计量称重项',
+            description: '更新结构化计量称重项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '称重项ID', example: 1 },
+                name: { type: String, have_to: false, mean: '结构化计量称重项', example: '称重项' },
+                type: { type: String, have_to: false, mean: '称重项类型', example: 'weight' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let company = await rbac_lib.get_company_by_token(token);
+                let item = await sq.models.sct_scale_item.findByPk(body.id, {
+                    include: [{
+                        model: sq.models.stuff,
+                        include: [{
+                            model: sq.models.company
+                        }]
+                    }],
+                });
+                if (item && item.stuff.company.id == company.id) {
+                    item.name = body.name;
+                    item.type = body.type || 'string';
+                    await item.save();
+                }
+                else {
+                    throw { err_msg: '称重项不存在' };
+                }
+                return { result: true };
+            }
+        },
+        del_sct_scale_item: {
+            name: '删除结构化计量称重项',
+            description: '删除结构化计量称重项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '称重项ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let item = await sq.models.sct_scale_item.findByPk(body.id, {
+                    include: [{
+                        model: sq.models.stuff,
+                        include: [{
+                            model: sq.models.company
+                        }]
+                    }],
+                });
+                if (item && item.stuff.company.id == company.id) {
+                    await item.destroy();
+                }
+                else {
+                    throw { err_msg: '称重项不存在' };
                 }
                 return { result: true };
             }

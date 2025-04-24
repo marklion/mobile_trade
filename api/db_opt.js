@@ -383,7 +383,16 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             code: { type: DataTypes.STRING },
-        }
+        },
+        sct_scale_item:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            type:{ type: DataTypes.STRING },
+        },
+        plan_sct_info:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            value: { type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -529,6 +538,13 @@ let db_opt = {
         _sq.models.contract.belongsTo(_sq.models.delegate);
         _sq.models.delegate.hasMany(_sq.models.plan);
         _sq.models.plan.belongsTo(_sq.models.delegate);
+
+        _sq.models.sct_scale_item.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.sct_scale_item);
+        _sq.models.plan_sct_info.belongsTo(_sq.models.sct_scale_item);
+        _sq.models.sct_scale_item.hasMany(_sq.models.plan_sct_info);
+        _sq.models.plan_sct_info.belongsTo(_sq.models.plan);
+        _sq.models.plan.hasMany(_sq.models.plan_sct_info);
     },
     install: async function () {
         console.log('run install');
