@@ -74,6 +74,9 @@ export default {
         let ticket = await this.$send_req('/global/get_ticket', {
             id: plan_id
         });
+        if (ticket.plan_sct_infos == undefined) {
+            ticket.plan_sct_infos = [];
+        }
         if (ticket.delegate_name) {
             if (options.is_internal && options.is_internal == 'true') {
                 ticket.company_name = ticket.delegate_name;
@@ -109,13 +112,13 @@ export default {
                 value: ticket.behind_plate
             }, ],
         };
-        if (ticket.fw_info) {
+        if (ticket.fw_info && ticket.plan_sct_infos.length <= 0) {
             this.ticket_content.list.push({
                 label: ticket.replace_fw_info || '一次计量',
                 value: ticket.fw_info,
             });
         }
-        if (ticket.sw_info) {
+        if (ticket.sw_info && ticket.plan_sct_infos.length <= 0) {
             this.ticket_content.list.push({
                 label: ticket.replace_sw_info || '二次计量',
                 value: ticket.sw_info,
@@ -138,7 +141,7 @@ export default {
                 label: '过皮时间',
                 value: ticket.p_time,
             });
-        } else if (ticket.m_time || ticket.p_time) {
+        } else if ((ticket.m_time || ticket.p_time) && ticket.plan_sct_infos.length <= 0) {
             this.ticket_content.list.push({
                 label: '计量时间',
                 value: ticket.m_time || ticket.p_time,
@@ -157,6 +160,12 @@ export default {
                 value: ticket.trans_company_name,
             })
         }
+        ticket.plan_sct_infos.forEach(item => {
+            this.ticket_content.list.push({
+                label: item.sct_scale_item.name,
+                value: item.value,
+            });
+        });
     },
     onShareAppMessage: function () {
         return {

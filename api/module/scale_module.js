@@ -2,6 +2,7 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
+const db_opt = require('../db_opt');
 module.exports = {
     name: 'scale',
     description: '计量管理',
@@ -291,7 +292,6 @@ module.exports = {
             },
             func: async function (body, token) {
                 const moment = require('moment');
-                const db_opt = require('../db_opt');
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
                     // 当日该物料已出货第几车
                     let vehicle_count = await plan.stuff.countPlans({
@@ -343,7 +343,30 @@ module.exports = {
                 });
                 return { result: true };
             }
-        }
-        
+        },
+        input_psi_info: {
+            name: '输入结构化计量信息',
+            description: '输入结构化计量信息',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                psi_id: { type: Number, have_to: true, mean: '结构化计量ID', example: 1 },
+                value: { type: String, have_to: true, mean: '结构化计量信息', example: '结构化计量信息' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
+                    let psi = await plan.getPlan_sct_infos({ where: { id: body.psi_id } });
+                    if (psi.length == 1) {
+                        psi[0].value = body.value;
+                        await psi[0].save();
+                    }
+                });
+                return { result: true };
+            },
+        },
     }
 }

@@ -89,6 +89,8 @@ public:
                 try
                 {
                     card_no = read_line_from_file(m_sel_fd);
+                    // 去除掉card_no前的若干0字符
+                    card_no.erase(0, card_no.find_first_not_of('0'));
                     m_log.log("read card no: %s", card_no.c_str());
                 }
                 catch (const std::runtime_error &e)

@@ -67,6 +67,7 @@ async function get_ticket_func(body, token) {
         replace_count: plan.stuff.company.global_replace_form.replace_count || '装载量',
         replace_fw_info: plan.stuff.company.global_replace_form.replace_fw_info || '一次计量',
         replace_sw_info: plan.stuff.company.global_replace_form.replace_sw_info || '二次计量',
+        plan_sct_infos:plan.plan_sct_infos,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
