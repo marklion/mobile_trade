@@ -2,13 +2,16 @@
 
 # [Choice] Ubuntu version: bionic, focal
 ARG VARIANT="focal"
-FROM ubuntu:${VARIANT}
+FROM --platform=linux/amd64  ubuntu:${VARIANT}
 
 # [Optional] Uncomment this section to install additional OS packages.
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake wget libpython3-dev npm sqlite3 libsqlite3-dev uuid uuid-dev libcurl4-openssl-dev automake bison flex g++ git libboost-all-dev libevent-dev libssl-dev libtool make pkg-config
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake wget libpython3-dev npm sqlite3 libsqlite3-dev 
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y uuid uuid-dev libcurl4-openssl-dev automake 
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y bison flex g++ git libboost-all-dev libevent-dev 
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libssl-dev libtool make pkg-config
 RUN npm install n -g
 RUN n v18.17.0
 RUN npm install pkg -g
