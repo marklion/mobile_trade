@@ -10,6 +10,8 @@
             </el-switch>
             <el-switch v-model="verify_pay_by_cash" active-text="验款权限设为余额管理" @change="set_verify_pay_config">
             </el-switch>
+            <el-switch v-model="show_sc_in_field" active-text="排队车辆界面操作安检" @change="set_show_sc_in_field">
+            </el-switch>
         </el-main>
     </el-container>
     <h3>代理配置</h3>
@@ -43,35 +45,35 @@
         </template>
     </page-content>
     <h3>磅单配置</h3>
-        <el-form label-width="100px" v-model="replace_form" style="width: 800px;">
-            <el-form-item label="称重单" >
-                <template>
-                    <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
-                </template>
-                <el-input v-model="replace_form.replace_weighingSheet" placeholder="请输入称重单的替换文字" style="width:200px"></el-input>
-            </el-form-item>
-            <el-form-item label="装载量">
-                <template>
-                    <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
-                </template>
-                <el-input v-model="replace_form.replace_count" placeholder="请输入装载量的替换文字"  style="width:200px"></el-input>
-            </el-form-item>
-            <el-form-item label="一次计量">
-                <template>
-                    <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
-                </template>
-                <el-input v-model="replace_form.replace_fw_info" placeholder="请输入一次计量的替换文字" style="width:200px"></el-input>
-            </el-form-item>
-            <el-form-item label="二次计量">
-                <template>
-                    <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
-                </template>
-                <el-input v-model="replace_form.replace_sw_info" placeholder="请输入二次计量的替换文字" style="width:200px"></el-input>
-            </el-form-item>
-            <el-button type="" @click="onReset" style="float: right;">重置</el-button>
-            <el-button type="primary" @click="onSaveReplace" style="float: right;">保存</el-button>
-        </el-form>
-    
+    <el-form label-width="100px" v-model="replace_form" style="width: 800px;">
+        <el-form-item label="称重单">
+            <template>
+                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+            </template>
+            <el-input v-model="replace_form.replace_weighingSheet" placeholder="请输入称重单的替换文字" style="width:200px"></el-input>
+        </el-form-item>
+        <el-form-item label="装载量">
+            <template>
+                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+            </template>
+            <el-input v-model="replace_form.replace_count" placeholder="请输入装载量的替换文字" style="width:200px"></el-input>
+        </el-form-item>
+        <el-form-item label="一次计量">
+            <template>
+                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+            </template>
+            <el-input v-model="replace_form.replace_fw_info" placeholder="请输入一次计量的替换文字" style="width:200px"></el-input>
+        </el-form-item>
+        <el-form-item label="二次计量">
+            <template>
+                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+            </template>
+            <el-input v-model="replace_form.replace_sw_info" placeholder="请输入二次计量的替换文字" style="width:200px"></el-input>
+        </el-form-item>
+        <el-button type="" @click="onReset" style="float: right;">重置</el-button>
+        <el-button type="primary" @click="onSaveReplace" style="float: right;">保存</el-button>
+    </el-form>
+
     <el-dialog title="新增合同" :visible.sync="show_add_contract_diag" width="50%">
         <select-search filterable body_key="contracts" get_url="/sale_management/contract_get" item_label="company.name" item_value="id" :permission_array="['sale_management', 'stuff_management']" v-model="contract_id_selected"></select-search>
         <span slot="footer">
@@ -131,9 +133,10 @@ export default {
                 hide_impact_selector: false,
             },
             qualification_check: false,
+            show_sc_in_field: false,
             create_delegate: false,
             verify_pay_by_cash: false,
-            replace_form:{
+            replace_form: {
                 replace_weighingSheet: '',
                 replace_count: '',
                 replace_fw_info: '',
@@ -150,10 +153,10 @@ export default {
     methods: {
         async fetchReplaceField() {
             try {
-                const ret = await this.$send_req('/stuff/get_replace_field',{});
+                const ret = await this.$send_req('/stuff/get_replace_field', {});
                 console.log('获取替换字段:', ret);
                 if (ret && ret.replace_form) {
-                this.replace_form = ret.replace_form;
+                    this.replace_form = ret.replace_form;
                 }
             } catch (error) {
                 console.error('获取替换字段失败:', error);
@@ -239,6 +242,10 @@ export default {
             let ret = await this.$send_req('/stuff/get_check_qualification', {});
             this.qualification_check = ret.enable;
         },
+        get_show_sc_in_field: async function () {
+            let ret = await this.$send_req('/global/get_show_sc_in_field', {});
+            this.show_sc_in_field = ret.show_sc_in_field;
+        },
         get_verify_pay_config: async function () {
             this.verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
         },
@@ -258,6 +265,12 @@ export default {
             });
             await this.get_company_qualification();
         },
+        set_show_sc_in_field: async function () {
+            await this.$send_req('/stuff/set_show_sc_in_field', {
+                show_sc_in_field: this.show_sc_in_field
+            });
+            await this.get_show_sc_in_field();
+        },
         onReset() {
             this.replace_form = {
                 weighingSheet: '',
@@ -267,14 +280,14 @@ export default {
             }
         },
         onSaveReplace: async function () {
-            let res = await this.$send_req('/stuff/set_replace_field', { 
-                replace_form: { 
+            let res = await this.$send_req('/stuff/set_replace_field', {
+                replace_form: {
                     replace_weighingSheet: this.replace_form.replace_weighingSheet || '称重单',
                     replace_count: this.replace_form.replace_count || '装载量',
                     replace_fw_info: this.replace_form.replace_fw_info || '一次计量',
                     replace_sw_info: this.replace_form.replace_sw_info || '二次计量'
                 }
-                });
+            });
             if (res) {
                 this.$message.success('保存成功');
             } else {

@@ -41,12 +41,13 @@ module.exports = {
             is_write: false,
             is_get_api: true,
             params: {
+                include_license: { type: Boolean, have_to: false, mean: '是否包含证件检查', example: true },
             },
             result: {
                 plans: { type: Array, mean: '计划列表', explain: api_param_result_define.plan_detail_define }
             },
             func: async function (body, token) {
-                let ret = await plan_lib.get_wait_que(body.pageNo, token);
+                let ret = await plan_lib.get_wait_que(body.pageNo, token, body.include_license);
                 return {
                     plans: ret.rows,
                     total: ret.count

@@ -904,14 +904,14 @@ module.exports = {
             name: '设置磅单替换字段',
             is_write: false,
             is_get_api: false,
-            params: { 
+            params: {
                 replace_form : { type: Object, have_to: true, mean: '替换表单', explain: {
                     replace_weighingSheet: { type: String, have_to: true, mean: '磅单替换表单', example: '磅单替换表单' },
                     replace_count: { type: String, have_to: true, mean: '载重量替换文字', example: '载重量替换文字' },
                     replace_fw_info: { type: String, have_to: true, mean: '一次称重替换文字', example: '一次称重替换文字' },
                     replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' }
-                    } 
-                } 
+                    }
+                }
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -936,9 +936,9 @@ module.exports = {
                     replace_content.replace_count = body.replace_form.replace_count;
                     replace_content.replace_fw_info = body.replace_form.replace_fw_info;
                     replace_content.replace_sw_info = body.replace_form.replace_sw_info;
-                    await replace_content.save(); 
+                    await replace_content.save();
                 }
-                
+
                 return { result: true };
             }
         },
@@ -953,8 +953,8 @@ module.exports = {
                     replace_count: { type: String, mean: '载重量替换文字', example: '载重量替换文字' },
                     replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
                     replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' }
-                    } 
-                } 
+                    }
+                }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
@@ -1115,5 +1115,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_show_sc_in_field:{
+            name:'设置在排队车辆处显示证件检查',
+            description:'设置在排队车辆处显示证件检查',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                show_sc_in_field: { type: Boolean, have_to: true, mean: '是否显示证件检查', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.show_sc_in_field = body.show_sc_in_field;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
+
     }
 }

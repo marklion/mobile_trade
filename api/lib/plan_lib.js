@@ -1072,10 +1072,9 @@ module.exports = {
         }
         return ret;
     },
-    get_wait_que: async function (pageNo, token) {
+    get_wait_que: async function (pageNo, token, include_license = false) {
         let sq = db_opt.get_sq();
         let stuff_array = [0];
-        let need_get_p_weight = false;
         let company = await rbac_lib.get_company_by_token(token);
         if (company) {
             let tmp = await company.getStuff();
@@ -1086,7 +1085,6 @@ module.exports = {
         }
         let cond = {
             [db_opt.Op.and]: [
-                { register_time: { [db_opt.Op.ne]: null } },
                 { status: { [db_opt.Op.ne]: 3 } },
                 {
                     stuffId: {
@@ -1095,9 +1093,18 @@ module.exports = {
                 }
             ],
         };
+        if (!include_license) {
+            cond[db_opt.Op.and].push(
+                { register_time: { [db_opt.Op.ne]: null } },
+            );
+        }
         let plans = await sq.models.plan.findAll({
             where: cond,
-            order: [[sq.fn('TIMESTAMP', sq.col('register_time')), 'ASC'], ['id', 'DESC']],
+            order: [
+                [sq.literal('register_time IS NULL'), 'ASC'], // 有 register_time 的记录排在前面
+                [sq.fn('TIMESTAMP', sq.col('register_time')), 'ASC'], // 按 register_time 升序排列
+                ['id', 'DESC'] // 按 id 降序排列
+            ],
             offset: pageNo * 20,
             limit: 20,
             include: util_lib.plan_detail_include(),
@@ -1657,7 +1664,7 @@ module.exports = {
     },
     prepare_sct_value: async function (plan) {
         let sq = db_opt.get_sq();
-        let all_ssi = await plan.stuff.getSct_scale_items({order: [['id', 'ASC']]});
+        let all_ssi = await plan.stuff.getSct_scale_items({ order: [['id', 'ASC']] });
         for (let index = 0; index < all_ssi.length; index++) {
             const element = all_ssi[index];
             let sct_info = await plan.getPlan_sct_infos({ where: { sctScaleItemId: element.id } });

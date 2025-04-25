@@ -2,12 +2,12 @@
 <view>
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
-        <list-show ref="plans" :fetch_function="get_wait_que" height="90vh" search_key="search_cond" v-model="plans">
-            <view v-for="item in plans" :key="item.id">
+        <list-show ref="plans" :fetch_function="get_wait_que" height="90vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field]">
+            <view v-for="item in plans" :key="item.id" class="single_card_show">
                 <u-cell :icon="icon_make(item)" :title="item.main_vehicle.plate + '-' + item.behind_vehicle.plate">
                     <view slot="label" style="display:flex; flex-direction: column;">
                         <fui-text :text="item.company.name" size="24"></fui-text>
-                        <fui-text type="primary" :text="'排号时间：' + item.register_time" size="24"></fui-text>
+                        <fui-text v-if="item.register_time" type="primary" :text="'排号时间：' + item.register_time" size="24"></fui-text>
                         <fui-text v-if="item.call_time" type="success" :text="'叫号时间：' + item.call_time" size="24"></fui-text>
                         <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + (item.seal_no?item.seal_no:'') + '-' + (item.drop_take_zone_name?item.drop_take_zone_name:'')" size="24"></fui-text>
                         <fui-text v-if="item.enter_time" type="purple" :text="'一次重量:' + item.p_weight" size="24"></fui-text>
@@ -19,19 +19,24 @@
                         <fui-text v-if="item.expect_weight > 0" size="24" :text="'期望重量:' + item.expect_weight"></fui-text>
                     </view>
                     <view slot="right-icon">
-                        <fui-button btnSize="mini" v-if="!item.call_time" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
-                        <view v-else-if="!item.enter_time">
-                            <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
-                            <fui-button v-if="item.stuff.manual_weight" btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
+                        <view v-if="item.register_time">
+                            <fui-button btnSize="mini" v-if="!item.call_time" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
+                            <view v-else-if="!item.enter_time">
+                                <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
+                                <fui-button v-if="item.stuff.manual_weight" btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
+                            </view>
+                            <view v-else>
+                                <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
+                                <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
+                                <fui-button btnSize="mini" v-if="item.stuff.manual_weight" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
+                            </view>
                         </view>
-                        <view v-else>
-                            <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
-                            <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
-                            <fui-button btnSize="mini" v-if="item.stuff.manual_weight" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
-                        </view>
-                        <fui-button btnSize="mini" text="检查" type="warning" @click="nav_to_fc(item)"></fui-button>
                     </view>
                 </u-cell>
+                <view style="display: flex;  padding: 10rpx;">
+                    <fui-button btnSize="mini" text="审批" type="primary" @click="prepare_sc_confirm(item)"></fui-button>
+                    <fui-button btnSize="mini" text="检查" type="warning" @click="nav_to_fc(item)"></fui-button>
+                </view>
             </view>
         </list-show>
     </view>
@@ -67,6 +72,10 @@
         </fui-list>
     </fui-bottom-popup>
     <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
+
+    <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
+        <sc-execute ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
+    </fui-bottom-popup>
 </view>
 </template>
 
@@ -75,15 +84,18 @@ import ListShow from '@/components/ListShow.vue';
 import $fui from '@/components/firstui/fui-clipboard';
 import DevOpt from './DevOpt.vue';
 import Measurement from '@/components/Measurement.vue';
+import ScExecute from './ScExecute.vue';
 export default {
     name: 'Field',
     components: {
         "list-show": ListShow,
         "dev-opt": DevOpt,
-        "measurement": Measurement
+        "measurement": Measurement,
+        "sc-execute": ScExecute,
     },
     data: function () {
         return {
+            show_sc_confirm: false,
             upload_url: this.$remote_url() + '/api/v1/upload_file',
             fileList: [],
             sub_pages: ['排队车辆', '设备管理', '磅单印章'],
@@ -102,9 +114,17 @@ export default {
             zone_name: '',
             show_zone_select: false,
             focus_plan: {},
+            show_sc_in_field: false,
         };
     },
     methods: {
+        prepare_sc_confirm: function (item) {
+            this.focus_plan = item;
+            this.show_sc_confirm = true;
+            this.$nextTick(() => {
+                this.$refs.sc_confirm.refresh();
+            });
+        },
         nav_to_fc: function (_plan) {
             uni.navigateTo({
                 url: '/subPage1/FcExecute?plan_id=' + _plan.id
@@ -223,9 +243,13 @@ export default {
             }
             return ret;
         },
-        get_wait_que: async function (pageNo) {
+        get_wait_que: async function (pageNo, [show_sc_in_field]) {
+            if (show_sc_in_field == undefined) {
+                return [];
+            }
             let ret = await this.$send_req('/scale/wait_que', {
-                pageNo: pageNo
+                pageNo: pageNo,
+                include_license: show_sc_in_field
             });
             ret.plans.forEach(ele => {
                 ele.search_cond = ele.main_vehicle.plate + ' ' + ele.behind_vehicle.plate;
@@ -249,6 +273,10 @@ export default {
             });
             uni.startPullDownRefresh();
         },
+        init_sc_show_switch: async function () {
+            this.show_sc_in_field = (await this.$send_req('/global/get_show_sc_in_field', {})).show_sc_in_field;
+            this.$refs.sc_confirm.refresh();
+        }
     },
     onPullDownRefresh: function () {
         if (this.$refs.plans) {
@@ -257,12 +285,25 @@ export default {
         this.init_stamp_pic();
         this.init_dev();
         uni.stopPullDownRefresh();
+        this.init_sc_show_switch();
     },
     onShow: function () {
         this.init_stamp_pic();
         this.init_dev();
+        this.init_sc_show_switch();
     },
 }
 </script>
 
-<style></style>
+<style scoped>
+.single_card_show {
+    border: 1px dashed red;
+    border-radius: 10rpx;
+    margin-bottom: -2px;
+}
+
+.single_card_show:not(:last-child) {
+    border-bottom: none;
+    /* 隐藏相邻框框的底部边框 */
+}
+</style>
