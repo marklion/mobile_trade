@@ -68,7 +68,7 @@ let db_opt = {
             prefer_order_begin_offset: { type: DataTypes.INTEGER, defaultValue: 0 },
             prefer_order_end_offset: { type: DataTypes.INTEGER, defaultValue: 1 },
         },
-        global_replace_form : { 
+        global_replace_form : {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             replace_weighingSheet: { type: DataTypes.STRING,  default: '称重单' },
             replace_count: { type: DataTypes.STRING, default: '载重量替换文字' },
@@ -118,6 +118,7 @@ let db_opt = {
             check_qualification: { type: DataTypes.BOOLEAN, defaultValue: false },
             qualification_expiration_date: { type: DataTypes.STRING(20) },
             verify_pay_by_cash:{ type: DataTypes.BOOLEAN, defaultValue: false },
+            show_sc_in_field:{ type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

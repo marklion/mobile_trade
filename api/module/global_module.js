@@ -42,7 +42,7 @@ async function get_ticket_func(body, token) {
     if (plan.delegate) {
         delegate_name = plan.delegate.name
     }
-    
+
     return {
         id: plan.id,
         company_name: plan.company.name,
@@ -1933,6 +1933,20 @@ module.exports = {
                     return { result: false };
                 }
             },
+        },
+        get_show_sc_in_field: {
+            name: '获取在排队车辆处显示证件检查',
+            description: '获取在排队车辆处显示证件检查',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                show_sc_in_field: { type: Boolean, mean: '是否显示证件检查', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { show_sc_in_field: company.show_sc_in_field };
+            }
         },
     },
 }
