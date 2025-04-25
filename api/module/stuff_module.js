@@ -9,8 +9,7 @@ async function change_stuff_single_switch(stuff_id, switch_name, switch_value, t
     if (stuff && company && await company.hasStuff(stuff)) {
         stuff[switch_name] = switch_value;
         await stuff.save();
-    }
-    else {
+    } else {
         throw { err_msg: '货物不存在' };
     }
     return { result: true };
@@ -90,6 +89,8 @@ module.exports = {
                         ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                         need_expect_weight: { type: Boolean, mean: '是否需要期望重量', example: false },
                         close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
+                        second_unit: { type: String, mean: '第二单位', example: '千克' },
+                        coefficient: { type: Number, mean: '系数', example: 1.0 },
                         add_base: { type: String, mean: '自增基础', example: 'day' },
                         sct_scale_items: {
                             type: Array, mean: '结构化计量项', explain: {
@@ -239,6 +240,29 @@ module.exports = {
             func: async function (body, token) {
                 return await change_stuff_single_switch(body.stuff_id, 'need_expect_weight', body.need_expect_weight, token);
             },
+        },
+        set_unit_coefficient:{
+            name: '基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',
+            description: '基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                unit_coefficient:{type:Object,have_to:true,mean:'基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',explain:{
+                    second_unit: { type: String, have_to: true, mean: '是基于物料增加第二单位配置（字符串）', example: '千克' },
+                    coefficient: { type: Number, have_to: true, mean: '基于物料增加系数配置（浮点数）', example: 1.0 },
+                },
+            }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                    await change_stuff_single_switch(body.stuff_id, 'second_unit', body.unit_coefficient.second_unit, token);  
+                    await change_stuff_single_switch(body.stuff_id, 'coefficient', body.unit_coefficient.coefficient, token);  
+                
+                return {result:true}          
+            }
         },
         manual_weight_config: {
             name: '配置货物是否需要手动计量',

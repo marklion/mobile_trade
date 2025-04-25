@@ -112,6 +112,12 @@ export default {
                 value: ticket.behind_plate
             }, ],
         };
+        if (ticket.second_unit && ticket.coefficient) {
+            this.ticket_content.list.unshift(0,{
+                label: '第二单位',
+                value: ticket.coefficient * ticket.count +  ticket.second_unit,
+            });
+        }
         if (ticket.fw_info && ticket.plan_sct_infos.length <= 0) {
             this.ticket_content.list.push({
                 label: ticket.replace_fw_info || '一次计量',

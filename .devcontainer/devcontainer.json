@@ -7,7 +7,9 @@
 		// Update 'VARIANT' to pick an Ubuntu version: focal, bionic
 		"args": {
 			"VARIANT": "focal"
-		}
+		},
+		"platform": "linux/amd64"
+		
 	},
 	// Set *default* container specific settings.json values on container create.
 	"settings": {},

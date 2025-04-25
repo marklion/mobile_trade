@@ -196,6 +196,8 @@ let db_opt = {
             need_expect_weight: { type: DataTypes.BOOLEAN, defaultValue: false },
             stuff_code: { type: DataTypes.STRING },
             close_today: { type: DataTypes.BOOLEAN, defaultValue: false },
+            second_unit: { type: DataTypes.STRING },
+            coefficient: { type: DataTypes.DECIMAL(5, 2), defaultValue: 1.00 , get:getDecimalValue('coefficient')},
             add_base:{type: DataTypes.STRING},
         },
         contract: {
