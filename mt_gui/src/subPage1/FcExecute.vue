@@ -3,6 +3,9 @@
     <list-show ref="fc_table" :fetch_function="get_fc_plan_tables" :fetch_params="[plan_id]" height="95vh" v-model="tables">
         <view v-for="single_table in tables" :key="single_table.id">
             <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="single_table.name" :tag="single_table.fc_plan_table.finish_time?(single_table.fc_plan_table.finish_time + ' 提交人:' + single_table.fc_plan_table.rbac_user.name):'未提交'">
+                <view style="display: flex; justify-content: flex-end;">
+                    <fui-text text="一键检查" type="primary" @click="toggleAll(single_table)"></fui-text>
+                </view>
                 <view v-for="item in single_table.fc_plan_table.fc_check_results" :key="item.id">
                     <u-cell :title="item.field_check_item.name">
                         <u-switch slot="value" inactiveColor="red" asyncChange :value="item.checked" @change="pass_fc($event, item)"></u-switch>
@@ -55,6 +58,12 @@ export default {
                 });
             });
             return resp.fc_plan_tables;
+        },
+        toggleAll: async function (table) {
+            for (let item of table.fc_plan_table.fc_check_results) {
+                await this.pass_fc(true, item);
+                }
+            await this.commit(table);
         },
     },
     onLoad: function (options) {
