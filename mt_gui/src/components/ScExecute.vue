@@ -72,8 +72,8 @@
 </template>
 
 <script>
-import ListShow from '../components/ListShow.vue';
-import ScUpload from '../components/ScUpload.vue';
+import ListShow from './ListShow.vue';
+import ScUpload from './ScUpload.vue';
 export default {
     name: 'ScExecute',
     components: {

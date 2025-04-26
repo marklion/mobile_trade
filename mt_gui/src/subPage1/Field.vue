@@ -84,7 +84,7 @@ import ListShow from '@/components/ListShow.vue';
 import $fui from '@/components/firstui/fui-clipboard';
 import DevOpt from './DevOpt.vue';
 import Measurement from '@/components/Measurement.vue';
-import ScExecute from './ScExecute.vue';
+import ScExecute from '../components/ScExecute.vue';
 export default {
     name: 'Field',
     components: {

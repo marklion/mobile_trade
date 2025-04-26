@@ -388,7 +388,7 @@ import $fui from '@/components/firstui/fui-clipboard';
 import pickRegions from '@/components/pick-regions/pick-regions.vue'
 import moment from 'moment';
 import Measurement from '../components/Measurement.vue';
-import ScExecute from '../subPage1/ScExecute.vue';
+import ScExecute from '../components/ScExecute.vue';
 export default {
     name: 'OrderList',
     components: {
