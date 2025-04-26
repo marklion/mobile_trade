@@ -37,7 +37,7 @@ async function get_ticket_func(body, token) {
     let plan = await plan_lib.replace_plan2archive(orig_plan)
     if (!plan) {
         plan = orig_plan;
-    }   
+    }
     let delegate_name = ''
     if (plan.delegate) {
         delegate_name = plan.delegate.name
@@ -65,10 +65,10 @@ async function get_ticket_func(body, token) {
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,
-        replace_weighingSheet:plan.stuff.company.global_replace_form.replace_weighingSheet || '称重单',
-        replace_count: plan.stuff.company.global_replace_form.replace_count || '装载量',
-        replace_fw_info: plan.stuff.company.global_replace_form.replace_fw_info || '一次计量',
-        replace_sw_info: plan.stuff.company.global_replace_form.replace_sw_info || '二次计量',
+        replace_weighingSheet:plan.stuff.company.global_replace_form?.replace_weighingSheet || '称重单',
+        replace_count: plan.stuff.company.global_replace_form?.replace_count || '装载量',
+        replace_fw_info: plan.stuff.company.global_replace_form?.replace_fw_info || '一次计量',
+        replace_sw_info: plan.stuff.company.global_replace_form?.replace_sw_info || '二次计量',
         plan_sct_infos:plan.plan_sct_infos,
     }
 }
