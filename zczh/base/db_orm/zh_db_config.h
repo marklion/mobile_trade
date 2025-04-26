@@ -308,6 +308,7 @@ public:
     std::string create_time;
     std::string continue_until;
     double expect_weight = 0;
+    long enter_gate = 0;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -339,6 +340,7 @@ public:
         ret.push_back(sqlite_orm_column("create_time", sqlite_orm_column::STRING, &create_time));
         ret.push_back(sqlite_orm_column("continue_until", sqlite_orm_column::STRING, &continue_until));
         ret.push_back(sqlite_orm_column("expect_weight", sqlite_orm_column::REAL, &expect_weight));
+        ret.push_back(sqlite_orm_column("enter_gate", sqlite_orm_column::INTEGER, &enter_gate));
 
         return ret;
     }

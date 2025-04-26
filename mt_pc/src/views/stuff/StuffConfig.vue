@@ -31,33 +31,13 @@
                                             <div class="unit-input-group">
                                                 <div class="input-item">
                                                     <span class="unit-label">第二单位配置:</span>
-                                                    <el-input                                                        
-                                                        v-model="scope.row.second_unit" 
-                                                        placeholder="例:千克" 
-                                                        size="small"
-                                                        clearable
-                                                        @change="validateUnitInput"
-                                                    />
+                                                    <el-input v-model="scope.row.second_unit" placeholder="例:千克" size="small" clearable @change="validateUnitInput" />
                                                 </div>
                                                 <div class="input-item">
                                                     <span class="unit-label">系数配置:</span>
-                                                    <el-input-number                                                      
-                                                        v-model="scope.row.coefficient"
-                                                        placeholder="例:1.00"
-                                                        :precision="2"
-                                                        :step="0.1"
-                                                        :min="0"
-                                                        :max="999999"
-                                                        size="small"
-                                                        controls-position="right"
-                                                    />
+                                                    <el-input-number v-model="scope.row.coefficient" placeholder="例:1.00" :precision="2" :step="0.1" :min="0" :max="999999" size="small" controls-position="right" />
                                                 </div>
-                                                <el-button 
-                                                    type="primary" 
-                                                    size="small"
-                                                    :loading="saving"
-                                                    @click="set_scunit_coe_configuration(scope.row)"
-                                                >保存配置</el-button>
+                                                <el-button type="primary" size="small" :loading="saving" @click="set_scunit_coe_configuration(scope.row)">保存配置</el-button>
                                             </div>
                                         </div>
                                         <el-button slot="reference" size="mini" type="primary">配置</el-button>
@@ -96,14 +76,18 @@
                             </el-table-column>
                             <el-table-column label="磅单前缀" width="200">
                                 <template slot-scope="scope">
-                                    <el-input v-model="scope.row.ticket_prefix" size="mini">
-                                        <template slot="prepend">前缀</template>
-                                        <el-button size="mini" type="text" slot="append" @click="set_ticket_prefix(scope.row)">保存</el-button>
-                                    </el-input>
-                                    <el-input v-model="scope.row.add_base" size="mini">
-                                        <template slot="prepend">自增</template>
-                                        <el-button size="mini" type="text" slot="append" @click="set_add_base(scope.row)">保存</el-button>
-                                    </el-input>
+                                    <div>
+                                        <el-input v-model="scope.row.ticket_prefix" size="mini" style="width: 100%;">
+                                            <template slot="prepend">前缀</template>
+                                            <el-button size="mini" type="text" slot="append" @click="set_ticket_prefix(scope.row)">保存</el-button>
+                                        </el-input>
+                                    </div>
+                                    <div>
+                                        <el-input v-model="scope.row.add_base" size="mini" style="width: 100%;">
+                                            <template slot="prepend">自增</template>
+                                            <el-button size="mini" type="text" slot="append" @click="set_add_base(scope.row)">保存</el-button>
+                                        </el-input>
+                                    </div>
                                 </template>
                             </el-table-column>
                             <el-table-column prop="use_for_buy" label="用于采购" width="100" align="center">
@@ -591,7 +575,7 @@ export default {
                 need_expect_weight: event
             });
         },
-        set_scunit_coe_configuration: async function(item) {
+        set_scunit_coe_configuration: async function (item) {
             try {
                 if (item.second_unit && typeof item.second_unit !== 'string') {
                     this.$message.error('第二单位必须是字符串类型');
@@ -751,6 +735,7 @@ export default {
     flex-direction: column;
     gap: 10px;
 }
+
 .unit-input-group {
     display: flex;
     align-items: center;
@@ -773,7 +758,8 @@ export default {
     white-space: nowrap;
 }
 
-.el-input, .el-input-number {
+.el-input,
+.el-input-number {
     width: 120px;
 }
 

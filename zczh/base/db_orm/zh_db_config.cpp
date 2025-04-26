@@ -77,6 +77,11 @@ std::string sql_device_set::should_handle_income_plate(const std::string &_plate
             {
                 ret = "车辆未叫号";
             }
+            if (ret.empty())
+            {
+                vo->enter_gate = 1;
+                vo->update_record();
+            }
         }
         else
         {
