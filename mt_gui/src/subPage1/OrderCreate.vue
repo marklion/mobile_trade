@@ -70,10 +70,14 @@
                 </fui-input>
             </fui-form-item>
             <fui-form-item label="挂车牌" :rules="rules[1]" prop="behind_vehicle_plate">
-                <fui-input :padding="[0]" v-model="new_vehicle.behind_vehicle_plate"></fui-input>
+                <fui-input :padding="[0]" v-model="new_vehicle.behind_vehicle_plate">
+                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_behind_vehicle_plate = true"></fui-button>    
+                </fui-input>
             </fui-form-item>
             <fui-form-item asterisk label="司机姓名" :rules="rules[2]" prop="driver_name">
-                <fui-input :padding="[0]" v-model="new_vehicle.driver_name"></fui-input>
+                <fui-input :padding="[0]" v-model="new_vehicle.driver_name">
+                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_driver_info = true"></fui-button>    
+                </fui-input>
             </fui-form-item>
             <fui-form-item asterisk label="司机电话" :rules="rules[3]" prop="driver_phone">
                 <fui-input :padding="[0]" v-model="new_vehicle.driver_phone"></fui-input>
@@ -107,6 +111,24 @@
             </list-show>
         </fui-list>
     </fui-bottom-popup>
+    <fui-bottom-popup :show="show_behind_vehicle_plate" @close="show_behind_vehicle_plate = false">
+        <fui-list>
+            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh" :fetch_params="[type_define.pair_get_url]">
+                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="choose_behind_vehicle(item)">
+                    挂车牌: {{item.behind_vehicle_plate}}
+                </fui-list-cell>
+            </list-show>
+        </fui-list>
+    </fui-bottom-popup>
+    <fui-bottom-popup :show="show_driver_info" @close="show_driver_info = false">
+        <fui-list>
+            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh" :fetch_params="[type_define.pair_get_url]">
+                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="choose_driver_info(item)">
+                    司机姓名: {{item.driver_name}}- 司机电话: {{item.driver_phone}}
+                </fui-list-cell>
+            </list-show>
+        </fui-list>
+    </fui-bottom-popup>
     <fui-modal :show="notice_show" v-if="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
     <fui-actionsheet v-if="show_import" :show="show_import" :tips="tips" :itemList="import_sheet" @cancel="show_import=false" @click="driver_import"></fui-actionsheet>
     <fui-message ref="msg"></fui-message>
@@ -132,6 +154,8 @@ export default {
             all_vt_list: [],
             show_add_vt: false,
             notice_show: false,
+            show_behind_vehicle_plate: false,
+            show_driver_info: false,
             notice: '',
             show_select_company: false,
             is_proxy: false,
@@ -493,6 +517,15 @@ export default {
             this.new_vehicle.driver_name = item.driver_name;
             this.new_vehicle.driver_phone = item.driver_phone;
             this.show_pick_vehicles = false;
+        },
+        choose_behind_vehicle: function (item) {
+            this.new_vehicle.behind_vehicle_plate = item.behind_vehicle_plate;
+            this.show_behind_vehicle_plate = false;
+        },
+        choose_driver_info: function (item) {
+            this.new_vehicle.driver_name = item.driver_name;
+            this.new_vehicle.driver_phone = item.driver_phone;
+            this.show_driver_info = false;
         },
         pick_address: function (e) {
             this.plan.drop_address = e.map(item => item.name).join('-')
