@@ -9,13 +9,7 @@
             </el-date-picker>
         </div>
         <div v-if="is_need_pm_time">
-            <el-time-picker
-            is-range
-            v-model="selected_time"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            placeholder="选择时间范围">
+            <el-time-picker is-range v-model="selected_time" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" placeholder="选择时间范围">
             </el-time-picker>
         </div>
         <div v-if="need_company">
@@ -26,6 +20,10 @@
         </div>
         <div v-if="need_stuff">
             <select-search body_key="stuff" first_item="所有物料" get_url="/stuff/get_all" item_label="name" item_value="id" :permission_array="['stuff']" v-model="stuff_id"></select-search>
+        </div>
+        <div v-if="concern_finished">
+            <el-switch v-model="only_finished" active-text="仅完成" inactive-text="所有">
+            </el-switch>
         </div>
         <el-button size="small" type="primary" @click="do_export">导出</el-button>
     </el-card>
@@ -41,6 +39,10 @@ export default {
         "select-search": SelectSearch,
     },
     props: {
+        concern_finished: {
+            type: Boolean,
+            default: false,
+        },
         is_buy: {
             type: Boolean,
             default: false,
@@ -75,9 +77,10 @@ export default {
         }
     },
     data: function () {
-        const now = new Date(); 
+        const now = new Date();
         const oneSecondLater = new Date(now.getTime() + 1000);
         return {
+            only_finished: false,
             contract_id: 0,
             company_id: 0,
             stuff_id: 0,
@@ -130,17 +133,17 @@ export default {
             return this.filter;
         },
         do_export: async function () {
-            let selected_time = this.selected_time.map(time => moment(time).format('HH:mm:ss'))
+            let selected_time = undefined;
+            if (this.selected_time) {
+                selected_time = this.selected_time.map(time => moment(time).format('HH:mm:ss'))
+            }
             let filter = {};
             this.get_date_range();
             filter.start_time = this.filter.start_time;
             filter.end_time = this.filter.end_time;
-            if(selected_time){
+            if (selected_time) {
                 filter.m_start_time = this.filter.start_time + " " + selected_time[0];
                 filter.m_end_time = this.filter.end_time + " " + selected_time[1];
-            }else{
-                filter.m_start_time = this.filter.start_time + " 00:00:00";
-                filter.m_end_time = this.filter.end_time + " 23:59:59";
             }
             if (this.need_company && this.company_id) {
                 filter.company_id = this.company_id;
@@ -150,6 +153,9 @@ export default {
             }
             if (this.need_contract && this.contract_id) {
                 filter.contract_id = this.contract_id;
+            }
+            if (this.concern_finished && this.only_finished) {
+                filter.only_finished = this.only_finished;
             }
             this.$emit('do_export', filter);
         },

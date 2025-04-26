@@ -1231,19 +1231,31 @@ module.exports = {
                 [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
             }),
         ];
-        if (body.m_start_time) {
-            conditions.push(
-                sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
-                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
-                })
-            );
-        }
-        if (body.m_end_time) {
-            conditions.push(
-                sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
-                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
-                })
-            );
+        if (body.m_start_time && body.m_end_time) {
+            conditions.push({
+                [db_opt.Op.or]: [
+                    {
+                        [db_opt.Op.and]: [
+                            sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
+                                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
+                            }),
+                            sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
+                                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
+                            }),
+                        ]
+                    },
+                    {
+                        [db_opt.Op.and]: [
+                            sq.where(sq.fn('TIMESTAMP', sq.col('p_time')), {
+                                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
+                            }),
+                            sq.where(sq.fn('TIMESTAMP', sq.col('p_time')), {
+                                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
+                            })
+                        ]
+                    }
+                ]
+            });
         }
         return conditions;
     },
@@ -1257,6 +1269,10 @@ module.exports = {
         }
         else {
             cond.is_buy = false;
+        }
+        if (body.only_finished) {
+            cond.status = 3;
+            cond.manual_close = false;
         }
         let user = await rbac_lib.get_user_by_token(token);
 
@@ -1284,6 +1300,10 @@ module.exports = {
         }
         if (body.company_id) {
             cond.companyId = body.company_id
+        }
+        if (body.only_finished) {
+            cond.status = 3;
+            cond.manual_close = false;
         }
         if (is_buy) {
             cond.is_buy = true;
@@ -1327,6 +1347,7 @@ module.exports = {
                 drop_address: element.drop_address,
                 fapiao_delivered: element.fapiao_delivered ? '是' : '否',
                 comment: element.comment,
+                delegate: element.delegate ? element.delegate.name : '',
             });
         }
         let columns = [{
@@ -1392,6 +1413,9 @@ module.exports = {
         }, {
             header: '装卸区域',
             key: 'drop_take_zone_name'
+        }, {
+            header: '代理公司',
+            key: 'delegate'
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
