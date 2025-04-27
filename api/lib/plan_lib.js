@@ -68,7 +68,14 @@ module.exports = {
     get_stuff_need_buy: async function (_sale_company, pageNo) {
         let sq = db_opt.get_sq();
         let ret = await sq.models.stuff.findAndCountAll({
-            where: { use_for_buy: true },
+            where: {
+                [db_opt.Op.and]: [
+                    {
+                        use_for_buy: true,
+                    },
+                    sq.literal(`(select count(*) from company where id = stuff.companyId AND (buy_config_hard = 0 OR (select count(*) from contract_stuff where stuffId = stuff.id AND contractId = (select id from contract where saleCompanyId = ${_sale_company.id} AND buyCompanyId = stuff.companyId AND deletedAt is Null)) = 1)) = 1`),
+                ],
+            },
             offset: pageNo * 20,
             limit: 20,
             order: [
@@ -77,14 +84,19 @@ module.exports = {
             ],
             include: [
                 {
-                    model: sq.models.company, required: true, include: [
+                    model: sq.models.company,
+                    required: true,
+                    include: [
                         {
-                            model: sq.models.contract, where: {
+                            model: sq.models.contract,
+                            where: {
                                 saleCompanyId: _sale_company.id
-                            }, required: true, as: 'buy_contracts'
-                        }
+                            },
+                            required: true,
+                            as: 'buy_contracts',
+                        },
                     ]
-                }
+                },
             ]
         });
         return ret;

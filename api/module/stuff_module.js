@@ -258,10 +258,10 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                    await change_stuff_single_switch(body.stuff_id, 'second_unit', body.unit_coefficient.second_unit, token);  
-                    await change_stuff_single_switch(body.stuff_id, 'coefficient', body.unit_coefficient.coefficient, token);  
-                
-                return {result:true}          
+                    await change_stuff_single_switch(body.stuff_id, 'second_unit', body.unit_coefficient.second_unit, token);
+                    await change_stuff_single_switch(body.stuff_id, 'coefficient', body.unit_coefficient.coefficient, token);
+
+                return {result:true}
             }
         },
         manual_weight_config: {
@@ -1159,6 +1159,25 @@ module.exports = {
                 return { result: true };
             }
         },
-
+        set_buy_config_hard:{
+            name:'设置采购严格模式',
+            description:'设置采购严格模式',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                buy_config_hard: { type: Boolean, have_to: true, mean: '是否严格模式', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.buy_config_hard = body.buy_config_hard;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
     }
 }

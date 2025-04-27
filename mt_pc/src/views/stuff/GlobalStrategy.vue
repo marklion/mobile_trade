@@ -12,6 +12,8 @@
             </el-switch>
             <el-switch v-model="show_sc_in_field" active-text="排队车辆界面操作安检" @change="set_show_sc_in_field">
             </el-switch>
+            <el-switch v-model="buy_config_hard" active-text="采购严格模式" @change="set_buy_config_hard">
+            </el-switch>
         </el-main>
     </el-container>
     <h3>代理配置</h3>
@@ -136,6 +138,7 @@ export default {
             show_sc_in_field: false,
             create_delegate: false,
             verify_pay_by_cash: false,
+            buy_config_hard: false,
             replace_form: {
                 replace_weighingSheet: '',
                 replace_count: '',
@@ -149,6 +152,8 @@ export default {
         this.get_company_qualification();
         this.get_verify_pay_config();
         this.fetchReplaceField();
+        this.get_buy_config_hard();
+        this.get_show_sc_in_field();
     },
     methods: {
         async fetchReplaceField() {
@@ -293,6 +298,16 @@ export default {
             } else {
                 this.$message.error('保存失败');
             }
+        },
+        get_buy_config_hard: async function () {
+            let ret = await this.$send_req('/global/get_buy_config_hard', {});
+            this.buy_config_hard = ret.buy_config_hard;
+        },
+        set_buy_config_hard: async function () {
+            await this.$send_req('/stuff/set_buy_config_hard', {
+                buy_config_hard: this.buy_config_hard
+            });
+            await this.get_buy_config_hard();
         }
     }
 }

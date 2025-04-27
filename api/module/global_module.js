@@ -1950,5 +1950,19 @@ module.exports = {
                 return { show_sc_in_field: company.show_sc_in_field };
             }
         },
+        get_buy_config_hard: {
+            name: '获取采购严格模式',
+            description: '获取采购严格模式',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                buy_config_hard: { type: Boolean, mean: '是否开启严格模式', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { buy_config_hard: company.buy_config_hard };
+            }
+        },
     },
 }
