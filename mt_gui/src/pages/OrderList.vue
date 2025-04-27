@@ -1465,17 +1465,7 @@ export default {
     /* 更浅的颜色 */
 }
 
-.movable-view {
-    height: 100%;
-    width: 100%;
-}
 
-.movable-area {
-    height: 90%;
-    width: 100%;
-    overflow: hidden;
-    z-index: 9999;
-}
 
 .lookimg {
     width: 100%;
@@ -1495,14 +1485,5 @@ export default {
     right: 20rpx;
 }
 
-.close-button-container {
-    position: absolute;
-    bottom: 40rpx;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 8889;
-}
+
 </style>

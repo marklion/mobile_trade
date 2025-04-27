@@ -109,7 +109,7 @@ export default {
         };
     },
     methods: {
-        refresh:function() {
+        refresh: function () {
             this.$refs.sc_confirm.refresh();
         },
         prepare_reject_sc: function (item) {
@@ -200,6 +200,39 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
+.close-button-container {
+    position: absolute;
+    bottom: 40rpx;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 8889;
+}
 
+.movable-view {
+    height: 100%;
+    width: 100%;
+}
+
+.movable-area {
+    height: 90%;
+    width: 100%;
+    overflow: hidden;
+    z-index: 9999;
+}
+
+.sc_execute_show {
+    height: 100%;
+    width: 100%;
+}
+
+.lookimg {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top:-10vh;
+}
 </style>
