@@ -64,6 +64,14 @@
         </fui-card>
     </module-filter>
     <fui-white-space size="default"></fui-white-space>
+    <module-filter require_module="customer">
+        <fui-card title="物料统计" full color="black" size="35">
+            <list-show ref="ss_list" :fetch_function="get_stuff_total" height="40vh" v-model="stuff_total">
+                <fui-table :height="table_height"   :itemList="totalCountData" :header="stuff_count_header"></fui-table>
+            </list-show>
+        </fui-card>
+    </module-filter>
+    <fui-white-space size="default"></fui-white-space>
     <module-filter require_module="stuff">
         <fui-card title="通知管理" full color="black" size="35">
             <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容" v-model="notice.notice"></fui-textarea>
@@ -96,12 +104,26 @@ export default {
             },
             stuff2buy: [],
             stuff2sale: [],
+            stuff_total:[],
             charts: [],
             notice: {
                 notice: '',
                 driver_notice: '',
             },
             tableData: [],
+            stuff_count_header: [{
+                prop: 'name',
+                label: '物料',
+                width: '400',
+            }, {
+                prop: 'yesterday_count',
+                label: '昨日',
+                width: '200',
+            }, {
+                prop: 'today_count',
+                label: '今日',
+                width: '200',
+            }],
             headerData: [{
                 prop: 'company_name',
                 label: '客户',
@@ -239,6 +261,15 @@ export default {
             } else {
                 return []
             }
+        },
+        get_stuff_total: async function (pageNo) {
+            let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {
+                pageNo: pageNo,
+                yesterday: this.day_offset - 1,
+                today: this.day_offset,
+            });
+            this.totalCountData = res.statistic
+            return this.totalCountData
         },
         get_stuff2sale: async function (pageNo) {
             if (this.$has_module('supplier')) {

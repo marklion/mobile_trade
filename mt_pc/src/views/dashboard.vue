@@ -38,6 +38,26 @@
                 </div>
             </el-card>
 
+            <el-card class="box-card" :body-style="{padding : 0}" >
+                <div slot="header" class="clearfix">
+                    <span>物料统计</span>
+                </div>
+                <div class="grid-content bg-purple-dark">
+                    <page-content ref="count_statistic_page" body_key="statistic" :req_body="{today: 0, yesterday: -1}" :req_url="total_count_req_url" :enable="true" @data_loaded="stat_loading = false" >
+                        <template v-slot:default="slotProps">
+                            <el-table  ref="stuff_count_table" v-loading="stat_loading" fixed :data="slotProps.content" stripe style="width: 100%" >
+                                <el-table-column prop="name" label="物料名称">
+                                </el-table-column>
+                                <el-table-column prop="yesterday_count" label="昨天" min-width="25">
+                                </el-table-column>
+                                <el-table-column prop="today_count" label="今天" min-width="25">
+                                </el-table-column>
+                            </el-table>
+                        </template>
+                    </page-content>
+                </div>
+            </el-card>
+
             <el-card class="box-card" :body-style="{padding : 0}" v-if="module_filter('customer')">
                 <div slot="header" class="clearfix">
                     <span>采购提单</span>
@@ -145,10 +165,11 @@ export default {
             day_offset: "0",
             tableData: [],
             charts: [],
-            notice: {
+            notice: {   
                 notice: '',
                 driver_notice: '',
             },
+            total_count_req_url: '/stuff/get_count_by_today_yesterday',
             req_url: '/sale_management/get_count_by_customer',
             sb_url: '/customer/get_stuff_on_sale',
             ss_url: '/supplier/get_stuff_need_buy'

@@ -1,6 +1,7 @@
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const moment = require('moment');
 const sq = db_opt.get_sq();
 async function change_stuff_single_switch(stuff_id, switch_name, switch_value, token) {
     let sq = db_opt.get_sq();
@@ -121,6 +122,30 @@ module.exports = {
                         }
                     ), total: await company.countStuff()
                 };
+            }
+        },
+        get_count_by_today_yesterday: {   
+            name: '获取今日、昨日物料统计',
+            description: '获取今日、昨日物料统计',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                    yesterday:{ type: Number, have_to: false, mean: '昨天', example: 1},
+                    today:{ type: Number, have_to: false, mean: '今天', example: 1, }
+            },
+            result: {
+                statistic: {
+                    type: Array, mean: '物料统计', explain: {
+                        name: {type: String, mean: '物料名称',example:'大米'},
+                        yesterday_count: {type: Number, mean: '昨日物料装载总量',example: 12},
+                        today_count: {type: Number, mean: '昨日物料数量装载总量',example: 12},
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let results = await plan_lib.getStatistic(company, body.yesterday, body.today);
+                return { statistic: results };
             }
         },
         del: {
