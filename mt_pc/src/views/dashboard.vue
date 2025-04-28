@@ -38,7 +38,7 @@
                 </div>
             </el-card>
 
-            <el-card class="box-card" :body-style="{padding : 0}" v-if="module_filter('sale_management') || module_filter('sale_management_order')">
+            <el-card class="box-card" :body-style="{padding : 0}" v-if="module_filter('sale_management') || module_filter('buy_management')">
                 <div slot="header" class="clearfix">
                     <span>物料统计</span>
                 </div>
