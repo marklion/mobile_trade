@@ -19,7 +19,13 @@ const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
 
 async function do_web_cap(url, file_name) {
-    await captureWebsite.default.file(url, file_name, {
+    let private_prefix = await util_lib.get_private_prefix_url();
+    let url_prefix = process.env.REMOTE_MOBILE_HOST;
+    if (private_prefix) {
+        url_prefix = private_prefix;
+    }
+    let full_url = url_prefix + url;
+    await captureWebsite.default.file(full_url, file_name, {
         emulateDevice: 'iPhone X',
         fullPage: true,
         waitForElement: 'body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view',
@@ -65,11 +71,11 @@ async function get_ticket_func(body, token) {
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,
-        replace_weighingSheet:plan.stuff.company.global_replace_form?.replace_weighingSheet || '称重单',
+        replace_weighingSheet: plan.stuff.company.global_replace_form?.replace_weighingSheet || '称重单',
         replace_count: plan.stuff.company.global_replace_form?.replace_count || '装载量',
         replace_fw_info: plan.stuff.company.global_replace_form?.replace_fw_info || '一次计量',
         replace_sw_info: plan.stuff.company.global_replace_form?.replace_sw_info || '二次计量',
-        plan_sct_infos:plan.plan_sct_infos,
+        plan_sct_infos: plan.plan_sct_infos,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
@@ -1192,7 +1198,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap('/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
@@ -1236,7 +1242,7 @@ module.exports = {
                         const plan = plans[index];
                         let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
                         const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                        await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, '/database' + filePath);
+                        await do_web_cap('/pages/Ticket?id=' + plan.id, '/database' + filePath);
                         filePaths.push(`/database${filePath}`);
                     }
                     if (filePaths.length === 0) {
@@ -1934,6 +1940,44 @@ module.exports = {
                     console.error('写入微信消息配置文件失败:', error);
                     return { result: false };
                 }
+            },
+        },
+        get_private_ticket_prefix: {
+            name: '获取私有部署磅单url前缀',
+            description: '获取私有部署磅单url前缀',
+            is_write: false,
+            is_get_api: false,
+            need_rbac: true,
+            params: {},
+            result: {
+                private_ticket_prefix: { type: String, mean: '私有部署磅单url前缀', example: 'http://localhost:3000' }
+            },
+            func: async function (body, token) {
+                return {
+                    private_ticket_prefix: await util_lib.get_private_prefix_url()
+                };
+            },
+        },
+        set_private_ticket_prefix: {
+            name: '设置私有部署磅单url前缀',
+            description: '设置私有部署磅单url前缀',
+            is_write: true,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                private_ticket_prefix: { type: String, have_to: true, mean: '私有部署磅单url前缀', example: 'http://localhost:3000' }
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true }
+            },
+            func: async function (body, token) {
+                try {
+                    const filePath = path.resolve('/database/private_url_prefix.txt');
+                    await fs.promises.writeFile(filePath, body.private_ticket_prefix, 'utf-8');
+                } catch (error) {
+                    console.log('设置私有部署磅单url前缀失败:', error);
+                }
+                return { result: true };
             },
         },
         get_show_sc_in_field: {
