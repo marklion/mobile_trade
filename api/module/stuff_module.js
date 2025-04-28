@@ -130,8 +130,6 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
-                    yesterday:{ type: Number, have_to: false, mean: '昨天', example: 1},
-                    today:{ type: Number, have_to: false, mean: '今天', example: 1, }
             },
             result: {
                 statistic: {
@@ -144,7 +142,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                let results = await plan_lib.getStatistic(company, body.yesterday, body.today);
+                let results = await plan_lib.getStatistic(company);
                 return { statistic: results };
             }
         },
