@@ -1064,7 +1064,7 @@ module.exports = {
         let rows = [];
         let company = await rbac_lib.get_company_by_token(token);
         let result = await company.getPlans({
-            group: 'mainVehicleId',
+            group: ['mainVehicleId','behindVehicleId','driverId'],
             offset: 20 * pageNo,
             limit: 20,
         });
