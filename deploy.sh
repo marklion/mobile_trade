@@ -12,6 +12,7 @@ DB_NAME_INPUT='test4delay'
 DB_USER_INPUT='sysadmin'
 DB_PASS_INPUT='no_pass'
 DB_HOST_INPUT='localhost'
+PRIVATE_TICKET_PATH=''
 is_in_container() {
     ls /.dockerenv >/dev/null 2>&1
 }
@@ -30,7 +31,7 @@ get_docker_image() {
 
 start_all_server() {
     line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 133`
+    line=`expr $line - 141`
     mkdir /tmp/sys_mt
     tail -n $line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
@@ -80,12 +81,19 @@ start_docker_con() {
     local CON_ID=`docker create --privileged ${MOUNT_PROC_ARG} --restart=always ${PORT_ARG} -e DB_HOST="${DB_HOST_INPUT}" -e DB_NAME="${DB_NAME_INPUT}" -e DB_USER="${DB_USER_INPUT}" -e DB_PASS="${DB_PASS_INPUT}" -e WECHAT_SECRET="${WECHAT_SECRET_INPUT}" -e SHARE_KEY="${SHARE_KEY_INPUT}" -e MP_SECRET="${WECHAT_MP_SECRET_INPUT}"   -v ${OLD_DATA_PATH}:/database/logo_res -e DEFAULT_PWD="${DEFAULT_PWD_INPUT}" -v ${DATA_BASE_PATH}:/database ${DOCKER_IMG_NAME} /root/install.sh`
     docker cp $0 ${CON_ID}:/root/ > /dev/null 2>&1
     docker start ${CON_ID} > /dev/null 2>&1
+    if [ "${PRIVATE_TICKET_PATH}" != "" ]
+    then
+        docker exec ${CON_ID} sh -c "echo '${PRIVATE_TICKET_PATH}' >> /etc/hosts"
+    fi
     echo ${CON_ID}
 }
 
-while getopts "p:w:d:m:h:P:U:T:D:H:" arg
+while getopts "p:w:d:m:h:P:U:T:D:H:t:" arg
 do
     case $arg in
+        t)
+            PRIVATE_TICKET_PATH=${OPTARG}
+            ;;
         p)
             PORT=${OPTARG}
             ;;
