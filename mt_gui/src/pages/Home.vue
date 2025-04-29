@@ -64,7 +64,7 @@
         </fui-card>
     </module-filter>
     <fui-white-space size="default"></fui-white-space>
-    <module-filter :rm_array="['sale_management', 'buy_management']">
+    <module-filter require_module="stuff">
         <fui-card title="物料统计" full color="black" size="35">
             <list-show ref="ss_list" :fetch_function="get_stuff_total" height="40vh" v-model="stuff_total">
                 <fui-table :height="table_height"   :itemList="totalCountData" :header="stuff_count_header"></fui-table>

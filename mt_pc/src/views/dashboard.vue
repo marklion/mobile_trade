@@ -6,7 +6,7 @@
             <el-row>
                 <el-col :span="12" v-for="(chartOption, index) in charts" :key="index">
                     <div class="grid-content bg-purple-dark">
-                        <ChartComponent :chartOption="chartOption" />      
+                        <ChartComponent :chartOption="chartOption" />
                     </div>
                 </el-col>
             </el-row>
@@ -38,7 +38,7 @@
                 </div>
             </el-card>
 
-            <el-card class="box-card" :body-style="{padding : 0}" v-if="module_filter('sale_management') || module_filter('buy_management')">
+            <el-card class="box-card" :body-style="{padding : 0}" v-if="module_filter('stuff')">
                 <div slot="header" class="clearfix">
                     <span>物料统计</span>
                 </div>
@@ -113,7 +113,7 @@
             </el-card>
         </el-col>
     </el-row>
-    <el-row :gutter="10"> 
+    <el-row :gutter="10">
         <el-col :span="12">
             <div class="grid-content bg-purple-dark" v-if="module_filter('stuff')">
                 <el-card class="box-card">
@@ -165,7 +165,7 @@ export default {
             day_offset: "0",
             tableData: [],
             charts: [],
-            notice: {   
+            notice: {
                 notice: '',
                 driver_notice: '',
             },
