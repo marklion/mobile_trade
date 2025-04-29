@@ -1,29 +1,27 @@
 const db_opt = require('../db_opt')
-const path = require('path')
-const fs = require('fs')
 module.exports = {
     plan_detail_include() {
         return [
-            {
-                model: db_opt.get_sq().models.company,
-                include: [db_opt.get_sq().models.global_replace_form],
-                paranoid: false
+            { 
+                model: db_opt.get_sq().models.company, 
+                include: [db_opt.get_sq().models.global_replace_form], 
+                paranoid: false 
             },
             { model: db_opt.get_sq().models.rbac_user, paranoid: false },
             { model: db_opt.get_sq().models.vehicle, as: 'main_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.vehicle, as: 'behind_vehicle', paranoid: false },
             { model: db_opt.get_sq().models.driver, paranoid: false },
-            {
-                model: db_opt.get_sq().models.stuff,
+            { 
+                model: db_opt.get_sq().models.stuff, 
                 include: [
-                    {
-                        model: db_opt.get_sq().models.company,
-                        include: [db_opt.get_sq().models.global_replace_form],
-                        paranoid: false
-                    },
+                    { 
+                        model: db_opt.get_sq().models.company, 
+                        include: [db_opt.get_sq().models.global_replace_form], 
+                        paranoid: false 
+                    }, 
                     db_opt.get_sq().models.drop_take_zone
-                ],
-                paranoid: false
+                ], 
+                paranoid: false 
             },
             { model: db_opt.get_sq().models.plan_history, paranoid: false, separate: true, order: [[db_opt.get_sq().fn('TIMESTAMP', db_opt.get_sq().col('time')), 'ASC'], ['id', 'ASC']] },
             {
@@ -53,17 +51,5 @@ module.exports = {
         });
 
         return ret;
-    },
-    get_private_prefix_url: async function () {
-        let ret = '';
-        const filePath = path.resolve('/database/private_url_prefix.txt');
-        try {
-            if (fs.existsSync(filePath)) {
-                ret = await fs.promises.readFile(filePath, 'utf-8');
-            }
-        } catch (error) {
-            console.error(':', error);
-        }
-        return ret;
-    },
+    }
 }

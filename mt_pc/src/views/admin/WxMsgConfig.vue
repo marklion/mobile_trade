@@ -9,9 +9,6 @@
             <el-button type="primary" @click="save_config">保存</el-button>
         </el-form-item>
     </el-form>
-    <h1>磅单下载配置</h1>
-    <el-input v-model="prefix_url"></el-input>
-    <el-button type="primary" @click="set_prefix_url">保存</el-button>
 </div>
 </template>
 
@@ -36,7 +33,6 @@ export default {
     },
     data: function () {
         return {
-            prefix_url: '',
             wx_config: {
                 plan_status: '',
                 call_vehicle: '',
@@ -47,15 +43,6 @@ export default {
         }
     },
     methods: {
-        get_prefix_url: async function () {
-            this.prefix_url = (await this.$send_req('/global/get_private_ticket_prefix', {})).private_ticket_prefix;
-        },
-        set_prefix_url: async function () {
-            await this.$send_req('/global/set_private_ticket_prefix', {
-                private_ticket_prefix: this.prefix_url
-            });
-            await this.get_prefix_url();
-        },
         save_config: async function () {
             this.$refs.wx_config.validate(async (valid) => {
                 if (valid) {
@@ -94,7 +81,6 @@ export default {
     },
     mounted: function () {
         this.init_wx_config();
-        this.get_prefix_url();
     }
 }
 </script>
