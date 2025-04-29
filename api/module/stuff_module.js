@@ -123,6 +123,28 @@ module.exports = {
                 };
             }
         },
+        get_count_by_today_yesterday: {   
+            name: '获取今日、昨日物料统计',
+            description: '获取今日、昨日物料统计',
+            is_write: true,
+            is_get_api: false,
+            params: {
+            },
+            result: {
+                statistic: {
+                    type: Array, mean: '物料统计', explain: {
+                        name: {type: String, mean: '物料名称',example:'大米'},
+                        yesterday_count: {type: Number, mean: '昨日物料装载总量',example: 12},
+                        today_count: {type: Number, mean: '昨日物料数量装载总量',example: 12},
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let results = await plan_lib.getStatistic(company);
+                return { statistic: results };
+            }
+        },
         del: {
             name: '删除物料',
             description: '删除物料',

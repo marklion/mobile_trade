@@ -208,6 +208,64 @@ module.exports = {
         });
         return { rows: rows, count: count };
     },
+    getPlansCount: async function (company, day_offset) {
+        let sq = db_opt.get_sq();
+        let condition = {
+            plan_time: moment().add(day_offset, 'days').format('YYYY-MM-DD'),
+            status:3,
+            manual_close:false,
+        };
+        let countStuff = [];
+        let stuff = await company.getStuff({ where: { use_for_buy: false } }); 
+        for (let i = 0; i < stuff.length; i++) {
+            const stuffItem = stuff[i];
+            const stuffName = stuffItem.name;
+            condition.stuffId = stuffItem.id;
+            let totalCount = await sq.models.plan.sum(
+                'count',
+                {
+                    where: condition,
+                    plain: true
+                }
+            );
+            countStuff.push({
+                name: stuffName,
+                count: totalCount?totalCount:0,
+            })
+        }
+        return countStuff;
+    },
+    getStatistic: async function (company) {
+        let statistic = {};
+
+        
+        let yesterday_result = await this.getPlansCount(company, -1);
+        for (let i = 0; i < yesterday_result.length; i++) {
+            const item = yesterday_result[i];
+            if (!statistic[item.name]) {
+                statistic[item.name] = { yesterday_count: 0, today_count: 0 };
+            }
+            statistic[item.name].yesterday_count = item.count;
+        }
+
+        let today_result = await this.getPlansCount(company, 0);
+        for (let i = 0; i < today_result.length; i++) {
+            const item = today_result[i];
+            if (!statistic[item.name]) {
+                statistic[item.name] = { yesterday_count: 0, today_count: 0 };
+            }
+            statistic[item.name].today_count = item.count;
+        }
+        
+
+        let resultArray = Object.keys(statistic).map(key => ({
+            name: key,
+            yesterday_count: statistic[key].yesterday_count,
+            today_count: statistic[key].today_count
+        }));
+
+        return resultArray;
+    },
     make_plan_where_condition: function (_condition, search_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = {
