@@ -1322,6 +1322,7 @@ module.exports = {
         let cond = {
             [db_opt.Op.and]: this.buildTimeCondition(body, sq),
         };
+        let order = this.default_export_sort(sq);
         if (is_buy) {
             cond.is_buy = true;
         }
@@ -1334,13 +1335,23 @@ module.exports = {
         }
         let user = await rbac_lib.get_user_by_token(token);
 
-        return await user.getPlans({ where: cond, include: util_lib.plan_detail_include() });
+        return await user.getPlans({ where: cond, order: order, include: util_lib.plan_detail_include() });
+    },
+    default_export_sort:function(sq){
+        const order = [
+            [sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'], 
+            ['ticket_no', 'ASC'], 
+            [sq.fn('TIMESTAMP', sq.col('m_time')), 'ASC'], 
+            [sq.fn('TIMESTAMP', sq.col('p_time')), 'ASC'] 
+        ];
+        return order;
     },
     filter_plan4manager: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
         let cond = {
             [db_opt.Op.and]: this.buildTimeCondition(body, sq),
         };
+        let order = this.default_export_sort(sq);
         if (body.stuff_id) {
             cond.stuffId = body.stuff_id
         }
@@ -1370,7 +1381,7 @@ module.exports = {
             cond.is_buy = false;
         }
 
-        return await sq.models.plan.findAll({ where: cond, include: util_lib.plan_detail_include() });
+        return await sq.models.plan.findAll({ where: cond, order: order, include: util_lib.plan_detail_include() });
     },
     place_hold: function (input, holder) {
         if (input == undefined) {
@@ -1389,8 +1400,9 @@ module.exports = {
                 accept_company: element.stuff.company.name,
                 stuff_name: element.stuff.name,
                 plan_time: element.plan_time,
-                p_time: element.p_time,
+                ticket_no: element.ticket_no,
                 m_time: element.m_time,
+                p_time: element.p_time,
                 mv: (element.main_vehicle ? element.main_vehicle.plate : ''),
                 bv: (element.behind_vehicle ? element.behind_vehicle.plate : ''),
                 driver_name: element.driver.name,
@@ -1401,7 +1413,6 @@ module.exports = {
                 unit_price: element.unit_price,
                 total_price: this.place_hold(element.unit_price, 0) * this.place_hold(element.count, 0),
                 seal_no: element.seal_no,
-                ticket_no: element.ticket_no,
                 drop_address: element.drop_address,
                 fapiao_delivered: element.fapiao_delivered ? '是' : '否',
                 comment: element.comment,
