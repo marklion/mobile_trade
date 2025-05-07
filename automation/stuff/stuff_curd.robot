@@ -144,4 +144,23 @@ Sct Scale Item Test
     Length Should Be  ${all_items}  1
     Should Be Equal As Strings    ${all_items}[0][name]    nssi
 
-
+Second Unit Config Test
+    [Teardown]  Stuff Reset
+    ${new_stuff}  Add A Stuff To Sale  st1  asdfa
+    # 添加一个 stuff 
+    Set Stuff Second Unit Coefficient  ${new_stuff}[id]  千克    ${0.5}
+    # 添加一个物料的第二单位和系数 单位设置为千克 系数设置为0.5
+    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${sc_admin_token}  stuff
+    # 查询一个物料的第二单位和系数 用一个数组去接收返回值
+    #验证是否有这个物料单位
+    Should Be Equal As Strings  ${stuffs_found[0]}[second_unit]  千克
+    # 验证是否有这个物料系数
+    Should Be Equal As Numbers  ${stuffs_found[0]}[coefficient]  0.5
+    Del Stuff Second Unit Coefficient  ${new_stuff}[id]
+    # 删除一个物料的第二单位和系数 单位设置为空 系数设置为1
+    Update Stuff Second Unit Coefficient  ${new_stuff}[id]  吨   ${1.2}
+    #更新一个物料的第二单位和系数 单位更新为吨 系数更新为1.2
+    @{stuffs_changed}  Req Get to Server  /stuff/get_all  ${sc_admin_token}  stuff
+    # 验证是否有这个物料单位 （更新后）    
+    Should Be Equal As Strings  ${stuffs_changed[0]}[second_unit]  吨
+    Should Be Equal As Numbers  ${stuffs_changed[0]}[coefficient]  1.2

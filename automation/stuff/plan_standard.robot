@@ -378,8 +378,22 @@ Input And Check Sct Info
     Should Be Equal As Strings    ${psi}[0][value]  abc
     Should Be Equal As Strings    ${psi}[1][value]  def
 
-
-
+Input And Check Stuff Unit Coefficient
+    [Teardown]  Plan Reset
+    Set Stuff Second Unit Coefficient  ${test_stuff}[id]  千克  ${1.5}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan_id}  Get From Dictionary  ${plan}  id  id
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Deliver A Plan  ${plan}  ${45}
+    ${req_body}  Create Dictionary  id=${plan_id}
+    ${p_resp}  Req to Server  /global/get_ticket  ${sc_admin_token}  ${req_body}
+    Should Be Equal As Numbers  ${p_resp}[coefficient]  ${1.5}
+    Should Be Equal As Strings  ${p_resp}[second_unit]  千克
+    
 *** Keywords ***
 Verify Order Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
