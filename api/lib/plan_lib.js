@@ -228,7 +228,7 @@ module.exports = {
             manual_close:false,
         };
         let countStuff = [];
-        let stuff = await company.getStuff({ where: { use_for_buy: false } }); 
+        let stuff = await company.getStuff();
         for (let i = 0; i < stuff.length; i++) {
             const stuffItem = stuff[i];
             const stuffName = stuffItem.name;
@@ -250,7 +250,7 @@ module.exports = {
     getStatistic: async function (company) {
         let statistic = {};
 
-        
+
         let yesterday_result = await this.getPlansCount(company, -1);
         for (let i = 0; i < yesterday_result.length; i++) {
             const item = yesterday_result[i];
@@ -268,7 +268,7 @@ module.exports = {
             }
             statistic[item.name].today_count = item.count;
         }
-        
+
 
         let resultArray = Object.keys(statistic).map(key => ({
             name: key,
@@ -1351,10 +1351,10 @@ module.exports = {
     },
     default_export_sort:function(sq){
         const order = [
-            [sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'], 
-            ['ticket_no', 'ASC'], 
-            [sq.fn('TIMESTAMP', sq.col('m_time')), 'ASC'], 
-            [sq.fn('TIMESTAMP', sq.col('p_time')), 'ASC'] 
+            [sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'],
+            ['ticket_no', 'ASC'],
+            [sq.fn('TIMESTAMP', sq.col('m_time')), 'ASC'],
+            [sq.fn('TIMESTAMP', sq.col('p_time')), 'ASC']
         ];
         return order;
     },
