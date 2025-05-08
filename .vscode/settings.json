@@ -1,5 +1,6 @@
 {
     "cmake.ignoreCMakeListsMissing": true,
+    "robot.language-server.python": "/workspaces/mobile_trade/.venv/bin/python",
     "files.associations": {
         "modbus.h": "c",
         "unistd.h": "c",
