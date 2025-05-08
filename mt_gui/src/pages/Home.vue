@@ -66,9 +66,7 @@
     <fui-white-space size="default"></fui-white-space>
     <module-filter require_module="stuff">
         <fui-card title="物料统计" full color="black" size="35">
-            <list-show ref="ss_list" :fetch_function="get_stuff_total" height="40vh" v-model="stuff_total">
-                <fui-table :height="table_height"   :itemList="totalCountData" :header="stuff_count_header"></fui-table>
-            </list-show>
+            <fui-table fixed stripe :itemList="totalCountData" :header="stuff_count_header"></fui-table>
         </fui-card>
     </module-filter>
     <fui-white-space size="default"></fui-white-space>
@@ -98,13 +96,13 @@ export default {
     },
     data() {
         return {
+            totalCountData:[],
             self_info: {
                 company: '',
                 company_logo: '',
             },
             stuff2buy: [],
             stuff2sale: [],
-            stuff_total:[],
             charts: [],
             notice: {
                 notice: '',
@@ -118,11 +116,11 @@ export default {
             }, {
                 prop: 'yesterday_count',
                 label: '昨日',
-                width: '200',
+                width: '160',
             }, {
                 prop: 'today_count',
                 label: '今日',
-                width: '200',
+                width: '160',
             }],
             headerData: [{
                 prop: 'company_name',
@@ -262,12 +260,11 @@ export default {
                 return []
             }
         },
-        get_stuff_total: async function (pageNo) {
-            let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {
-                pageNo: pageNo,
-            });
-            this.totalCountData = res.statistic
-            return this.totalCountData
+        get_stuff_total: async function () {
+            if (this.$has_module('stuff')) {
+                let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
+                this.totalCountData = res.statistic
+            }
         },
         get_stuff2sale: async function (pageNo) {
             if (this.$has_module('supplier')) {
@@ -372,7 +369,7 @@ export default {
             this.charts = []
             tmp.forEach((item, index) => {
                 // 过滤掉可能的 null 值
-                if(item !== null){
+                if (item !== null) {
                     this.$set(this.charts, index, JSON.parse(JSON.stringify(item)))
                 }
             });
@@ -400,11 +397,13 @@ export default {
         this.init_statistic();
         uni.stopPullDownRefresh();
         this.$refs.noticeBar.getNoticeData();
+        this.get_stuff_total()
     },
     onLoad: async function () {
         //只需要调用，无需等待结果
         this.init_brief_info()
         this.init_statistic()
+        this.get_stuff_total()
     },
 }
 </script>
