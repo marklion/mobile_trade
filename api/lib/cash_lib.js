@@ -8,28 +8,32 @@ const { default: axios } = require('axios');
 const util_lib = require('./util_lib');
 const httpsAgent = require('https').Agent;
 module.exports = {
+    charge_by_username_and_contract: async function (user_name, contract, _cash_increased, _comment) {
+        contract.balance += _cash_increased;
+        await contract.save();
+        await contract.createBalance_history({
+            time: moment().format('YYYY-MM-DD HH:mm:ss'),
+            operator: user_name,
+            comment: _comment,
+            cash_increased: _cash_increased,
+        });
+        let buy_company = await contract.getBuy_company();
+        if (buy_company) {
+            let plans = await buy_company.getPlans({ where: { status: 1 } });
+            for (let index = 0; index < plans.length; index++) {
+                const element = plans[index];
+                await plan_lib.verify_plan_pay(element)
+            }
+        }
+
+    },
     charge: async function (_token, _contract_id, _cash_increased, _comment) {
         let user = await rbac_lib.get_user_by_token(_token);
         let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);
         if (user && contract) {
             let sale_company = await user.getCompany();
             if (sale_company && await sale_company.hasSale_contract(contract)) {
-                contract.balance += _cash_increased;
-                await contract.save();
-                await contract.createBalance_history({
-                    time: moment().format('YYYY-MM-DD HH:mm:ss'),
-                    operator: user.name,
-                    comment: _comment,
-                    cash_increased: _cash_increased,
-                });
-                let buy_company = await contract.getBuy_company();
-                if (buy_company) {
-                    let plans = await buy_company.getPlans({ where: { status: 1 } });
-                    for (let index = 0; index < plans.length; index++) {
-                        const element = plans[index];
-                        await plan_lib.verify_plan_pay(element)
-                    }
-                }
+                await this.charge_by_username_and_contract(user.name, contract, _cash_increased, _comment);
             }
             else {
                 throw { err_msg: '无权限' }
@@ -162,10 +166,14 @@ module.exports = {
         let ret = [];
 
         for (let plan of plans) {
+            let tmp_price = plan.unit_price;
+            if (plan.subsidy_price) {
+                tmp_price = plan.subsidy_price;
+            }
             ret.push({
                 cinventoryid: plan.stuff.stuff_code,
                 nnumber: plan.count,
-                noriginalcurprice: plan.unit_price,
+                noriginalcurprice: tmp_price,
             });
         }
 
@@ -432,5 +440,161 @@ module.exports = {
             });
         })
         return resp;
-    }
+    },
+    search_subsidy_related_plans: async function (filter, company) {
+        let sq = db_opt.get_sq();
+        let cond = {
+            is_buy: false,
+            subsidy_price: 0,
+            status: 3,
+            manual_close: false,
+            count: {
+                [db_opt.Op.ne]: 0,
+            },
+        };
+        if (filter.filter_by_plan_time) {
+            cond.plan_time = {
+                [db_opt.Op.gte]: filter.time_start,
+                [db_opt.Op.lte]: filter.time_end,
+            }
+        }
+        else {
+            cond.m_time = {
+                [db_opt.Op.gte]: filter.time_start,
+                [db_opt.Op.lte]: filter.time_end,
+            }
+        }
+        let orig_plans = await sq.models.plan.findAll({
+            where: cond,
+            include: [
+                {
+                    model: sq.models.stuff,
+                    where: {
+                        companyId: company.id,
+                    },
+                    required: true,
+                    include: [
+                        {
+                            model: sq.models.subsidy_gate_discount
+                        }
+                    ],
+                },
+            ],
+        });
+        let orig_plan_ids = orig_plans.map(item => item.id);
+        let plans = await sq.models.archive_plan.findAll({
+            where: {
+                planId: {
+                    [db_opt.Op.in]: orig_plan_ids,
+                },
+            }
+        });
+        plans.forEach(item=>{
+            item.content = JSON.parse(item.content);
+        });
+
+        return plans;
+    },
+    split_plans_by_stuff: async function (plans) {
+        let ret = [];
+        for (let index = 0; index < plans.length; index++) {
+            const element = plans[index];
+            let stuff_group = ret.find(item => item.stuffId == element.content.stuff.id);
+            if (!stuff_group) {
+                stuff_group = {
+                    stuffId: element.content.stuff.id,
+                    plans: [],
+                }
+                ret.push(stuff_group);
+            }
+            stuff_group.plans.push(element);
+        }
+        return ret;
+    },
+    split_plans_by_company: async function (plans) {
+        let ret = [];
+        for (let index = 0; index < plans.length; index++) {
+            const element = plans[index];
+            let company_group = ret.find(item => item.companyId == element.content.company.id);
+            if (!company_group) {
+                company_group = {
+                    companyId: element.content.company.id,
+                    plans: [],
+                }
+                ret.push(company_group);
+            }
+            company_group.plans.push(element);
+        }
+        return ret;
+    },
+    calc_total_count: async function (plans) {
+        let ret = 0;
+        plans.forEach(plan => {
+            ret += plan.content.count;
+        });
+        return ret;
+    },
+    set_subsidy_price: async function (plans, discount) {
+        let ret = 0;
+        for (let index = 0; index < plans.length; index++) {
+            const element = plans[index];
+            element.content.subsidy_price = element.content.unit_price * discount / 10;
+            ret += (element.content.unit_price - element.content.subsidy_price) * element.content.count;
+            let save_one = await db_opt.get_sq().models.archive_plan.findByPk(element.id);
+            save_one.content = JSON.stringify(element.content);
+            let orig_plan = await db_opt.get_sq().models.plan.findByPk(element.planId);
+            orig_plan.subsidy_price = element.content.subsidy_price;
+            await orig_plan.save();
+            await save_one.save();
+        }
+        return ret;
+    },
+    do_subsidy_per_company: async function (plan_company_group, subsidy_gate_discounts) {
+        let ret = 0;
+        for (let index = 0; index < plan_company_group.length; index++) {
+            const element = plan_company_group[index];
+            if (element.plans.length > 0) {
+                let contract = await db_opt.get_sq().models.contract.findOne({
+                    where: {
+                        buyCompanyId: element.companyId,
+                        saleCompanyId: element.plans[0].content.stuff.company.id,
+                    }
+                });
+                let total_count = await this.calc_total_count(element.plans);
+                for (let j = 0; j < subsidy_gate_discounts.length; j++) {
+                    let sgd = subsidy_gate_discounts[j];
+                    if (total_count >= sgd.gate) {
+                        let discount = sgd.discount;
+                        let total_subsidy = await this.set_subsidy_price(element.plans, discount);
+                        await this.charge_by_username_and_contract('自动',contract, total_subsidy, `因为总量${total_count}大于门槛${sgd.gate},补贴${total_subsidy}`);
+                        ret += element.plans.length;
+                        break;
+                    }
+                }
+            }
+
+        }
+        return ret;
+    },
+    do_subsidy_by_filter: async function (filter, company) {
+        let ret = 0;
+        await db_opt.get_sq().transaction(async (t) => {
+            let total_plans = await this.search_subsidy_related_plans(filter, company);
+            let plan_stuff_group = await this.split_plans_by_stuff(total_plans);
+            for (let index = 0; index < plan_stuff_group.length; index++) {
+                const element = plan_stuff_group[index];
+                let stuff = await db_opt.get_sq().models.stuff.findByPk(element.stuffId);
+                if (stuff) {
+                    let subsidy_gate_discounts = await stuff.getSubsidy_gate_discounts({
+                        order: [['gate', 'DESC']],
+                    });
+                    if (subsidy_gate_discounts.length > 0) {
+                        let plan_company_group = await this.split_plans_by_company(element.plans);
+                        ret += await this.do_subsidy_per_company(plan_company_group, subsidy_gate_discounts);
+                    }
+                }
+            }
+        });
+        return ret;
+    },
 };

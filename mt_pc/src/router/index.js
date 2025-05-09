@@ -265,6 +265,30 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/subsidy',
+    component: Layout,
+    name: 'Subsidy',
+    meta: {
+      title: '补贴管理',
+      icon: 'el-icon-magic-stick',
+      roles: ['cash']
+    },
+    children: [
+      {
+        path: 'subsidy_config',
+        name: 'SubsidyConfig',
+        component: () => import('@/views/subsidy/SubsidyConfig'),
+        meta: { title: '补贴配置', roles: ['cash'] }
+      },
+      {
+        path: 'do_subsidy',
+        name: 'DoSubsidy',
+        component: () => import('@/views/subsidy/DoSubsidy'),
+        meta: { title: '补贴执行', roles: ['cash'] }
+      },
+    ],
+  },
+  {
     path: '/system_config',
     name: 'SystemConfig',
     component: Layout,

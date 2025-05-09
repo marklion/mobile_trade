@@ -540,3 +540,19 @@ Update Stuff Second Unit Coefficient
     #封装一个接口的请求参数 注意是字典 先定义内部的字典
     ${req}  Create Dictionary  stuff_id=${stuff_id}  unit_coefficient=${unit_coefficient}
     Req to Server    /stuff/set_unit_coefficient    ${token}    ${req}
+
+
+Add Subsidy
+    [Arguments]  ${stuff_id}  ${gate}  ${discount}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  gate=${gate}  discount=${discount}
+    Req to Server    /cash/add_subsidy_params    ${token}    ${req}
+
+Del Subsidy
+    [Arguments]  ${sub_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${sub_id}
+    Req to Server    /cash/del_subsidy_params  ${token}  ${req}
+
+Get Subsidy
+    [Arguments]  ${token}=${sc_admin_token}
+    ${resp}  Req Get to Server    /cash/get_subsidy_params    ${token}  subsidy_params    ${-1}
+    RETURN  ${resp}

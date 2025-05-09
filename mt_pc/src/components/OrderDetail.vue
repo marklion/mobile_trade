@@ -9,6 +9,7 @@
                     <el-descriptions-item label="计划时间">{{plan.plan_time}}</el-descriptions-item>
                     <el-descriptions-item label="单价">
                         {{plan.unit_price}}
+                        <span v-if="plan.subsidy_price">(折后价{{plan.subsidy_price}})</span>
                         <el-button type="text" v-if="has_plan_reciever_permission" @click="change_price">调价</el-button>
                     </el-descriptions-item>
                     <el-descriptions-item :label="plan_buyer_and_saler.saler.label">{{plan_buyer_and_saler.saler.company}}</el-descriptions-item>
@@ -23,10 +24,10 @@
                             <el-button v-if="user_authorize == '未授权'" type="text" @click="authorize_user">授权</el-button>
                         </span>
                         <div v-if="plan.status == 1 && plan.arrears > 0">
-                                <el-tag size="mini" type="warning">
-                                    欠:{{plan.arrears}}
-                                </el-tag>
-                            </div>
+                            <el-tag size="mini" type="warning">
+                                欠:{{plan.arrears}}
+                            </el-tag>
+                        </div>
                     </el-descriptions-item>
                     <template slot="title">
                         计划信息

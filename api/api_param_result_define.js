@@ -345,6 +345,7 @@ module.exports = {
             }
         },
         plan_sct_infos: plan_sct_infos,
+        subsidy_price: { type: Number, mean: '补贴价格', example: 1 },
     },
     bidding_items: bidding_items,
     dev_data: {

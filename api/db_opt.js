@@ -160,6 +160,7 @@ let db_opt = {
             dup_info:{type: DataTypes.STRING},
             expect_weight: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('expect_weight') },
             arrears: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('arrears')},
+            subsidy_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('subsidy_price') },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -405,6 +406,17 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             value: { type: DataTypes.STRING },
         },
+        subsidy_gate_discount:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            gate:{type:DataTypes.DECIMAL(12,2), defaultValue: 0, get:getDecimalValue('gate')},
+            discount:{type:DataTypes.DECIMAL(12,2), defaultValue: 0, get:getDecimalValue('discount')},
+        },
+        subsidy_record:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            range:{ type: DataTypes.STRING },
+            status:{type:DataTypes.STRING},
+            order_count:{type:DataTypes.INTEGER, defaultValue: 0},
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -559,6 +571,11 @@ let db_opt = {
         _sq.models.sct_scale_item.hasMany(_sq.models.plan_sct_info);
         _sq.models.plan_sct_info.belongsTo(_sq.models.plan);
         _sq.models.plan.hasMany(_sq.models.plan_sct_info);
+
+        _sq.models.subsidy_gate_discount.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.subsidy_gate_discount);
+        _sq.models.subsidy_record.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.subsidy_record);
     },
     install: async function () {
         console.log('run install');
