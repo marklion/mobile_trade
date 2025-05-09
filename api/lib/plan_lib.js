@@ -1429,6 +1429,9 @@ module.exports = {
                 fapiao_delivered: element.fapiao_delivered ? '是' : '否',
                 comment: element.comment,
                 delegate: element.delegate ? element.delegate.name : '',
+                subsidy_price: this.place_hold(element.subsidy_price, 0),
+                subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
+                subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price *10).toFixed(1),
             });
         }
         let columns = [{
@@ -1497,6 +1500,15 @@ module.exports = {
         }, {
             header: '代理公司',
             key: 'delegate'
+        }, {
+            header: '打折后单价',
+            key: 'subsidy_price'
+        },{
+            header: '打折后总价',
+            key: 'subsidy_total_price'
+        },{
+            header: '打折数',
+            key: 'subsidy_discount'
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
