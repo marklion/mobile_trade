@@ -231,7 +231,7 @@ module.exports = {
                     time_filter_valid = true;
                     filter_by_plan_time = true;
                 }
-                else (body.m_time_start && body.m_time_end)
+                else if (body.m_time_start && body.m_time_end)
                 {
                     time_filter_valid = true;
                 }
