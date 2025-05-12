@@ -126,3 +126,8 @@ Set Bidding Verify
     [Arguments]  ${is_open}=${True}
     ${req}  Create Dictionary  flag=${is_open}
     Req to Server    /global/need_verify_pic    admin_token    ${req}
+
+Export Bidding
+    [Arguments]  ${bc_id}  ${token}=${sc_admin_token}  ${exception}=${False}
+    ${req}  Create Dictionary  bc_id=${bc_id}
+    Req to Server  /bid/export_bc  ${token}  ${req}  ${exception}
