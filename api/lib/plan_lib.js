@@ -240,6 +240,9 @@ module.exports = {
                     plain: true
                 }
             );
+            if (stuffItem.second_unit && stuffItem.coefficient > 0) {
+                totalCount *= stuffItem.coefficient;
+            }
             countStuff.push({
                 name: stuffName,
                 count: totalCount?totalCount:0,
