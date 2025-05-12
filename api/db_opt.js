@@ -395,6 +395,7 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             code: { type: DataTypes.STRING },
+            stamp_pic: { type: DataTypes.STRING },
         },
         sct_scale_item:{
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

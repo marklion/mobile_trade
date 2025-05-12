@@ -77,11 +77,13 @@ export default {
         if (ticket.plan_sct_infos == undefined) {
             ticket.plan_sct_infos = [];
         }
+        this.stamp_path = ticket.stamp_path;
         if (ticket.delegate_name) {
             if (options.is_internal && options.is_internal == 'true') {
                 ticket.company_name = ticket.delegate_name;
             } else {
                 ticket.order_company_name = ticket.delegate_name;
+                this.stamp_path = ticket.delegate_stamp_path;
             }
         }
         this.main_vehicle_plate = ticket.plate;
@@ -90,7 +92,6 @@ export default {
             dec_title = '入厂';
         }
         this.qr_code = ticket.qr_code;
-        this.stamp_path = ticket.stamp_path;
         this.title = ticket.order_company_name + dec_title + (ticket.replace_weighingSheet || '称重单');
         this.ticket_content = {
             label: ticket.replace_count || '装载量',
@@ -113,9 +114,9 @@ export default {
             }, ],
         };
         if (ticket.second_unit && ticket.coefficient) {
-            this.ticket_content.list.unshift(0,{
+            this.ticket_content.list.unshift(0, {
                 label: '第二单位',
-                value: ticket.coefficient * ticket.count +  ticket.second_unit,
+                value: ticket.coefficient * ticket.count + ticket.second_unit,
             });
         }
         if (ticket.fw_info && ticket.plan_sct_infos.length <= 0) {
