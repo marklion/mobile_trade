@@ -114,9 +114,11 @@ export default {
             }, ],
         };
         if (ticket.second_unit && ticket.coefficient) {
+            let su_value = ticket.coefficient * ticket.count ;
+            this.ticket_content.value = utils.moneyFormatter(su_value) + ticket.second_unit;
             this.ticket_content.list.unshift(0, {
-                label: '第二单位',
-                value: ticket.coefficient * ticket.count + ticket.second_unit,
+                label: '原始计量',
+                value: ticket.count,
             });
         }
         if (ticket.fw_info && ticket.plan_sct_infos.length <= 0) {
