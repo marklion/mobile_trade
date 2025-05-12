@@ -95,7 +95,16 @@
                             ￥{{ scope.row.pay_first }}
                         </template>
                     </el-table-column>
-                    <el-table-column prop="comment" label="备注" show-overflow-tooltip></el-table-column>
+                    <el-table-column label="备注" show-overflow-tooltip>
+                        <template slot-scope="scope">
+                            <div>
+                                {{ scope.row.comment }}
+                            </div>
+                            <div>
+                                <el-tag size="mini" type="primary" v-if="scope.row.price_hide">价格隐藏</el-tag>
+                            </div>
+                        </template>
+                    </el-table-column>
                     <el-table-column v-permission="['bid']" label="操作" width="300">
                         <template slot-scope="scope">
                             <el-button v-if="scope.row.status == 0 && scope.row.bidding_turns.length == 0" type="primary" size="mini" @click="handle_start_bid(scope.row)">开启</el-button>
@@ -129,6 +138,10 @@
                 </el-form-item>
                 <el-form-item label="竞价轮次" prop="total_turn">
                     <el-input type="number" v-model="new_bc.total_turn" placeholder="请输入竞价轮次"></el-input>
+                </el-form-item>
+                <el-form-item label="隐藏价格" prop="price_hide">
+                    <el-switch v-model="new_bc.price_hide" size="small">
+                    </el-switch>
                 </el-form-item>
             </el-form>
             <span slot="footer" class="dialog-footer">
@@ -219,6 +232,7 @@ export default {
                 "total": 0,
                 "total_turn": 1,
                 "stuff_name": '',
+                price_hide: false,
             },
             rules: {
                 comment: [{
