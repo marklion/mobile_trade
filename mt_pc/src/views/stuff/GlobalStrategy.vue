@@ -14,6 +14,8 @@
             </el-switch>
             <el-switch v-model="buy_config_hard" active-text="采购严格模式" @change="set_buy_config_hard">
             </el-switch>
+            <el-switch v-model="push_messages_writable_roles" active-text="是否只推送消息给可写角色" @change="set_push_messages_writable_roles">
+            </el-switch>
         </el-main>
     </el-container>
     <h3>代理配置</h3>
@@ -112,6 +114,7 @@ export default {
     data() {
         return {
             show_add_contract_diag: false,
+            push_messages_writable_roles: false,
             contract_id_selected: 0,
             focus_delegate_id: 0,
             new_delegate: {
@@ -154,6 +157,7 @@ export default {
         this.fetchReplaceField();
         this.get_buy_config_hard();
         this.get_show_sc_in_field();
+        this.get_push_messages_writable_roles();
     },
     methods: {
         async fetchReplaceField() {
@@ -308,7 +312,16 @@ export default {
                 buy_config_hard: this.buy_config_hard
             });
             await this.get_buy_config_hard();
-        }
+        },
+        get_push_messages_writable_roles: async function () {
+            let ret = await this.$send_req('/global/get_push_messages_writable_roles', {});
+            this.push_messages_writable_roles = ret.push_messages_writable_roles;
+        },
+        set_push_messages_writable_roles: async function () {   
+            await this.$send_req('/stuff/set_push_messages_writable_roles', {
+                push_messages_writable_roles: this.push_messages_writable_roles
+            });
+        },
     }
 }
 </script>
