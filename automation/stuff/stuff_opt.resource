@@ -515,3 +515,44 @@ Input Plan Sct Info
     [Arguments]  ${plan_id}  ${psi_id}  ${value}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan_id}  psi_id=${psi_id}  value=${value}
     Req to Server    /scale/input_psi_info    ${token}    ${req}
+
+Set Stuff Second Unit Coefficient
+    #定义一个函数，
+    [Arguments]  ${stuff_id}   ${second_unit}  ${coefficient}  ${token}=${sc_admin_token}
+    # 函数所需要的参数：带等号的是默认值
+    ${unit_coefficient}  Create Dictionary  second_unit=${second_unit}  coefficient=${coefficient}
+    #封装一个接口的请求参数 注意是字典 先定义内部的字典
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  unit_coefficient=${unit_coefficient}
+    # 然后用req包裹俩层字典
+    Req to Server    /stuff/set_unit_coefficient    ${token}    ${req}
+    # 最后向这个接口发送请求
+
+Del Stuff Second Unit Coefficient
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
+    ${unit_coefficient}  Create Dictionary  second_unit=${EMPTY}  coefficient=${1}
+    #封装一个接口的请求参数 注意是字典 先定义内部的字典
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  unit_coefficient=${unit_coefficient}
+    Req to Server    /stuff/set_unit_coefficient    ${token}    ${req}
+
+Update Stuff Second Unit Coefficient
+    [Arguments]  ${stuff_id}  ${second_unit}  ${coefficient}  ${token}=${sc_admin_token}
+    ${unit_coefficient}  Create Dictionary  second_unit=${second_unit}  coefficient=${coefficient}
+    #封装一个接口的请求参数 注意是字典 先定义内部的字典
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  unit_coefficient=${unit_coefficient}
+    Req to Server    /stuff/set_unit_coefficient    ${token}    ${req}
+
+
+Add Subsidy
+    [Arguments]  ${stuff_id}  ${gate}  ${discount}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  gate=${gate}  discount=${discount}
+    Req to Server    /cash/add_subsidy_params    ${token}    ${req}
+
+Del Subsidy
+    [Arguments]  ${sub_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${sub_id}
+    Req to Server    /cash/del_subsidy_params  ${token}  ${req}
+
+Get Subsidy
+    [Arguments]  ${token}=${sc_admin_token}
+    ${resp}  Req Get to Server    /cash/get_subsidy_params    ${token}  subsidy_params    ${-1}
+    RETURN  ${resp}

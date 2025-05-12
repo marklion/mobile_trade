@@ -123,7 +123,7 @@ module.exports = {
                 };
             }
         },
-        get_count_by_today_yesterday: {   
+        get_count_by_today_yesterday: {
             name: '获取今日、昨日物料统计',
             description: '获取今日、昨日物料统计',
             is_write: true,
@@ -892,6 +892,32 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_delegate_stamp_pic: {
+            name: '设置代理印章图片',
+            description: '设置代理印章图片',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '代理ID', example: 1 },
+                stamp_pic: { type: String, have_to: false, mean: '印章图片', example: '印章图片' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let delegate = await company.getDelegates({
+                    where: {
+                        id: body.id
+                    }
+                });
+                if (delegate.length == 1) {
+                    delegate[0].stamp_pic = body.stamp_pic;
+                    await delegate[0].save();
+                }
+                return { result: true };
+            },
+        },
         get_delegates: {
             name: '获取代理',
             description: '获取代理',
@@ -905,6 +931,7 @@ module.exports = {
                         id: { type: Number, mean: '代理ID', example: 1 },
                         name: { type: String, mean: '代理名称', example: '代理名称' },
                         code: { type: String, mean: '代理编码', example: '代理编码' },
+                        stamp_pic: { type: String, mean: '印章图片', example: '印章图片' },
                         contracts: {
                             type: Array, mean: '合同列表', explain: {
                                 id: { type: Number, mean: '合同ID', example: 1 },
@@ -951,11 +978,12 @@ module.exports = {
             is_write: false,
             is_get_api: false,
             params: {
-                replace_form : { type: Object, have_to: true, mean: '替换表单', explain: {
-                    replace_weighingSheet: { type: String, have_to: true, mean: '磅单替换表单', example: '磅单替换表单' },
-                    replace_count: { type: String, have_to: true, mean: '载重量替换文字', example: '载重量替换文字' },
-                    replace_fw_info: { type: String, have_to: true, mean: '一次称重替换文字', example: '一次称重替换文字' },
-                    replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' }
+                replace_form: {
+                    type: Object, have_to: true, mean: '替换表单', explain: {
+                        replace_weighingSheet: { type: String, have_to: true, mean: '磅单替换表单', example: '磅单替换表单' },
+                        replace_count: { type: String, have_to: true, mean: '载重量替换文字', example: '载重量替换文字' },
+                        replace_fw_info: { type: String, have_to: true, mean: '一次称重替换文字', example: '一次称重替换文字' },
+                        replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' }
                     }
                 }
             },
@@ -994,11 +1022,12 @@ module.exports = {
             is_get_api: false,
             params: {},
             result: {
-                replace_form : { type: Object, mean: '替换表单', explain: {
-                    replace_weighingSheet: { type: String, mean: '磅单替换表单', example: '磅单替换表单' },
-                    replace_count: { type: String, mean: '载重量替换文字', example: '载重量替换文字' },
-                    replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
-                    replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' }
+                replace_form: {
+                    type: Object, mean: '替换表单', explain: {
+                        replace_weighingSheet: { type: String, mean: '磅单替换表单', example: '磅单替换表单' },
+                        replace_count: { type: String, mean: '载重量替换文字', example: '载重量替换文字' },
+                        replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
+                        replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' }
                     }
                 }
             },
@@ -1085,7 +1114,7 @@ module.exports = {
                     if (exist.length == 0) {
                         let item = await sq.models.sct_scale_item.create({
                             name: body.name,
-                            type:type,
+                            type: type,
                         });
                         await item.setStuff(stuff);
                     }
@@ -1161,9 +1190,9 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_show_sc_in_field:{
-            name:'设置在排队车辆处显示证件检查',
-            description:'设置在排队车辆处显示证件检查',
+        set_show_sc_in_field: {
+            name: '设置在排队车辆处显示证件检查',
+            description: '设置在排队车辆处显示证件检查',
             is_write: true,
             is_get_api: false,
             params: {
@@ -1181,9 +1210,9 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_buy_config_hard:{
-            name:'设置采购严格模式',
-            description:'设置采购严格模式',
+        set_buy_config_hard: {
+            name: '设置采购严格模式',
+            description: '设置采购严格模式',
             is_write: true,
             is_get_api: false,
             params: {

@@ -188,6 +188,7 @@ module.exports = {
         plan_sct_infos: plan_sct_infos,
         second_unit: { type: String, mean: '第二单位', example: '吨' },
         coefficient: { type: Number, mean: '换算系数', example: 1 },
+        delegate_stamp_path: { type: String, mean: '代理公司印章路径', example: 'delegate_stamp_path_example' },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },
@@ -345,6 +346,7 @@ module.exports = {
             }
         },
         plan_sct_infos: plan_sct_infos,
+        subsidy_price: { type: Number, mean: '补贴价格', example: 1 },
     },
     bidding_items: bidding_items,
     dev_data: {

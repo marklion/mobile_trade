@@ -1,83 +1,33 @@
 <template>
-    <el-container>
-        <el-main>
-            <div v-if="stamp_pic">
-                <el-image style="width: 300px;height: 300px;" :zoom-rate="1.2" :preview-src-list="[$make_file_url(stamp_pic)]"  :src="$make_file_url(stamp_pic)" fit="cover">
-                </el-image>
-                <br>
-                <el-button type="danger" @click="delete_stamp_pic">删除</el-button>
-            </div>
-            <div v-else>
-                <el-upload ref="upload" :action="upload_url" :file-list="fileList" :limit="1"
-                    :on-success="after_attach_uploaded" :on-error="meet_upload_error" :on-exceed="handle_exceed"
-                    :before-upload="before_upload">
-                    <el-button size="small" type="primary">点击上传</el-button>
-                </el-upload>
-            </div>
-        </el-main>
-    </el-container>
+<el-container>
+    <el-main>
+        <stamp-pic :get_pic_interface="get_pic_interface" :set_pic_interface="set_pic_interface"></stamp-pic>
+    </el-main>
+</el-container>
 </template>
 
 <script>
+import StampPic from '../../components/StampPic.vue';
 export default {
     name: 'SealPic',
     description: '磅单印章',
-    data() {
-        return {
-            stamp_pic: '',
-            fileList: [],
-            upload_url: this.$make_file_url()
-        }
+    components: {
+        "stamp-pic": StampPic
     },
-    mounted() {
-        this.init_stamp_pic();
+    data() {
+        return {}
     },
     methods: {
-        delete_stamp_pic: async function () {
-            this.$confirm('确定删除磅单印章图片吗？', '提示', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                type: 'warning'
-            }).then(async () => {
-                await this.$send_req('/scale/set_stamp_pic', {
-                    stamp_pic: ''
-                });
-                this.stamp_pic = '';
-                this.$message.success('删除成功');
-            });
-        },
-        after_attach_uploaded: async function (res, file, fileList) {
-            if (res) {
-                this.stamp_pic = res;
-                await this.set_stamp_pic();
-                this.$message.success('上传成功');
-            } else {
-                this.$message.error('上传失败')
-            }
-        },
-        meet_upload_error(err) {
-            this.$message.error('上传出错:' + err)
-        },
-        init_stamp_pic: async function () {
+        get_pic_interface: async function () {
             let ret = await this.$send_req('/scale/get_stamp_pic');
-            this.stamp_pic = ret.stamp_pic;
+            return ret.stamp_pic;
         },
-        set_stamp_pic: async function () {
+
+        set_pic_interface: async function (pic) {
             await this.$send_req('/scale/set_stamp_pic', {
-                stamp_pic: this.stamp_pic
+                stamp_pic: pic
             });
         },
-        handle_exceed() {
-            this.$message.warning('最多只能上传1张图片');
-        },
-        before_upload(file) {
-            const isImage = file.type.indexOf('image') !== -1
-            if (!isImage) {
-                this.$message.error('只能上传图片文件!')
-                return false
-            }
-            return true
-        }
     }
 }
 </script>

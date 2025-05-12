@@ -73,6 +73,21 @@ Confirm Bidding While Not Finished
     Customer Price Out  ${joiners}[1][user_token]  ${300}
     Confirm One Bidding    ${added_one}[id]  ${joiners}[1][user_token]  ${True}
 
+Export Bidding While Not Finished
+    [Teardown]  Bidding Reset
+    ${added_one}  Create A Bidding  ${test_stuff}  ${1}
+    Add All Customer To Bidding Except First One  ${added_one}[id]
+    Move Bidding Date
+    Customer Accept Bidding  ${joiners}[1][user_token]
+    Customer Accept Bidding  ${joiners}[2][user_token]
+    Customer Accept Bidding  ${joiners}[3][user_token]
+    Move Bidding Date  ${False}
+    Customer Price Out  ${joiners}[1][user_token]  ${199}
+    Export Bidding    ${added_one}[id]  exception=${True}
+    Customer Price Out  ${joiners}[2][user_token]  ${198}
+    Customer Price Out  ${joiners}[3][user_token]  ${197}
+    Export Bidding    ${added_one}[id]
+
 Bidding Price With Wrong Verify Code
     [Teardown]  Run Keywords  Bidding Reset  AND  Set Bidding Verify  ${False}
     Set Bidding Verify  ${True}

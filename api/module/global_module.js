@@ -39,8 +39,10 @@ async function get_ticket_func(body, token) {
         plan = orig_plan;
     }
     let delegate_name = ''
+    let delegate_stamp_path = ''
     if (plan.delegate) {
         delegate_name = plan.delegate.name
+        delegate_stamp_path = plan.delegate.stamp_pic
     }
 
     return {
@@ -70,6 +72,7 @@ async function get_ticket_func(body, token) {
         replace_fw_info: plan.stuff.company.global_replace_form?.replace_fw_info || '一次计量',
         replace_sw_info: plan.stuff.company.global_replace_form?.replace_sw_info || '二次计量',
         plan_sct_infos:plan.plan_sct_infos,
+        delegate_stamp_path: delegate_stamp_path,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {

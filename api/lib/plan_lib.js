@@ -228,7 +228,7 @@ module.exports = {
             manual_close:false,
         };
         let countStuff = [];
-        let stuff = await company.getStuff({ where: { use_for_buy: false } }); 
+        let stuff = await company.getStuff();
         for (let i = 0; i < stuff.length; i++) {
             const stuffItem = stuff[i];
             const stuffName = stuffItem.name;
@@ -240,6 +240,9 @@ module.exports = {
                     plain: true
                 }
             );
+            if (stuffItem.second_unit && stuffItem.coefficient > 0) {
+                totalCount *= stuffItem.coefficient;
+            }
             countStuff.push({
                 name: stuffName,
                 count: totalCount?totalCount:0,
@@ -250,7 +253,7 @@ module.exports = {
     getStatistic: async function (company) {
         let statistic = {};
 
-        
+
         let yesterday_result = await this.getPlansCount(company, -1);
         for (let i = 0; i < yesterday_result.length; i++) {
             const item = yesterday_result[i];
@@ -268,7 +271,7 @@ module.exports = {
             }
             statistic[item.name].today_count = item.count;
         }
-        
+
 
         let resultArray = Object.keys(statistic).map(key => ({
             name: key,
@@ -1351,10 +1354,10 @@ module.exports = {
     },
     default_export_sort:function(sq){
         const order = [
-            [sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'], 
-            ['ticket_no', 'ASC'], 
-            [sq.fn('TIMESTAMP', sq.col('m_time')), 'ASC'], 
-            [sq.fn('TIMESTAMP', sq.col('p_time')), 'ASC'] 
+            [sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'],
+            ['ticket_no', 'ASC'],
+            [sq.fn('TIMESTAMP', sq.col('m_time')), 'ASC'],
+            [sq.fn('TIMESTAMP', sq.col('p_time')), 'ASC']
         ];
         return order;
     },
@@ -1429,6 +1432,9 @@ module.exports = {
                 fapiao_delivered: element.fapiao_delivered ? '是' : '否',
                 comment: element.comment,
                 delegate: element.delegate ? element.delegate.name : '',
+                subsidy_price: this.place_hold(element.subsidy_price, 0),
+                subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
+                subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price *10).toFixed(1),
             });
         }
         let columns = [{
@@ -1497,6 +1503,15 @@ module.exports = {
         }, {
             header: '代理公司',
             key: 'delegate'
+        }, {
+            header: '打折后单价',
+            key: 'subsidy_price'
+        },{
+            header: '打折后总价',
+            key: 'subsidy_total_price'
+        },{
+            header: '打折数',
+            key: 'subsidy_discount'
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');

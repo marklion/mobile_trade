@@ -36,6 +36,11 @@
                         </el-table>
                     </template>
                 </el-table-column>
+                <el-table-column label="磅单印章">
+                    <template slot-scope="scope">
+                        <stamp-pic :get_pic_interface="get_get_pic_interface(scope.row)" :set_pic_interface="get_set_pic_interface(scope.row.id)"></stamp-pic>
+                    </template>
+                </el-table-column>
                 <el-table-column fixed="right" width="350">
                     <template slot="header">
                         <el-button size="mini" type="success" @click="create_delegate = true">新增</el-button>
@@ -105,11 +110,13 @@
 <script>
 import PageContent from '../../components/PageContent.vue';
 import SelectSearch from '../../components/SelectSearch.vue';
+import StampPic from '../../components/StampPic.vue';
 export default {
     name: 'GlobalStrategy',
     components: {
         "page-content": PageContent,
-        "select-search": SelectSearch
+        "select-search": SelectSearch,
+        "stamp-pic": StampPic
     },
     data() {
         return {
@@ -160,6 +167,20 @@ export default {
         this.get_push_messages_writable_roles();
     },
     methods: {
+        get_set_pic_interface: function (id) {
+            return async (pic) => {
+                this.$send_req('/stuff/set_delegate_stamp_pic', {
+                    id: id,
+                    stamp_pic: pic,
+                });
+            };
+        },
+        get_get_pic_interface: function (row) {
+            return () => {
+                return row.stamp_pic;
+            };
+        },
+
         async fetchReplaceField() {
             try {
                 const ret = await this.$send_req('/stuff/get_replace_field', {});
