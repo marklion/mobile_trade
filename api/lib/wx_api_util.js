@@ -21,7 +21,7 @@ async function filter_related_users(module_name, users) {
             for (let index = 0; index < roles.length; index++) {
                 let role = roles[index];
                 if (await target_module.hasRbac_role(role)) { 
-                    if (role.company.push_messages_writable_roles) {
+                    if (role.company && role.company.push_messages_writable_roles) {
                         if (!role.is_readonly) {
                             found = true;
                         }
