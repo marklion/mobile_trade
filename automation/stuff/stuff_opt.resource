@@ -510,7 +510,10 @@ Set Stuff Manual Weight
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${is_manual_weight}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  manual_weight=${is_manual_weight}
     Req to Server    /stuff/manual_weight_config    ${token}    ${req}
-
+Set Auto Confirm Goods
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${auto_confirm_goods}=${True}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  auto_confirm_goods=${auto_confirm_goods}
+    Req to Server  /stuff/auto_confirm_goods  ${token}  ${req}
 Input Plan Sct Info
     [Arguments]  ${plan_id}  ${psi_id}  ${value}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan_id}  psi_id=${psi_id}  value=${value}

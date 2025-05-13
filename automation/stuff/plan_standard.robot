@@ -394,6 +394,20 @@ Input And Check Stuff Unit Coefficient
     Should Be Equal As Numbers  ${p_resp}[coefficient]  ${1.5}
     Should Be Equal As Strings  ${p_resp}[second_unit]  千克
     
+Auto confirm Goods With Plan
+    [Teardown]  Plan Reset
+    Set Auto Confirm Goods
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan_id}  Get From Dictionary  ${plan}  id  id
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan    ${plan}
+    Check And Set Is Confirm  ${plan}  ${False}
+    Plan Enter  ${plan}
+    Check And Set Is Confirm  ${plan}  ${True}
+
 *** Keywords ***
 Verify Order Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
@@ -452,6 +466,14 @@ Verify Order Detail
             END
         END
         Should Be True  ${found_node}
+    END
+Check And Set Is Confirm
+    [Arguments]  ${plan}  ${expected_value}
+    ${is_confirm}  Run Keyword And Return Status  Get From Dictionary  ${plan}  is_confirm
+    IF  ${is_confirm} == ${expected_value}
+        Log  is_confirm is ${expected_value}
+    ELSE
+        Set To Dictionary  ${plan}  is_confirm  ${expected_value}
     END
 Verify Plan Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
