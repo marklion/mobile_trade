@@ -120,6 +120,7 @@ let db_opt = {
             verify_pay_by_cash:{ type: DataTypes.BOOLEAN, defaultValue: false },
             show_sc_in_field:{ type: DataTypes.BOOLEAN, defaultValue: false },
             buy_config_hard:{type: DataTypes.BOOLEAN, defaultValue: false },
+            push_messages_writable_roles:{type: DataTypes.BOOLEAN, defaultValue: false }
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

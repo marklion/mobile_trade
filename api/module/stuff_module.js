@@ -1230,5 +1230,25 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_push_messages_writable_roles:{
+            name:'设置消息推送可写角色',
+            description:'设置消息推送可写角色',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                push_messages_writable_roles: { type: Boolean, have_to: true, mean: '设置消息推送可写角色', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean:'结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.push_messages_writable_roles = body.push_messages_writable_roles;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        }
     }
 }

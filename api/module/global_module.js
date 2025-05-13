@@ -1967,5 +1967,19 @@ module.exports = {
                 return { buy_config_hard: company.buy_config_hard };
             }
         },
+        get_push_messages_writable_roles:{
+            name: '获取推送消息可写角色',
+            description: '获取推送消息可写角色',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                push_messages_writable_roles: { type: Boolean, mean: '是否只推送消息给可写角色', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { push_messages_writable_roles: company.push_messages_writable_roles };
+            }
+        }
     },
 }

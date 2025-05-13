@@ -119,7 +119,7 @@ WxMsg Catch
     Append To List    ${WX_MSG_CATCHED}  @{lines_after_filter}
     Set Suite Variable  ${WX_MSG_CATCHED}
 WxMsg was recieved
-    [Arguments]  ${open_id}  ${msg_id}
+    [Arguments]  ${open_id}  ${msg_id}  ${no_msg}=${False}
     ${found}  Set Variable  ${False}
     Log  ${open_id}
     Log  ${msg_id}
@@ -129,4 +129,8 @@ WxMsg was recieved
             Exit For Loop
         END
     END
-    Should Be True    ${found}
+    IF  $no_msg
+        Should Not Be True    ${found}
+    ELSE
+        Should Be True    ${found}
+    END
