@@ -978,6 +978,7 @@ module.exports = {
         },
         set_replace_field: {
             name: '设置磅单替换字段',
+            description: '设置磅单替换字段',
             is_write: false,
             is_get_api: false,
             params: {
@@ -1021,6 +1022,7 @@ module.exports = {
         },
         get_replace_field: {
             name: '获取磅单替换字段',
+            description: '获取磅单替换字段',
             is_write: false,
             is_get_api: false,
             params: {},
