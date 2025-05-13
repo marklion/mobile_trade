@@ -202,6 +202,7 @@ let db_opt = {
             second_unit: { type: DataTypes.STRING },
             coefficient: { type: DataTypes.DECIMAL(12, 2), defaultValue: 1.00 , get:getDecimalValue('coefficient')},
             add_base:{type: DataTypes.STRING},
+            second_unit_decimal: { type: DataTypes.INTEGER, defaultValue: 2 },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
