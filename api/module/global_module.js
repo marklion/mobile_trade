@@ -1974,7 +1974,7 @@ module.exports = {
             is_get_api: false,
             params: {},
             result: {
-                push_messages_writable_roles: { type: Boolean, mean: '是否开启严格模式', example: true }
+                push_messages_writable_roles: { type: Boolean, mean: '是否只推送消息给可写角色', example: true }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
