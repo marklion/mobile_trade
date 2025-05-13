@@ -467,7 +467,7 @@ export default {
                     unit_coefficient: {
                         second_unit: item.second_unit || '',
                         coefficient: item.coefficient || 0,
-                        second_unit_decimal: parseInt(item.second_unit_decimal == undefined ? 2 : item.second_unit_decimal)
+                        second_unit_decimal: parseInt(item.second_unit_decimal == undefined ? 2 : item.second_unit_decimal, 10)
                     }
                 });
                 uni.showToast({
