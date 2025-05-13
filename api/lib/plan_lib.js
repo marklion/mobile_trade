@@ -1432,6 +1432,8 @@ module.exports = {
                 subsidy_price: this.place_hold(element.subsidy_price, 0),
                 subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
                 subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price *10).toFixed(1),
+                second_unit:this.place_hold(element.stuff.second_unit, ''),
+                second_value:(element.stuff.second_unit?this.place_hold(element.stuff.coefficient, 1)*element.count:0),
             });
         }
         let columns = [{
@@ -1509,6 +1511,12 @@ module.exports = {
         },{
             header: '打折数',
             key: 'subsidy_discount'
+        }, {
+            header: '第二单位',
+            key: 'second_unit'
+        }, {
+            header: '第二单位装卸量',
+            key: 'second_value'
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
@@ -1519,6 +1527,7 @@ module.exports = {
         worksheet.getColumn('count').numFmt = '0.00';
         worksheet.getColumn('unit_price').numFmt = '0.00';
         worksheet.getColumn('total_price').numFmt = '0.00';
+        worksheet.getColumn('second_value').numFmt = '0.00';
 
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
