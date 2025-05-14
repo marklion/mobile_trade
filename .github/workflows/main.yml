@@ -42,6 +42,12 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 18.17.0
+      - name: sync npm1
+        run: |
+          cd api
+          npm install
+          cd ../mt_pc
+          npm install
       - uses: bahmutov/npm-install@v1
         with:
           working-directory: |
@@ -50,6 +56,10 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 16.8.0
+      - name: sync npm2
+        run: |
+          cd mt_gui
+          npm install
       - uses: bahmutov/npm-install@v1
         with:
           working-directory: mt_gui
