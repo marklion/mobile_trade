@@ -404,9 +404,9 @@ Auto confirm Goods With Plan
     ${plan_id}  Get From Dictionary  ${plan}  id  id
     Confirm A Plan  ${plan}
     Manual Pay A Plan    ${plan}
-    Check And Set Is Confirm  ${plan}  ${False}
+    Check Plan Was Confirmed  ${plan_id}  ${False}
     Plan Enter  ${plan}
-    Check And Set Is Confirm  ${plan}  ${True}
+    Check Plan Was Confirmed  ${plan_id}  ${True}
 
 *** Keywords ***
 Verify Order Detail
@@ -467,14 +467,11 @@ Verify Order Detail
         END
         Should Be True  ${found_node}
     END
-Check And Set Is Confirm
-    [Arguments]  ${plan}  ${expected_value}
-    ${is_confirm}  Run Keyword And Return Status  Get From Dictionary  ${plan}  is_confirm
-    IF  ${is_confirm} == ${expected_value}
-        Log  is_confirm is ${expected_value}
-    ELSE
-        Set To Dictionary  ${plan}  is_confirm  ${expected_value}
-    END
+Check Plan Was Confirmed
+    [Arguments]  ${plan_id}  ${is_confirm}=${True}
+    ${focus_plan}  Get Plan By Id  ${plan_id}
+    ${check_confirm}  Get From Dictionary  ${focus_plan}  confirmed  ${False}
+    Should Be Equal  ${check_confirm}  ${is_confirm}
 Verify Plan Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
