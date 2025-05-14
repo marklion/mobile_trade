@@ -59,7 +59,7 @@ Plan Confirm with Not Enough Cash and Check
     Confirm A Plan  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
     Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${False}
-    # 获取订单中的欠款额 
+    # 获取订单中的欠款额
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_first}  Get From Dictionary  ${data_plan}  arrears  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
@@ -74,7 +74,7 @@ Plan Confirm with Not Enough Cash and Check
     Confirm A Plan  ${plan}
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
     Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
-    # 获取订单中的欠款额 
+    # 获取订单中的欠款额
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_second}  Get From Dictionary  ${data_plan}  arrears  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
@@ -85,6 +85,7 @@ Plan Confirm with Not Enough Cash and Check
     # 比较计算结果与实际值
     Should Be Equal As Numbers    ${arrears_second}    ${b}
     Manual Pay A Plan    ${plan}
+    Deliver A Plan    ${plan}    ${20}
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_third}  Get From Dictionary  ${data_plan}  arrears  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
@@ -470,7 +471,7 @@ Input And Check Stuff Unit Coefficient
     ${p_resp}  Req to Server  /global/get_ticket  ${sc_admin_token}  ${req_body}
     Should Be Equal As Numbers  ${p_resp}[coefficient]  ${1.5}
     Should Be Equal As Strings  ${p_resp}[second_unit]  千克
-   
+
 Auto confirm Goods With Plan
     [Teardown]  Plan Reset
     Set Auto Confirm Goods
