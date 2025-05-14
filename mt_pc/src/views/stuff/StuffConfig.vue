@@ -31,8 +31,16 @@
                                             <el-switch v-model="scope.row.auto_confirm_goods" inline-prompt active-text="自动确认装卸货" @change="change_auto_confirm_goods($event,scope.row)"></el-switch>
                                             <div class="unit-input-group">
                                                 <div class="input-item">
+                                                    <span class="unit-label">延迟结算时间点</span>
+                                                    <el-time-picker style="width:100px" size="mini" value-format="HH:mm:ss" v-model="scope.row.delay_checkout_time" placeholder="延迟结算时间点" @change="confirm_checkout_delay_time($event, scope.row)">
+                                                    </el-time-picker>
+                                                </div>
+                                                <el-button type="success" size="small" @click="batch_checkout(scope.row.id)">一键结算</el-button>
+                                            </div>
+                                            <div class="unit-input-group">
+                                                <div class="input-item">
                                                     <span class="unit-label">第二单位配置:</span>
-                                                    <el-input v-model="scope.row.second_unit" placeholder="例:千克" size="small" clearable @change="validateUnitInput" />
+                                                    <el-input v-model="scope.row.second_unit" placeholder="例:千克" size="small" clearable />
                                                 </div>
                                                 <div class="input-item">
                                                     <span class="unit-label">系数配置:</span>
@@ -42,8 +50,9 @@
                                                     <span class="unit-label">小数位数:</span>
                                                     <el-input-number v-model="scope.row.second_unit_decimal" placeholder="例:2" :precision="0" :step="1" :min="0" :max="6" size="small" controls-position="right" />
                                                 </div>
-                                                <el-button type="primary" size="small" :loading="saving" @click="set_scunit_coe_configuration(scope.row)">保存配置</el-button>
+                                                <el-button type="primary" size="small" @click="set_scunit_coe_configuration(scope.row)">保存配置</el-button>
                                             </div>
+
                                         </div>
                                         <el-button slot="reference" size="mini" type="primary">配置</el-button>
                                     </el-popover>
@@ -386,6 +395,21 @@ export default {
         await this.update_price_profile();
     },
     methods: {
+        batch_checkout: async function (stuff_id) {
+            try {
+                await this.$confirm('确定要一键结算吗？', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                let resp = await this.$send_req('/sale_management/batch_checkout', {
+                    stuff_id: stuff_id
+                });
+                this.$message.success(`一键结算成功，${resp.order_count}个订单已结算`);
+            } catch (error) {
+                console.log(error);
+            }
+        },
         set_add_base: async function (stuff) {
             await this.$send_req('/stuff/set_add_base', {
                 stuff_id: stuff.id,
@@ -603,6 +627,23 @@ export default {
                         coefficient: parseFloat(item.coefficient || 0),
                         second_unit_decimal: parseInt(item.second_unit_decimal == undefined ? 2 : item.second_unit_decimal, 10)
                     }
+                });
+                this.$message.success('配置保存成功');
+                this.refresh_stuff();
+
+            } catch (error) {
+                this.$message.error('保存失败：' + error.message);
+            }
+        },
+        confirm_checkout_delay_time: async function (event, stuff) {
+            stuff.delay_checkout_time = event;
+            await this.set_delay_checkout_time(stuff);
+        },
+        set_delay_checkout_time: async function (item) {
+            try {
+                await this.$send_req('/stuff/set_delay_checkout_time', {
+                    stuff_id: item.id,
+                    delay_checkout_time: item.delay_checkout_time || ''
                 });
                 this.$message.success('配置保存成功');
                 this.refresh_stuff();

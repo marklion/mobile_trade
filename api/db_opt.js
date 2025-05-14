@@ -204,7 +204,8 @@ let db_opt = {
             add_base:{type: DataTypes.STRING},
             auto_confirm_goods:{type: DataTypes.BOOLEAN, defaultValue: false},
             second_unit_decimal: { type: DataTypes.INTEGER, defaultValue: 2 },
-
+            delay_checkout_time:{type: DataTypes.STRING},
+            last_delay_checkout:{type: DataTypes.STRING},
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
