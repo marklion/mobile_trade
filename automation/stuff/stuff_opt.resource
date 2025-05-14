@@ -454,6 +454,11 @@ Set Stuff Checkout Delay
     ${req}  Create Dictionary  stuff_id=${stuff_id}  checkout_delay=${delay}
     Req to Server   /stuff/checkout_delay_config     ${token}  ${req}
 
+Set Stuff Checkout Delay Time
+    [Arguments]   ${delay_time}  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  delay_checkout_time=${delay_time}
+    Req to Server    /stuff/set_delay_checkout_time    ${token}    ${req}
+
 Set Stuff Need Expect Weight
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${expect_weight}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  need_expect_weight=${expect_weight}
@@ -464,6 +469,10 @@ Checkout A Plan
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server    /customer/checkout_plan    ${token}    ${req}
 
+Batch Checkout
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}
+    Req to Server    /sale_management/batch_checkout    ${token}    ${req}
 Get Charge History
     [Arguments]  ${contract_id}  ${token}=${sc_admin_token}
     ${today}  Get Current Date  result_format=${DATE_FORMAT}

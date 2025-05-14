@@ -95,6 +95,12 @@ Update User OpenId
     Execute Sql String  update rbac_user set open_id = '${open_id}' where phone = '${phone}';
     Disconnect From All Databases
 
+Set User Fixed
+    [Arguments]  ${phone}
+    DB Connect
+    Execute Sql String  update rbac_user set fixed = 1 where phone = '${phone}';
+    Disconnect From All Databases
+
 Exam Reset
     Clear Table  option_answer
     Clear Table  question
