@@ -39,6 +39,20 @@ jobs:
           mysql database: 'automation_test' # Optional, default value is "test". The specified database which will be create
           mysql user: 'sysadmin' # Required if "mysql root password" is empty, default is empty. The superuser for the specified database. Can use secrets, too
           mysql password: ${{ secrets.DB_PASSWORD}} # Required if "mysql user" exists. The password for the "mysql user"
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18.17.0
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: |
+            api
+            mt_pc
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.8.0
+      - uses: bahmutov/npm-install@v1
+        with:
+          working-directory: mt_gui
       - name: Run build-wrapper
         run: |
           docker pull marklion/mt_deploy:v1.0
