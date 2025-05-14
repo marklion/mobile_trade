@@ -38,6 +38,7 @@
     "officegen": "^0.6.5",
     "pg-hstore": "^2.3.4",
     "pizzip": "^3.1.7",
+    "readable-stream": "^2.3.8",
     "sequelize": "^6.37.1",
     "showdown": "^2.1.0",
     "svg-captcha": "^1.4.0",
