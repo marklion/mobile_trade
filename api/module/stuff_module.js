@@ -249,7 +249,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return checkout_delay_config_func(body, token);
+                return await checkout_delay_config_func(body, token);
             },
         },
         expect_weight_config: {
