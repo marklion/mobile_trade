@@ -137,11 +137,7 @@
                                 <fui-list-cell>
                                     <view class="fui-list__cell">
                                         <fui-text size="28" text="第二单位配置"></fui-text>
-                                        <fui-input 
-                                            v-model="item.second_unit" 
-                                            placeholder="请输入单位"
-                                            style="flex: 1; margin-left: 20rpx;"
-                                        />
+                                        <fui-input v-model="item.second_unit" placeholder="请输入单位" style="flex: 1; margin-left: 20rpx;" />
                                     </view>
                                 </fui-list-cell>
                             </fui-label>
@@ -153,27 +149,26 @@
                                 <fui-list-cell>
                                     <view class="fui-list__cell">
                                         <fui-text size="28" text="系数配置"></fui-text>
-                                        <fui-input-number
-                                            v-model="item.coefficient"
-                                            :digit="2"
-                                            :step="0.1"
-                                            :value="1.00"
-                                            :min="0"
-                                            :max="999999"
-                                            style="flex: 1; margin-left: 20rpx;"
-                                        />
+                                        <fui-input-number v-model="item.coefficient" :digit="2" :step="0.1" :value="1.00" :min="0" :max="999999" style="flex: 1; margin-left: 20rpx;" />
+                                    </view>
+                                </fui-list-cell>
+                            </fui-label>
+                        </fui-col>
+                    </fui-row>
+                    <fui-row>
+                        <fui-col :span="24">
+                            <fui-label>
+                                <fui-list-cell>
+                                    <view class="fui-list__cell">
+                                        <fui-text size="28" text="小数位"></fui-text>
+                                        <fui-input-number v-model="item.second_unit_decimal" :digit="0" :step="1" :value="2" :min="0" :max="6" style="flex: 1; margin-left: 20rpx;" />
                                     </view>
                                 </fui-list-cell>
                             </fui-label>
                         </fui-col>
                     </fui-row>
                     <view class="btn-wrapper">
-                        <fui-button 
-                            text="保存配置" 
-                            type="primary" 
-                            btnSize="medium"
-                            @click="set_scunit_coe_configuration(item)"
-                        />
+                        <fui-button text="保存配置" type="primary" btnSize="medium" @click="set_scunit_coe_configuration(item)" />
                     </view>
                 </view>
                 <fui-divider text="装卸区域配置"></fui-divider>
@@ -477,7 +472,7 @@ export default {
                 need_expect_weight: event.detail.value
             });
         },
-        set_scunit_coe_configuration: async function(item) {
+        set_scunit_coe_configuration: async function (item) {
             try {
                 if (!item || !item.id) {
                     uni.showToast({
@@ -489,8 +484,9 @@ export default {
                 await this.$send_req('/stuff/set_unit_coefficient', {
                     stuff_id: item.id,
                     unit_coefficient: {
-                        second_unit: item.second_unit || '',  
-                        coefficient: item.coefficient || 0 
+                        second_unit: item.second_unit || '',
+                        coefficient: item.coefficient || 0,
+                        second_unit_decimal: parseInt(item.second_unit_decimal == undefined ? 2 : item.second_unit_decimal, 10)
                     }
                 });
                 uni.showToast({
@@ -707,6 +703,7 @@ export default {
     align-items: center;
     padding: 6rpx 0 4rpx 24rpx;
 }
+
 .btn-wrapper {
     padding: 20rpx;
     display: flex;

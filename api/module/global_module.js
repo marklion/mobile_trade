@@ -64,6 +64,7 @@ async function get_ticket_func(body, token) {
         stuff_name: plan.stuff.name,
         coefficient: plan.stuff.coefficient,
         second_unit: plan.stuff.second_unit,
+        second_unit_decimal: plan.stuff.second_unit_decimal,
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,

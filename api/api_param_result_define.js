@@ -189,6 +189,7 @@ module.exports = {
         second_unit: { type: String, mean: '第二单位', example: '吨' },
         coefficient: { type: Number, mean: '换算系数', example: 1 },
         delegate_stamp_path: { type: String, mean: '代理公司印章路径', example: 'delegate_stamp_path_example' },
+        second_unit_decimal: { type: Number, mean: '第二单位小数位数', example: 2 },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },
