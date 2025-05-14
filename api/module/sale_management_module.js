@@ -643,5 +643,46 @@ module.exports = {
                 return ret;
             }
         },
+        batch_checkout:{
+            name: '批量结算',
+            description: '批量结算',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+            },
+            result: {
+                order_count: { type: Number, mean: '影响订单数', example: 10 }
+            },
+            func: async function (body, token) {
+                let ret = { order_count: 0 };
+                let sq = db_opt.get_sq();
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (company && stuff && company.id == stuff.companyId) {
+                    let cond = {
+                        status: 2,
+                        is_buy: false,
+                        count: {
+                            [db_opt.Op.gt]: 0
+                        },
+                        checkout_delay: true,
+                        stuffId: body.stuff_id,
+                    };
+                    let plans = await sq.models.plan.findAll({
+                        where: cond,
+                    });
+                    await sq.transaction(async (t) => {
+                        for (let index = 0; index < plans.length; index++) {
+                            const element = plans[index];
+                            await plan_lib.checkout_plan(element.id, token);
+                        }
+                        ret.order_count = plans.length;
+                    });
+                }
+
+                return ret;
+            }
+        },
     },
 }

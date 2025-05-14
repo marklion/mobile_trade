@@ -117,6 +117,19 @@
                     </fui-col>
                 </fui-row>
                 <fui-white-space size="large"></fui-white-space>
+                <fui-row>
+                    <fui-col :span="12">
+                        <fui-label>
+                            <fui-list-cell>
+                                <view class="fui-list__cell">
+                                    <fui-text size="28" text="自动确认装卸货"></fui-text>
+                                    <fui-switch :scaleRatio="0.7" :checked="item.auto_confirm_goods" @change="change_auto_confirm_goods($event,item)"></fui-switch>
+                                </view>
+                            </fui-list-cell>
+                        </fui-label>
+                    </fui-col>
+                </fui-row>
+                <fui-white-space size="large"></fui-white-space>
                 <view>
                     <fui-row>
                         <fui-col :span="24">
@@ -439,6 +452,12 @@ export default {
             await this.$send_req('/stuff/manual_weight_config', {
                 stuff_id: item.id,
                 manual_weight: event.detail.value
+            });
+        },
+        change_auto_confirm_goods: async function (event, item) {
+            await this.$send_req('/stuff/auto_confirm_goods', {
+                stuff_id: item.id,
+                auto_confirm_goods: event.detail.value
             });
         },
         change_need_enter_weight: async function (event, item) {

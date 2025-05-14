@@ -288,6 +288,7 @@ else {
     add_min_timer(5, async () => {
         console.log('5 min timer');
         old_zczh.proc_timeout_5min();
+        plan_lib.walk_through2checkout();
     });
 
     app.post('/api/v1/internal_timeout', async (req, res) => {

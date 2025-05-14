@@ -49,6 +49,50 @@ Plan Confirm with Enough Cash and Check
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2
     Charge To A Company  ${buy_company1}[id]  ${unit_price * -22}
     Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
+Plan Confirm with Not Enough Cash and Check
+    [Teardown]  Plan Reset
+    ${unit_price}  Set Variable  ${test_stuff}[price]
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${False}
+    # 获取订单中的欠款额 
+    ${data_plan}  Get Plan By Id  ${plan}[id]
+    ${arrears_first}  Get From Dictionary  ${data_plan}  arrears  false
+    # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
+    ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
+    ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count]
+    ${a}   Evaluate  ${expr}
+    # 比较计算结果与实际值
+    Should Be Equal As Numbers    ${arrears_first}    ${a}
+    Manual Pay A Plan    ${plan}
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
+    # 获取订单中的欠款额 
+    ${data_plan}  Get Plan By Id  ${plan}[id]
+    ${arrears_second}  Get From Dictionary  ${data_plan}  arrears  false
+    # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
+    ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
+    ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count] * 2
+    ${b}   Evaluate  ${expr}
+    # 比较计算结果与实际值
+    Should Be Equal As Numbers    ${arrears_second}    ${b}
+    Manual Pay A Plan    ${plan}
+    ${data_plan}  Get Plan By Id  ${plan}[id]
+    ${arrears_third}  Get From Dictionary  ${data_plan}  arrears  false
+    # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
+    ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
+    ${c}  Set Variable  ${0}
+    # 比较计算结果与实际值
+    Should Be Equal As Numbers    ${arrears_third}    ${c}
 Plan Confirm with No User Authorized
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
@@ -214,6 +258,39 @@ Deliver Plan With Delay Checkout
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  3  ${True}
     ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Should Be Equal  ${expect_balance}  ${cur_balance}
+
+Batch Checkout Test
+    [Setup]  Set Stuff Checkout Delay Time    10:10:23
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay Time  ${EMPTY}  AND  Set Stuff Checkout Delay  delay=${False}
+    ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${plan}  Go Deliver Plan    ${10}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal As Numbers    ${cur_balance}    ${orig_balance}
+    ${single_cost}  Set Variable  ${plan}[unit_price]
+    ${single_cost}  Set Variable  ${single_cost * 10}
+    ${expect_balance}  Evaluate  $orig_balance - $single_cost
+    Batch Checkout  ${test_stuff}[id]
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal As Numbers    ${cur_balance}    ${expect_balance}
+
+Batch Checkout With Timer
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay Time  ${EMPTY}  AND  Set Stuff Checkout Delay  delay=${False}
+    ${now_time}  Get Current Date  increment=1m  result_format=%H:%M:%S
+    Set Stuff Checkout Delay Time    ${now_time}
+    ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Go Deliver Plan    ${6.5}
+    Go Deliver Plan    ${6.5}
+    Go Deliver Plan    ${6.5}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal    ${orig_balance}    ${cur_balance}
+    Sleep    2m
+    ${plan}  Go Deliver Plan    ${6.5}
+    Sleep    2m
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${single_cost}  Set Variable  ${plan}[unit_price]
+    ${single_cost}  Set Variable  ${single_cost * 6.5}
+    ${expect_balance}  Evaluate  $orig_balance - $single_cost * 3
+    Should Be Equal As Numbers    ${cur_balance}    ${expect_balance}
 
 Lots of Plan Explore
     [Teardown]  Plan Reset
@@ -393,8 +470,33 @@ Input And Check Stuff Unit Coefficient
     ${p_resp}  Req to Server  /global/get_ticket  ${sc_admin_token}  ${req_body}
     Should Be Equal As Numbers  ${p_resp}[coefficient]  ${1.5}
     Should Be Equal As Strings  ${p_resp}[second_unit]  千克
-    
+   
+Auto confirm Goods With Plan
+    [Teardown]  Plan Reset
+    Set Auto Confirm Goods
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan_id}  Get From Dictionary  ${plan}  id  id
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan    ${plan}
+    Check Plan Was Confirmed  ${plan_id}  ${False}
+    Plan Enter  ${plan}
+    Check Plan Was Confirmed  ${plan_id}  ${True}
+
 *** Keywords ***
+Go Deliver Plan
+    [Arguments]  ${count}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    Deliver A Plan    ${plan}    ${count}
+    ${plan}  Get Plan By Id    ${plan}[id]
+    RETURN  ${plan}
 Verify Order Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
@@ -453,6 +555,11 @@ Verify Order Detail
         END
         Should Be True  ${found_node}
     END
+Check Plan Was Confirmed
+    [Arguments]  ${plan_id}  ${is_confirm}=${True}
+    ${focus_plan}  Get Plan By Id  ${plan_id}
+    ${check_confirm}  Get From Dictionary  ${focus_plan}  confirmed  ${False}
+    Should Be Equal  ${check_confirm}  ${is_confirm}
 Verify Plan Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]

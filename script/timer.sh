@@ -9,5 +9,5 @@ while true; do
     curl -X POST -H "Content-Type: application/json" -d "$payload" http://localhost/api/v1/internal_timeout
 
     # Sleep for 1 minute before sending the next request
-    sleep 60
+    sleep 6
 done

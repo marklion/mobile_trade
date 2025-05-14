@@ -454,6 +454,11 @@ Set Stuff Checkout Delay
     ${req}  Create Dictionary  stuff_id=${stuff_id}  checkout_delay=${delay}
     Req to Server   /stuff/checkout_delay_config     ${token}  ${req}
 
+Set Stuff Checkout Delay Time
+    [Arguments]   ${delay_time}  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  delay_checkout_time=${delay_time}
+    Req to Server    /stuff/set_delay_checkout_time    ${token}    ${req}
+
 Set Stuff Need Expect Weight
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${expect_weight}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  need_expect_weight=${expect_weight}
@@ -464,6 +469,10 @@ Checkout A Plan
     ${req}  Create Dictionary  plan_id=${plan}[id]
     Req to Server    /customer/checkout_plan    ${token}    ${req}
 
+Batch Checkout
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}
+    Req to Server    /sale_management/batch_checkout    ${token}    ${req}
 Get Charge History
     [Arguments]  ${contract_id}  ${token}=${sc_admin_token}
     ${today}  Get Current Date  result_format=${DATE_FORMAT}
@@ -505,12 +514,25 @@ Get Sct Scale Item
         END
     END
     RETURN  ${resp}
-
+Get Stuff By Id
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
+    ${resp}  Set Variable
+    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${token}  stuff
+    FOR    ${element}    IN    @{stuffs_found}
+        IF  ${element}[id] == ${stuff_id}
+            ${resp}  Set To Dictionary    ${element}
+            Exit For Loop
+        END
+    END
+    RETURN  ${resp}
 Set Stuff Manual Weight
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${is_manual_weight}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  manual_weight=${is_manual_weight}
     Req to Server    /stuff/manual_weight_config    ${token}    ${req}
-
+Set Auto Confirm Goods
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${auto_confirm_goods}=${True}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  auto_confirm_goods=${auto_confirm_goods}
+    Req to Server  /stuff/auto_confirm_goods  ${token}  ${req}
 Input Plan Sct Info
     [Arguments]  ${plan_id}  ${psi_id}  ${value}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan_id}  psi_id=${psi_id}  value=${value}
