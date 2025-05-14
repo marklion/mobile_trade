@@ -14,6 +14,9 @@ async function change_stuff_single_switch(stuff_id, switch_name, switch_value, t
     }
     return { result: true };
 }
+async function checkout_delay_config_func(body, token) {
+    return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token);
+}
 module.exports = {
     name: 'stuff',
     description: '物料管理',
@@ -100,6 +103,7 @@ module.exports = {
                                 type: { type: String, mean: '类型', example: '类型' },
                             }
                         },
+                        delay_checkout_time: { type: String, mean: '延迟结算时间', example: '2025' },
                     }
                 },
             },
@@ -245,7 +249,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token);
+                return checkout_delay_config_func(body, token);
             },
         },
         expect_weight_config: {
@@ -1254,6 +1258,29 @@ module.exports = {
                 }
                 return { result: true };
             }
-        }
+        },
+        set_delay_checkout_time: {
+            name: '设置延迟结算定时时间',
+            description: '设置延迟结算定时时间',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                delay_checkout_time: { type: String, have_to: true, mean: '延迟结算定时时间', example: '2025' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await change_stuff_single_switch(body.stuff_id, 'delay_checkout_time', body.delay_checkout_time, token);
+                if (body.delay_checkout_time != '') {
+                    await checkout_delay_config_func({
+                        stuff_id: body.stuff_id,
+                        checkout_delay: true,
+                    }, token);
+                }
+                return { result: true };
+            }
+        },
     }
 }

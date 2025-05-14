@@ -16,7 +16,7 @@ module.exports = {
         plan.status = 3;
         plan.arrears = 0;
         await plan.save();
-        wx_api_util.plan_scale_msg(plan);
+        await wx_api_util.plan_scale_msg(plan);
         await this.rp_history_checkout(plan, (await rbac_lib.get_user_by_token(token)).name);
         if (!plan.is_buy) {
             await this.plan_cost(plan);
@@ -224,8 +224,13 @@ module.exports = {
         let sq = db_opt.get_sq();
         let condition = {
             plan_time: moment().add(day_offset, 'days').format('YYYY-MM-DD'),
-            status:3,
-            manual_close:false,
+            manual_close: false,
+            [db_opt.Op.or]: [{
+                status: 3,
+            }, {
+                status: 2,
+                checkout_delay: true,
+            }],
         };
         let countStuff = [];
         let stuff = await company.getStuff();
@@ -245,14 +250,13 @@ module.exports = {
             }
             countStuff.push({
                 name: stuffName,
-                count: totalCount?totalCount:0,
+                count: totalCount ? totalCount : 0,
             })
         }
         return countStuff;
     },
     getStatistic: async function (company) {
         let statistic = {};
-
 
         let yesterday_result = await this.getPlansCount(company, -1);
         for (let i = 0; i < yesterday_result.length; i++) {
@@ -271,7 +275,6 @@ module.exports = {
             }
             statistic[item.name].today_count = item.count;
         }
-
 
         let resultArray = Object.keys(statistic).map(key => ({
             name: key,
@@ -300,7 +303,25 @@ module.exports = {
             where_condition[db_opt.Op.and].push({ is_buy: false });
         }
         if (_condition.status != undefined) {
-            where_condition[db_opt.Op.and].push({ status: _condition.status });
+            let status_filter = {
+                [db_opt.Op.or]: [
+                    { status: _condition.status },
+                ],
+            }
+            if (_condition.only_count) {
+                status_filter[db_opt.Op.or].push({
+                    [db_opt.Op.and]: [
+                        {
+                            status: 2,
+                            checkout_delay: true,
+                            count: {
+                                [db_opt.Op.gt]: 0
+                            }
+                        }
+                    ]
+                });
+            }
+            where_condition[db_opt.Op.and].push(status_filter);
         }
         if (_condition.stuff_id != undefined) {
             where_condition[db_opt.Op.and].push({ stuffId: _condition.stuff_id });
@@ -950,9 +971,13 @@ module.exports = {
         }
         this.mark_dup_info(plan);
     },
-    mark_dup_info: async function (plan) {
-        plan.dup_info = (await this.checkDuplicatePlans(plan)).message;
-        await plan.save();
+    mark_dup_info: function (plan) {
+        setTimeout(() => {
+            this.checkDuplicatePlans(plan).then((resp) => {
+                plan.dup_info = resp.message;
+                plan.save();
+            })
+        }, 500);
     },
     record_plan_history: async function (_plan, _operator, _action_type, _transation) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type }, _transation);
@@ -1079,7 +1104,7 @@ module.exports = {
         let rows = [];
         let company = await rbac_lib.get_company_by_token(token);
         let result = await company.getPlans({
-            group: ['mainVehicleId','behindVehicleId','driverId'],
+            group: ['mainVehicleId', 'behindVehicleId', 'driverId'],
             offset: 20 * pageNo,
             limit: 20,
         });
@@ -1352,7 +1377,7 @@ module.exports = {
 
         return await user.getPlans({ where: cond, order: order, include: util_lib.plan_detail_include() });
     },
-    default_export_sort:function(sq){
+    default_export_sort: function (sq) {
         const order = [
             [sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'],
             ['ticket_no', 'ASC'],
@@ -1434,7 +1459,7 @@ module.exports = {
                 delegate: element.delegate ? element.delegate.name : '',
                 subsidy_price: this.place_hold(element.subsidy_price, 0),
                 subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
-                subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price *10).toFixed(1),
+                subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price * 10).toFixed(1),
                 second_unit:this.place_hold(element.stuff.second_unit, ''),
                 second_value:(element.stuff.second_unit?this.place_hold(element.stuff.coefficient, 1)*element.count:0),
             });
@@ -1508,10 +1533,10 @@ module.exports = {
         }, {
             header: '打折后单价',
             key: 'subsidy_price'
-        },{
+        }, {
             header: '打折后总价',
             key: 'subsidy_total_price'
-        },{
+        }, {
             header: '打折数',
             key: 'subsidy_discount'
         }, {
@@ -1801,6 +1826,63 @@ module.exports = {
                 let new_psi = await sq.models.plan_sct_info.create({ value: '' });
                 await new_psi.setPlan(plan);
                 await new_psi.setSct_scale_item(element);
+            }
+        }
+    },
+    walk_through2checkout: async function () {
+        let sq = db_opt.get_sq();
+        let now_time = moment().format('HH:mm:ss');
+        let now_date = moment().format('YYYY-MM-DD');
+        let stuff = await sq.models.stuff.findAll({
+            where: {
+                delay_checkout_time: {
+                    [db_opt.Op.lt]: now_time
+                },
+                last_delay_checkout: {
+                    [db_opt.Op.or]: [
+                        { [db_opt.Op.eq]: null },
+                        { [db_opt.Op.ne]: now_date }
+                    ],
+                },
+                checkout_delay: true,
+            }
+        });
+
+        for (let index = 0; index < stuff.length; index++) {
+            const element = stuff[index];
+            try {
+                await sq.transaction(async (t) => {
+                    let company = await element.getCompany();
+                    let admin_user = await company.getRbac_users({
+                        where: {
+                            fixed: true,
+                        }
+                    });
+                    if (admin_user.length > 0) {
+                        admin_user = admin_user[0];
+                    }
+                    else {
+                        throw { err_msg: '未找到管理员' };
+                    }
+                    let plans = await element.getPlans({
+                        where: {
+                            status: 2,
+                            is_buy: false,
+                            count: {
+                                [db_opt.Op.gt]: 0
+                            },
+                            checkout_delay: true,
+                        }
+                    });
+                    for (let index = 0; index < plans.length; index++) {
+                        const plan = plans[index];
+                        await this.checkout_plan(plan.id, admin_user.online_token);
+                    }
+                    element.last_delay_checkout = now_date;
+                    await element.save();
+                });
+            } catch (error) {
+                console.log(error);
             }
         }
     },

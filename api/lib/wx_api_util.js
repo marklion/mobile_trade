@@ -12,7 +12,7 @@ async function filter_related_users(module_name, users) {
         if (element.open_id) {
             let SearchQuery = {
                 include:[{
-                    model: db_opt.get_sq().models.company, 
+                    model: db_opt.get_sq().models.company,
                 }],
                 required: true,
             }
@@ -20,7 +20,7 @@ async function filter_related_users(module_name, users) {
             let found = false
             for (let index = 0; index < roles.length; index++) {
                 let role = roles[index];
-                if (await target_module.hasRbac_role(role)) { 
+                if (await target_module.hasRbac_role(role)) {
                     if (role.company && role.company.push_messages_writable_roles) {
                         if (!role.is_readonly) {
                             found = true;
@@ -468,7 +468,7 @@ module.exports = {
             module_name = 'buy_management';
         }
         tar_array = tar_array.concat(await filter_related_users(module_name, users));
-        tar_array.forEach(async item => {
+        tar_array.forEach(item => {
             req.touser = this.openid_map.get_pub_openid(item);
             send_wx_msg({ ...req }, item);
         });

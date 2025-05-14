@@ -24,6 +24,7 @@ Reg Company Admin
     [Arguments]  ${company_id}  ${phone}  ${name}=company_admin
     ${req}  Create Dictionary  company_id=${company_id}  phone=${phone}  name=${name}
     ${resp}  Req to Server  /global/reg_company_admin  admin_token  ${req}
+    Set User Fixed    ${phone}
     Should Be True  ${resp}[result]
 
 User Login With Phone

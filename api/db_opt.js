@@ -203,6 +203,8 @@ let db_opt = {
             coefficient: { type: DataTypes.DECIMAL(12, 2), defaultValue: 1.00 , get:getDecimalValue('coefficient')},
             add_base:{type: DataTypes.STRING},
             second_unit_decimal: { type: DataTypes.INTEGER, defaultValue: 2 },
+            delay_checkout_time:{type: DataTypes.STRING},
+            last_delay_checkout:{type: DataTypes.STRING},
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
