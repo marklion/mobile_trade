@@ -115,7 +115,9 @@ export default {
         };
         if (ticket.second_unit && ticket.coefficient) {
             let su_value = ticket.coefficient * ticket.count ;
-            this.ticket_content.value = utils.moneyFormatter(su_value) + ticket.second_unit;
+            let su_decimal = ticket.second_unit_decimal;
+            su_value = parseFloat(su_value).toFixed(su_decimal);
+            this.ticket_content.value = su_value + ticket.second_unit;
             this.ticket_content.list.unshift(0, {
                 label: '原始计量',
                 value: ticket.count,

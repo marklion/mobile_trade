@@ -91,12 +91,13 @@ module.exports = {
                         close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
                         second_unit: { type: String, mean: '第二单位', example: '千克' },
                         coefficient: { type: Number, mean: '系数', example: 1.0 },
+                        second_unit_decimal: { type: Number, mean: '第二单位小数位数', example: 2 },
                         add_base: { type: String, mean: '自增基础', example: 'day' },
                         sct_scale_items: {
                             type: Array, mean: '结构化计量项', explain: {
                                 id: { type: Number, mean: 'ID', example: 1 },
                                 name: { type: String, mean: '名称', example: '名称' },
-                                type:{ type: String, mean: '类型', example: '类型' },
+                                type: { type: String, mean: '类型', example: '类型' },
                             }
                         },
                     }
@@ -133,9 +134,9 @@ module.exports = {
             result: {
                 statistic: {
                     type: Array, mean: '物料统计', explain: {
-                        name: {type: String, mean: '物料名称',example:'大米'},
-                        yesterday_count: {type: Number, mean: '昨日物料装载总量',example: 12},
-                        today_count: {type: Number, mean: '昨日物料数量装载总量',example: 12},
+                        name: { type: String, mean: '物料名称', example: '大米' },
+                        yesterday_count: { type: Number, mean: '昨日物料装载总量', example: 12 },
+                        today_count: { type: Number, mean: '昨日物料数量装载总量', example: 12 },
                     }
                 }
             },
@@ -263,27 +264,29 @@ module.exports = {
                 return await change_stuff_single_switch(body.stuff_id, 'need_expect_weight', body.need_expect_weight, token);
             },
         },
-        set_unit_coefficient:{
+        set_unit_coefficient: {
             name: '基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',
             description: '基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',
             is_write: true,
             is_get_api: false,
             params: {
                 stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
-                unit_coefficient:{type:Object,have_to:true,mean:'基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）',explain:{
-                    second_unit: { type: String, have_to: true, mean: '是基于物料增加第二单位配置（字符串）', example: '千克' },
-                    coefficient: { type: Number, have_to: true, mean: '基于物料增加系数配置（浮点数）', example: 1.0 },
-                },
-            }
+                unit_coefficient: {
+                    type: Object, have_to: true, mean: '基于物料增加第二单位配置（字符串）& 基于物料增加系数配置（浮点数）', explain: {
+                        second_unit: { type: String, have_to: true, mean: '是基于物料增加第二单位配置（字符串）', example: '千克' },
+                        coefficient: { type: Number, have_to: true, mean: '基于物料增加系数配置（浮点数）', example: 1.0 },
+                        second_unit_decimal: { type: Number, have_to: false, mean: '第二单位小数位数', example: 2 },
+                    },
+                }
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                    await change_stuff_single_switch(body.stuff_id, 'second_unit', body.unit_coefficient.second_unit, token);
-                    await change_stuff_single_switch(body.stuff_id, 'coefficient', body.unit_coefficient.coefficient, token);
-
-                return {result:true}
+                await change_stuff_single_switch(body.stuff_id, 'second_unit', body.unit_coefficient.second_unit, token);
+                await change_stuff_single_switch(body.stuff_id, 'coefficient', body.unit_coefficient.coefficient, token);
+                await change_stuff_single_switch(body.stuff_id, 'second_unit_decimal', body.unit_coefficient.second_unit_decimal, token);
+                return { result: true }
             }
         },
         manual_weight_config: {
@@ -975,6 +978,7 @@ module.exports = {
         },
         set_replace_field: {
             name: '设置磅单替换字段',
+            description: '设置磅单替换字段',
             is_write: false,
             is_get_api: false,
             params: {
@@ -1018,6 +1022,7 @@ module.exports = {
         },
         get_replace_field: {
             name: '获取磅单替换字段',
+            description: '获取磅单替换字段',
             is_write: false,
             is_get_api: false,
             params: {},
@@ -1230,16 +1235,16 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_push_messages_writable_roles:{
-            name:'设置消息推送可写角色',
-            description:'设置消息推送可写角色',
+        set_push_messages_writable_roles: {
+            name: '设置消息推送可写角色',
+            description: '设置消息推送可写角色',
             is_write: true,
             is_get_api: false,
             params: {
                 push_messages_writable_roles: { type: Boolean, have_to: true, mean: '设置消息推送可写角色', example: true }
             },
             result: {
-                result: { type: Boolean, mean:'结果', example: true }
+                result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);

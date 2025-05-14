@@ -37,6 +37,10 @@
                                                     <span class="unit-label">系数配置:</span>
                                                     <el-input-number v-model="scope.row.coefficient" placeholder="例:1.00" :precision="2" :step="0.1" :min="0" :max="999999" size="small" controls-position="right" />
                                                 </div>
+                                                <div class="input-item">
+                                                    <span class="unit-label">小数位数:</span>
+                                                    <el-input-number v-model="scope.row.second_unit_decimal" placeholder="例:2" :precision="0" :step="1" :min="0" :max="6" size="small" controls-position="right" />
+                                                </div>
                                                 <el-button type="primary" size="small" :loading="saving" @click="set_scunit_coe_configuration(scope.row)">保存配置</el-button>
                                             </div>
                                         </div>
@@ -589,7 +593,8 @@ export default {
                     stuff_id: item.id,
                     unit_coefficient: {
                         second_unit: item.second_unit || '',
-                        coefficient: parseFloat(item.coefficient || 0)
+                        coefficient: parseFloat(item.coefficient || 0),
+                        second_unit_decimal: parseInt(item.second_unit_decimal == undefined ? 2 : item.second_unit_decimal, 10)
                     }
                 });
                 this.$message.success('配置保存成功');
