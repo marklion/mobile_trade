@@ -49,6 +49,50 @@ Plan Confirm with Enough Cash and Check
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2
     Charge To A Company  ${buy_company1}[id]  ${unit_price * -22}
     Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
+Plan Confirm with Not Enough Cash and Check
+    [Teardown]  Plan Reset
+    ${unit_price}  Set Variable  ${test_stuff}[price]
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${False}
+    # 获取订单中的欠款额 
+    ${data_plan}  Get Plan By Id  ${plan}[id]
+    ${arrears_first}  Get From Dictionary  ${data_plan}  arrears  false
+    # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
+    ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
+    ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count]
+    ${a}   Evaluate  ${expr}
+    # 比较计算结果与实际值
+    Should Be Equal As Numbers    ${arrears_first}    ${a}
+    Manual Pay A Plan    ${plan}
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
+    Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
+    # 获取订单中的欠款额 
+    ${data_plan}  Get Plan By Id  ${plan}[id]
+    ${arrears_second}  Get From Dictionary  ${data_plan}  arrears  false
+    # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
+    ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
+    ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count] * 2
+    ${b}   Evaluate  ${expr}
+    # 比较计算结果与实际值
+    Should Be Equal As Numbers    ${arrears_second}    ${b}
+    Manual Pay A Plan    ${plan}
+    ${data_plan}  Get Plan By Id  ${plan}[id]
+    ${arrears_third}  Get From Dictionary  ${data_plan}  arrears  false
+    # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
+    ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
+    ${c}  Set Variable  ${0}
+    # 比较计算结果与实际值
+    Should Be Equal As Numbers    ${arrears_third}    ${c}
 Plan Confirm with No User Authorized
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0

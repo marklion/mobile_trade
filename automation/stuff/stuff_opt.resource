@@ -505,7 +505,17 @@ Get Sct Scale Item
         END
     END
     RETURN  ${resp}
-
+Get Stuff By Id
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
+    ${resp}  Set Variable
+    @{stuffs_found}  Req Get to Server  /stuff/get_all  ${token}  stuff
+    FOR    ${element}    IN    @{stuffs_found}
+        IF  ${element}[id] == ${stuff_id}
+            ${resp}  Set To Dictionary    ${element}
+            Exit For Loop
+        END
+    END
+    RETURN  ${resp}
 Set Stuff Manual Weight
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${is_manual_weight}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  manual_weight=${is_manual_weight}
