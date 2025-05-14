@@ -94,6 +94,7 @@ module.exports = {
                         close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
                         second_unit: { type: String, mean: '第二单位', example: '千克' },
                         coefficient: { type: Number, mean: '系数', example: 1.0 },
+                        auto_confirm_goods: { type: Boolean, mean: '是否自动确认货物', example: false },
                         second_unit_decimal: { type: Number, mean: '第二单位小数位数', example: 2 },
                         add_base: { type: String, mean: '自增基础', example: 'day' },
                         sct_scale_items: {
@@ -266,6 +267,22 @@ module.exports = {
             },
             func: async function (body, token) {
                 return await change_stuff_single_switch(body.stuff_id, 'need_expect_weight', body.need_expect_weight, token);
+            },
+        },
+        auto_confirm_goods: {
+            name: '配置货物是否自动确认装货',
+            description: '配置货物是否自动确认装货',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                auto_confirm_goods: { type: Boolean, have_to: true, mean: '是否自动确认装货', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'auto_confirm_goods', body.auto_confirm_goods, token);
             },
         },
         set_unit_coefficient: {

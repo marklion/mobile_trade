@@ -28,6 +28,7 @@
                                             <el-switch v-model="scope.row.checkout_delay" inline-prompt active-text="延迟结算" @change="change_checkout_delay($event, scope.row)"></el-switch>
                                             <el-switch v-model="scope.row.manual_weight" inline-prompt active-text="手动计量" @change="change_manual_weight($event, scope.row)"></el-switch>
                                             <el-switch v-model="scope.row.need_expect_weight" inline-prompt active-text="需要填写期望重量" @change="change_expect_weight($event,scope.row)"></el-switch>
+                                            <el-switch v-model="scope.row.auto_confirm_goods" inline-prompt active-text="自动确认装卸货" @change="change_auto_confirm_goods($event,scope.row)"></el-switch>
                                             <div class="unit-input-group">
                                                 <div class="input-item">
                                                     <span class="unit-label">延迟结算时间点</span>
@@ -577,6 +578,12 @@ export default {
             await this.$send_req('/stuff/expect_weight_config', {
                 stuff_id: item.id,
                 need_expect_weight: event
+            });
+        },
+        change_auto_confirm_goods: async function (event, item) {
+            await this.$send_req('/stuff/auto_confirm_goods', {
+                stuff_id: item.id,
+                auto_confirm_goods: event
             });
         },
         change_manual_weight: async function (event, item) {

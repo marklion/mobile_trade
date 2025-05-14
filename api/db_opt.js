@@ -202,6 +202,7 @@ let db_opt = {
             second_unit: { type: DataTypes.STRING },
             coefficient: { type: DataTypes.DECIMAL(12, 2), defaultValue: 1.00 , get:getDecimalValue('coefficient')},
             add_base:{type: DataTypes.STRING},
+            auto_confirm_goods:{type: DataTypes.BOOLEAN, defaultValue: false},
             second_unit_decimal: { type: DataTypes.INTEGER, defaultValue: 2 },
             delay_checkout_time:{type: DataTypes.STRING},
             last_delay_checkout:{type: DataTypes.STRING},

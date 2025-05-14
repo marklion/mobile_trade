@@ -279,6 +279,7 @@ module.exports = {
                     }
                 },
                 manual_weight: { type: Boolean, mean: '是否需要手动计量', example: false },
+                auto_confirm_goods: { type: Boolean, mean: '是否自动确认装卸货', example: false },
                 checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
                 ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                 need_expect_weight: { type: Boolean, mean: '是否需要预计重量', example: false },

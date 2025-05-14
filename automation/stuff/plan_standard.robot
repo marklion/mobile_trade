@@ -470,6 +470,20 @@ Input And Check Stuff Unit Coefficient
     ${p_resp}  Req to Server  /global/get_ticket  ${sc_admin_token}  ${req_body}
     Should Be Equal As Numbers  ${p_resp}[coefficient]  ${1.5}
     Should Be Equal As Strings  ${p_resp}[second_unit]  千克
+   
+Auto confirm Goods With Plan
+    [Teardown]  Plan Reset
+    Set Auto Confirm Goods
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan_id}  Get From Dictionary  ${plan}  id  id
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan    ${plan}
+    Check Plan Was Confirmed  ${plan_id}  ${False}
+    Plan Enter  ${plan}
+    Check Plan Was Confirmed  ${plan_id}  ${True}
 
 *** Keywords ***
 Go Deliver Plan
@@ -541,6 +555,11 @@ Verify Order Detail
         END
         Should Be True  ${found_node}
     END
+Check Plan Was Confirmed
+    [Arguments]  ${plan_id}  ${is_confirm}=${True}
+    ${focus_plan}  Get Plan By Id  ${plan_id}
+    ${check_confirm}  Get From Dictionary  ${focus_plan}  confirmed  ${False}
+    Should Be Equal  ${check_confirm}  ${is_confirm}
 Verify Plan Detail
     [Arguments]  ${plan}  ${mv}  ${bv}  ${dv}  ${price}  ${status}  ${stuff_name}  ${check_in_time}=${False}  ${enter_check}=${False}
     Should Be Equal As Strings  ${plan}[behind_vehicle][plate]  ${bv}[plate]
