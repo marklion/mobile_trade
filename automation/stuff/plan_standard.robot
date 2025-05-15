@@ -86,6 +86,8 @@ Plan Confirm with Not Enough Cash and Check
     Should Be Equal As Numbers    ${arrears_second}    ${b}
     Manual Pay A Plan    ${plan}
     Deliver A Plan    ${plan}    ${20}
+    ${unit_price}  Set Variable  ${test_stuff}[price]
+    Charge To A Company  ${buy_company1}[id]  ${unit_price * 20}
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_third}  Get From Dictionary  ${data_plan}  arrears  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
