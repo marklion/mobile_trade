@@ -16,7 +16,6 @@ module.exports = {
         plan.status = 3;
         plan.arrears = 0;
         await plan.save();
-        await wx_api_util.plan_scale_msg(plan);
         await this.rp_history_checkout(plan, (await rbac_lib.get_user_by_token(token)).name);
         if (!plan.is_buy) {
             await this.plan_cost(plan);
@@ -1002,6 +1001,7 @@ module.exports = {
             _plan.ticket_no = await this.generate_ticket_no(_plan, _ticket_no);
             await _plan.save();
         }
+        await wx_api_util.plan_scale_msg(_plan);
         await this.record_plan_history(_plan, _operator, '发车');
     },
     rp_history_checkout: async function (_plan, _operator) {

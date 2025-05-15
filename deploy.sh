@@ -30,10 +30,9 @@ get_docker_image() {
 }
 
 start_all_server() {
-    line=`wc -l $0|awk '{print $1}'`
-    line=`expr $line - 142`
+    line=$(awk '/^__ARCHIVE_BELOW__$/{print NR + 1}' $0)
     mkdir /tmp/sys_mt
-    tail -n $line $0 | tar zx  -C /tmp/sys_mt/
+    tail -n +$line $0 | tar zx  -C /tmp/sys_mt/
     rsync -aK /tmp/sys_mt/ /
     cp /conf/ngx_http_flv_live_module.so /lib/nginx/modules/
     source /conf/env.sh
@@ -138,5 +137,5 @@ else
     start_docker_con
 fi
 
-#
 exit
+__ARCHIVE_BELOW__
