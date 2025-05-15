@@ -20,6 +20,8 @@ module.exports = {
                     },
                 },
                 all: { type: Boolean, have_to: false, mean: '是否全部同步', example: true },
+                plan_time_start:{type:String,have_to:true,mean:'计划开始时间',example:'2020-03-01'},
+                plan_time_end:{type:String,have_to:true,mean:'计划开始时间',example:'2020-03-01'},
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -35,9 +37,13 @@ module.exports = {
                         [db_opt.Op.and]: [
                             {
                                 status: 3,
-                                u8cOrderInfoId: null,
                                 manual_close: false,
-                            }
+                                plan_time: {
+                                    [db_opt.Op.gte]: body.plan_time_start,
+                                    [db_opt.Op.lte]: body.plan_time_end,
+                                },
+                            },
+                            sq.literal(`(select count(*) from u8c_order_info where id = plan.u8cOrderInfoId AND deletedAt is Null) = 0`),
                         ]
                     };
                     let stuff = await company.getStuff({ paranoid: false });
@@ -50,7 +56,7 @@ module.exports = {
                     });
                     let search_condition = {
                         where: where_condition,
-                        include: [sq.models.company, sq.models.delegate]
+                        include: [sq.models.company, sq.models.delegate, sq.models.u8c_order_info],
                     };
                     plans = await sq.models.plan.findAll(search_condition);
                 }
@@ -62,13 +68,12 @@ module.exports = {
                         plans.push(plan);
                     }
                 }
-                plans.forEach((itr)=>{
-                    if (itr.delegate)
-                    {
+                plans.forEach((itr) => {
+                    if (itr.delegate) {
                         itr.company = {
-                            id:-itr.delegate.id,
-                            name:itr.delegate.name,
-                            code:itr.delegate.code,
+                            id: -itr.delegate.id,
+                            name: itr.delegate.name,
+                            code: itr.delegate.code,
                         }
                     }
                 });
@@ -85,6 +90,7 @@ module.exports = {
             result: {
                 ois: {
                     type: Array, mean: '订单同步信息', explain: {
+                        id: { type: Number, mean: '订单同步信息ID', example: 1 },
                         operator: { type: String, mean: '操作人', example: '张三' },
                         time: { type: String, mean: '时间', example: '2020-03-01 12:00:00' },
                         is_running: { type: Boolean, mean: '是否正在同步', example: true },
@@ -114,12 +120,38 @@ module.exports = {
                 }
             },
         },
+        u8c_del_oi: {
+            name: '删除U8C订单同步信息',
+            description: '删除U8C订单同步信息',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                oi_ids: {
+                    type: Array, have_to: true, mean: '订单同步信息ID数组', explain: {
+                        id: { type: Number, have_to: true, mean: '订单同步信息ID', example: 1 }
+                    }
+                },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await cash_lib.del_u8c_oi(company, body.oi_ids.map((itr) => {
+                    return itr.id;
+                }
+                ));
+                return { result: true };
+            }
+        },
         unsynced_plans_get: {
             name: "获取未同步的计划",
             description: "获取未同步的计划",
             is_write: false,
             is_get_api: true,
             params: {
+                plan_time_start: { type: String, have_to: true, mean: '计划开始时间', example: '2020-03-01' },
+                plan_time_end: { type: String, have_to: true, mean: '计划开始时间', example: '2020-03-01' },
             },
             result: {
                 plans: {
@@ -127,7 +159,7 @@ module.exports = {
                 },
             },
             func: async function (body, token) {
-                return await cash_lib.get_unsynced_plans(token, body.pageNo);;
+                return await cash_lib.get_unsynced_plans(token, body, body.pageNo);;
             }
         },
         u8c_config_get: {

@@ -6,6 +6,7 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const { default: axios } = require('axios');
 const util_lib = require('./util_lib');
+const { Utils } = require('sequelize');
 const httpsAgent = require('https').Agent;
 module.exports = {
     charge_by_username_and_contract: async function (user_name, contract, _cash_increased, _comment) {
@@ -351,6 +352,19 @@ module.exports = {
             await this.create_u8c_record(operator, buy_plans[key], company);
         }
     },
+    del_u8c_oi: async function (company, ids) {
+        let ois = await company.getU8c_order_infos({
+            where: {
+                id: {
+                    [db_opt.Op.in]: ids,
+                }
+            }
+        });
+        for (let index = 0; index < ois.length; index++) {
+            const element = ois[index];
+            await element.destroy();
+        }
+    },
     get_u8c_oi: async function (token, pageNo) {
         let company = await rbac_lib.get_company_by_token(token);
         let ret = { count: 0, rows: [] };
@@ -368,7 +382,7 @@ module.exports = {
         }
         return ret;
     },
-    get_unsynced_plans: async function (token, pageNo) {
+    get_unsynced_plans: async function (token, cond, pageNo) {
         let sq = db_opt.get_sq();
         let company = await rbac_lib.get_company_by_token(token);
         let stuff_or = [];
@@ -376,10 +390,14 @@ module.exports = {
             [db_opt.Op.and]: [
                 {
                     status: 3,
-                    u8cOrderInfoId: null,
                     manual_close: false,
-                }
-            ]
+                    plan_time: {
+                        [db_opt.Op.gte]: cond.plan_time_start,
+                        [db_opt.Op.lte]: cond.plan_time_end,
+                    }
+                },
+                sq.literal(`(select count(*) from u8c_order_info where id = plan.u8cOrderInfoId AND deletedAt is Null) = 0`),
+            ],
         };
         let stuff = await company.getStuff({ paranoid: false });
         for (let index = 0; index < stuff.length; index++) {
@@ -389,12 +407,13 @@ module.exports = {
         where_condition[db_opt.Op.and].push({
             [db_opt.Op.or]: stuff_or
         });
+        let tmp_include = util_lib.plan_detail_include();
         let search_condition = {
             order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
             offset: pageNo * 20,
             limit: 20,
             where: where_condition,
-            include: util_lib.plan_detail_include(),
+            include: tmp_include,
         };
         let count = await sq.models.plan.count({ where: where_condition });
         let plans = await sq.models.plan.findAll(search_condition);
@@ -489,7 +508,7 @@ module.exports = {
                 },
             }
         });
-        plans.forEach(item=>{
+        plans.forEach(item => {
             item.content = JSON.parse(item.content);
         });
 
@@ -566,7 +585,7 @@ module.exports = {
                     if (total_count >= sgd.gate) {
                         let discount = sgd.discount;
                         let total_subsidy = await this.set_subsidy_price(element.plans, discount);
-                        await this.charge_by_username_and_contract('自动',contract, total_subsidy, `因为总量${total_count}大于门槛${sgd.gate},补贴${total_subsidy}`);
+                        await this.charge_by_username_and_contract('自动', contract, total_subsidy, `因为总量${total_count}大于门槛${sgd.gate},补贴${total_subsidy}`);
                         ret += element.plans.length;
                         break;
                     }
