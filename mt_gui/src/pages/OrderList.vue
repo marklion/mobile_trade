@@ -177,8 +177,10 @@
                             </module-filter>
                         </view>
                         <view slot="label">
-                            <fui-text v-if="focus_plan.status == 3 && !focus_plan.manual_close" type="primary" text="查看磅单" :size="28" decoration="underline" @click="go_to_ticket(false)"></fui-text>
-                            <fui-text v-if="focus_plan.status == 3 && !focus_plan.manual_close && focus_plan.delegate" type="primary" text="内部磅单" :size="28" decoration="underline" @click="go_to_ticket(true)"></fui-text>
+                            <div v-if="(focus_plan.status == 3 || (focus_plan.checkout_delay && focus_plan.status == 2)) && !focus_plan.manual_close">
+                                <fui-text type="primary" text="查看磅单" :size="28" decoration="underline" @click="go_to_ticket(false)"></fui-text>
+                                <fui-text v-if="focus_plan.delegate" type="primary" text="内部磅单" :size="28" decoration="underline" @click="go_to_ticket(true)"></fui-text>
+                            </div>
                         </view>
                     </u-cell>
                 </u-cell-group>
@@ -1465,8 +1467,6 @@ export default {
     /* 更浅的颜色 */
 }
 
-
-
 .lookimg {
     width: 100%;
     height: 100%;
@@ -1484,6 +1484,4 @@ export default {
     top: 20rpx;
     right: 20rpx;
 }
-
-
 </style>

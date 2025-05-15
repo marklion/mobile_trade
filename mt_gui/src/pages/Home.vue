@@ -264,6 +264,10 @@ export default {
             if (this.$has_module('stuff')) {
                 let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
                 this.totalCountData = res.statistic
+                this.totalCountData.forEach(item => {
+                    item.yesterday_count = item.yesterday_count.toFixed(2)
+                    item.today_count = item.today_count.toFixed(2)
+                });
             }
         },
         get_stuff2sale: async function (pageNo) {

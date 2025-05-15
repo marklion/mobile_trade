@@ -351,6 +351,7 @@ module.exports = {
         },
         plan_sct_infos: plan_sct_infos,
         subsidy_price: { type: Number, mean: '补贴价格', example: 1 },
+        checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
     },
     bidding_items: bidding_items,
     dev_data: {

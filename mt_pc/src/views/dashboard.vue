@@ -3,14 +3,14 @@
     <el-row :gutter="10">
         <el-col :span="12">
             <el-card class="box-card" :body-style="{padding : 10}">
-            <el-row>
-                <el-col :span="12" v-for="(chartOption, index) in charts" :key="index">
-                    <div class="grid-content bg-purple-dark">
-                        <ChartComponent :chartOption="chartOption" />
-                    </div>
-                </el-col>
-            </el-row>
-        </el-card>
+                <el-row>
+                    <el-col :span="12" v-for="(chartOption, index) in charts" :key="index">
+                        <div class="grid-content bg-purple-dark">
+                            <ChartComponent :chartOption="chartOption" />
+                        </div>
+                    </el-col>
+                </el-row>
+            </el-card>
         </el-col>
         <el-col :span="12">
             <el-card class="box-card" :body-style="{padding : 0}" v-if="module_filter('sale_management')">
@@ -43,17 +43,11 @@
                     <span>物料统计</span>
                 </div>
                 <div class="grid-content bg-purple-dark">
-                <el-table 
-                    ref="stuff_count_table" 
-                    v-loading="stat_loading" 
-                    :data="tableData" 
-                    stripe 
-                    style="width: 100%"
-                >
-                    <el-table-column prop="name" label="物料名称"></el-table-column>
-                    <el-table-column prop="yesterday_count" label="昨天" min-width="25"></el-table-column>
-                    <el-table-column prop="today_count" label="今天" min-width="25"></el-table-column>
-                </el-table>
+                    <el-table ref="stuff_count_table" v-loading="stat_loading" :data="tableData" stripe style="width: 100%">
+                        <el-table-column prop="name" label="物料名称"></el-table-column>
+                        <el-table-column prop="yesterday_count" label="昨天" min-width="25"></el-table-column>
+                        <el-table-column prop="today_count" label="今天" min-width="25"></el-table-column>
+                    </el-table>
                 </div>
             </el-card>
 
@@ -184,6 +178,10 @@ export default {
             this.stat_loading = true;
             let resp = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
             this.tableData = resp.statistic;
+            this.tableData.forEach(item => {
+                item.yesterday_count = item.yesterday_count.toFixed(2)
+                item.today_count = item.today_count.toFixed(2)
+            });
         },
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);

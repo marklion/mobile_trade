@@ -931,7 +931,14 @@ module.exports = {
                             [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_date)
                         }),
                         {
-                            status: 3
+                            [db_opt.Op.or]: [
+                                { status: 3 },
+                                {
+                                    status: 2,
+                                    checkout_delay: true,
+                                    count:{[db_opt.Op.gt]: 0}
+                                }
+                            ]
                         }
                     ]
                 }
@@ -1970,7 +1977,7 @@ module.exports = {
                 return { buy_config_hard: company.buy_config_hard };
             }
         },
-        get_push_messages_writable_roles:{
+        get_push_messages_writable_roles: {
             name: '获取推送消息可写角色',
             description: '获取推送消息可写角色',
             is_write: false,
