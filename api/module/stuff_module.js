@@ -1008,7 +1008,10 @@ module.exports = {
                         replace_weighingSheet: { type: String, have_to: true, mean: '磅单替换表单', example: '磅单替换表单' },
                         replace_count: { type: String, have_to: true, mean: '载重量替换文字', example: '载重量替换文字' },
                         replace_fw_info: { type: String, have_to: true, mean: '一次称重替换文字', example: '一次称重替换文字' },
-                        replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' }
+                        replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' },
+                        order_company: { type: String, have_to: true, mean: '下单公司替换文字', example: '二次称重替换文字' },
+                        transportation_company: { type: String, have_to: true, mean: '运输公司替换文字', example: '运输公司替换文字' },
+
                     }
                 }
             },
@@ -1028,13 +1031,17 @@ module.exports = {
                         replace_weighingSheet: body.replace_form.replace_weighingSheet,
                         replace_count: body.replace_form.replace_count,
                         replace_fw_info: body.replace_form.replace_fw_info,
-                        replace_sw_info: body.replace_form.replace_sw_info
+                        replace_sw_info: body.replace_form.replace_sw_info,
+                        order_company: body.replace_form.order_company,
+                        transportation_company: body.replace_form.transportation_company,
                     });
                 } else {
                     replace_content.replace_weighingSheet = body.replace_form.replace_weighingSheet;
                     replace_content.replace_count = body.replace_form.replace_count;
                     replace_content.replace_fw_info = body.replace_form.replace_fw_info;
                     replace_content.replace_sw_info = body.replace_form.replace_sw_info;
+                    replace_content.order_company = body.replace_form.order_company;
+                    replace_content.transportation_company = body.replace_form.transportation_company;
                     await replace_content.save();
                 }
 
@@ -1053,7 +1060,9 @@ module.exports = {
                         replace_weighingSheet: { type: String, mean: '磅单替换表单', example: '磅单替换表单' },
                         replace_count: { type: String, mean: '载重量替换文字', example: '载重量替换文字' },
                         replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
-                        replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' }
+                        replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' },
+                        order_company: { type: String, mean: '下单公司替换文字', example: '下单公司替换文字' },
+                        transportation_company: { type: String, mean: '运输公司替换文字', example: '运输公司替换文字' }
                     }
                 }
             },
@@ -1069,7 +1078,9 @@ module.exports = {
                         replace_weighingSheet: replace_content ? replace_content.replace_weighingSheet : '称重单',
                         replace_count: replace_content ? replace_content.replace_count : '装载量',
                         replace_fw_info: replace_content ? replace_content.replace_fw_info : '一次计量',
-                        replace_sw_info: replace_content ? replace_content.replace_sw_info : '二次计量'
+                        replace_sw_info: replace_content ? replace_content.replace_sw_info : '二次计量',
+                        order_company: replace_content ? replace_content.order_company : '下单公司',
+                        transportation_company: replace_content ? replace_content.transportation_company : '运输公司'
                     }
                 };
             }

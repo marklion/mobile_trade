@@ -72,6 +72,8 @@ async function get_ticket_func(body, token) {
         replace_count: plan.stuff.company.global_replace_form?.replace_count || '装载量',
         replace_fw_info: plan.stuff.company.global_replace_form?.replace_fw_info || '一次计量',
         replace_sw_info: plan.stuff.company.global_replace_form?.replace_sw_info || '二次计量',
+        order_company: plan.stuff.company.global_replace_form?.order_company || '下单公司',
+        transportation_company: plan.stuff.company.global_replace_form?.transportation_company || '运输公司',
         plan_sct_infos:plan.plan_sct_infos,
         delegate_stamp_path: delegate_stamp_path,
     }

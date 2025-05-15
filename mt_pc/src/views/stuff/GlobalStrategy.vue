@@ -79,6 +79,18 @@
             </template>
             <el-input v-model="replace_form.replace_sw_info" placeholder="请输入二次计量的替换文字" style="width:200px"></el-input>
         </el-form-item>
+        <el-form-item label="下单公司">
+            <template>
+                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+            </template>
+            <el-input v-model="replace_form.order_company" placeholder="请输入下单公司的替换文字" style="width:200px"></el-input>
+        </el-form-item>
+        <el-form-item label="运输公司">
+            <template>
+                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+            </template>
+            <el-input v-model="replace_form.transportation_company" placeholder="请输入运输公司的替换文字" style="width:200px"></el-input>
+        </el-form-item>
         <el-button type="" @click="onReset" style="float: right;">重置</el-button>
         <el-button type="primary" @click="onSaveReplace" style="float: right;">保存</el-button>
     </el-form>
@@ -153,7 +165,9 @@ export default {
                 replace_weighingSheet: '',
                 replace_count: '',
                 replace_fw_info: '',
-                replace_sw_info: ''
+                replace_sw_info: '',
+                order_company: '',
+                transportation_company: ''
             }
         }
     },
@@ -315,7 +329,9 @@ export default {
                     replace_weighingSheet: this.replace_form.replace_weighingSheet || '称重单',
                     replace_count: this.replace_form.replace_count || '装载量',
                     replace_fw_info: this.replace_form.replace_fw_info || '一次计量',
-                    replace_sw_info: this.replace_form.replace_sw_info || '二次计量'
+                    replace_sw_info: this.replace_form.replace_sw_info || '二次计量',
+                    order_company: this.replace_form.order_company || '下单公司',
+                    transportation_company: this.replace_form.transportation_company || '运输公司',
                 }
             });
             if (res) {

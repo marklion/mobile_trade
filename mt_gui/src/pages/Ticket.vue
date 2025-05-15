@@ -103,7 +103,7 @@ export default {
                 label: '磅单号',
                 value: ticket.ticket_no,
             }, {
-                label: '下单公司',
+                label: ticket.order_company || '下单公司',
                 value: ticket.company_name
             }, {
                 label: '主车号',
@@ -167,7 +167,7 @@ export default {
         }
         if (ticket.trans_company_name) {
             this.ticket_content.list.push({
-                label: '运输公司',
+                label: ticket.transportation_company || '运输公司',
                 value: ticket.trans_company_name,
             })
         }

@@ -72,8 +72,10 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             replace_weighingSheet: { type: DataTypes.STRING,  default: '称重单' },
             replace_count: { type: DataTypes.STRING, default: '载重量替换文字' },
-            replace_fw_info: { type: DataTypes.STRING, default: '载重量替换文字' },
-            replace_sw_info: { type: DataTypes.STRING, default: '载重量替换文字' },
+            replace_fw_info: { type: DataTypes.STRING, default: '一次称重替换文字' },
+            replace_sw_info: { type: DataTypes.STRING, default: '二次称重替换文字' },
+            order_company: { type: DataTypes.STRING, default: '下单公司替换文字' },
+            transportation_company: { type: DataTypes.STRING, default: '运输公司替换文字' },
             },
         rbac_role: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
