@@ -185,6 +185,8 @@ module.exports = {
         replace_count: { type: String, mean: '载重量替换文字', example: '载重量替换文字' },
         replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
         replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' },
+        order_company: { type: String, mean: '下单公司替换文字', example: '下单公司替换文字' },
+        transportation_company: { type: String, mean: '运输公司替换文字', example: '运输公司替换文字' },
         plan_sct_infos: plan_sct_infos,
         second_unit: { type: String, mean: '第二单位', example: '吨' },
         coefficient: { type: Number, mean: '换算系数', example: 1 },
