@@ -1,10 +1,12 @@
 <template>
 <div class="u8c_show">
     <span class="sub_title_show">订单选择</span>
+    <el-date-picker style="width:260px" :clearable="false" v-model="date_range" type="daterange" align="right" unlink-panels range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :picker-options="pickerOptions" @change="refresh_info">
+    </el-date-picker>
     <el-button v-if="order_selected.length > 0" size="mini" type="success" @click="sync_selected2u8c">同步所选</el-button>
     <el-button size="mini" type="primary" @click="sync_all">全部同步</el-button>
     <el-button size="mini" type="text" @click="config_show = true">同步配置</el-button>
-    <page-content ref="plans" body_key="plans" enable req_url="/u8c/unsynced_plans_get">
+    <page-content ref="plans" body_key="plans" :enable="filter.plan_time_start.length > 0" req_url="/u8c/unsynced_plans_get" :req_body="filter">
         <template v-slot:default="slotProps">
             <div class="top_part_show">
                 <el-table ref="order_table" :data="slotProps.content" style="width: 100%" stripe height="100%" @selection-change="record_selection">
@@ -27,10 +29,12 @@
     </page-content>
     <el-divider></el-divider>
     <span class="sub_title_show">同步记录</span>
+    <el-button v-if="ois_selected.length > 0" size="mini" type="success" @click="del_ois">删除</el-button>
     <page-content body_key="ois" enable req_url="/u8c/u8c_get_oi" ref="ois">
         <template v-slot:default="slotProps">
             <div class="bottom_part_show">
-                <el-table ref="oi_table" :data="slotProps.content" style="width: 100%" stripe height="100%">
+                <el-table ref="oi_table" :data="slotProps.content" style="width: 100%" stripe height="100%" @selection-change="ois_selection">
+                    <el-table-column type="selection"></el-table-column>
                     <el-table-column prop="time" label="时间" width="100px">
                     </el-table-column>
                     <el-table-column prop="operator" label="操作员" width="80px">
@@ -90,6 +94,7 @@ import {
     VueGrid,
     VueCell
 } from 'vue-grd';
+import moment from 'moment';
 export default {
     name: 'u8c',
     components: {
@@ -99,6 +104,13 @@ export default {
     },
     data: function () {
         return {
+            ois_selected: [],
+            pickerOptions: this.$quik_date_option,
+            filter: {
+                plan_time_start: '',
+                plan_time_end: '',
+            },
+            date_range: '',
             config_show: false,
             order_selected: [],
             u8c_config: {
@@ -182,6 +194,20 @@ export default {
         }
     },
     methods: {
+        ois_selection: function (val) {
+            this.ois_selected = val;
+        },
+        del_ois: async function () {
+            let oi_ids = this.ois_selected.map((item) => {
+                return {
+                    id: item.id
+                }
+            });
+            await this.$send_req('/u8c/u8c_del_oi', {
+                oi_ids: oi_ids,
+            });
+            this.refresh_info();
+        },
         record_selection: function (val) {
             this.order_selected = val;
         },
@@ -192,23 +218,36 @@ export default {
                 }
             });
             await this.$send_req('/u8c/u8c_sync_order', {
-                plan_ids: plan_ids
+                plan_ids: plan_ids,
+                plan_time_start: this.filter.plan_time_start,
+                plan_time_end: this.filter.plan_time_end,
             });
             this.refresh_info();
         },
         refresh_info: function () {
+            this.filter.plan_time_start = moment(this.date_range[0]).format('YYYY-MM-DD');
+            this.filter.plan_time_end = moment(this.date_range[1]).format('YYYY-MM-DD');
             this.$refs.plans.refresh();
             this.$refs.ois.refresh();
             this.order_selected = [];
+            this.ois_selected = [];
         },
         sync_all: async function () {
             await this.$send_req('/u8c/u8c_sync_order', {
-                all: true
+                all: true,
+                plan_time_start: this.filter.plan_time_start,
+                plan_time_end: this.filter.plan_time_end,
             });
             this.refresh_info();
         },
         init_u8c_config: async function () {
+            this.filter = {
+                plan_time_start: moment().format('YYYY-MM-DD'),
+                plan_time_end: moment().add(1, 'days').format('YYYY-MM-DD'),
+            };
+            this.date_range = [new Date(this.filter.plan_time_start), new Date(this.filter.plan_time_end)];
             this.u8c_config = await this.$send_req('/u8c/u8c_config_get', {});
+            this.refresh_info();
         },
         save_u8c_config: async function () {
             await this.$send_req('/u8c/u8c_config_set', this.u8c_config);
