@@ -307,7 +307,7 @@ module.exports = {
                     { status: _condition.status },
                 ],
             }
-            if (_condition.only_count) {
+            if (_condition.only_count && _condition.status == 3) {
                 status_filter[db_opt.Op.or].push({
                     [db_opt.Op.and]: [
                         {

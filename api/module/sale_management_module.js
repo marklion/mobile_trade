@@ -478,12 +478,20 @@ module.exports = {
                             where: { action_type: '确认' }
                         }]
                     });
+                    let tmp_cond = {
+                        ...condition,
+                        manual_close: false,
+                        [db_opt.Op.or]: [
+                            { status: 3 },
+                            {
+                                status: 2,
+                                checkout_delay: true,
+                                count: { [db_opt.Op.gt]: 0 }
+                            }
+                        ]
+                    }
                     let finish_count = await customer.countPlans({
-                        where: {
-                            ...condition,
-                            status: 3,
-                            manual_close: false
-                        }
+                        where: tmp_cond
                     });
                     ret.push({
                         company: customer,
@@ -643,7 +651,7 @@ module.exports = {
                 return ret;
             }
         },
-        batch_checkout:{
+        batch_checkout: {
             name: '批量结算',
             description: '批量结算',
             is_write: true,
