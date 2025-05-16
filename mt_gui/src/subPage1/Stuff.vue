@@ -135,6 +135,36 @@
                         <fui-col :span="24">
                             <fui-label>
                                 <fui-list-cell>
+                                    <view class="fui-list__cell" @click="showDelayCheckoutPicker = item.id">
+                                    <fui-text size="28">延迟结算时间点：
+                                        <text style="font-size: 34rpx; color: #666;">{{ item.delay_checkout_time || '请选择时间' }}</text>
+                                    </fui-text>
+                                    </view>
+                                    <fui-date-picker 
+                                        :scaleRatio="0.7" 
+                                        :value="item.delay_checkout_time" 
+                                        type="7"
+                                        :show="showDelayCheckoutPicker === item.id" 
+                                        @change="confirm_checkout_delay_time($event, item)"
+                                        @cancel="showDelayCheckoutPicker = null"
+                                    />
+                                    <fui-button 
+                                    text="一键结算" 
+                                    btnSize="mini" 
+                                    type="success" 
+                                    @click="handleBatchCheckout(item)"
+                                    />
+                                </fui-list-cell>
+                            </fui-label>
+                        </fui-col>
+                    </fui-row>
+                </view>
+                <fui-white-space size="large"></fui-white-space>
+                <view>
+                    <fui-row>
+                        <fui-col :span="24">
+                            <fui-label>
+                                <fui-list-cell>
                                     <view class="fui-list__cell">
                                         <fui-text size="28" text="第二单位配置"></fui-text>
                                         <fui-input v-model="item.second_unit" placeholder="请输入单位" style="flex: 1; margin-left: 20rpx;" />
@@ -273,11 +303,13 @@
 import ListShow from '../components/ListShow.vue'
 import utils from '@/components/firstui/fui-utils';
 import BlackList from './BlackList.vue';
+import FuiDatePicker from '../components/firstui/fui-date-picker/fui-date-picker.vue';
 export default {
     name: 'Stuff',
     components: {
         ListShow,
-        BlackList
+        BlackList,
+        FuiDatePicker
     },
     data: function () {
         return {
@@ -285,6 +317,7 @@ export default {
                 default_impact_plan: false,
                 hide_impact_selector: false,
             },
+            showDelayCheckoutPicker: null,
             cur_seg: 0,
             seg_list: ['物料配置', '全局策略', '黑名单'],
             show_cancel_next_price: false,
@@ -346,6 +379,52 @@ export default {
         }
     },
     methods: {
+        handleBatchCheckout(item, event) {
+        if (event?.stopPropagation) {
+        event.stopPropagation();
+        }
+        this.batch_checkout(item);
+        },
+        batch_checkout: async function (item) {
+            try {
+                const { confirm } = await uni.showModal({
+                    title: '提示',
+                    content: '确定要一键结算吗？',
+                    showCancel: true,
+                    cancelText: '取消',
+                    confirmText: '确定',
+                    confirmColor: '#4CAF50'
+                });
+
+                if (confirm) {
+                    let resp = await this.$send_req('/sale_management/batch_checkout', {
+                        stuff_id: item.id
+                    });
+                    uni.showToast({ title: `一键结算成功，${resp.order_count}个订单已结算`, icon: 'success' });
+                }
+            } catch (error) {
+                console.error(error);
+                uni.showToast({ title: '操作失败，请查看控制台日志', icon: 'none' });
+            }
+        },
+        confirm_checkout_delay_time(event, stuff) {
+            stuff.delay_checkout_time = event.result;
+
+            this.set_delay_checkout_time(stuff);
+            this.showDelayCheckoutPicker = null;
+        },
+        async set_delay_checkout_time(item) {
+            try {
+                await this.$send_req('/stuff/set_delay_checkout_time', {
+                    stuff_id: item.id,
+                    delay_checkout_time: item.delay_checkout_time || ''
+                });
+                uni.showToast({ title: '保存成功', icon: 'success' });
+                uni.startPullDownRefresh();
+            } catch (error) {
+                uni.showToast({ title: '保存失败：' + error.message, icon: 'none' });
+            }
+        },
         save_ticket_prefix: async function (item) {
             await this.$send_req('/stuff/set_ticket_prefix', {
                 stuff_id: item.id,
