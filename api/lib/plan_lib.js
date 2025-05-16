@@ -1921,4 +1921,16 @@ module.exports = {
             await exist_contents[0].save();
         }
     },
+    get_extra_info_config_ids: async function (plan_id) {
+        let plan = await util_lib.get_single_plan_by_id(plan_id);
+        let ei_configs = await plan.stuff.company.getExtra_info_configs({
+            order: [['id', 'DESC']]
+        });
+        let ids = [];
+        for (let index = 0; index < ei_configs.length; index++) {
+            const element = ei_configs[index];
+            ids.push(element.id);
+        }
+        return ids;
+    }
 };

@@ -386,6 +386,13 @@ module.exports = {
                     await plan_lib.confirm_single_plan(plan_id, token, true);
                     await plan_lib.manual_pay_plan(plan_id, token);
                     ret = { err_msg: "", result: { orderNumber: plan_id.toString() } };
+                    let extra_info_config_ids = await plan_lib.get_extra_info_config_ids(plan_id);
+                    if (extra_info_config_ids.length > 0 && req_body.c3) {
+                        await plan_lib.set_extrac_info_content(plan_id, extra_info_config_ids[0], req_body.c3);
+                    }
+                    if (extra_info_config_ids.length > 1 && req_body.c4) {
+                        await plan_lib.set_extrac_info_content(plan_id, extra_info_config_ids[1], req_body.c4);
+                    }
                 }
             } catch (error) {
                 console.log(error);

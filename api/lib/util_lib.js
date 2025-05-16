@@ -16,7 +16,12 @@ module.exports = {
                 include: [
                     {
                         model: db_opt.get_sq().models.company,
-                        include: [db_opt.get_sq().models.global_replace_form, db_opt.get_sq().models.extra_info_config],
+                        include: [db_opt.get_sq().models.global_replace_form,
+                            {
+                                model:db_opt.get_sq().models.extra_info_config,
+                                order:[['id', 'DESC']],
+                            },
+                        ],
                         paranoid: false
                     },
                     db_opt.get_sq().models.drop_take_zone
@@ -45,6 +50,7 @@ module.exports = {
                 model:db_opt.get_sq().models.extra_info_content,
                 paranoid: false,
                 include:[db_opt.get_sq().models.extra_info_config],
+                order:[['id', 'ASC']],
             }
         ];
     },
