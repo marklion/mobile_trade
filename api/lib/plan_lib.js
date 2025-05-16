@@ -349,6 +349,7 @@ module.exports = {
                 ret = JSON.parse(archive_plan.content);
                 ret.stuff.concern_fapiao = _plan.stuff.concern_fapiao;
                 ret.fapiao_delivered = _plan.fapiao_delivered;
+                ret.extra_info_contents = _plan.extra_info_contents;
             }
         }
 
@@ -1892,6 +1893,32 @@ module.exports = {
             } catch (error) {
                 console.log(error);
             }
+        }
+    },
+    set_extrac_info_content: async function (plan_id, title_id, content) {
+        let plan = await util_lib.get_single_plan_by_id(plan_id);
+        let ei_configs = await plan.stuff.company.getExtra_info_configs({
+            where: {
+                id: title_id
+            }
+        });
+        if (ei_configs.length != 1) {
+            throw { err_msg: '无额外信息项' };
+        }
+        let exist_contents = await plan.getExtra_info_contents({
+            where: {
+                extraInfoConfigId: title_id
+            }
+        });
+        if (exist_contents.length != 1) {
+            await ei_configs[0].createExtra_info_content({
+                content: content,
+                planId: plan_id
+            })
+        }
+        else {
+            exist_contents[0].content = content;
+            await exist_contents[0].save();
         }
     },
 };

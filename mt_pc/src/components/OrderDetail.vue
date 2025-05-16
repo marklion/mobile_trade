@@ -29,6 +29,11 @@
                             </el-tag>
                         </div>
                     </el-descriptions-item>
+                    <el-descriptions-item label="运输公司">{{plan.trans_company_name}}</el-descriptions-item>
+                    <el-descriptions-item v-for="single_es_config in (plan.is_buy?[]:plan.stuff.company.extra_info_configs)" :key="single_es_config.id" :label="single_es_config.title">
+                        {{find_content_by_id(single_es_config.id)}}
+                        <el-button type="text" @click="set_extra_info(single_es_config.id)">修改</el-button>
+                    </el-descriptions-item>
                     <template slot="title">
                         计划信息
                         <el-button type="text" @click="preview_company_attach">查看双方资质</el-button>
@@ -274,6 +279,30 @@ export default {
         motived: Boolean,
     },
     methods: {
+        set_extra_info: async function (id) {
+            try {
+                let content = await this.$prompt('请输入内容', '设置', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    inputPlaceholder: '不填就是删除'
+                });
+                await this.$send_req('/sale_management/set_extra_info', {
+                    plan_id: this.plan.id,
+                    extra_info_config_id: id,
+                    extra_info: content.value ? content.value : '',
+                });
+                this.$emit('refresh');
+            } catch (error) {
+                console.log(error);
+            }
+
+        },
+        find_content_by_id: function (id) {
+            let tmp = this.plan.extra_info_contents.find(ele => {
+                return ele.extra_info_config.id == id;
+            });
+            return tmp ? tmp.content : '';
+        },
         cancel_delegate: function () {
             this.$confirm('确定要取消代理吗？', '提示', {
                 confirmButtonText: '确定',

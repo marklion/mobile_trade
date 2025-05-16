@@ -114,6 +114,10 @@ FC Reset
     Clear Table    fc_plan_table
     Clear Table    fc_check_result
 
+Extra Info Reset
+    Clear Table    extra_info_config
+    Clear Table    extra_info_content
+
 WxMsg Catch
     Sleep    2s
     ${records}  Get File  ${WX_API_RECORD_FILE}

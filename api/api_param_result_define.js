@@ -192,6 +192,12 @@ module.exports = {
         coefficient: { type: Number, mean: '换算系数', example: 1 },
         delegate_stamp_path: { type: String, mean: '代理公司印章路径', example: 'delegate_stamp_path_example' },
         second_unit_decimal: { type: Number, mean: '第二单位小数位数', example: 2 },
+        extra_infos: {
+            type: Array, mean: '额外信息内容', explain: {
+                title: { type: String, mean: '标题', example: '标题' },
+                content: { type: String, mean: '内容', example: '内容' },
+            }
+        },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },
@@ -267,6 +273,12 @@ module.exports = {
                         driver_notice: { type: String, mean: '司机通知', example: '司机通知' },
                         attachment: { type: String, mean: '附件', example: '附件' },
                         pressure_config: { type: Boolean, mean: '是否支持泄压', example: false },
+                        extra_info_configs: {
+                            type: Array, mean: '额外信息配置', explain: {
+                                id: { type: Number, mean: 'ID', example: 1 },
+                                title: { type: String, mean: '标题', example: '标题' },
+                            }
+                        }
                     }
                 },
                 need_sc: { type: Boolean, mean: '是否需要安检', example: true },
@@ -352,6 +364,18 @@ module.exports = {
         plan_sct_infos: plan_sct_infos,
         subsidy_price: { type: Number, mean: '补贴价格', example: 1 },
         checkout_delay: { type: Boolean, mean: '是否需要延迟结算', example: false },
+        extra_info_contents: {
+            type: Array, mean: '额外信息内容', explain: {
+                id: { type: Number, mean: 'ID', example: 1 },
+                content: { type: String, mean: '内容', example: '内容' },
+                extra_info_config: {
+                    type: Object, mean: '额外信息配置', explain: {
+                        id: { type: Number, mean: 'ID', example: 1 },
+                        title: { type: String, mean: '标题', example: '标题' },
+                    }
+                }
+            }
+        },
     },
     bidding_items: bidding_items,
     dev_data: {
@@ -384,7 +408,7 @@ module.exports = {
             cpurorganization: { type: String, have_to: true, mean: '采购组织id', example: 'cpurorganization' },
             idiscounttaxtype: { type: String, have_to: true, mean: '扣税类别', example: 'idiscounttaxtype' },
             ntaxrate_buy: { type: String, have_to: true, mean: '采购税率', example: 'ntaxrate_buy' },
-            vnote:{type: String, have_to: true, mean: '备注', example: '备注' },
+            vnote: { type: String, have_to: true, mean: '备注', example: '备注' },
             coperatorid: { type: String, have_to: true, mean: '操作员id', example: 'coperatorid' },
         };
         if (!is_param) {

@@ -488,7 +488,35 @@ Auto confirm Goods With Plan
     Plan Enter  ${plan}
     Check Plan Was Confirmed  ${plan_id}  ${True}
 
+Extra Info Set Test
+    [Teardown]  Run Keywords  Plan Reset  AND  Extra Info Reset
+    Add Extra Info Config    t1
+    Add Extra Info Config    t2
+    ${plan}  Go Deliver Plan    ${20}
+    ${ei_configs}  Get Extra Info Config from Plan    ${plan}
+    Set Extra Info to Plan    ${plan}[id]    ${ei_configs}[0][id]    c2
+    ${plan}  Get Plan By Id    ${plan}[id]
+    ${ei_contents}  Get Extra Info Content from Plan    ${plan}
+    ${ticket}  Get Ticket by Plan Id    ${plan}[id]
+    ${c2_plan}  Set Variable  ${ei_contents}[0]
+    ${c2_ticket}  Set Variable   ${ticket}[extra_infos][0]
+    Should Be Equal As Strings    ${c2_plan}[content]  c2
+    Should Be Equal As Strings    ${c2_plan}[extra_info_config][title]  t2
+    Should Be Equal As Strings    ${c2_ticket}[content]    c2
+    Should Be Equal As Strings    ${c2_ticket}[title]    t2
+
 *** Keywords ***
+Get Ticket by Plan Id
+    [Arguments]  ${plan_id}  ${token}=${sc_admin_token}
+    ${req_body}  Create Dictionary  id=${plan_id}
+    ${p_resp}  Req to Server  /global/get_ticket  ${token}  ${req_body}
+    RETURN  ${p_resp}
+Get Extra Info Content from Plan
+    [Arguments]  ${plan}
+    RETURN  ${plan}[extra_info_contents]
+Get Extra Info Config from Plan
+    [Arguments]  ${plan}
+    RETURN  ${plan}[stuff][company][extra_info_configs]
 Go Deliver Plan
     [Arguments]  ${count}
     ${mv}  Search Main Vehicle by Index  0

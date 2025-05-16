@@ -114,7 +114,7 @@ export default {
             }, ],
         };
         if (ticket.second_unit && ticket.coefficient) {
-            let su_value = ticket.coefficient * ticket.count ;
+            let su_value = ticket.coefficient * ticket.count;
             let su_decimal = ticket.second_unit_decimal;
             su_value = parseFloat(su_value).toFixed(su_decimal);
             this.ticket_content.value = su_value + ticket.second_unit;
@@ -158,7 +158,6 @@ export default {
                 value: ticket.m_time || ticket.p_time,
             });
         }
-
         if (ticket.seal_no) {
             this.ticket_content.list.push({
                 label: '封签号',
@@ -176,6 +175,15 @@ export default {
                 label: item.sct_scale_item.name,
                 value: item.value,
             });
+        });
+        ticket.extra_infos.forEach(item => {
+            if (item.content) {
+                this.ticket_content.list.push({
+                    label: item.title,
+                    value: item.content,
+                });
+            }
+
         });
     },
     onShareAppMessage: function () {

@@ -427,6 +427,14 @@ let db_opt = {
             status:{type:DataTypes.STRING},
             order_count:{type:DataTypes.INTEGER, defaultValue: 0},
         },
+        extra_info_config:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            title:{ type: DataTypes.STRING },
+        },
+        extra_info_content:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            content:{ type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -586,6 +594,13 @@ let db_opt = {
         _sq.models.stuff.hasMany(_sq.models.subsidy_gate_discount);
         _sq.models.subsidy_record.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.subsidy_record);
+
+        _sq.models.company.hasMany(_sq.models.extra_info_config);
+        _sq.models.extra_info_config.belongsTo(_sq.models.company);
+        _sq.models.extra_info_config.hasMany(_sq.models.extra_info_content);
+        _sq.models.extra_info_content.belongsTo(_sq.models.extra_info_config);
+        _sq.models.plan.hasMany(_sq.models.extra_info_content);
+        _sq.models.extra_info_content.belongsTo(_sq.models.plan);
     },
     install: async function () {
         console.log('run install');
