@@ -129,6 +129,8 @@ export default {
                 cpurorganization: '',
                 idiscounttaxtype: '',
                 ntaxrate_buy: '',
+                vnote: '',
+                coperatorid:'',
             },
             u8c_config_array: [{
                     key: 'system_code',
@@ -190,6 +192,14 @@ export default {
                     key: 'ntaxrate_buy',
                     label: '税率',
                 },
+                {
+                    key: 'vnote',
+                    label: '备注',
+                },
+                {
+                    key: 'coperatorid',
+                    label: '操作员ID',
+                }
             ],
         }
     },

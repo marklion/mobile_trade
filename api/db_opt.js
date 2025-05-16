@@ -390,6 +390,8 @@ let db_opt = {
             cpurorganization:{ type: DataTypes.STRING },
             idiscounttaxtype: { type: DataTypes.STRING },
             ntaxrate_buy: { type: DataTypes.STRING },
+            vnote: { type: DataTypes.STRING },
+            coperatorid: { type: DataTypes.STRING },
         },
         u8c_order_info: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

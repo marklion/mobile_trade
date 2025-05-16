@@ -384,6 +384,8 @@ module.exports = {
             cpurorganization: { type: String, have_to: true, mean: '采购组织id', example: 'cpurorganization' },
             idiscounttaxtype: { type: String, have_to: true, mean: '扣税类别', example: 'idiscounttaxtype' },
             ntaxrate_buy: { type: String, have_to: true, mean: '采购税率', example: 'ntaxrate_buy' },
+            vnote:{type: String, have_to: true, mean: '备注', example: '备注' },
+            coperatorid: { type: String, have_to: true, mean: '操作员id', example: 'coperatorid' },
         };
         if (!is_param) {
             for (let key in ret) {

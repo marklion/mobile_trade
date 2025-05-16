@@ -236,6 +236,8 @@ module.exports = {
                                 cpurorganization: cpurorganization,
                                 cvendormangid: contract.customer_code,
                                 cdeptid: u8c_config.cdeptid_buy,
+                                vmemo: moment().format('YYYY-MM-DD HH-mm-ss') + u8c_config.vnote,
+                                coperator:u8c_config.coperatorid
                             },
                             childrenvo: this.make_buy_order_children(u8c_oi.plans, u8c_config.idiscounttaxtype, u8c_config.ntaxrate_buy),
                         }]
@@ -249,6 +251,7 @@ module.exports = {
                         saleorder: [{
                             parentvo: {
                                 cbiztype: u8c_config.cbiztype_sale,
+                                pk_corp: u8c_config.corpid,
                                 ccustomerid: contract.customer_code,
                                 cdeptid: u8c_config.cdeptid_sale,
                                 csalecorpid: u8c_config.csalecorpid,
@@ -256,6 +259,8 @@ module.exports = {
                                 creceiptcorpid: contract.customer_code,
                                 ndiscountrate: 100,
                                 ccurrencytypeid: u8c_config.ccurrencytypeid,
+                                coperatorid: u8c_config.coperatorid,
+                                vnote:moment().format('YYYY-MM-DD HH-mm-ss') + u8c_config.vnote,
                             },
                             childrenvo: this.make_sale_order_children(u8c_oi.plans),
                         }],
