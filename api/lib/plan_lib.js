@@ -307,18 +307,26 @@ module.exports = {
                     { status: _condition.status },
                 ],
             }
-            if (_condition.only_count && _condition.status == 3) {
-                status_filter[db_opt.Op.or].push({
-                    [db_opt.Op.and]: [
-                        {
-                            status: 2,
-                            checkout_delay: true,
-                            count: {
-                                [db_opt.Op.gt]: 0
+            if (_condition.only_count) {
+                if (_condition.status == 2) {
+                    status_filter = {
+                        status: 2,
+                        count: 0,
+                    }
+                }
+                else if (_condition.status == 3) {
+                    status_filter[db_opt.Op.or].push({
+                        [db_opt.Op.and]: [
+                            {
+                                status: 2,
+                                checkout_delay: true,
+                                count: {
+                                    [db_opt.Op.gt]: 0
+                                }
                             }
-                        }
-                    ]
-                });
+                        ]
+                    });
+                }
             }
             where_condition[db_opt.Op.and].push(status_filter);
         }
@@ -1460,8 +1468,8 @@ module.exports = {
                 subsidy_price: this.place_hold(element.subsidy_price, 0),
                 subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
                 subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price * 10).toFixed(1),
-                second_unit:this.place_hold(element.stuff.second_unit, ''),
-                second_value:(element.stuff.second_unit?this.place_hold(element.stuff.coefficient, 1)*element.count:0),
+                second_unit: this.place_hold(element.stuff.second_unit, ''),
+                second_value: (element.stuff.second_unit ? this.place_hold(element.stuff.coefficient, 1) * element.count : 0),
             });
         }
         let columns = [{
