@@ -17,10 +17,11 @@ module.exports = {
                     {
                         model: db_opt.get_sq().models.company,
                         include: [db_opt.get_sq().models.global_replace_form,
-                            {
-                                model:db_opt.get_sq().models.extra_info_config,
-                                order:[['id', 'DESC']],
-                            },
+                        {
+                            model: db_opt.get_sq().models.extra_info_config,
+                            separate: true,
+                            order: [['id', 'DESC']],
+                        },
                         ],
                         paranoid: false
                     },
@@ -44,13 +45,14 @@ module.exports = {
                     model: db_opt.get_sq().models.sct_scale_item,
                 }],
                 separate: true,
-                order:[['id', 'ASC']]
+                order: [['id', 'ASC']]
             },
             {
-                model:db_opt.get_sq().models.extra_info_content,
+                model: db_opt.get_sq().models.extra_info_content,
                 paranoid: false,
-                include:[db_opt.get_sq().models.extra_info_config],
-                order:[['id', 'ASC']],
+                include: [db_opt.get_sq().models.extra_info_config],
+                separate: true,
+                order: [['id', 'ASC']],
             }
         ];
     },
