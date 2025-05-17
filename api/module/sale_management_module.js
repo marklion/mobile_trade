@@ -692,5 +692,27 @@ module.exports = {
                 return ret;
             }
         },
+        set_extra_info:{
+            name: '设置额外信息',
+            description: '设置额外信息',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                extra_info_config_id: { type: Number, have_to: true, mean: '额外信息配置ID', example: 1 },
+                extra_info: { type: String, have_to: true, mean: '额外信息', example: '额外信息' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (plan && company && plan.stuff.companyId == company.id) {
+                    await plan_lib.set_extrac_info_content(plan.id, body.extra_info_config_id, body.extra_info);
+                }
+                return { result: true };
+            }
+        },
     },
 }

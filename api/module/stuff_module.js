@@ -1310,5 +1310,87 @@ module.exports = {
                 return { result: true };
             }
         },
+        add_extra_info_config:{
+            name: '添加额外信息',
+            description: '添加额外信息',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                title: { type: String, have_to: true, mean: '额外信息标题', example: '额外配置' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let exist_record = await company.getExtra_info_configs({
+                    where: {
+                        title: body.title
+                    }
+                });
+                if (exist_record.length == 0) {
+                    await company.createExtra_info_config({
+                        title: body.title
+                    });
+                }
+                return { result: true };
+            }
+        },
+        del_extra_info_config:{
+            name: '删除额外信息',
+            description: '删除额外信息',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '额外信息ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let exist_record = await company.getExtra_info_configs({
+                    where: {
+                        id: body.id
+                    }
+                });
+                if (exist_record.length == 1) {
+                    await exist_record[0].destroy();
+                }
+                return { result: true };
+            }
+        },
+        get_extra_info_config:{
+            name: '获取额外信息',
+            description: '获取额外信息',
+            is_write: false,
+            is_get_api: true,
+            params: {
+            },
+            result: {
+                extra_info_configs: {
+                    type: Array, mean: '额外信息列表', explain: {
+                        id: { type: Number, mean: '额外信息ID', example: 1 },
+                        title: { type: String, mean: '额外信息标题', example: '额外配置' }
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let sq = db_opt.get_sq();
+                let resp = await sq.models.extra_info_config.findAndCountAll({
+                    where: {
+                        companyId: company.id
+                    },
+                    limit: 20,
+                    offset: body.pageNo * 20,
+                    order: [['id', 'DESC']]
+                });
+                return {
+                    extra_info_configs: resp.rows,
+                    total: resp.count
+                }
+            }
+        },
     }
 }

@@ -188,3 +188,15 @@ Config Subsidy Test
     Length Should Be    ${got_subsidies}    2
     Should Be Equal As Numbers    ${got_subsidies}[0][gate]  30.3
     Should Be Equal As Numbers    ${got_subsidies}[1][discount]    7
+
+Config Extra Info Test
+    [Teardown]  Extra Info Reset
+    Add Extra Info Config    e1
+    Add Extra Info Config    e2
+    Add Extra Info Config    e3
+    ${extra_info_configs}  Get Extra Info Config
+    Length Should Be    ${extra_info_configs}    3
+    Should Be Equal As Strings    ${extra_info_configs}[0][title]    e3
+    Del Extra Info Config    ${extra_info_configs}[1][id]
+    ${extra_info_configs}  Get Extra Info Config
+    Should Be Equal As Strings    ${extra_info_configs}[1][title]    e1

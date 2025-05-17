@@ -578,3 +578,23 @@ Get Subsidy
     [Arguments]  ${token}=${sc_admin_token}
     ${resp}  Req Get to Server    /cash/get_subsidy_params    ${token}  subsidy_params    ${-1}
     RETURN  ${resp}
+
+Add Extra Info Config
+    [Arguments]  ${title}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  title=${title}
+    Req to Server    /stuff/add_extra_info_config    ${token}    ${req}
+
+Del Extra Info Config
+    [Arguments]  ${id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${id}
+    Req to Server    /stuff/del_extra_info_config    ${token}    ${req}
+
+Get Extra Info Config
+    [Arguments]  ${token}=${sc_admin_token}
+    ${resp}  Req Get to Server    /stuff/get_extra_info_config    ${token}  extra_info_configs    ${-1}
+    RETURN  ${resp}
+
+Set Extra Info to Plan
+    [Arguments]  ${plan_id}  ${title_id}  ${content}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan_id}  extra_info_config_id=${title_id}  extra_info=${content}
+    Req to Server    /sale_management/set_extra_info    ${token}    ${req}

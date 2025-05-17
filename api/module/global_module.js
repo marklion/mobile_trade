@@ -44,6 +44,13 @@ async function get_ticket_func(body, token) {
         delegate_name = plan.delegate.name
         delegate_stamp_path = plan.delegate.stamp_pic
     }
+    let extra_infos = [];
+    plan.extra_info_contents.forEach((element) => {
+        extra_infos.push({
+            title: element.extra_info_config.title,
+            content: element.content,
+        });
+    });
 
     return {
         id: plan.id,
@@ -76,6 +83,7 @@ async function get_ticket_func(body, token) {
         transportation_company: plan.stuff.company.global_replace_form?.transportation_company || '运输公司',
         plan_sct_infos:plan.plan_sct_infos,
         delegate_stamp_path: delegate_stamp_path,
+        extra_infos: extra_infos,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
