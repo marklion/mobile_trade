@@ -62,7 +62,9 @@ Plan Confirm with Not Enough Cash and Check
     # 获取订单中的欠款额
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_first}  Get From Dictionary  ${data_plan}  arrears  false
+    ${first_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    Should Be Equal As Numbers    ${first_outstanding_vehicles}  ${1}
     ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
     ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
     ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count]
@@ -78,6 +80,8 @@ Plan Confirm with Not Enough Cash and Check
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_second}  Get From Dictionary  ${data_plan}  arrears  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
+    ${second_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
+    Should Be Equal As Numbers    ${second_outstanding_vehicles}  ${2}
     ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
     ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
     ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count] * 2
@@ -90,6 +94,8 @@ Plan Confirm with Not Enough Cash and Check
     Charge To A Company  ${buy_company1}[id]  ${unit_price * 20}
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_third}  Get From Dictionary  ${data_plan}  arrears  false
+    ${third_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
+    Should Be Equal As Numbers    ${third_outstanding_vehicles}  ${0}
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
     ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
     ${data_stuff}  Get Stuff By Id  ${test_stuff_id}

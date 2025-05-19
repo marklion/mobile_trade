@@ -23,9 +23,9 @@
                             <span>({{user_authorize}})</span>
                             <el-button v-if="user_authorize == '未授权'" type="text" @click="authorize_user">授权</el-button>
                         </span>
-                        <div v-if="plan.status == 1 && plan.arrears > 0">
+                        <div v-if="plan.status == 1 && plan.arrears > 0 && plan.outstanding_vehicles != 0">
                             <el-tag size="mini" type="warning">
-                                欠:{{plan.arrears}}
+                                欠:{{plan.arrears}}需付{{plan.outstanding_vehicles}}车
                             </el-tag>
                         </div>
                     </el-descriptions-item>

@@ -60,7 +60,7 @@
                         <template slot-scope="scope">
                             <div v-if="scope.row.status == 1 && scope.row.arrears > 0">
                                 <el-tag size="mini" type="warning">
-                                    欠:{{scope.row.arrears}}
+                                    欠:{{scope.row.arrears}}需付{{ scope.row.outstanding_vehicles}}车
                                 </el-tag>
                             </div>
                             <div>

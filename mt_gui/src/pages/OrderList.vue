@@ -67,7 +67,7 @@
                         <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.count && item.count != 0" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
-                        <fui-tag v-if="item.status == 1 && item.arrears > 0" theme="plain" :text="'欠款额:' + item.arrears" :scaleRatio="0.8" type="warning"></fui-tag>
+                        <fui-tag v-if="item.status == 1 && item.arrears > 0" theme="plain" :text="'欠款额:' + item.arrears + '需付'+ item.outstanding_vehicles + '车'" :scaleRatio="0.8" type="warning"></fui-tag>
                     </view>
                     <template slot="label">
                         <view>
@@ -150,7 +150,7 @@
                                 <module-filter require_module="cash">
                                     {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}
                                 </module-filter>
-                                <fui-tag v-if="focus_plan.status == 1 && focus_plan.arrears > 0" theme="plain" :text="'欠款额:' + focus_plan.arrears" :scaleRatio="0.8" type="warning"></fui-tag>
+                                <fui-tag v-if="focus_plan.status == 1 && focus_plan.arrears > 0" theme="plain" :text="'欠款额:' + focus_plan.arrears + '需付' + focus_plan.outstanding_vehicles + '车'" :scaleRatio="0.8" type="warning"></fui-tag>
                             </view>
                             <view slot="right-icon">
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
