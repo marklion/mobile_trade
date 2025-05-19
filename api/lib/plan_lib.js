@@ -1490,6 +1490,7 @@ module.exports = {
                     return value.toFixed(decimalPlaces);
                 })(),
             });
+        }
         let columns = [{
             header: '下单公司',
             key: 'create_company',
@@ -1585,7 +1586,7 @@ module.exports = {
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
         return file_name;
-    }},
+    },
     make_exe_rate_file: async function (body, token) {
         let plans = await this.filter_plan4manager(body, token, false);
         let workbook = new ExcelJS.Workbook();
