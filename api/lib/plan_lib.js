@@ -15,6 +15,7 @@ module.exports = {
     close_a_plan: async function (plan, token) {
         plan.status = 3;
         plan.arrears = 0;
+        plan.outstanding_vehicles = 0;
         await plan.save();
         await this.rp_history_checkout(plan, (await rbac_lib.get_user_by_token(token)).name);
         if (!plan.is_buy) {
@@ -813,11 +814,13 @@ module.exports = {
                     if (arrears <= 0) {
                         plan.status = 2;
                         plan.arrears = 0;
+                        plan.outstanding_vehicles = 0;
                         await plan.save();
                         await this.rp_history_pay(plan, '自动');
                         plan4next = plan;
                     } else {
                         plan.arrears = arrears;
+                        plan.outstanding_vehicles = paid_vehicle_count + 1;
                         await plan.save();
                     }
                 }
