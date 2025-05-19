@@ -181,11 +181,9 @@ export default {
             this.tableData = resp.statistic;
             this.tableData.forEach(item => {
                 if(item.second_unit == '无'){
-                    item.second_unit = item.second_unit;
                     item.yesterday_count = item.yesterday_count.toFixed(2)
                     item.today_count = item.today_count.toFixed(2)
                 }else{
-                    item.second_unit = item.second_unit;
                     item.yesterday_count = item.yesterday_count.toFixed(item.second_unit_decimal)
                     item.today_count = item.today_count.toFixed(item.second_unit_decimal)
                 }
