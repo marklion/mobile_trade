@@ -142,6 +142,8 @@ module.exports = {
                         name: { type: String, mean: '物料名称', example: '大米' },
                         yesterday_count: { type: Number, mean: '昨日物料装载总量', example: 12 },
                         today_count: { type: Number, mean: '昨日物料数量装载总量', example: 12 },
+                        second_unit: { type: String, mean: '第二单位', example: '千克' },
+                        second_unit_decimal: { type: Number, mean: '第二单位小数位数', example: 2 },
                     }
                 }
             },
