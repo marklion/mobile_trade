@@ -112,19 +112,19 @@ export default {
             stuff_count_header: [{
                 prop: 'name',
                 label: '物料',
-                width: '350',
+                width: '260',
             }, {
                 prop: 'yesterday_count',
                 label: '昨日',
-                width: '160',
+                width: '150',
             }, {
                 prop: 'today_count',
                 label: '今日',
-                width: '160',
+                width: '150',
             },{
                 prop: 'second_unit',
                 label: '单位',
-                width: '160',
+                width: '140',
             }],
             headerData: [{
                 prop: 'company_name',
