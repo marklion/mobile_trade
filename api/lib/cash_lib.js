@@ -171,9 +171,15 @@ module.exports = {
             if (plan.subsidy_price) {
                 tmp_price = plan.subsidy_price;
             }
+            let su_value = plan.count;
+            if (plan.stuff.second_unit) {
+                su_value = plan.stuff.coefficient * plan.count;
+                let su_decimal = plan.stuff.second_unit_decimal;
+                su_value = parseFloat(su_value).toFixed(su_decimal);
+            }
             ret.push({
                 cinventoryid: plan.stuff.stuff_code,
-                nnumber: plan.count,
+                nnumber: su_value,
                 noriginalcurprice: tmp_price,
             });
         }
@@ -182,11 +188,16 @@ module.exports = {
     },
     make_buy_order_children: function (plans, idiscounttaxtype, ntaxrate) {
         let ret = [];
-
         for (let plan of plans) {
+            let su_value = plan.count;
+            if (plan.stuff.second_unit) {
+                su_value = plan.stuff.coefficient * plan.count;
+                let su_decimal = plan.stuff.second_unit_decimal;
+                su_value = parseFloat(su_value).toFixed(su_decimal);
+            }
             ret.push({
                 cmangid: plan.stuff.stuff_code,
-                nordernum: plan.count,
+                nordernum: su_value,
                 norgtaxprice: plan.unit_price,
                 idiscounttaxtype: idiscounttaxtype,
                 ntaxrate: parseFloat(ntaxrate)
@@ -233,11 +244,11 @@ module.exports = {
                                 pk_corp: u8c_config.corpid,
                                 dorderdate: moment().format('YYYY-MM-DD'),
                                 cbiztype: u8c_config.cbiztype_buy,
-                                cpurorganization: cpurorganization,
+                                cpurorganization: u8c_config.cpurorganization,
                                 cvendormangid: contract.customer_code,
                                 cdeptid: u8c_config.cdeptid_buy,
                                 vmemo: moment().format('YYYY-MM-DD HH-mm-ss') + u8c_config.vnote,
-                                coperator:u8c_config.coperatorid
+                                coperator: u8c_config.coperatorid
                             },
                             childrenvo: this.make_buy_order_children(u8c_oi.plans, u8c_config.idiscounttaxtype, u8c_config.ntaxrate_buy),
                         }]
@@ -260,7 +271,7 @@ module.exports = {
                                 ndiscountrate: 100,
                                 ccurrencytypeid: u8c_config.ccurrencytypeid,
                                 coperatorid: u8c_config.coperatorid,
-                                vnote:moment().format('YYYY-MM-DD HH-mm-ss') + u8c_config.vnote,
+                                vnote: moment().format('YYYY-MM-DD HH-mm-ss') + u8c_config.vnote,
                             },
                             childrenvo: this.make_sale_order_children(u8c_oi.plans),
                         }],

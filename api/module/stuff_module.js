@@ -1,6 +1,7 @@
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const util_lib = require('../lib/util_lib');
 const sq = db_opt.get_sq();
 async function change_stuff_single_switch(stuff_id, switch_name, switch_value, token) {
     let sq = db_opt.get_sq();
@@ -513,16 +514,26 @@ module.exports = {
                         if (isNaN(unitPrice)) {
                             throw new Error('Invalid unit price');
                         }
-                        if (plan && plan.status != 3) {
-                            let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
-                            await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, { transaction })
-                            // 更新价格
-                            plan.unit_price = unitPrice;
-                            await plan.save({ transaction });
+                        if (plan) {
+                            if (plan.is_buy || plan.status != 3) {
+                                let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
+                                await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, { transaction })
+                                // 更新价格
+                                plan.unit_price = unitPrice;
+                                await plan.save({ transaction });
+                                if (plan.status == 3) {
+                                    setTimeout(async () => {
+                                        let full_plan = await util_lib.get_single_plan_by_id(plan.id);
+                                        await plan_lib.updateArchivePlan(full_plan)
+                                    }, 200);
+                                }
+                            }
+                            else {
+                                throw new Error('计划已关闭');
+                            }
                         } else {
-                            throw new Error('计划已关闭');
+                            throw new Error('计划不存在');
                         }
-
                     }));
                     await transaction.commit();
                     return { result: true };
@@ -1310,7 +1321,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        add_extra_info_config:{
+        add_extra_info_config: {
             name: '添加额外信息',
             description: '添加额外信息',
             is_write: true,
@@ -1336,7 +1347,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        del_extra_info_config:{
+        del_extra_info_config: {
             name: '删除额外信息',
             description: '删除额外信息',
             is_write: true,
@@ -1360,7 +1371,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        get_extra_info_config:{
+        get_extra_info_config: {
             name: '获取额外信息',
             description: '获取额外信息',
             is_write: false,
