@@ -251,7 +251,7 @@ module.exports = {
             countStuff.push({
                 name: stuffName,
                 count: totalCount ? totalCount : 0,
-                second_unit: stuffItem.second_unit ? stuffItem.second_unit : '无',
+                second_unit: stuffItem.second_unit ? stuffItem.second_unit : '吨',
                 second_unit_decimal: stuffItem.second_unit_decimal ? stuffItem.second_unit_decimal : 0
             })
         }
@@ -262,8 +262,8 @@ module.exports = {
         let yesterday_result = await this.getPlansCount(company, -1);
         for (let i = 0; i < yesterday_result.length; i++) {
             const item = yesterday_result[i];
-            if (!statistic[item.name] && item.second_unit) {
-                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '无', second_unit_decimal : 0 };
+            if (!statistic[item.name]) {
+                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal : 0 };
             }
             statistic[item.name].yesterday_count = item.count;
             statistic[item.name].second_unit = item.second_unit;
@@ -275,7 +275,7 @@ module.exports = {
         for (let i = 0; i < today_result.length; i++) {
             const item = today_result[i];
             if (!statistic[item.name] && item.second_unit) {
-                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '无', second_unit_decimal : 0 };
+                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal : 0 };
             }
             statistic[item.name].today_count = item.count;
             statistic[item.name].second_unit = item.second_unit;
@@ -1452,8 +1452,13 @@ module.exports = {
     },
     make_file_by_plans: async function (plans) {
         let json = [];
+        let unifiedDecimalPlaces = 2;
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
+            const dp = element.stuff?.second_unit_decimal ?? 2;
+            if (dp > unifiedDecimalPlaces) {
+                unifiedDecimalPlaces = dp;
+            }
             json.push({
                 create_company: this.place_hold(element.company, { name: '(司机选择)' }).name,
                 accept_company: element.stuff.company.name,
@@ -1486,8 +1491,7 @@ module.exports = {
                     if (!element.stuff.second_unit) {
                         return value.toFixed(2);
                     }
-                    const decimalPlaces = element.stuff.second_unit_decimal ?? 2;
-                    return value.toFixed(decimalPlaces);
+                    return value.toFixed(dp);
                 })(),
             });
         }
@@ -1582,6 +1586,7 @@ module.exports = {
         worksheet.getColumn('count').numFmt = '0.00';
         worksheet.getColumn('unit_price').numFmt = '0.00';
         worksheet.getColumn('total_price').numFmt = '0.00';
+        worksheet.getColumn('second_value').numFmt = `0.${'0'.repeat(unifiedDecimalPlaces)}`;
 
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);

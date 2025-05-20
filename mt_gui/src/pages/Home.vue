@@ -269,7 +269,7 @@ export default {
                 let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
                 this.totalCountData = res.statistic
                 this.totalCountData.forEach(item => {
-                    if(item.second_unit == '无'){
+                    if(item.second_unit == '吨'){
                         item.yesterday_count = item.yesterday_count.toFixed(2)
                         item.today_count = item.today_count.toFixed(2)
                     }else{
