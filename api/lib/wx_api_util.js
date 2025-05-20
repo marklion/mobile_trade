@@ -201,9 +201,10 @@ function make_plan_status_msg(plan) {
     if (plan.is_buy && status == 1) {
         status = 2;
     }
+    const currentDate = new Date().toISOString().split('T')[0];
     return {
         thing3: { value: plan.company.name },
-        thing5: { value: plan.stuff.name },
+        thing5: { value: currentDate + ' ' + plan.stuff.name },
         car_number14: { value: plan.main_vehicle.plate },
         thing9: { value: plan.stuff.company.name },
         const24: { value: status_array[status] },
