@@ -47,6 +47,7 @@
                         <el-table-column prop="name" label="物料名称"></el-table-column>
                         <el-table-column prop="yesterday_count" label="昨天" min-width="25"></el-table-column>
                         <el-table-column prop="today_count" label="今天" min-width="25"></el-table-column>
+                        <el-table-column prop="second_unit" label="单位" min-width="25"></el-table-column>
                     </el-table>
                 </div>
             </el-card>
@@ -179,8 +180,13 @@ export default {
             let resp = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
             this.tableData = resp.statistic;
             this.tableData.forEach(item => {
-                item.yesterday_count = item.yesterday_count.toFixed(2)
-                item.today_count = item.today_count.toFixed(2)
+                if(item.second_unit == '吨'){
+                    item.yesterday_count = item.yesterday_count.toFixed(2)
+                    item.today_count = item.today_count.toFixed(2)
+                }else{
+                    item.yesterday_count = item.yesterday_count.toFixed(item.second_unit_decimal)
+                    item.today_count = item.today_count.toFixed(item.second_unit_decimal)
+                }
             });
         },
         save_notice: async function () {

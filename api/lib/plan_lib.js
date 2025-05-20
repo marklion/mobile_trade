@@ -251,37 +251,44 @@ module.exports = {
             countStuff.push({
                 name: stuffName,
                 count: totalCount ? totalCount : 0,
+                second_unit: stuffItem.second_unit ? stuffItem.second_unit : '吨',
+                second_unit_decimal: stuffItem.second_unit_decimal ? stuffItem.second_unit_decimal : 0
             })
         }
         return countStuff;
     },
     getStatistic: async function (company) {
         let statistic = {};
-
         let yesterday_result = await this.getPlansCount(company, -1);
         for (let i = 0; i < yesterday_result.length; i++) {
             const item = yesterday_result[i];
             if (!statistic[item.name]) {
-                statistic[item.name] = { yesterday_count: 0, today_count: 0 };
+                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal : 0 };
             }
             statistic[item.name].yesterday_count = item.count;
+            statistic[item.name].second_unit = item.second_unit;
+            statistic[item.name].second_unit_decimal = item.second_unit_decimal;
+
         }
 
         let today_result = await this.getPlansCount(company, 0);
         for (let i = 0; i < today_result.length; i++) {
             const item = today_result[i];
-            if (!statistic[item.name]) {
-                statistic[item.name] = { yesterday_count: 0, today_count: 0 };
+            if (!statistic[item.name] && item.second_unit) {
+                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal : 0 };
             }
             statistic[item.name].today_count = item.count;
+            statistic[item.name].second_unit = item.second_unit;
+            statistic[item.name].second_unit_decimal = item.second_unit_decimal;
         }
 
         let resultArray = Object.keys(statistic).map(key => ({
             name: key,
             yesterday_count: statistic[key].yesterday_count,
-            today_count: statistic[key].today_count
+            today_count: statistic[key].today_count,
+            second_unit: statistic[key].second_unit,
+            second_unit_decimal : statistic[key].second_unit_decimal
         }));
-
         return resultArray;
     },
     make_plan_where_condition: function (_condition, search_buy = false) {
@@ -1445,8 +1452,13 @@ module.exports = {
     },
     make_file_by_plans: async function (plans) {
         let json = [];
+        let unifiedDecimalPlaces = 2;
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
+            const dp = element.stuff?.second_unit_decimal ?? 2;
+            if (dp > unifiedDecimalPlaces) {
+                unifiedDecimalPlaces = dp;
+            }
             json.push({
                 create_company: this.place_hold(element.company, { name: '(司机选择)' }).name,
                 accept_company: element.stuff.company.name,
@@ -1473,7 +1485,14 @@ module.exports = {
                 subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
                 subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price * 10).toFixed(1),
                 second_unit: this.place_hold(element.stuff.second_unit, ''),
-                second_value: (element.stuff.second_unit ? this.place_hold(element.stuff.coefficient, 1) * element.count : 0),
+                second_value: (() => {
+                    const coefficient = this.place_hold(element.stuff.coefficient, 2);
+                    const value = coefficient * element.count;
+                    if (!element.stuff.second_unit) {
+                        return value.toFixed(2);
+                    }
+                    return value.toFixed(dp);
+                })(),
             });
         }
         let columns = [{
@@ -1567,7 +1586,7 @@ module.exports = {
         worksheet.getColumn('count').numFmt = '0.00';
         worksheet.getColumn('unit_price').numFmt = '0.00';
         worksheet.getColumn('total_price').numFmt = '0.00';
-        worksheet.getColumn('second_value').numFmt = '0.00';
+        worksheet.getColumn('second_value').numFmt = `0.${'0'.repeat(unifiedDecimalPlaces)}`;
 
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);

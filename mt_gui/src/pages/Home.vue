@@ -112,7 +112,7 @@ export default {
             stuff_count_header: [{
                 prop: 'name',
                 label: '物料',
-                width: '400',
+                width: '350',
             }, {
                 prop: 'yesterday_count',
                 label: '昨日',
@@ -120,6 +120,10 @@ export default {
             }, {
                 prop: 'today_count',
                 label: '今日',
+                width: '160',
+            },{
+                prop: 'second_unit',
+                label: '单位',
                 width: '160',
             }],
             headerData: [{
@@ -265,8 +269,13 @@ export default {
                 let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
                 this.totalCountData = res.statistic
                 this.totalCountData.forEach(item => {
-                    item.yesterday_count = item.yesterday_count.toFixed(2)
-                    item.today_count = item.today_count.toFixed(2)
+                    if(item.second_unit == '吨'){
+                        item.yesterday_count = item.yesterday_count.toFixed(2)
+                        item.today_count = item.today_count.toFixed(2)
+                    }else{
+                        item.yesterday_count = item.yesterday_count.toFixed(item.second_unit_decimal)
+                        item.today_count = item.today_count.toFixed(item.second_unit_decimal)
+                    }
                 });
             }
         },
