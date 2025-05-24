@@ -653,7 +653,7 @@ module.exports = {
         await plan.save();
         let buy_company = plan.company;
         if (buy_company && need_verify_balance) {
-            let plans = await buy_company.getPlans({ where: { status: 1 } });
+            let plans = await buy_company.getPlans({ where: { status: 1, is_buy:false } });
             for (let index = 0; index < plans.length; index++) {
                 const element = plans[index];
                 await this.verify_plan_pay(element)
