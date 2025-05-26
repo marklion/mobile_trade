@@ -228,6 +228,7 @@ module.exports = {
                         status: 2,
                         is_buy: false,
                     }],
+                    count:0,
                 };
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 if (driver) {
