@@ -42,7 +42,8 @@ Do Change Price By Plan
 Change And Verify Price
     [Arguments]  ${plan_id}  ${token}=${sc_admin_token}  ${expected_price}=${1245}
     ${plan_id_string}  Convert To String    ${plan_id}
-    Do Change Price By Plan    ${plan_id_string}    ${expected_price}
+    @{plan_ids}  Create List    ${plan_id_string}
+    Do Change Price By Plan    ${plan_ids}    ${expected_price}
     Sleep    1s
     ${plan}  Get Plan By Id    ${plan_id}
     Should Be Equal As Numbers    ${plan}[unit_price]    ${expected_price}
@@ -58,14 +59,15 @@ Change Price With Single Plan
     [Documentation]    测试更改计划价格（单个）
     ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
     ${plan_id}  Convert To String  ${plan_ids}[0]
-    Do Change Price By Plan    ${plan_id}    ${123}
+    @{plan_ids}  Create List  ${plan_id}
+    Do Change Price By Plan    ${plan_ids}    ${123}
     ${plan}=    Get Plan By Id    ${plan_ids}[0]
     Should Be Equal As Numbers    ${plan}[unit_price]    ${123}
     Confirm A Plan    ${plan}
     Manual Pay A Plan    ${plan}
     Change And Verify Price    ${plan}[id]  expected_price=${3131}
     Deliver A Plan  ${plan}  ${23}
-    Do Change Price By Plan    ${plan_id}    ${123}  expect_failure=${True}
+    Do Change Price By Plan    ${plan_ids}    ${123}  expect_failure=${True}
 
 Change Price of One Order
     ${mv}  Search Main Vehicle by Index  0
