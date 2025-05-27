@@ -58,8 +58,7 @@ Change Price With Muti Plan
 Change Price With Single Plan
     [Documentation]    测试更改计划价格（单个）
     ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
-    ${plan_id}  Convert To String  ${plan_ids}[0]
-    @{plan_ids}  Create List  ${plan_id}
+    @{plan_ids}  Create List  ${plan_ids}[0]
     Do Change Price By Plan    ${plan_ids}    ${123}
     ${plan}=    Get Plan By Id    ${plan_ids}[0]
     Should Be Equal As Numbers    ${plan}[unit_price]    ${123}
