@@ -5,14 +5,32 @@ static std::string g_dev_ip;
 
 class tld_style_scale : public common_scale_driver
 {
+    std::string buffer_ready;
+    std::string prepare_valid_buff(const std::string &_frame)
+    {
+        std::string ret;
+        buffer_ready += _frame;
+        while (buffer_ready.length() > 0 && buffer_ready[0] != 0x02)
+        {
+            buffer_ready.erase(0, 1);
+        }
+        if (buffer_ready.length() >= 18)
+        {
+            ret = buffer_ready.substr(0, 18);
+            buffer_ready.erase(0, 18);
+        }
+
+        return ret;
+    }
 public:
     using common_scale_driver::common_scale_driver;
     virtual double handle_buff(const std::string &_frame)
     {
         double ret = 0;
-        if (_frame.length() >= 18)
+        std::string frame = prepare_valid_buff(_frame);
+        if (frame.length() >= 18 && frame[0] == 0x02)
         {
-            int dot_pos = _frame[1] & 0x07;
+            int dot_pos = frame[1] & 0x07;
             int pow_number = 2 - dot_pos;
             if (pow_number > 0)
             {
@@ -20,7 +38,7 @@ public:
             }
             for (auto i = 0; i < 6; i++)
             {
-                auto tmp_number = _frame[4 + i];
+                auto tmp_number = frame[4 + i];
                 if (tmp_number >= '0' && tmp_number <= '9')
                 {
                     tmp_number = tmp_number - '0';

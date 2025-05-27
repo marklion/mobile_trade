@@ -1203,6 +1203,7 @@ module.exports = {
         let cond = {
             [db_opt.Op.and]: [
                 { status: { [db_opt.Op.ne]: 3 } },
+                { count: 0 },
                 {
                     stuffId: {
                         [db_opt.Op.in]: stuff_array
@@ -1243,6 +1244,7 @@ module.exports = {
             where: {
                 [db_opt.Op.and]: [
                     { status: { [db_opt.Op.ne]: 3 } },
+                    { count: 0 },
                     { register_time: { [db_opt.Op.ne]: null } },
                 ],
             }
