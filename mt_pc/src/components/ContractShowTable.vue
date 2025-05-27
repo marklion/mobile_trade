@@ -126,7 +126,7 @@
                     <el-table-column prop="time" label="充值时间"></el-table-column>
                     <el-table-column label="操作">
                         <template slot-scope="scope">
-                        <div v-if="scope.row.reversed" class="reversed-tag">已冲销</div>
+                        <div v-if="scope.row.reversed">已冲销</div>
                             <el-button 
                                 v-else
                                 type="warning" 
@@ -196,7 +196,7 @@ export default {
     },
     methods: {
         reverseCharge: function (charge) { 
-        this.$confirm('确定冲销该充值吗?', '提示', {
+            this.$confirm('确定冲销该充值吗?', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning'
@@ -380,8 +380,5 @@ export default {
 </script>
 
 <style>
-.reversed-tag {
-  color: #999;
-  font-weight: bold;
-}
+
 </style>
