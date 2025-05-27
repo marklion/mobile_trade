@@ -124,6 +124,17 @@
                     <el-table-column prop="comment" label="充值原因"></el-table-column>
                     <el-table-column prop="operator" label="充值人"></el-table-column>
                     <el-table-column prop="time" label="充值时间"></el-table-column>
+                    <el-table-column label="操作">
+                        <template slot-scope="scope">
+                        <div v-if="scope.row.reversed" class="reversed-tag">已冲销</div>
+                            <el-button 
+                                v-else
+                                type="warning" 
+                                size="small" 
+                                @click="reverseCharge(scope.row)"
+                            >冲销</el-button>
+                        </template>
+                    </el-table-column>
                 </el-table>
             </template>
         </page-content>
@@ -184,6 +195,20 @@ export default {
         is_motive: Boolean,
     },
     methods: {
+        reverseCharge: function (charge) { 
+        this.$confirm('确定冲销该充值吗?', '提示', {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+        }).then(async () => {
+            await this.$send_req('/cash/charge', {
+                contract_id: this.focus_contract.id,
+                cash_increased: -parseFloat(charge.cash_increased),
+                comment: `回退${charge.time}的充值: ${charge.comment}`
+            });
+            this.$refs.charge_history.refresh(1);
+        });
+        },      
         del_contract: function (contract) {
             this.$confirm('确定删除该合同吗?', '提示', {
                 confirmButtonText: '确定',
@@ -355,5 +380,8 @@ export default {
 </script>
 
 <style>
-
+.reversed-tag {
+  color: #999;
+  font-weight: bold;
+}
 </style>
