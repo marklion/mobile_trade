@@ -17,7 +17,7 @@ class tld_style_scale : public common_scale_driver
         if (buffer_ready.length() >= 18)
         {
             ret = buffer_ready.substr(0, 18);
-            buffer_ready.erase(0, 18);
+            buffer_ready.clear();
         }
 
         return ret;
