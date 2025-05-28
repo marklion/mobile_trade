@@ -70,6 +70,7 @@ function mkplan_filter(cond = undefined, is_all = false) {
 
     let ret = {
         ...real_cond,
+        count: 0,
         [db_opt.Op.or]: [
             {
                 is_buy: true,
