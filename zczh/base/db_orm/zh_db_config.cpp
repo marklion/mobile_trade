@@ -59,11 +59,7 @@ std::string sql_device_set::should_handle_income_plate(const std::string &_plate
                 {
                     ret = "";
                 }
-                else if (vo->confirm_info_time.length() > 0)
-                {
-                    ret = "";
-                }
-                else if (!vo->get_children<sql_order_history>("belong_order", "node_name == '%s'", node_name_p_weight.c_str()))
+                else if (vo->confirm_info_time.length() > 0 && vo->p_weight > 0 && vo->m_weight > 0)
                 {
                     ret = "";
                 }

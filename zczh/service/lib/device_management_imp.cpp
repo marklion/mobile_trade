@@ -779,7 +779,7 @@ std::string device_management_handler::gate_proc_id_plate(const std::string &_id
         ret = _set.should_handle_income_plate(plate, order_number);
         if (ret.length() > 0)
         {
-            auto vo = sqlite_orm::search_record<sql_order>("plate_number == '%s' AND enter_gate == 1", plate.c_str());
+            auto vo = sqlite_orm::search_record<sql_order>("plate_number == '%s' AND enter_gate == 1 AND status == 100", plate.c_str());
             if (vo)
             {
                 vo->enter_gate = 0;
