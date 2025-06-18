@@ -327,6 +327,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->gate_strict = rule.gate_strict;
         er->max_j_weight = rule.max_j_weight;
         er->max_m_weight = rule.max_m_weight;
+        er->weight_coe = rule.weight_coe;
         ret = er->update_record();
     }
     else
@@ -342,6 +343,8 @@ bool config_management_handler::set_rule(const running_rule &rule)
         tmp.issue_card_path = rule.issue_card_path;
         tmp.max_j_weight = rule.max_j_weight;
         tmp.max_m_weight = rule.max_m_weight;
+        tmp.gate_strict = rule.gate_strict;
+        tmp.weight_coe = rule.weight_coe;
         ret = tmp.insert_record();
     }
     return ret;
@@ -368,6 +371,7 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.gate_strict = er->gate_strict;
         _return.max_j_weight = er->max_j_weight;
         _return.max_m_weight = er->max_m_weight;
+        _return.weight_coe = er->weight_coe;
     }
 }
 

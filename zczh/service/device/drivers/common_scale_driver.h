@@ -37,7 +37,17 @@ public:
                         auto ret = read(fd, buff, sizeof(buff));
                         if (ret > 0)
                         {
+                            auto weight_coe = 1.0;
+                            THR_CALL_BEGIN(config_management);
+                            running_rule tmp_rule;
+                            client->get_rule(tmp_rule);
+                            weight_coe = tmp_rule.weight_coe;
+                            THR_CALL_END();
                             weight = handle_buff(std::string(buff, ret));
+                            if (weight_coe > 0)
+                            {
+                                weight *= weight_coe;
+                            }
                         }
                         else
                         {

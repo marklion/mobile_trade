@@ -141,6 +141,7 @@ struct running_rule {
     9:bool gate_strict,
     10:double max_m_weight,
     11:double max_j_weight,
+    12:double weight_coe,
 }
 
 struct device_run_time{
