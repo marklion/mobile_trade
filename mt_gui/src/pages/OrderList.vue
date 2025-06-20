@@ -62,6 +62,9 @@
                         </u-checkbox>
                         <u-icon :name="get_status_icon(item)"></u-icon>
                     </view>
+                    <view slot="icon">
+                        <fui-tag theme="plain" :text="!!item.enter_time?'已入场':'未入场'" :type="!!item.enter_time?'success':'warning'" :scaleRatio="0.8"></fui-tag>
+                    </view>
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
                         <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>

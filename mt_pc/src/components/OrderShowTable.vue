@@ -47,11 +47,16 @@
             <div style="height: 80vh">
                 <el-table ref="order_table" :data="slotProps.content" style="width: 100%" stripe height="100%" @selection-change="record_selection">
                     <el-table-column type="selection"></el-table-column>
-                    <el-table-column min-width="170" v-if="motived" prop="stuff.company.name" label="接单公司">
+                    <el-table-column min-width="170" v-if="motived"  label="接单公司">
+                        <template slot-scope="scope">
+                        {{ scope.row.stuff.company.name }}
+                        <el-tag size="mini" :type="scope.row.enter_time?'success':'warning'">{{!!scope.row.enter_time?'已入场':'未入场'}}</el-tag>
+                        </template>
                     </el-table-column>
                     <el-table-column min-width="170" v-else label="下单公司">
                         <template slot-scope="scope">
                             {{scope.row.company.name}}({{scope.row.rbac_user.name}})
+                            <el-tag size="mini" :type="scope.row.enter_time?'success':'info'">{{!!scope.row.enter_time?'已入场':'未入场'}}</el-tag>
                         </template>
                     </el-table-column>
                     <el-table-column min-width="50" prop="stuff.name" label="物料">
