@@ -6,7 +6,20 @@
                 <el-table :data="slotProps.content" style="width: 100%" stripe height="100%">
                     <el-table-column prop="stuff.name" label="物料"></el-table-column>
                     <el-table-column prop="gate" label="门槛"></el-table-column>
-                    <el-table-column prop="discount" label="折扣"></el-table-column>
+                    <el-table-column label="优惠类型">
+                        <template slot-scope="scope">
+                        <el-tag type="success" v-if="scope.row.discount">折扣</el-tag>
+                        <el-tag type="warning" v-else-if="scope.row.amount">优惠金额</el-tag>
+                        </template>
+                    </el-table-column>
+
+                    <!-- 数值列 -->
+                    <el-table-column label="优惠值">
+                        <template slot-scope="scope">
+                        <span v-if="scope.row.discount">{{ scope.row.discount }}折</span>
+                        <span v-else-if="scope.row.amount">￥{{ scope.row.amount }}</span>
+                        </template>
+                    </el-table-column>
                     <el-table-column>
                         <template slot="header">
                             <el-button size="mini" type="success" @click="add_subsidy_diag = true">新增</el-button>
@@ -27,10 +40,19 @@
             <el-form-item label="门槛" prop="gate">
                 <el-input v-model="new_subsidy.gate"></el-input>
             </el-form-item>
-            <el-form-item label="折扣" prop="discount">
-                <el-tooltip effect="dark" content="输入8就是八折，输入9.5就是九五折" placement="right">
+            <el-form-item label="优惠类型">
+            <el-radio-group v-model="new_subsidy.selectedType">
+                <el-radio label="discount">折扣</el-radio>
+                <el-radio label="amount">优惠金额</el-radio>
+            </el-radio-group>
+            </el-form-item>
+            <el-form-item label="折扣" prop="discount" v-if="new_subsidy.selectedType === 'discount'">
+                <el-tooltip effect="dark" content="输入8即八折，9.5即九五折" placement="right">
                     <el-input v-model="new_subsidy.discount"></el-input>
                 </el-tooltip>
+            </el-form-item>
+            <el-form-item label="优惠金额" prop="amount" v-if="new_subsidy.selectedType === 'amount'">
+                <el-input v-model.number="new_subsidy.amount"></el-input>
             </el-form-item>
         </el-form>
         <span slot="footer">
@@ -56,7 +78,9 @@ export default {
             new_subsidy: {
                 stuff_id: 0,
                 gate: 0,
-                discount: 10
+                discount: 10,
+                amount: null,
+                selectedType: 'discount'
             },
             new_subsidy_rules: {
                 stuff_id: [{
@@ -85,7 +109,19 @@ export default {
                         message: '折扣必须在0-10之间',
                         trigger: 'blur'
                     }
-                ]
+                ],
+                amount: [{
+                    required: true,
+                    message: '请输入优惠金额',
+                    trigger: 'blur',
+                    validator: (rule, value, callback) => {
+                    if (this.new_subsidy.selectedType === 'amount' && (!value || value <= 0)) {
+                        callback(new Error('优惠金额必须大于0'));
+                    } else {
+                        callback();
+                    }
+                    }
+                }]
             }
         }
     },
