@@ -10,8 +10,8 @@ ${nr_stuff}  ${EMPTY}
 Check Discount When Higher Gate Arrive
     [Setup]  Prepare Several Plan
     [Teardown]  Run Keywords  Clean Subsidy  AND  Plan Reset
-    Config Subsidy    ${20}    ${9}
-    Config Subsidy    ${100}    ${8}
+    Config Subsidy    ${20}    ${9}  discount
+    Config Subsidy    ${100}    ${8}  discount
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${order_count}  Do Subsidy
     Should Be Equal As Integers    ${order_count}    10
@@ -106,8 +106,8 @@ Prepare Several Plan
     Set Suite Variable  ${nr_stuff}  ${nr_stuff}
 
 Config Subsidy
-    [Arguments]  ${gate}  ${discount}  ${stuff_id}=${test_stuff}[id]
-    Add Subsidy    ${stuff_id}    ${gate}    ${discount}
+    [Arguments]  ${gate}  ${discount}  ${selectedType}  ${stuff_id}=${test_stuff}[id]  
+    Add Subsidy    ${stuff_id}    ${gate}    ${discount}  ${selectedType}
 Clean Subsidy
     ${resp}  Get Subsidy
     FOR    ${single_sub}    IN    @{resp}
