@@ -10,7 +10,7 @@
     <h2>磅单导出</h2>
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
-            <export-date :export_name="single_module.module_name" @do_export="export_ticket($event, single_module.module)"></export-date>
+            <export-date :export_name="single_module.module_name" @do_export="export_ticket($event, single_module.module)" :need_company="true"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
@@ -121,6 +121,7 @@ export default {
                     start_time: filter.start_time,
                     end_time: filter.end_time,
                     ticket_type: module,
+                    company_id: filter.company_id,
                 });
                 this.show_export_success();
             } catch (error) {
