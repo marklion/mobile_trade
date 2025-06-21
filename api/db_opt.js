@@ -421,6 +421,7 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             gate:{type:DataTypes.DECIMAL(12,2), defaultValue: 0, get:getDecimalValue('gate')},
             discount:{type:DataTypes.DECIMAL(12,2), defaultValue: 0, get:getDecimalValue('discount')},
+            amount:{type:DataTypes.DECIMAL(12,2), defaultValue: 0, get:getDecimalValue('amount')},
         },
         subsidy_record:{
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
