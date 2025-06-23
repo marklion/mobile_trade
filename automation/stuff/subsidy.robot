@@ -10,8 +10,9 @@ ${nr_stuff}  ${EMPTY}
 Check Discount When Higher Gate Arrive
     [Setup]  Prepare Several Plan
     [Teardown]  Run Keywords  Clean Subsidy  AND  Plan Reset
-    Config Subsidy    ${20}    ${9}   ${null}  
-    Config Subsidy    ${100}    ${8}   ${null}  
+    Config Subsidy    ${20}    ${9}    ${null}    
+    Config Subsidy    ${100}    ${8}    ${null}    
+    Config Subsidy    ${100}    ${null}    ${4100}  
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${order_count}  Do Subsidy
     Should Be Equal As Integers    ${order_count}    10
@@ -25,8 +26,7 @@ Check Discount When Higher Gate Arrive
     Should Be Equal As Numbers    ${resp}[0][subsidy_price]  0
     Should Be Equal As Numbers    ${resp}[5][subsidy_price]  8
     Should Be Equal As Numbers    ${resp}[9][subsidy_price]  8
-    Should Be Equal As Numbers    ${resp}[14][subsidy_price]  8
-    Should Be Equal As Numbers    ${resp}[15][subsidy_price]  0
+    Should Be Equal As Numbers    ${resp}[14][subsidy_price]  4100
 
 Check Discount When Lower Gate Arrive
     [Setup]  Prepare Several Plan

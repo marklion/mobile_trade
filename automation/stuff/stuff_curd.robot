@@ -169,9 +169,12 @@ Config Subsidy Test
     [Teardown]  Stuff Reset
     ${s1}  Add A Stuff To Sale    s1  s1
     ${s2}  Add A Stuff To Sale    s2  s2
+    ${s3}  Add A Stuff To Sale    s3  s3
     #重复设置给物料2添加相同补贴门槛的折扣值
     Add Subsidy    ${s2}[id]  ${10}    ${6}   ${null}
     Add Subsidy    ${s2}[id]  ${10}    ${8.4}  ${null}
+    Add Subsidy    ${s3}[id]  ${10}    ${null}  ${3100}
+    Add Subsidy    ${s3}[id]  ${10}    ${null}  ${4100}
     #给物料1添加两个门槛的折扣值
     Add Subsidy    ${s1}[id]  ${40.39}    ${7}  ${null}
     Add Subsidy    ${s1}[id]  ${30.3}    ${8}  ${null}
