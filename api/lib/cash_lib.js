@@ -569,12 +569,21 @@ module.exports = {
         });
         return ret;
     },
-    set_subsidy_price: async function (plans, discount) {
+    set_subsidy_price: async function (plans, discount, amount) {
         let ret = 0;
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
-            element.content.subsidy_price = element.content.unit_price * discount / 10;
-            ret += (element.content.unit_price - element.content.subsidy_price) * element.content.count;
+            if (amount && amount > 0) {
+                element.content.subsidy_price = Math.max(
+                    0,
+                    element.content.unit_price - amount
+                );
+                ret += amount * element.content.count;
+            }
+            else if (discount && discount > 0) {
+                element.content.subsidy_price = element.content.unit_price * discount / 10;
+                ret += (element.content.unit_price - element.content.subsidy_price) * element.content.count;
+            }
             let save_one = await db_opt.get_sq().models.archive_plan.findByPk(element.id);
             save_one.content = JSON.stringify(element.content);
             let orig_plan = await db_opt.get_sq().models.plan.findByPk(element.planId);
@@ -600,7 +609,8 @@ module.exports = {
                     let sgd = subsidy_gate_discounts[j];
                     if (total_count >= sgd.gate) {
                         let discount = sgd.discount;
-                        let total_subsidy = await this.set_subsidy_price(element.plans, discount);
+                        let amount = sgd.amount;
+                        let total_subsidy = await this.set_subsidy_price(element.plans, discount, amount);
                         await this.charge_by_username_and_contract('自动', contract, total_subsidy, `因为总量${total_count}大于门槛${sgd.gate},补贴${total_subsidy}`);
                         ret += element.plans.length;
                         break;

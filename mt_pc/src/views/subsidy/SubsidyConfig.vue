@@ -134,12 +134,20 @@ export default {
                 if (valid) {
                     this.new_subsidy.gate = parseFloat(this.new_subsidy.gate);
                     this.new_subsidy.discount = parseFloat(this.new_subsidy.discount);
+                    this.new_subsidy.amount = parseFloat(this.new_subsidy.amount);
+                    if (this.new_subsidy.selectedType === 'discount') {
+                        this.new_subsidy.amount = null;
+                    } else if (this.new_subsidy.selectedType === 'amount') {
+                        this.new_subsidy.discount = null;
+                    }
                     await this.$send_req('/cash/add_subsidy_params', this.new_subsidy);
                     this.refresh_subsidy_list();
                     this.new_subsidy = {
                         stuff_id: 0,
                         gate: 0,
-                        discount: 10
+                        discount: 10,
+                        amount: null,
+                        selectedType: 'discount'
                     };
                     this.add_subsidy_diag = false;
                 }

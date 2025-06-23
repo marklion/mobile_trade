@@ -102,9 +102,8 @@ module.exports = {
             params: {
                 stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
                 gate: { type: Number, have_to: true, mean: '补贴门槛', example: 1 },
-                discount: { type: Number, have_to: true, mean: '折扣', example: 1 },
+                discount: { type: Number, have_to: false, mean: '折扣', example: 1 },
                 amount: { type: Number, have_to: false, mean: '补贴金额', example: 0 },
-                selectedType: { type: String, have_to: true, mean: '选择类型', example: '全部' },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -120,10 +119,10 @@ module.exports = {
                 const exist_records = await stuff.getSubsidy_gate_discounts({ where: { gate: body.gate } });
                 if (exist_records && exist_records.length == 1)
                 {
-                    if (body.selectedType === 'discount') {
+                    if (body.discount && (body.discount > 0 && body.discount < 10)) {
                         exist_records[0].discount = body.discount;
                         exist_records[0].amount = null;
-                    } else {
+                    } else if (body.amount && body.amount > 0) {
                         exist_records[0].amount = body.amount;
                         exist_records[0].discount = null;
                     }
@@ -131,8 +130,8 @@ module.exports = {
                 } else {
                     const createData = {
                         gate: body.gate,
-                        discount: body.selectedType === 'discount' ? body.discount : null,
-                        amount: body.selectedType === 'amount' ? body.amount : null
+                        discount: body.discount,
+                        amount: body.amount,
                     };
                     await stuff.createSubsidy_gate_discount(createData);
                 }
