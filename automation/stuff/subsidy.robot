@@ -10,8 +10,8 @@ ${nr_stuff}  ${EMPTY}
 Check Discount When Higher Gate Arrive
     [Setup]  Prepare Several Plan
     [Teardown]  Run Keywords  Clean Subsidy  AND  Plan Reset
-    Config Subsidy    ${20}    ${9}  
-    Config Subsidy    ${100}    ${8}  
+    Config Subsidy    ${20}    ${9}   ${null}  
+    Config Subsidy    ${100}    ${8}   ${null}  
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${order_count}  Do Subsidy
     Should Be Equal As Integers    ${order_count}    10
