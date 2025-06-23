@@ -49,8 +49,8 @@ Check Discount When Lower Gate Arrive
 Check Discount When No Gate Arrive
     [Setup]  Prepare Several Plan
     [Teardown]  Run Keywords  Clean Subsidy  AND  Plan Reset
-    Config Subsidy    ${50.6}    ${8}  ${nr_stuff}[id]
-    Config Subsidy    ${102}    ${8}
+    Config Subsidy    ${50.6}    ${8}   ${null}  ${nr_stuff}[id]
+    Config Subsidy    ${102}    ${8}  ${null}
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${order_count}  Do Subsidy
     Should Be Equal As Integers    ${order_count}    0
