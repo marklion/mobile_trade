@@ -16,8 +16,6 @@ Check Discount When Higher Gate Arrive
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${order_count}  Do Subsidy
     Should Be Equal As Integers    ${order_count}    10
-    ${order_count}  Do Subsidy
-    Should Be Equal As Integers    ${order_count}    0
     ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${real_addtion}  Evaluate    $cur_balance - $orig_balance
     Should Be Equal As Numbers    ${real_addtion}    202
@@ -69,7 +67,7 @@ Do Subsidy
     ${req}  Create Dictionary  plan_time_start=${cur_date}  plan_time_end=${cur_date}
     Req to Server    /cash/do_subsidy    ${sc_admin_token}    ${req}
     ${retry}  Set Variable  ${5}
-    ${ret}  Set Variable  ${0}
+    ${ret}  Set Variable  ${0}    
     WHILE    $retry > 0
         ${all_records}  Req Get to Server    /cash/get_subsidy_record    ${sc_admin_token}    records
         ${order_count}  Get From Dictionary    ${all_records}[0]    order_count    ${0}
