@@ -170,11 +170,11 @@ Config Subsidy Test
     ${s1}  Add A Stuff To Sale    s1  s1
     ${s2}  Add A Stuff To Sale    s2  s2
     #重复设置给物料2添加相同补贴门槛的折扣值
-    Add Subsidy    ${s2}[id]  ${10}    ${6}
-    Add Subsidy    ${s2}[id]  ${10}    ${8.4}
+    Add Subsidy    ${s2}[id]  ${10}    ${6}   ${null}
+    Add Subsidy    ${s2}[id]  ${10}    ${8.4}  ${null}
     #给物料1添加两个门槛的折扣值
-    Add Subsidy    ${s1}[id]  ${40.39}    ${7}
-    Add Subsidy    ${s1}[id]  ${30.3}    ${8}
+    Add Subsidy    ${s1}[id]  ${40.39}    ${7}  ${null}
+    Add Subsidy    ${s1}[id]  ${30.3}    ${8}  ${null}
 
     ${got_subsidies}  Get Subsidy
     Length Should Be    ${got_subsidies}    3
