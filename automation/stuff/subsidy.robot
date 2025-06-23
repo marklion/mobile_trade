@@ -12,19 +12,19 @@ Check Discount When Higher Gate Arrive
     [Teardown]  Run Keywords  Clean Subsidy  AND  Plan Reset
     Config Subsidy    ${20}    ${9}    ${null}    
     Config Subsidy    ${100}    ${8}    ${null}    
-    Config Subsidy    ${100}    ${null}    ${4100}  
+    Config Subsidy    ${100}    ${null}    ${4}  
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${order_count}  Do Subsidy
     Should Be Equal As Integers    ${order_count}    10
     ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${real_addtion}  Evaluate    $cur_balance - $orig_balance
-    Should Be Equal As Numbers    ${real_addtion}    202
+    Should Be Equal As Numbers    ${real_addtion}    404
     ${resp}  Search Plans Based on User  ${sc_admin_token}
     Length Should Be    ${resp}    16
     Should Be Equal As Numbers    ${resp}[0][subsidy_price]  0
-    Should Be Equal As Numbers    ${resp}[5][subsidy_price]  8
-    Should Be Equal As Numbers    ${resp}[9][subsidy_price]  8
-    Should Be Equal As Numbers    ${resp}[14][subsidy_price]  4100
+    Should Be Equal As Numbers    ${resp}[5][subsidy_price]  6
+    Should Be Equal As Numbers    ${resp}[9][subsidy_price]  6
+    Should Be Equal As Numbers    ${resp}[14][subsidy_price]  6
 
 Check Discount When Lower Gate Arrive
     [Setup]  Prepare Several Plan

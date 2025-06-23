@@ -173,24 +173,26 @@ Config Subsidy Test
     #重复设置给物料2添加相同补贴门槛的折扣值
     Add Subsidy    ${s2}[id]  ${10}    ${6}   ${null}
     Add Subsidy    ${s2}[id]  ${10}    ${8.4}  ${null}
-    Add Subsidy    ${s3}[id]  ${10}    ${null}  ${3100}
-    Add Subsidy    ${s3}[id]  ${10}    ${null}  ${4100}
+    Add Subsidy    ${s3}[id]  ${10}    ${null}  ${5}
+    Add Subsidy    ${s3}[id]  ${10}    ${null}  ${4}
     #给物料1添加两个门槛的折扣值
     Add Subsidy    ${s1}[id]  ${40.39}    ${7}  ${null}
     Add Subsidy    ${s1}[id]  ${30.3}    ${8}  ${null}
 
     ${got_subsidies}  Get Subsidy
-    Length Should Be    ${got_subsidies}    3
+    Length Should Be    ${got_subsidies}    4
     #获取到的补贴数据应该是按物料和门槛排序
     Should Be Equal As Numbers    ${got_subsidies}[0][gate]  30.3
     Should Be Equal As Numbers    ${got_subsidies}[1][discount]    7
     Should Be Equal As Strings    ${got_subsidies}[2][stuff][name]    s2
+    Should Be Equal As Numbers    ${got_subsidies}[3][amount]    4
 
     Del Subsidy    ${got_subsidies}[2][id]
     ${got_subsidies}  Get Subsidy
-    Length Should Be    ${got_subsidies}    2
+    Length Should Be    ${got_subsidies}    3
     Should Be Equal As Numbers    ${got_subsidies}[0][gate]  30.3
     Should Be Equal As Numbers    ${got_subsidies}[1][discount]    7
+    Should Be Equal As Numbers    ${got_subsidies}[2][amount]    4
 
 Config Extra Info Test
     [Teardown]  Extra Info Reset
