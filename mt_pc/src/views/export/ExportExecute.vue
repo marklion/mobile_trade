@@ -10,7 +10,7 @@
     <h2>磅单导出</h2>
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
-            <export-date :export_name="single_module.module_name" @do_export="export_ticket($event, single_module.module)" :need_company="true"></export-date>
+            <export-date :export_name="single_module.module_name" @do_export="export_ticket($event, single_module.module)" :need_company="single_module.has_more_filter"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
