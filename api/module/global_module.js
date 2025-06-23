@@ -1228,6 +1228,7 @@ module.exports = {
                 start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
                 ticket_type: { type: String, have_to: true, mean: '磅单类型', example: 'sale' },
+                company_id: { type: Number, have_to: false, mean: '公司ID', example: 22 },
             },
             result: {
                 url: { type: String, mean: '下载地址', example: 'https://abc' },
