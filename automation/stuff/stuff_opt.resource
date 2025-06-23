@@ -565,8 +565,8 @@ Update Stuff Second Unit Coefficient
 
 
 Add Subsidy
-    [Arguments]  ${stuff_id}  ${gate}  ${discount}    ${token}=${sc_admin_token}
-    ${req}  Create Dictionary  stuff_id=${stuff_id}  gate=${gate}  discount=${discount}  
+    [Arguments]  ${stuff_id}  ${gate}  ${discount}  ${amount}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  gate=${gate}  discount=${discount}  amount=${amount}
     Req to Server    /cash/add_subsidy_params    ${token}    ${req}
 
 Del Subsidy
