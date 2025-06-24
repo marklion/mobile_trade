@@ -73,7 +73,8 @@
                         <view>
                             <fui-text size="24" type="success" :text="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate">
                             </fui-text>
-                            <fui-tag theme="plain" :text="!!item.enter_time?'已入场':'未入场'" :type="!!item.enter_time?'success':'warning'" :scaleRatio="0.8"></fui-tag>
+                            <image v-if="item.enter_time" :src="require('../static/enter.png')" style="width: 24px; height: 24px;"></image>
+                            <image v-else :src="require('../static/miss.png')" style="width: 24px; height: 24px;"></image>
                         </view>
                         <view>
                             <fui-text size="22" type="gray" v-if="item.comment" :text="item.comment">
