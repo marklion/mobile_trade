@@ -73,6 +73,8 @@
                         <view>
                             <fui-text size="24" type="success" :text="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate">
                             </fui-text>
+                            <image v-if="item.enter_time" :src="require('../static/enter.png')" style="width: 24px; height: 24px;"></image>
+                            <image v-else :src="require('../static/miss.png')" style="width: 24px; height: 24px;"></image>
                         </view>
                         <view>
                             <fui-text size="22" type="gray" v-if="item.comment" :text="item.comment">
@@ -84,6 +86,7 @@
                             <fui-text size="22" type="danger" :text="item.duplicateInfo.message"></fui-text>
                         </view>
                     </template>
+                    
                 </u-cell>
             </view>
         </list-show>
