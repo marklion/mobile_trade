@@ -102,7 +102,8 @@ module.exports = {
             params: {
                 stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
                 gate: { type: Number, have_to: true, mean: '补贴门槛', example: 1 },
-                discount: { type: Number, have_to: true, mean: '折扣', example: 1 },
+                discount: { type: Number, have_to: false, mean: '折扣', example: 1 },
+                amount: { type: Number, have_to: false, mean: '补贴金额', example: 0 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -112,27 +113,30 @@ module.exports = {
                 let sq = db_opt.get_sq();
                 let company = await rbac_lib.get_company_by_token(token);
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (stuff && company && (await company.hasStuff(stuff)))
+                if (!stuff || !company || !(await company.hasStuff(stuff))) {
+                    throw { err_msg: '物料不存在或没有权限' };
+                }
+                const exist_records = await stuff.getSubsidy_gate_discounts({ where: { gate: body.gate } });
+                if (exist_records && exist_records.length == 1)
                 {
-                    let exist_records = await stuff.getSubsidy_gate_discounts({where:{gate:body.gate}});
-                    if (exist_records && exist_records.length == 1)
-                    {
+                    if (body.discount && (body.discount > 0 && body.discount < 10)) {
                         exist_records[0].discount = body.discount;
-                        await exist_records[0].save();
+                        exist_records[0].amount = null;
+                    } else if (body.amount && body.amount > 0) {
+                        exist_records[0].amount = body.amount;
+                        exist_records[0].discount = null;
                     }
-                    else
-                    {
-                        await stuff.createSubsidy_gate_discount({
-                            gate: body.gate,
-                            discount: body.discount,
-                        });
-                    }
-                    ret.result = true;
+                    await exist_records[0].save();
+                } else {
+                    const createData = {
+                        gate: body.gate,
+                        discount: body.discount,
+                        amount: body.amount,
+                    };
+                    await stuff.createSubsidy_gate_discount(createData);
                 }
-                else
-                {
-                    throw { err_msg: '物料不存在或没有权限' }
-                }
+                
+                ret.result = true;
                 return ret;
             }
         },
@@ -179,6 +183,7 @@ module.exports = {
                         id:{type:Number,mean:'补贴参数ID',example:1},
                         gate:{type:Number,mean:'补贴门槛',example:1},
                         discount:{type:Number,mean:'折扣',example:1},
+                        amount:{type:Number,mean:'补贴金额',example:1},
                         stuff:{type:Object,mean:'物料',explain:{
                             id:{type:Number,mean:'物料ID',example:1},
                             name:{type:String,mean:'物料名称',example:'物料1'},
