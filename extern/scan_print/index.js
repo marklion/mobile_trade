@@ -37,6 +37,7 @@ async function print(ip, content)
 	// encoding is optional
 
 	const printer = new escpos.Printer(device, options);
+	let trans_company_name = content.trans_company_name;
 
 	device.open(function(error){
 		console.log(error)
@@ -97,14 +98,17 @@ async function print(ip, content)
 				{ text:'铅封号码', align:"LEFT", width:width},
 				{ text:(content.seal_no?content.seal_no:''), align:"LEFT", width:sec_width },
 			],)
-			.qrimage('http://mt.d8sis.cn/#/pages/Ticket?id=' + content.id, function(err){
+			.tableCustom([
+				{ text: (trans_company_name ? '运输公司' : ''), align: "LEFT", width: width },
+				{ text: (trans_company_name ? trans_company_name : ''), align: "LEFT", width: sec_width },
+			])
+			.qrimage('http://mt.d8sis.cn/#/pages/Ticket?id=' + content.id, function (err) {
 				this.cut();
 				this.close();
 			});
 	});
 }
-async function main()
-{
+async function main() {
 
 	var usbScanner = require('./usbscanner').usbScanner;
 	var getDevices = require('./usbscanner').getDevices;
@@ -116,10 +120,10 @@ async function main()
 	console.log(connectedHidDevices)
 
 	//initialize new usbScanner - takes optional parmeters vendorId and hidMap - check source for details
-	var scanner = new usbScanner({vendorId:7851});
+	var scanner = new usbScanner({ vendorId: 7851 });
 
 	//scanner emits a data event once a barcode has been read and parsed
-	scanner.on("data", async function(code){
+	scanner.on("data", async function (code) {
 		code = code.toLowerCase();
 		code = code.slice(0, 4) + ':' + code.slice(4);
 		code = code.replace('/3/', '/#/');
