@@ -1300,6 +1300,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_ticket_hasOrhasnt_place:{
+            name: '榜单上是否显示装卸车地点',
+            description: '榜单上是否显示装卸车地点',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                ticket_hasOrhasnt_place: { type: Boolean, have_to: true, mean: '榜单上是否显示装卸车地点', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.ticket_hasOrhasnt_place = body.ticket_hasOrhasnt_place;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_delay_checkout_time: {
             name: '设置延迟结算定时时间',
             description: '设置延迟结算定时时间',

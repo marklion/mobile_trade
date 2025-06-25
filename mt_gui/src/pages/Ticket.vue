@@ -170,6 +170,12 @@ export default {
                 value: ticket.trans_company_name,
             })
         }
+        if(ticket.drop_address) {
+            this.ticket_content.list.push({
+                label: '卸货地址',
+                value: ticket.drop_address,
+            });
+        }
         ticket.plan_sct_infos.forEach(item => {
             this.ticket_content.list.push({
                 label: item.sct_scale_item.name,
