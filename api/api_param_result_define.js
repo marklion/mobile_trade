@@ -198,6 +198,7 @@ module.exports = {
                 content: { type: String, mean: '内容', example: '内容' },
             }
         },
+        drop_address: { type: String, mean: '卸货地址', example: '卸货地址' },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },

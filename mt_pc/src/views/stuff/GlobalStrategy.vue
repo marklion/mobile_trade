@@ -31,6 +31,10 @@
                     <el-switch v-model="push_messages_writable_roles" active-text="是否只推送消息给可写角色" @change="set_push_messages_writable_roles">
                     </el-switch>
                 </vue-cell>
+                <vue-cell width="3of12">
+                    <el-switch v-model="ticket_hasOrhasnt_place" active-text="榜单上是否显示装卸车地点" @change="set_ticket_hasOrhasnt_place">
+                    </el-switch>
+                </vue-cell>
             </vue-grid>
             <h3>代理配置</h3>
             <page-content ref="all_delegates" body_key="delegates" enable req_url="/stuff/get_delegates">
@@ -179,6 +183,7 @@ export default {
         return {
             show_add_contract_diag: false,
             push_messages_writable_roles: false,
+            ticket_hasOrhasnt_place: false,
             contract_id_selected: 0,
             focus_delegate_id: 0,
             new_delegate: {
@@ -224,6 +229,7 @@ export default {
         this.get_buy_config_hard();
         this.get_show_sc_in_field();
         this.get_push_messages_writable_roles();
+        this.get_ticket_hasOrhasnt_place();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -437,6 +443,15 @@ export default {
         set_push_messages_writable_roles: async function () {
             await this.$send_req('/stuff/set_push_messages_writable_roles', {
                 push_messages_writable_roles: this.push_messages_writable_roles
+            });
+        },
+        get_ticket_hasOrhasnt_place: async function () {
+            let ret = await this.$send_req('/global/get_ticket_hasOrhasnt_place', {});
+            this.ticket_hasOrhasnt_place = ret.ticket_hasOrhasnt_place;
+        },
+        set_ticket_hasOrhasnt_place: async function () {
+            await this.$send_req('/stuff/set_ticket_hasOrhasnt_place', {
+                ticket_hasOrhasnt_place: this.ticket_hasOrhasnt_place
             });
         },
     }

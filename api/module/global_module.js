@@ -51,6 +51,12 @@ async function get_ticket_func(body, token) {
             content: element.content,
         });
     });
+    let drop_address = '';
+    if (plan.company.ticket_hasOrhasnt_place){
+        drop_address = plan.drop_address
+    }else{
+        drop_address = null
+    }
 
     return {
         id: plan.id,
@@ -84,6 +90,7 @@ async function get_ticket_func(body, token) {
         plan_sct_infos:plan.plan_sct_infos,
         delegate_stamp_path: delegate_stamp_path,
         extra_infos: extra_infos,
+        drop_address: drop_address,
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
@@ -2000,6 +2007,20 @@ module.exports = {
                 let company = await rbac_lib.get_company_by_token(token);
                 return { push_messages_writable_roles: company.push_messages_writable_roles };
             }
-        }
+        },
+        get_ticket_hasOrhasnt_place:{
+            name:'获取榜单是否显示装卸车地点',
+            description:'获取榜单是否显示装卸车地点',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                ticket_hasOrhasnt_place: { type: Boolean, mean: '是否显示装卸车地点', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { ticket_hasOrhasnt_place: company.ticket_hasOrhasnt_place };    
+            }
+        },
     },
 }
