@@ -41,7 +41,7 @@
         </list-show>
     </view>
     <view v-else-if="cur_page == 1">
-        <dev-opt v-for="(single_dev,index) in all_dev" :key="index" :device="single_dev" @refresh="dev_refresh"></dev-opt>
+        <dev-opt v-for="(single_dev,index) in all_dev" :key="index" :company="current_company" :device="single_dev" @refresh="dev_refresh"></dev-opt>
     </view>
     <view v-else-if="cur_page == 2">
         <view v-if="stamp_pic">
@@ -108,6 +108,7 @@ export default {
             tmp_seal_no: '',
             stamp_pic: '',
             all_dev: [],
+            current_company:'',
             is_exit_confirm: false,
             focus_company: {},
             zones: [],
@@ -132,6 +133,9 @@ export default {
         },
         init_dev: async function () {
             let resp = await this.$send_req('/scale/get_device_status', {});
+            this.current_company = {
+                access_control_permission: resp.switchAcc 
+            };
             this.$set(this, 'all_dev', resp.devices);
         },
         dev_refresh: async function () {
