@@ -17,6 +17,7 @@
                             <text class="time-text">{{ begin_hour }}:{{ begin_minute }}:{{ begin_second }}</text>
                             <text class="divider">-</text>
                             <text class="time-text">{{ end_hour }}:{{ end_minute }}:{{ end_second }}</text>
+                            <fui-button btnSize="mini" type="gray" text="清除时间" @click="clearTime" style="margin-left: 10px;" />
                         </view>
                         <view style="display: flex;justify-content: center; gap: 10px;">
                             <fui-button btnSize="mini" type="warning" @click="show_start_time = true">开始时间</fui-button>
@@ -97,6 +98,12 @@ export default {
     },
     data: function () {
         return {
+            begin_hour: '',
+            begin_minute: '',
+            begin_second: '',
+            end_hour: '',
+            end_minute: '',
+            end_second: '',
             status_string: function (url) {
                 let ret = '正在导出';
                 if (url == 'no') {
@@ -138,6 +145,16 @@ export default {
         };
     },
     methods: {
+        clearTime() {
+            this.begin_hour = '';
+            this.begin_minute = '';
+            this.begin_second = '';
+            this.end_hour = '';
+            this.end_minute = '';
+            this.end_second = '';
+            this.show_start_time = false;
+            this.show_end_time = false;
+        },
         download_file: function (url) {
             uni.downloadFile({
                 url: this.$convert_attach_url(url),
@@ -177,14 +194,19 @@ export default {
             this.end_date = e.endDate.result;
         },
         export_plan: async function (prefix) {
-            await this.$send_req(prefix + '/export_plans', {
+            let export_params = {
                 start_time: this.begin_date,
                 end_time: this.end_date,
                 stuff_id: this.stuff_filter.id,
                 company_id: this.company_filter.id,
-                m_start_time: this.begin_date + ' ' + this.begin_hour + ':' + this.begin_minute + ':' + this.begin_second,
-                m_end_time: this.end_date + ' ' + this.end_hour + ':' + this.end_minute + ':' + this.end_second,
-            });
+                m_start_time: undefined,
+                m_end_time: undefined,
+            };
+            if (this.begin_hour || this.end_hour) {
+                export_params.m_start_time = this.begin_date + ' ' + this.begin_hour + ':' + this.begin_minute + ':' + this.begin_second;
+                export_params.m_end_time = this.end_date + ' ' + this.end_hour + ':' + this.end_minute + ':' + this.end_second;
+            }
+            await this.$send_req(prefix + '/export_plans', export_params);
             this.cur_page = 1;
         },
         get_stuff: async function (pageNo) {
@@ -327,7 +349,7 @@ export default {
     background-color: #f5f5f5;
     border-radius: 8px;
     margin: 10px 0;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .time-text {
