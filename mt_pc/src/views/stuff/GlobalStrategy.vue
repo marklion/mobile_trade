@@ -35,6 +35,10 @@
                     <el-switch v-model="ticket_hasOrhasnt_place" active-text="榜单上是否显示装卸车地点" @change="set_ticket_hasOrhasnt_place">
                     </el-switch>
                 </vue-cell>
+                <vue-cell width="3of12">
+                    <el-switch v-model="access_control_permission" active-text="门禁权限是否关闭" @change="set_access_control_permission">
+                    </el-switch>
+                </vue-cell>
             </vue-grid>
             <h3>代理配置</h3>
             <page-content ref="all_delegates" body_key="delegates" enable req_url="/stuff/get_delegates">
@@ -184,6 +188,7 @@ export default {
             show_add_contract_diag: false,
             push_messages_writable_roles: false,
             ticket_hasOrhasnt_place: false,
+            access_control_permission: false,
             contract_id_selected: 0,
             focus_delegate_id: 0,
             new_delegate: {
@@ -230,6 +235,7 @@ export default {
         this.get_show_sc_in_field();
         this.get_push_messages_writable_roles();
         this.get_ticket_hasOrhasnt_place();
+        this.get_access_control_permission();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -452,6 +458,15 @@ export default {
         set_ticket_hasOrhasnt_place: async function () {
             await this.$send_req('/stuff/set_ticket_hasOrhasnt_place', {
                 ticket_hasOrhasnt_place: this.ticket_hasOrhasnt_place
+            });
+        },
+        get_access_control_permission: async function () {
+            let ret = await this.$send_req('/global/get_access_control_permission', {});
+            this.access_control_permission = ret.access_control_permission;
+        },
+        set_access_control_permission: async function () { 
+            await this.$send_req('/stuff/set_access_control_permission', {
+                access_control_permission: this.access_control_permission
             });
         },
     }

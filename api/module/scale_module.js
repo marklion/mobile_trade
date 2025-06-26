@@ -187,10 +187,18 @@ module.exports = {
                 devices: { type: Array, mean: '设备状态', explain: api_param_result_define.device_status_define }
             },
             func: async function (body, token) {
+                let switchAcc = false;
                 let company = await rbac_lib.get_company_by_token(token);
+                if (company.access_control_permission) {
+                    switchAcc = true;
+                }else{
+                    switchAcc = false;
+                }
                 let resp = await field_lib.dev_opt.get_device_status(company)
                 return {
-                    devices: resp
+                    devices: resp,
+                    switchAcc: switchAcc
+                    
                 }
             }
         },

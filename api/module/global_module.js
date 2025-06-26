@@ -2022,5 +2022,19 @@ module.exports = {
                 return { ticket_hasOrhasnt_place: company.ticket_hasOrhasnt_place };    
             }
         },
+        get_access_control_permission:{
+            name: '获取门禁权限',
+            description: '获取门禁权限',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                access_control_permission: { type: Boolean, mean: '是否开启门禁权限', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { access_control_permission: company.access_control_permission };
+            }
+        }
     },
 }
