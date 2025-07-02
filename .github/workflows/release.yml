@@ -24,7 +24,7 @@ jobs:
     - name: Build BackEnd
       run: |
         docker pull marklion/mt_deploy:v1.0
-        docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.0 make -j 10 -f `realpath .`/Makefile ENV_REMOTE_HOST='https://console.d8sis.cn'
+        docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.0 make -f `realpath .`/Makefile ENV_REMOTE_HOST='https://console.d8sis.cn'
 
     - name: Deploy
       env:
