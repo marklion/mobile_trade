@@ -32,7 +32,7 @@
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
-                    <el-switch v-model="ticket_hasOrhasnt_place" active-text="榜单上是否显示装卸车地点" @change="set_ticket_hasOrhasnt_place">
+                    <el-switch v-model="ticket_hasOrhasnt_place" active-text="磅单上是否显示装卸车地点" @change="set_ticket_hasOrhasnt_place">
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
