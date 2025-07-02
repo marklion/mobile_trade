@@ -30,6 +30,9 @@
                     <el-form-item label="卸车地点" prop="drop_address">
                         <el-cascader v-model="plan.drop_address" placeholder="请选择，可搜索" :options="getRegion()" filterable></el-cascader>
                     </el-form-item>
+                    <el-form-item label="详细地址" prop="location_detail" v-if="support_location_detail">
+                        <el-input v-model="plan.location_detail" placeholder="请输入详细地址：门牌号" :options="getRegion()" filterable></el-input>
+                    </el-form-item>
                 </div>
                 <div v-else>
                     <el-form-item label="单价" prop="price">
@@ -169,7 +172,7 @@ export default {
 
             add_type: '',
             query: {},
-
+            support_location_detail: false,
             order_rules: {
                 plan_time: [{
                     required: true,
@@ -268,6 +271,7 @@ export default {
             plan: {
                 comment: "",
                 drop_address: [],
+                location_detail: "",
                 plan_time: "",
                 stuff_id: 0,
                 use_for: "",
@@ -318,6 +322,7 @@ export default {
         if (this.notice) {
             this.notice_show = true;
         }
+        this.get_support_location_detail();
     },
     methods: {
         onProxyChange(is_proxy) {
@@ -326,6 +331,10 @@ export default {
             this.plan.trans_company_name = this.saler_name;
             this.saler_name = tmp;
 
+        },
+        get_support_location_detail: async function () {
+            let ret = await this.$send_req('/global/get_support_location_detail', {});
+            this.support_location_detail = ret.support_location_detail;
         },
         deleteRow(index, rows) {
             rows.splice(index, 1);
@@ -451,7 +460,10 @@ export default {
                 for (let ele of this.vehicles) {
                     let req = {
                         ...this.plan,
-                        drop_address: this.plan.drop_address.join('-'),
+                        drop_address: [
+                            ...this.plan.drop_address,
+                            ...(this.plan.location_detail ? [this.plan.location_detail] : [])
+                        ].join('-'),
                         main_vehicle_id: ele.main_vehicle.id,
                         behind_vehicle_id: ele.behind_vehicle.id,
                         driver_id: ele.driver.id,

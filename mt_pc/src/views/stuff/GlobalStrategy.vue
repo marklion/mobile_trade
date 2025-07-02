@@ -35,6 +35,10 @@
                     <el-switch v-model="ticket_hasOrhasnt_place" active-text="榜单上是否显示装卸车地点" @change="set_ticket_hasOrhasnt_place">
                     </el-switch>
                 </vue-cell>
+                <vue-cell width="3of12">
+                    <el-switch v-model="support_location_detail" active-text="卸车地点支持细节输入" @change="set_support_location_detail">
+                    </el-switch>
+                </vue-cell>
             </vue-grid>
             <h3>代理配置</h3>
             <page-content ref="all_delegates" body_key="delegates" enable req_url="/stuff/get_delegates">
@@ -184,6 +188,7 @@ export default {
             show_add_contract_diag: false,
             push_messages_writable_roles: false,
             ticket_hasOrhasnt_place: false,
+            support_location_detail: false,
             contract_id_selected: 0,
             focus_delegate_id: 0,
             new_delegate: {
@@ -230,6 +235,7 @@ export default {
         this.get_show_sc_in_field();
         this.get_push_messages_writable_roles();
         this.get_ticket_hasOrhasnt_place();
+        this.get_support_location_detail();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -454,6 +460,15 @@ export default {
                 ticket_hasOrhasnt_place: this.ticket_hasOrhasnt_place
             });
         },
+        set_support_location_detail: async function () {
+            await this.$send_req('/stuff/set_support_location_detail', {
+                support_location_detail: this.support_location_detail
+            });
+        },
+        get_support_location_detail: async function () {
+            let ret = await this.$send_req('/global/get_support_location_detail', {});
+            this.support_location_detail = ret.support_location_detail;
+        }
     }
 }
 </script>

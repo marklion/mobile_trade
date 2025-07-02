@@ -18,6 +18,9 @@
                     <fui-input placeholder="请输入卸车地点" disabled v-model="plan.drop_address"></fui-input>
                 </fui-form-item>
             </pick-regions>
+            <fui-form-item v-if="support_location_detail" label="详细地址" :padding="[0,'18px']" prop="location_detail">
+                <fui-input placeholder="请输入详细地址" v-model="plan.location_detail"></fui-input>
+            </fui-form-item>
         </view>
         <view v-else>
             <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
@@ -153,6 +156,7 @@ export default {
             }],
             all_vt_list: [],
             show_add_vt: false,
+            support_location_detail: false,
             notice_show: false,
             show_behind_vehicle_plate: false,
             show_driver_info: false,
@@ -205,6 +209,7 @@ export default {
             plan: {
                 comment: "",
                 drop_address: "",
+                location_detail: "",
                 plan_time: "",
                 stuff_id: 0,
                 use_for: "",
@@ -265,6 +270,10 @@ export default {
                 pageNo: pageNo
             });
             return res.vehicle_teams;
+        },
+        get_support_location_detail: async function () {
+            let ret = await this.$send_req('/global/get_support_location_detail', {});
+            this.support_location_detail = ret.support_location_detail;
         },
         prepare_proxy_buy: function () {
             this.is_proxy = true;
@@ -593,11 +602,12 @@ export default {
                 let ele = this.vehicles[index];
                 let req = {
                     ...this.plan,
+                    drop_address: this.plan.drop_address + (this.plan.location_detail ? '-' + this.plan.location_detail : ''),
                     main_vehicle_id: ele.main_vehicle.id,
                     behind_vehicle_id: ele.behind_vehicle.id,
                     driver_id: ele.driver.id,
                     is_proxy: this.is_proxy,
-                    bidding_id: this.bidding_id,
+                    bidding_id: this.bidding_id,    
                     comment: ele.comment,
                 };
                 if (req.is_proxy) {
@@ -640,6 +650,7 @@ export default {
         if (this.notice) {
             this.notice_show = true;
         }
+        this.get_support_location_detail();
     },
 }
 </script>
