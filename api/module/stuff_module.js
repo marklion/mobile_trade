@@ -1320,6 +1320,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_support_location_detail:{
+            name: '设置卸货地点是否显示详细地址',
+            description: '设置卸货地点是否显示详细地址',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                support_location_detail: { type: Boolean, have_to: true, mean: '卸货地点是否显示详细地址', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }  
+                },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.support_location_detail = body.support_location_detail;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_delay_checkout_time: {
             name: '设置延迟结算定时时间',
             description: '设置延迟结算定时时间',

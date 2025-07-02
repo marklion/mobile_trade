@@ -2022,5 +2022,19 @@ module.exports = {
                 return { ticket_hasOrhasnt_place: company.ticket_hasOrhasnt_place };    
             }
         },
+        get_support_location_detail: {
+            name: '获取卸车地点支持细节输入',
+            description: '获取卸车地点支持细节输入',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                support_location_detail: { type: Boolean, mean: '是否支持卸车地点细节输入', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { support_location_detail: company.unloading_location_detailed };
+            }
+        }
     },
 }

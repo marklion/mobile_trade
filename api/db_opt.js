@@ -124,6 +124,7 @@ let db_opt = {
             buy_config_hard:{type: DataTypes.BOOLEAN, defaultValue: false },
             push_messages_writable_roles:{type: DataTypes.BOOLEAN, defaultValue: false },
             ticket_hasOrhasnt_place: { type: DataTypes.BOOLEAN, defaultValue: false },
+            support_location_detail: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
