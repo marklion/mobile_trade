@@ -184,7 +184,8 @@ module.exports = {
             params: {
             },
             result: {
-                devices: { type: Array, mean: '设备状态', explain: api_param_result_define.device_status_define }
+                devices: { type: Array, mean: '设备状态', explain: api_param_result_define.device_status_define },
+                switchAcc: { type: Boolean, mean: '是否开启设备状态开关', example: true }
             },
             func: async function (body, token) {
                 let switchAcc = false;
