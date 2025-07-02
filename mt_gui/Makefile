@@ -11,7 +11,7 @@ all:$(SRC_DIR)/node_modules
 	cp -a $(SRC_DIR)/dist/build/mp-weixin/* $(MP_DELIVER_PATH)/ || true
 	sed -i "s/$(ENV_MP_APPID)/MP_APPID/g" $(SRC_DIR)/src/manifest.json
 $(SRC_DIR)/node_modules:$(SRC_DIR)/package.json
-	pushd $(SRC_DIR); n 16.8.0 && yarn install; n 18.17.0;
+	pushd $(SRC_DIR); n 16.8.0 && yarn install --ignore-engines; n 18.17.0;
 clean:
 	rm -rf $(SRC_DIR)/dist
 	rm -rf $(SRC_DIR)/node_modules
