@@ -2022,7 +2022,7 @@ module.exports = {
                 return { ticket_hasOrhasnt_place: company.ticket_hasOrhasnt_place };    
             }
         },
-        get_access_control_permission:{
+        get_access_control_permission: {
             name: '获取门禁权限',
             description: '获取门禁权限',
             is_write: false,

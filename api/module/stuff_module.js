@@ -1320,7 +1320,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_access_control_permission:{
+        set_access_control_permission: {
             name: '设置权限控制权限',
             description: '设置权限控制权限',
             is_write: true,
@@ -1338,9 +1338,9 @@ module.exports = {
                     await company.save();
                 }
                 return { result: true };
-            }   
+            }
         },
-        set_support_location_detail:{
+        set_support_location_detail: {
             name: '设置卸货地点是否显示详细地址',
             description: '设置卸货地点是否显示详细地址',
             is_write: true,
@@ -1349,8 +1349,8 @@ module.exports = {
                 support_location_detail: { type: Boolean, have_to: true, mean: '卸货地点是否显示详细地址', example: true }
             },
             result: {
-                result: { type: Boolean, mean: '结果', example: true }  
-                },
+                result: { type: Boolean, mean: '结果', example: true }
+            },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 if (company) {
