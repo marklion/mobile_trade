@@ -776,7 +776,7 @@ std::string device_management_handler::gate_proc_id_plate(const std::string &_id
             plate = get_plate_no_by_id(_id);
         }
         std::string order_number;
-        ret = _set.should_handle_income_plate(plate, order_number);
+        ret = _set.should_handle_income_plate(plate, order_number, _is_enter);
         if (ret.length() > 0)
         {
             auto vo = sqlite_orm::search_record<sql_order>("plate_number == '%s' AND enter_gate == 1 AND status == 100", plate.c_str());

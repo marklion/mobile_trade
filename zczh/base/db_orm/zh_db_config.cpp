@@ -43,7 +43,7 @@ bool sql_device_set::is_empty_set()
     return ret;
 }
 
-std::string sql_device_set::should_handle_income_plate(const std::string &_plate_no, std::string &_order_number)
+std::string sql_device_set::should_handle_income_plate(const std::string &_plate_no, std::string &_order_number, bool _is_enter)
 {
     std::string ret = "无车辆信息";
 
@@ -60,6 +60,10 @@ std::string sql_device_set::should_handle_income_plate(const std::string &_plate
                     ret = "";
                 }
                 else if (vo->confirm_info_time.length() > 0 && vo->p_weight > 0 && vo->m_weight > 0)
+                {
+                    ret = "";
+                }
+                else if (_is_enter)
                 {
                     ret = "";
                 }

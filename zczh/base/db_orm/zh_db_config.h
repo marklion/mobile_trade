@@ -182,7 +182,7 @@ public:
         return ret;
     }
     bool is_empty_set();
-    std::string should_handle_income_plate(const std::string &_plate_no, std::string &_order_number);
+    std::string should_handle_income_plate(const std::string &_plate_no, std::string &_order_number, bool _is_enter = false);
     virtual std::string table_name()
     {
         return "device_set_table";
