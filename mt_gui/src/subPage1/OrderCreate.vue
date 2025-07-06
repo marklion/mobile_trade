@@ -74,12 +74,12 @@
             </fui-form-item>
             <fui-form-item label="挂车牌" :rules="rules[1]" prop="behind_vehicle_plate">
                 <fui-input :padding="[0]" v-model="new_vehicle.behind_vehicle_plate">
-                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_behind_vehicle_plate = true"></fui-button>    
+                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_behind_vehicle_plate = true"></fui-button>
                 </fui-input>
             </fui-form-item>
             <fui-form-item asterisk label="司机姓名" :rules="rules[2]" prop="driver_name">
                 <fui-input :padding="[0]" v-model="new_vehicle.driver_name">
-                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_driver_info = true"></fui-button>    
+                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_driver_info = true"></fui-button>
                 </fui-input>
             </fui-form-item>
             <fui-form-item asterisk label="司机电话" :rules="rules[3]" prop="driver_phone">
@@ -272,7 +272,9 @@ export default {
             return res.vehicle_teams;
         },
         get_support_location_detail: async function () {
-            let ret = await this.$send_req('/global/get_support_location_detail', {});
+            let ret = await this.$send_req('/global/get_support_location_detail', {
+                company_id: this.company_id,
+            });
             this.support_location_detail = ret.support_location_detail;
         },
         prepare_proxy_buy: function () {
@@ -607,7 +609,7 @@ export default {
                     behind_vehicle_id: ele.behind_vehicle.id,
                     driver_id: ele.driver.id,
                     is_proxy: this.is_proxy,
-                    bidding_id: this.bidding_id,    
+                    bidding_id: this.bidding_id,
                     comment: ele.comment,
                 };
                 if (req.is_proxy) {

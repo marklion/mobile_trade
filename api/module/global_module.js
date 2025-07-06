@@ -2019,7 +2019,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return { ticket_hasOrhasnt_place: company.ticket_hasOrhasnt_place };    
+                return { ticket_hasOrhasnt_place: company.ticket_hasOrhasnt_place };
             }
         },
         get_access_control_permission: {
@@ -2041,13 +2041,18 @@ module.exports = {
             description: '获取卸车地点支持细节输入',
             is_write: false,
             is_get_api: false,
-            params: {},
+            params: {
+                company_id:{ type: Number, have_to: false, mean: '公司ID', example: 1 }
+            },
             result: {
                 support_location_detail: { type: Boolean, mean: '是否支持卸车地点细节输入', example: true }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                return { support_location_detail: company.unloading_location_detailed };
+                if (body.company_id) {
+                    company = await db_opt.get_sq().models.company.findByPk(body.company_id);
+                }
+                return { support_location_detail: company.support_location_detail };
             }
         }
     },

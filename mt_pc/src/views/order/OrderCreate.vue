@@ -333,7 +333,9 @@ export default {
 
         },
         get_support_location_detail: async function () {
-            let ret = await this.$send_req('/global/get_support_location_detail', {});
+            let ret = await this.$send_req('/global/get_support_location_detail', {
+                company_id:this.company_id
+            });
             this.support_location_detail = ret.support_location_detail;
         },
         deleteRow(index, rows) {
