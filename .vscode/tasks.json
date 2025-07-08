@@ -6,9 +6,9 @@
         {
             "label": "build project",
             "type": "shell",
-            "command": "make -j 10 -C ./api/",
+            "command": "npm install",
             "options": {
-                "cwd": "${workspaceFolder}"
+                "cwd": "${workspaceFolder}/api"
             },
             "problemMatcher": [
                 "$tsc"
@@ -32,6 +32,9 @@
                 "showReuseMessage": true,
                 "clear": false
             },
+            "dependsOn": [
+                "build project"
+            ],
             "problemMatcher": []
         },
         {
