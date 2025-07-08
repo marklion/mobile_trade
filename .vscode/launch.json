@@ -2,15 +2,23 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "node",
-            "request": "launch",
             "name": "debug backend",
-            "program": "${workspaceFolder}/api/build/api/index.js",
             "envFile": "/tmp/purpose.env",
-            "console": "integratedTerminal",
-            "internalConsoleOptions": "neverOpen",
             "cwd": "${workspaceFolder}/api",
             "sourceMaps": true,
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "restart": true,
+            "skipFiles": [
+                "<node_internals>/**"
+            ],
             "preLaunchTask": "Select Purpose",
             "postDebugTask": "Reset DB"
         },

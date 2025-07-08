@@ -57,7 +57,7 @@ async function make_plan_resp(plan) {
     };
 }
 function mkplan_filter(cond = undefined, is_all = false) {
-    let = real_cond = { id: { [db_opt.Op.ne]: 0 } };
+    let real_cond = { id: { [db_opt.Op.ne]: 0 } };
     let status_filter = {
         [db_opt.Op.in]: [1, 2]
     };

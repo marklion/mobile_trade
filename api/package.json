@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon --watch ./ --exec babel-node ./index.js",
     "build": "webpack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -51,12 +52,15 @@
     "vertx": "^0.0.1-security"
   },
   "devDependencies": {
+    "@babel/node": "^7.28.0",
+    "babel-node": "^0.0.1-security",
     "copy-webpack-plugin": "^12.0.2",
     "eslint": "^8.57.0",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-webpack-plugin": "^4.0.1",
     "node-pre-gyp": "^0.17.0",
+    "nodemon": "^3.1.10",
     "webpack": "^5.89.0",
     "webpack-cli": "^5.1.4"
   }

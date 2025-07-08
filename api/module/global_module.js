@@ -5,7 +5,6 @@ const db_opt = require('../db_opt');
 const sc_lib = require('../lib/sc_lib');
 const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
-const captureWebsite = require('capture-website');
 const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
@@ -19,6 +18,7 @@ const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
 
 async function do_web_cap(url, file_name) {
+    const captureWebsite = await import('capture-website');
     await captureWebsite.default.file(url, file_name, {
         emulateDevice: 'iPhone X',
         fullPage: true,

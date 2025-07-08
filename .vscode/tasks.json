@@ -6,7 +6,7 @@
         {
             "label": "build project",
             "type": "shell",
-            "command": "make -j 10",
+            "command": "make -j 10 -C ./api/",
             "options": {
                 "cwd": "${workspaceFolder}"
             },
@@ -24,9 +24,6 @@
             "options": {
                 "cwd": "${workspaceFolder}"
             },
-            "dependsOn": [
-                "build project"
-            ],
             "presentation": {
                 "echo": true,
                 "reveal": "always",
