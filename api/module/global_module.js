@@ -1264,7 +1264,8 @@ module.exports = {
                     const filePaths = [];
                     for (let index = 0; index < plans.length; index++) {
                         const plan = plans[index];
-                        let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
+                        const uuid = require('uuid');
+                        let real_file_name = uuid.v4();
                         const filePath = '/uploads/ticket_' + real_file_name + '.png';
                         await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, '/database' + filePath);
                         filePaths.push(`/database${filePath}`);
