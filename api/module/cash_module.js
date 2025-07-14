@@ -69,7 +69,8 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await common.do_export_later(token, '余额明细', async () => {
+                let company = await db_opt.get_sq().models.company.findByPk(body.contract_id);
+                return await common.do_export_later(token, company.name + '的余额明细', async () => {
                     return await cash_lib.export_cash_history(token, body.contract_id, body.begin_time, body.end_time);
                 });
             },
