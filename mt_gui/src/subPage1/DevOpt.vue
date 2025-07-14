@@ -19,7 +19,7 @@
                 </u-row>
             </view>
             <view slot="title">
-                <u-row gutter="10" justify="space-between" v-if="device.scale_status">
+                <u-row gutter="10" justify="space-between" v-if="device.scale_status || company.barriergate_control_permission">
                     <u-col :span="4">
                         重量：{{device.cur_weight}}
                     </u-col>
@@ -99,7 +99,7 @@ export default {
         company: {
             type: Object,
             required: true,
-            default: () => ({ access_control_permission: false })
+            default: () => ({ access_control_permission: false , barriergate_control_permission: false }),
         }
     },
     computed: {
