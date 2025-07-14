@@ -361,7 +361,7 @@ static std::string get_plate_no_by_id(const std::string &_id)
     std::string ret;
     if (_id.length() > 0)
     {
-        auto vo = sqlite_orm::search_record<sql_order>("driver_id == '%s' AND status != 100", _id.c_str());
+        auto vo = sqlite_orm::search_record<sql_order>("driver_id == '%s' ORDER BY PRI_ID DESC LIMIT 1", _id.c_str());
         if (vo)
         {
             ret = vo->plate_number;

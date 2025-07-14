@@ -1487,6 +1487,7 @@ module.exports = {
                 subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
                 subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price * 10).toFixed(1),
                 second_unit: this.place_hold(element.stuff.second_unit, ''),
+                drop_take_zone_name:element.drop_take_zone_name,
                 second_value: (() => {
                     const coefficient = this.place_hold(element.stuff.coefficient, 2);
                     const value = coefficient * element.count;
