@@ -1455,12 +1455,22 @@ module.exports = {
     make_file_by_plans: async function (plans) {
         let json = [];
         let unifiedDecimalPlaces = 2;
+        let totalOrders = 0;
+        let totalLoad = 0;
+        let totalPriceSum = 0;
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
             const dp = element.stuff?.second_unit_decimal ?? 2;
             if (dp > unifiedDecimalPlaces) {
                 unifiedDecimalPlaces = dp;
             }
+            const countVal = this.place_hold(element.count, 0);
+            const unitPriceVal = this.place_hold(element.unit_price, 0);
+            const totalPriceVal = unitPriceVal * countVal;
+
+            totalOrders++;
+            totalLoad += countVal;
+            totalPriceSum += totalPriceVal;
             json.push({
                 create_company: this.place_hold(element.company, { name: '(司机选择)' }).name,
                 accept_company: element.stuff.company.name,
@@ -1495,6 +1505,8 @@ module.exports = {
                     }
                     return value.toFixed(dp);
                 })(),
+                plan_counts:countVal,
+                total_orders: totalOrders,
             });
         }
         let columns = [{
@@ -1583,6 +1595,15 @@ module.exports = {
         let worksheet = workbook.addWorksheet('Plans');
         worksheet.columns = columns;
         worksheet.addRows(json);
+        worksheet.addRow({
+            create_company: `合计:共${totalOrders}单`,
+            count: totalLoad, 
+            total_price: totalPriceSum, 
+        })
+        const lastRow = worksheet.lastRow;
+        lastRow.font = { bold: true, color: { argb: 'FFFF0000' }, }; 
+        lastRow.getCell('count').numFmt = '0.00';
+        lastRow.getCell('total_price').numFmt = '0.00';
         worksheet.getColumn('p_weight').numFmt = '0.00';
         worksheet.getColumn('m_weight').numFmt = '0.00';
         worksheet.getColumn('count').numFmt = '0.00';
