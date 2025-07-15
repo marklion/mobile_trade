@@ -126,6 +126,7 @@ let db_opt = {
             ticket_hasOrhasnt_place: { type: DataTypes.BOOLEAN, defaultValue: false },
             access_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
             support_location_detail: { type: DataTypes.BOOLEAN, defaultValue: false },
+            barriergate_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

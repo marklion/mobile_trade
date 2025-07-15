@@ -1360,6 +1360,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_barriergate_control_permission:{
+            name: '设置门禁权限控制权限',
+            description: '设置门禁权限控制权限',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                barriergate_control_permission: { type: Boolean, have_to: true, mean: '是否启用门禁权限控制', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.barriergate_control_permission = body.barriergate_control_permission;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_delay_checkout_time: {
             name: '设置延迟结算定时时间',
             description: '设置延迟结算定时时间',

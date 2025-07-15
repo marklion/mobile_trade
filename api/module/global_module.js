@@ -2037,6 +2037,20 @@ module.exports = {
                 return { access_control_permission: company.access_control_permission };
             }
         },
+        get_barriergate_control_permission: { 
+            name: '获取闸杆权限',
+            description: '获取闸杆权限',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                barriergate_control_permission: { type: Boolean, mean: '是否开启闸杆权限', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { barriergate_control_permission: company.barriergate_control_permission };
+            }
+        },
         get_support_location_detail: {
             name: '获取卸车地点支持细节输入',
             description: '获取卸车地点支持细节输入',

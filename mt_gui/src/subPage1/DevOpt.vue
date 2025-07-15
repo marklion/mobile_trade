@@ -3,7 +3,7 @@
     <u-cell-group :title="device.name + '-' + device.scale_status">
         <u-cell>
             <view slot="label">
-                <u-row gutter="10" justify="space-between" v-if="company.access_control_permission || device.scale_status">
+                <u-row gutter="10" justify="space-between" v-if="device.scale_status ? company.access_control_permission : company.barriergate_control_permission">
                     <u-col :span="3">
                         <u-button type="primary" size="mini" :text="'开' + gate_name.fg" @click="gate_ctrl(true, true)"></u-button>
                     </u-col>
@@ -99,7 +99,7 @@ export default {
         company: {
             type: Object,
             required: true,
-            default: () => ({ access_control_permission: false })
+            default: () => ({ access_control_permission: false , barriergate_control_permission: false }),
         }
     },
     computed: {

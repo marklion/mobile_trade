@@ -40,6 +40,10 @@
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
+                    <el-switch v-model="barriergate_control_permission" active-text="磅上闸杆是否关闭" @change="set_barriergate_control_permission">
+                    </el-switch>
+                </vue-cell>
+                <vue-cell width="3of12">
                     <el-switch v-model="support_location_detail" active-text="卸车地点支持细节输入" @change="set_support_location_detail">
                     </el-switch>
                 </vue-cell>
@@ -193,6 +197,7 @@ export default {
             push_messages_writable_roles: false,
             ticket_hasOrhasnt_place: false,
             access_control_permission: false,
+            barriergate_control_permission: false,
             support_location_detail: false,
             contract_id_selected: 0,
             focus_delegate_id: 0,
@@ -242,6 +247,7 @@ export default {
         this.get_ticket_hasOrhasnt_place();
         this.get_access_control_permission();
         this.get_support_location_detail();
+        this.get_barriergate_control_permission();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -483,8 +489,17 @@ export default {
         get_support_location_detail: async function () {
             let ret = await this.$send_req('/global/get_support_location_detail', {});
             this.support_location_detail = ret.support_location_detail;
-        }
+        },
+        set_barriergate_control_permission: async function () {
+            await this.$send_req('/stuff/set_barriergate_control_permission', {
+                barriergate_control_permission: this.barriergate_control_permission
+            });
+        },
+        get_barriergate_control_permission: async function () {
+            let ret = await this.$send_req('/global/get_barriergate_control_permission', {});
+            this.barriergate_control_permission = ret.barriergate_control_permission;
     }
+}
 }
 </script>
 

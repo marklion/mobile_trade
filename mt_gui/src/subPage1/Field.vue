@@ -134,7 +134,8 @@ export default {
         init_dev: async function () {
             let resp = await this.$send_req('/scale/get_device_status', {});
             this.current_company = {
-                access_control_permission: !resp.switchAcc
+                access_control_permission: !resp.switchAcc,
+                barriergate_control_permission: !resp.switchGate
             };
             this.$set(this, 'all_dev', resp.devices);
         },

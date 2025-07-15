@@ -188,18 +188,18 @@ module.exports = {
                 switchAcc: { type: Boolean, mean: '是否开启设备状态开关', example: true }
             },
             func: async function (body, token) {
-                let switchAcc = false;
                 let company = await rbac_lib.get_company_by_token(token);
-                if (company.access_control_permission) {
-                    switchAcc = true;
+                if (!company) {
+                    throw { err_msg: '公司信息不存在' };
                 }else{
-                    switchAcc = false;
-                }
-                let resp = await field_lib.dev_opt.get_device_status(company)
-                return {
-                    devices: resp,
-                    switchAcc: switchAcc
-                    
+                    let switchAcc = company.access_control_permission;
+                    let switchGate = company.barriergate_control_permission; 
+                    let resp = await field_lib.dev_opt.get_device_status(company)
+                    return {
+                        devices: resp,
+                        switchAcc: switchAcc,
+                        switchGate: switchGate
+                    }
                 }
             }
         },
