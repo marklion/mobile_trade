@@ -642,4 +642,35 @@ module.exports = {
         });
         return ret;
     },
+    undo_subsidy_by_id: async function(sid) {
+        await db_opt.get_sq().transaction(async (t) => {
+            let sr = await db_opt.get_sq().models.subsidy_record.findByPk(sid, {
+                include:[{
+                    model:db_opt.get_sq().models.company,
+                }]
+            });
+            let filter = {
+                filter_by_plan_time: true,
+            };
+            let prefix = sr.range.split(':')[0].strim();
+            let time_string = sr.range.split(':')[1].strim();
+            filter.time_start = time_string.split(' - ')[0].trim();
+            filter.time_end = time_string.split(' - ')[1].trim();
+            if (prefix == '创建时间') {
+                filter.filter_by_plan_time = false;
+            }
+            let total_plans = await this.search_subsidy_related_plans(filter, sr.company);
+            for (let index = 0; index < total_plans.length; index++) {
+                const element = total_plans[index];
+                let save_one = await db_opt.get_sq().models.archive_plan.findByPk(element.id);
+                element.content.subsidy_price = 0;
+                save_one.content = JSON.stringify(element.content);
+                let orig_plan = await db_opt.get_sq().models.plan.findByPk(element.planId);
+                orig_plan.subsidy_price = element.content.subsidy_price;
+                await orig_plan.save();
+                await save_one.save();
+            }
+            let bhs = await sr
+        });
+    },
 };
