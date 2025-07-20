@@ -133,7 +133,7 @@ module.exports = {
         get_count_by_today_yesterday: {
             name: '获取今日、昨日物料统计',
             description: '获取今日、昨日物料统计',
-            is_write: true,
+            is_write: false,
             is_get_api: false,
             params: {
             },
