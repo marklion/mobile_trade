@@ -600,6 +600,8 @@ let db_opt = {
         _sq.models.stuff.hasMany(_sq.models.subsidy_gate_discount);
         _sq.models.subsidy_record.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.subsidy_record);
+        _sq.models.balance_history.belongsTo(_sq.models.subsidy_record);
+        _sq.models.subsidy_record.hasMany(_sq.models.balance_history);
 
         _sq.models.company.hasMany(_sq.models.extra_info_config);
         _sq.models.extra_info_config.belongsTo(_sq.models.company);

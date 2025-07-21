@@ -10,9 +10,9 @@ ${nr_stuff}  ${EMPTY}
 Check Discount When Higher Gate Arrive
     [Setup]  Prepare Several Plan
     [Teardown]  Run Keywords  Clean Subsidy  AND  Plan Reset
-    Config Subsidy    ${20}    ${9}    ${null}    
-    Config Subsidy    ${100}    ${8}    ${null}    
-    Config Subsidy    ${100}    ${null}    ${4}  
+    Config Subsidy    ${20}    ${9}    ${null}
+    Config Subsidy    ${100}    ${8}    ${null}
+    Config Subsidy    ${100}    ${null}    ${4}
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     ${order_count}  Do Subsidy
     Should Be Equal As Integers    ${order_count}    10
@@ -61,13 +61,53 @@ Check Discount When No Gate Arrive
     Should Be Equal As Numbers    ${resp}[10][subsidy_price]  0
     Should Be Equal As Numbers    ${resp}[11][subsidy_price]  0
     Should Be Equal As Numbers    ${resp}[15][subsidy_price]  0
+
+Do And Undo Subsidy
+    [Setup]  Prepare Several Plan
+    [Teardown]  Run Keywords  Clean Subsidy  AND  Plan Reset
+    Config Subsidy    ${50.3}  ${null}  ${1}  ${nr_stuff}[id]
+    ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${order_count}  Do Subsidy
+    Should Be Equal As Integers    ${order_count}    5
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${real_addtion}  Evaluate    $cur_balance - $orig_balance
+    Should Be Equal As Numbers    ${real_addtion}    50.5
+    ${latest_sr}  Get Latest Subsidies
+    Undo Subsidy    ${latest_sr}
+    ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Should Be Equal As Numbers    ${orig_balance}    ${cur_balance}
+    ${resp}  Search Plans Based on User  ${sc_admin_token}
+    Length Should Be    ${resp}    16
+    Should Be Equal As Numbers    ${resp}[0][subsidy_price]  0
+    Should Be Equal As Numbers    ${resp}[4][subsidy_price]  0
+    Should Be Equal As Numbers    ${resp}[14][subsidy_price]  0
+    Should Be Equal As Numbers    ${resp}[15][subsidy_price]  0
 *** Keywords ***
+Get Latest Subsidies
+    [Arguments]  ${token}=${sc_admin_token}
+    ${all_records}  Req Get to Server    /cash/get_subsidy_record    ${token}    records
+    RETURN  ${all_records}[0]
+Undo Subsidy
+    [Arguments]  ${sr}
+    ${req}  Create Dictionary  record_id=${sr}[id]
+    Req to Server    /cash/undo_subsidy    ${sc_admin_token}    ${req}
+    ${retry}  Set Variable  ${5}
+    WHILE    $retry > 0
+        ${latest_sr}  Get Latest Subsidies
+        ${status}  Get From Dictionary    ${latest_sr}    status    撤销中
+        IF    $status != '撤销中'
+            Should Be Equal As Strings    ${status}    已撤销
+            BREAK
+        END
+        ${retry}  Evaluate    ${retry} - 1
+        Sleep  5s
+    END
 Do Subsidy
     ${cur_date}  Get Current Date  result_format=%Y-%m-%d
     ${req}  Create Dictionary  plan_time_start=${cur_date}  plan_time_end=${cur_date}
     Req to Server    /cash/do_subsidy    ${sc_admin_token}    ${req}
     ${retry}  Set Variable  ${5}
-    ${ret}  Set Variable  ${0}    
+    ${ret}  Set Variable  ${0}
     WHILE    $retry > 0
         ${all_records}  Req Get to Server    /cash/get_subsidy_record    ${sc_admin_token}    records
         ${order_count}  Get From Dictionary    ${all_records}[0]    order_count    ${0}
@@ -104,7 +144,7 @@ Prepare Several Plan
     Set Suite Variable  ${nr_stuff}  ${nr_stuff}
 
 Config Subsidy
-    [Arguments]  ${gate}  ${discount}   ${amount}  ${stuff_id}=${test_stuff}[id]  
+    [Arguments]  ${gate}  ${discount}   ${amount}  ${stuff_id}=${test_stuff}[id]
     Add Subsidy    ${stuff_id}    ${gate}    ${discount}  ${amount}
 Clean Subsidy
     ${resp}  Get Subsidy

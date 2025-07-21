@@ -136,7 +136,7 @@ module.exports = {
                     };
                     await stuff.createSubsidy_gate_discount(createData);
                 }
-                
+
                 ret.result = true;
                 return ret;
             }
@@ -265,7 +265,7 @@ module.exports = {
                     setTimeout(async () => {
                         let new_record = await db_opt.get_sq().models.subsidy_record.findByPk(new_record_id);
                         try {
-                            let order_count = await cash_lib.do_subsidy_by_filter(timer_filter, company);
+                            let order_count = await cash_lib.do_subsidy_by_filter(timer_filter, company, new_record);
                             new_record.order_count = order_count;
                             new_record.status = '已完成';
                         } catch (error) {
@@ -281,6 +281,46 @@ module.exports = {
                 }
                 return ret;
             }
+        },
+        undo_subsidy:{
+            name:'撤销补贴',
+            description: '撤销补贴',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                record_id: { type: Number, have_to: true, mean: '补贴记录ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
+            },
+            func: async function (body, token) {
+                let ret = {
+                    result:false,
+                };
+                let sq = db_opt.get_sq();
+                let sr = await sq.models.subsidy_record.findByPk(body.record_id);
+                let company = await rbac_lib.get_company_by_token(token);
+                if (sr && sr.status == '已完成' && company &&(await company.hasSubsidy_record(sr))) {
+                    ret.result = true;
+                    sr.status = '撤销中';
+                    await sr.save();
+                    setTimeout(async()=>{
+                        try {
+                            await cash_lib.undo_subsidy_by_id(sr.id, token);
+                            sr.status = '已撤销';
+                        } catch (error) {
+                            console.log(error);
+                            sr.status = '撤销失败';
+                        }
+                        await sr.save();
+                    }, 200);
+                }
+                else
+                {
+                    throw { err_msg: '补贴记录不存在或未完成' };
+                }
+                return ret;
+            },
         },
         get_subsidy_record: {
             name: '获取补贴记录',
