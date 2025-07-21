@@ -1219,8 +1219,8 @@ module.exports = {
             func: async function (body, token) {
                 let id = body.id;
                 let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
-                const filePath = '/uploads/ticket_' + real_file_name + '.png'; id.v4();
-                await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
+                const filePath = '/uploads/ticket_' + real_file_name + '.png';
+                await do_web_cap('https://console.d8sis.cn' + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
@@ -1239,45 +1239,67 @@ module.exports = {
             result: {
                 url: { type: String, mean: '下载地址', example: 'https://abc' },
             },
-            func:async function(body, token) {
-                return await common.do_export_later(token, '磅单导出', async () => {             
+            func: async function (body, token) {
+                return await common.do_export_later(token, '磅单导出', async () => {
                     const tempDir = path.join('/database/uploads/', uuid.v4());
-                    await fs.mkdir(tempDir, { recursive: true });
+                    await fs.promises.mkdir(tempDir, { recursive: true });
+
+                    let success = false;
                     try {
                         let plans = await module.exports.methods.getPlansByTicketType(body, token);
-                        if (plans.length === 0) {
-                            throw { err_msg: '未找到磅单信息' };
+                        if (plans.length === 0) throw { err_msg: '未找到磅单信息' };
+
+                        const firstPlan = plans[0];
+                        if (!firstPlan.stuff?.company?.name) {
+                            throw { err_msg: '公司名称为空' };
                         }
+                        if (!firstPlan.main_vehicle?.plate) {
+                            throw { err_msg: '主车号为空' };
+                        }
+                        if (!firstPlan.behind_vehicle?.plate) {
+                            throw { err_msg: '挂车号为空' };
+                        }
+
+                        const companyName = firstPlan.stuff.company.name.replace(/[\\/:*?"<>|]/g, '_');
+                        const mainPlate = firstPlan.main_vehicle.plate;
+                        const behindPlate = firstPlan.behind_vehicle.plate;
+                        const planId = firstPlan.id;
+
+                        const zipName = `磅单导出_${companyName}_${mainPlate}-${behindPlate}_${planId}.zip`;
+                        const zipPath = path.join('/database/uploads/', zipName);
+                        console.log(`正在生成 ${zipPath}`);
                         const filePaths = await Promise.all(plans.map(async (plan) => {
+                            console.log(`正在生成 ${plan.id}`);
                             const fileName = module.exports.methods.generateTicketFilename(plan);
                             const filePath = path.join(tempDir, fileName);
                             await do_web_cap(
-                                `${process.env.REMOTE_MOBILE_HOST}/pages/Ticket?id=${plan.id}`,
+                                `https://console.d8sis.cn/pages/Ticket?id=${plan.id}`,
                                 filePath
                             );
-
+                            console.log(`已生成 ${filePath}`);
                             return filePath;
                         }));
-
-                        const zipName = `磅单导出_${uuid.v4().split('-')[0]}.zip`;
-                        const zipPath = path.join('/database/uploads/', zipName);
 
                         const archive = archiver('zip', { zlib: { level: 9 } });
                         const output = fs.createWriteStream(zipPath);
                         archive.pipe(output);
                         await Promise.all(filePaths.map(async (filePath) => {
-                            const fileData = await fs.readFile(filePath);
+                            const fileData = await fs.promises.readFile(filePath);
                             const fileName = path.basename(filePath);
                             archive.append(fileData, { name: fileName });
                         }));
 
                         await archive.finalize();
-                        await fs.rm(tempDir, { recursive: true, force: true });
-
+                        success = true;
+                        console.log('Zip file created successfully', zipName);
                         return zipName;
                     } catch (error) {
-                        await fs.rm(tempDir, { recursive: true, force: true });
+                        console.error('磅单导出错误:', error);
                         throw error;
+                    } finally {
+                        if (tempDir) {
+                            await fs.promises.rm(tempDir, { recursive: true, force: true });
+                        }
                     }
                 });
             }
