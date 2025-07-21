@@ -1220,7 +1220,7 @@ module.exports = {
                 let id = body.id;
                 let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap('https://console.d8sis.cn' + '/pages/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
@@ -1272,10 +1272,7 @@ module.exports = {
                             console.log(`正在生成 ${plan.id}`);
                             const fileName = module.exports.methods.generateTicketFilename(plan);
                             const filePath = path.join(tempDir, fileName);
-                            await do_web_cap(
-                                `https://console.d8sis.cn/pages/Ticket?id=${plan.id}`,
-                                filePath
-                            );
+                            await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                             console.log(`已生成 ${filePath}`);
                             return filePath;
                         }));
