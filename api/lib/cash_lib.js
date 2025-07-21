@@ -9,15 +9,18 @@ const util_lib = require('./util_lib');
 const { Utils } = require('sequelize');
 const httpsAgent = require('https').Agent;
 module.exports = {
-    charge_by_username_and_contract: async function (user_name, contract, _cash_increased, _comment) {
+    charge_by_username_and_contract: async function (user_name, contract, _cash_increased, _comment, subsidy_record) {
         contract.balance += _cash_increased;
         await contract.save();
-        await contract.createBalance_history({
+        let bh = await contract.createBalance_history({
             time: moment().format('YYYY-MM-DD HH:mm:ss'),
             operator: user_name,
             comment: _comment,
             cash_increased: _cash_increased,
         });
+        if (subsidy_record && bh) {
+            await bh.setSubsidy_record(subsidy_record);
+        }
         let buy_company = await contract.getBuy_company();
         if (buy_company) {
             let plans = await buy_company.getPlans({ where: { status: 1, is_buy: false } });
@@ -476,7 +479,7 @@ module.exports = {
         })
         return resp;
     },
-    search_subsidy_related_plans: async function (filter, company) {
+    search_subsidy_related_plans: async function (filter, company, is_undo) {
         let sq = db_opt.get_sq();
         let cond = {
             is_buy: false,
@@ -487,6 +490,11 @@ module.exports = {
                 [db_opt.Op.ne]: 0,
             },
         };
+        if (is_undo) {
+            cond.subsidy_price = {
+                [db_opt.Op.ne]: 0,
+            };
+        }
         if (filter.filter_by_plan_time) {
             cond.plan_time = {
                 [db_opt.Op.gte]: filter.time_start,
@@ -593,7 +601,7 @@ module.exports = {
         }
         return ret;
     },
-    do_subsidy_per_company: async function (plan_company_group, subsidy_gate_discounts) {
+    do_subsidy_per_company: async function (plan_company_group, subsidy_gate_discounts, subsidy_record) {
         let ret = 0;
         for (let index = 0; index < plan_company_group.length; index++) {
             const element = plan_company_group[index];
@@ -611,7 +619,7 @@ module.exports = {
                         let discount = sgd.discount;
                         let amount = sgd.amount;
                         let total_subsidy = await this.set_subsidy_price(element.plans, discount, amount);
-                        await this.charge_by_username_and_contract('自动', contract, total_subsidy, `因为总量${total_count}大于门槛${sgd.gate},补贴${total_subsidy}`);
+                        await this.charge_by_username_and_contract('自动', contract, total_subsidy, `因为总量${total_count}大于门槛${sgd.gate},补贴${total_subsidy}`, subsidy_record);
                         ret += element.plans.length;
                         break;
                     }
@@ -621,7 +629,7 @@ module.exports = {
         }
         return ret;
     },
-    do_subsidy_by_filter: async function (filter, company) {
+    do_subsidy_by_filter: async function (filter, company, subsidy_record) {
         let ret = 0;
         await db_opt.get_sq().transaction(async (t) => {
             let total_plans = await this.search_subsidy_related_plans(filter, company);
@@ -635,31 +643,31 @@ module.exports = {
                     });
                     if (subsidy_gate_discounts.length > 0) {
                         let plan_company_group = await this.split_plans_by_company(element.plans);
-                        ret += await this.do_subsidy_per_company(plan_company_group, subsidy_gate_discounts);
+                        ret += await this.do_subsidy_per_company(plan_company_group, subsidy_gate_discounts, subsidy_record);
                     }
                 }
             }
         });
         return ret;
     },
-    undo_subsidy_by_id: async function(sid) {
+    undo_subsidy_by_id: async function (sid, token) {
         await db_opt.get_sq().transaction(async (t) => {
             let sr = await db_opt.get_sq().models.subsidy_record.findByPk(sid, {
-                include:[{
-                    model:db_opt.get_sq().models.company,
+                include: [{
+                    model: db_opt.get_sq().models.company,
                 }]
             });
             let filter = {
                 filter_by_plan_time: true,
             };
-            let prefix = sr.range.split(':')[0].strim();
-            let time_string = sr.range.split(':')[1].strim();
+            let prefix = sr.range.split(': ')[0].trim();
+            let time_string = sr.range.split(': ')[1].trim();
             filter.time_start = time_string.split(' - ')[0].trim();
             filter.time_end = time_string.split(' - ')[1].trim();
             if (prefix == '创建时间') {
                 filter.filter_by_plan_time = false;
             }
-            let total_plans = await this.search_subsidy_related_plans(filter, sr.company);
+            let total_plans = await this.search_subsidy_related_plans(filter, sr.company, true);
             for (let index = 0; index < total_plans.length; index++) {
                 const element = total_plans[index];
                 let save_one = await db_opt.get_sq().models.archive_plan.findByPk(element.id);
@@ -670,7 +678,10 @@ module.exports = {
                 await orig_plan.save();
                 await save_one.save();
             }
-            let bhs = await sr
+            let bhs = await sr.getBalance_histories();
+            for (let bh of bhs) {
+                await this.charge(token, bh.contractId, -bh.cash_increased, '撤销补贴');
+            }
         });
     },
 };

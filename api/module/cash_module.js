@@ -265,7 +265,7 @@ module.exports = {
                     setTimeout(async () => {
                         let new_record = await db_opt.get_sq().models.subsidy_record.findByPk(new_record_id);
                         try {
-                            let order_count = await cash_lib.do_subsidy_by_filter(timer_filter, company);
+                            let order_count = await cash_lib.do_subsidy_by_filter(timer_filter, company, new_record);
                             new_record.order_count = order_count;
                             new_record.status = '已完成';
                         } catch (error) {
@@ -302,12 +302,17 @@ module.exports = {
                 let company = await rbac_lib.get_company_by_token(token);
                 if (sr && sr.status == '已完成' && company &&(await company.hasSubsidy_record(sr))) {
                     ret.result = true;
+                    sr.status = '撤销中';
+                    await sr.save();
                     setTimeout(async()=>{
                         try {
-
+                            await cash_lib.undo_subsidy_by_id(sr.id, token);
+                            sr.status = '已撤销';
                         } catch (error) {
                             console.log(error);
+                            sr.status = '撤销失败';
                         }
+                        await sr.save();
                     }, 200);
                 }
                 else

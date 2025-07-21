@@ -6,10 +6,14 @@
                 <el-table :data="slotProps.content" style="width: 100%" stripe height="100%">
                     <el-table-column prop="range" label="时间范围"></el-table-column>
                     <el-table-column prop="order_count" label="影响订单数"></el-table-column>
-                    <el-table-column prop="status">
+                    <el-table-column>
                         <template slot="header">
                             <el-button size="mini" type="success" @click="do_subsidy_diag = true">执行</el-button>
                             <el-button size="mini" type="primary" @click="refresh_page">刷新</el-button>
+                        </template>
+                        <template slot-scope="scope">
+                            <span>{{scope.row.status}}</span>
+                            <el-button v-if="scope.row.status === '已完成'" type="danger" size="mini" @click="undo_subsidy(scope.row.id)">撤销</el-button>
                         </template>
                     </el-table-column>
                 </el-table>
@@ -63,6 +67,21 @@ export default {
             return {
                 time_start: moment(this.subsidy_range.range[0]).format('YYYY-MM-DD HH:mm:ss'),
                 time_end: moment(this.subsidy_range.range[1]).format('YYYY-MM-DD HH:mm:ss')
+            }
+        },
+        undo_subsidy: async function (id) {
+            try {
+                await this.$confirm('确定要撤销吗？', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                await this.$send_req('/cash/undo_subsidy', {
+                    record_id: id
+                });
+                this.refresh_page();
+            } catch (error) {
+                console.log(error);
             }
         },
         do_subsidy: async function () {
