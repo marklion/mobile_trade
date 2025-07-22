@@ -1218,7 +1218,8 @@ module.exports = {
             },
             func: async function (body, token) {
                 let id = body.id;
-                let real_file_name = `${plan.id}-${plan.main_vehicle.plate}-${plan.behind_vehicle.plate}`;
+                const uuid = require('uuid');
+                real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
                 await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
@@ -1250,19 +1251,9 @@ module.exports = {
                         if (plans.length === 0) throw { err_msg: '未找到磅单信息' };
 
                         const firstPlan = plans[0];
-                        if (!firstPlan.stuff?.company?.name) {
-                            throw { err_msg: '公司名称为空' };
-                        }
-                        if (!firstPlan.main_vehicle?.plate) {
-                            throw { err_msg: '主车号为空' };
-                        }
-                        if (!firstPlan.behind_vehicle?.plate) {
-                            throw { err_msg: '挂车号为空' };
-                        }
-
-                        const companyName = firstPlan.stuff.company.name.replace(/[\\/:*?"<>|]/g, '_');
-                        const mainPlate = firstPlan.main_vehicle.plate;
-                        const behindPlate = firstPlan.behind_vehicle.plate;
+                        const companyName = firstPlan.stuff?.company?.name ? firstPlan.stuff.company.name.replace(/[\\/:*?"<>|]/g, '_') : '未知公司';
+                        const mainPlate = firstPlan.main_vehicle?.plate || '无主车';
+                        const behindPlate = firstPlan.behind_vehicle?.plate || '无挂车';
                         const planId = firstPlan.id;
 
                         const zipName = `磅单导出_${companyName}_${mainPlate}-${behindPlate}_${planId}.zip`;
@@ -1287,7 +1278,6 @@ module.exports = {
                         }));
 
                         await archive.finalize();
-                        success = true;
                         console.log('Zip file created successfully', zipName);
                         return zipName;
                     } catch (error) {
