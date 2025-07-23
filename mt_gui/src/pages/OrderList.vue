@@ -171,7 +171,7 @@
                             <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
                             <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
                                 <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
-                                <fui-button v-if="focus_plan.status != 0" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
+                                <fui-button v-if="focus_plan.status != 0 && is_allowed_order_return" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
                                 <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
                             </module-filter>
@@ -615,7 +615,8 @@ export default {
             deliver_time_type: '',
             tabs: [],
             show_batch_copy: false,
-            gallery_index: 0
+            gallery_index: 0,
+            is_allowed_order_return: false,
         }
     },
     computed: {
@@ -882,6 +883,10 @@ export default {
                 this.refresh_plans();
             }
             this.show_batch_copy = false;
+        },
+        get_is_allowed_order_return: async function () {
+            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
+            this.is_allowed_order_return = ret.is_allowed_order_return;
         },
         pick_address: function (e) {
             this.dup_plan.drop_address = e.map(item => item.name).join('-')
@@ -1455,6 +1460,7 @@ export default {
         tom.setDate(tom.getDate() + 1);
         this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
+        this.get_is_allowed_order_return();
     },
 }
 </script>

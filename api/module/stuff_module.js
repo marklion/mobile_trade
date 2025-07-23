@@ -1380,7 +1380,27 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_delay_checkout_time: {
+        set_is_allowed_order_return: {
+            name: '设置是否允许订单回退',
+            description: '设置是否允许订单回退',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                is_allowed_order_return: { type: Boolean, have_to: true, mean: '是否允许订单回退', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.is_allowed_order_return = body.is_allowed_order_return;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
+        set_delay_checkout_time: {  
             name: '设置延迟结算定时时间',
             description: '设置延迟结算定时时间',
             is_write: true,

@@ -1,4 +1,4 @@
-<template>
+                <template>
 <div>
     <vue-grid align="stretch" justify="around">
         <vue-cell width="12of12">
@@ -46,7 +46,7 @@
                         <span v-if="has_plan_reciever_permission">
                             <el-button v-if="plan.status == 0" type="success" size="small" @click="confirm_plan">确认</el-button>
                             <el-button v-if="plan.status != 3" type="danger" size="small" @click="close_plan">关闭</el-button>
-                            <el-button v-if="plan.status != 0" size="small" type="warning" @click="rollback_plan">回退</el-button>
+                            <el-button v-if="plan.status != 0 && order_refunds_allowed" size="small" type="warning" @click="rollback_plan">回退</el-button>
                             <el-button v-if="plan.status == 1 && !plan.is_buy" size="small" type="success" @click="pay_plan">验款</el-button>
                         </span>
                         <el-button v-permission="['scale']" v-if="(plan.status == 2) || (plan.status == 1 && plan.is_buy)" type="primary" size="small">发车</el-button>
@@ -239,6 +239,7 @@ export default {
             show_order_verify: false,
             show_fc_execute: false,
             show_sc_exe: true,
+            order_refunds_allowed: false,
             update_input_rules: {
                 main_vehicle_plate: [{
                     pattern: /^[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}[A-Z0-9]{4}[A-Z0-9挂学警港澳]{1}$/,
@@ -493,6 +494,10 @@ export default {
             })
             this.$emit('refresh');
         },
+        get_order_refunds_config: async function () {
+            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
+            this.order_refunds_allowed = ret.is_allowed_order_return;
+        },
         preview_company_attach: function () {
             this.pics = [];
             if (this.plan.company.attachment) {
@@ -538,6 +543,7 @@ export default {
     },
     mounted: function () {
         this.init_contract();
+        this.get_order_refunds_config();
     },
 }
 </script>
