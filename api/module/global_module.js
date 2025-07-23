@@ -1245,28 +1245,23 @@ module.exports = {
                     const tempDir = path.join('/database/uploads/', uuid.v4());
                     await fs.promises.mkdir(tempDir, { recursive: true });
 
-                    let success = false;
                     try {
                         let plans = await module.exports.methods.getPlansByTicketType(body, token);
                         if (plans.length === 0) throw { err_msg: '未找到磅单信息' };
 
-                        const firstPlan = plans[0];
-                        const companyName = firstPlan.stuff?.company?.name ? firstPlan.stuff.company.name.replace(/[\\/:*?"<>|]/g, '_') : '未知公司';
-                        const mainPlate = firstPlan.main_vehicle?.plate || '无主车';
-                        const behindPlate = firstPlan.behind_vehicle?.plate || '无挂车';
-                        const planId = firstPlan.id;
-
-                        const zipName = `磅单导出_${companyName}_${mainPlate}-${behindPlate}_${planId}.zip`;
+                        const zipName = `磅单导出_${uuid.v4()}.zip`;
                         const zipPath = path.join('/database/uploads/', zipName);
                         console.log(`正在生成 ${zipPath}`);
-                        const filePaths = await Promise.all(plans.map(async (plan) => {
+                        const filePaths = []
+                        for (let plan of plans)
+                        {
                             console.log(`正在生成 ${plan.id}`);
                             const fileName = module.exports.methods.generateTicketFilename(plan);
                             const filePath = path.join(tempDir, fileName);
-                            await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
+                            await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, filePath);
                             console.log(`已生成 ${filePath}`);
-                            return filePath;
-                        }));
+                            filePaths.push(filePath);
+                        }
 
                         const archive = archiver('zip', { zlib: { level: 9 } });
                         const output = fs.createWriteStream(zipPath);
@@ -2059,7 +2054,7 @@ module.exports = {
             }
         },
         generateTicketFilename(plan) {
-            const companyName = plan.stuff.company.name.replace(/[\\/:*?"<>|]/g, '_'); // 清理特殊字符
+            const companyName = plan.company.name.replace(/[\\/:*?"<>|]/g, '_'); // 清理特殊字符
             const mainPlate = plan.main_vehicle.plate || '无主车';
             const behindPlate = plan.behind_vehicle.plate || '无挂车';
 
