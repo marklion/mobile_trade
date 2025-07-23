@@ -1,18 +1,25 @@
 <template>
 <el-container>
     <el-header style="padding-top: 20px;">
-        <el-form>
+        <el-form :inline="true">
             <el-form-item style="width: 400px;">
                 <el-input v-model="search_key" placeholder="输入公司名称/车牌号/司机姓名/电话查询" clearable @clear="cancel_search">
                     <el-button slot="append" icon="el-icon-search" @click="do_search"></el-button>
                 </el-input>
+            </el-form-item>
+            <el-form-item>
+                <el-switch
+                    v-model="only_show_uncalled"
+                    active-text="仅显示未叫号"
+                    @change="filter_uncalled_vehicles">
+                </el-switch>
             </el-form-item>
         </el-form>
     </el-header>
     <el-main>
         <page-content ref="wait_que" :req_url="'/scale/wait_que'" :search_input="search_key" :search_key="['company.name', 'main_vehicle.plate', 'behind_vehicle.plate', 'driver.name', 'driver.phone']" body_key="plans" :req_body="{}" :enable="true">
             <template v-slot:default="scope">
-                <el-table :data="scope.content" height="80vh" table-layout="auto">
+                <el-table :data="filteredContent(scope.content)" height="80vh" table-layout="auto">
                     <el-table-column prop="register_number" label="序号" width="60">
                     </el-table-column>
                     <el-table-column prop="company.name" label="公司名称" width="120">
@@ -140,9 +147,19 @@ export default {
             zones: [],
             zone_name: '',
             focus_plan: {},
+            only_show_uncalled: false,
         };
     },
     methods: {
+        filteredContent(content) {
+            if (!content) return [];
+            return content.filter(plan => {
+                if (this.only_show_uncalled) {
+                    return !plan.call_time;
+                }
+                return true;
+            });
+        },
         init_dev: async function () {
             let resp = await this.$send_req('/scale/get_device_status', {});
             this.$set(this, 'all_dev', resp.devices);
