@@ -11,13 +11,13 @@
                 <el-switch
                     v-model="only_show_uncalled"
                     active-text="仅显示未叫号"
-                    @change="filter_uncalled_vehicles">
+                    @change="refresh_wait_que">
                 </el-switch>
             </el-form-item>
         </el-form>
     </el-header>
     <el-main>
-        <page-content ref="wait_que" :req_url="'/scale/wait_que'" :search_input="search_key" :search_key="['company.name', 'main_vehicle.plate', 'behind_vehicle.plate', 'driver.name', 'driver.phone']" body_key="plans" :req_body="{}" :enable="true">
+        <page-content ref="wait_que" :req_url="'/scale/wait_que'" :search_input="search_key" :search_key="['company.name', 'main_vehicle.plate', 'behind_vehicle.plate', 'driver.name', 'driver.phone']" body_key="plans" :req_body="{ only_show_uncalled: only_show_uncalled }" :enable="true">
             <template v-slot:default="scope">
                 <el-table :data="filteredContent(scope.content)" height="80vh" table-layout="auto">
                     <el-table-column prop="register_number" label="序号" width="60">
@@ -152,13 +152,7 @@ export default {
     },
     methods: {
         filteredContent(content) {
-            if (!content) return [];
-            return content.filter(plan => {
-                if (this.only_show_uncalled) {
-                    return !plan.call_time;
-                }
-                return true;
-            });
+            return content || [];
         },
         init_dev: async function () {
             let resp = await this.$send_req('/scale/get_device_status', {});
@@ -179,8 +173,10 @@ export default {
             this.$refs.wait_que.cancel_search();
         },
         refresh_wait_que() {
-            let cur_page = this.$refs.wait_que.cur_page;
-            this.$refs.wait_que.refresh(cur_page);
+            this.$nextTick(() => {
+                let cur_page = this.$refs.wait_que.cur_page;
+                this.$refs.wait_que.refresh(cur_page);
+            });
         },
 
         after_other_action(e) {

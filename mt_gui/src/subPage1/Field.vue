@@ -12,7 +12,7 @@
                     <fui-text text="仅显示未叫号" size="28" color="#333" style="margin-right: 15rpx;"></fui-text>
                     <u-switch
                         v-model="only_show_uncalled"
-                        @change="filter_uncalled_vehicles"
+                        @change="refresh_plans"
                         active-color="#007aff"
                         inactive-color="#e5e5e5">
                     </u-switch>
@@ -136,13 +136,7 @@ export default {
     },
     computed: {
         filtered_plans() {
-            if (!this.plans) return [];
-            return this.plans.filter(plan => {
-                if (this.only_show_uncalled) {
-                    return !plan.call_time;
-                }
-                return true;
-            });
+            return this.plans || [];
         }
     },
     methods: {
@@ -281,12 +275,18 @@ export default {
             }
             let ret = await this.$send_req('/scale/wait_que', {
                 pageNo: pageNo,
-                include_license: show_sc_in_field
+                include_license: show_sc_in_field,
+                only_show_uncalled: this.only_show_uncalled
             });
             ret.plans.forEach(ele => {
                 ele.search_cond = ele.main_vehicle.plate + ' ' + ele.behind_vehicle.plate;
             });
             return ret.plans;
+        },
+        refresh_plans() {
+            if (this.$refs.plans) {
+                this.$refs.plans.refresh();
+            }
         },
         copy_text: function (e) {
             $fui.getClipboardData(e, res => {
