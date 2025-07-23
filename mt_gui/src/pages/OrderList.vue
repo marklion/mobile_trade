@@ -56,7 +56,7 @@
     <u-checkbox-group v-model="plan_selected" placement="column">
         <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
             <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :title="item.company_show + '-' + item.stuff.name" clickable @click="prepare_plan_detail(item)">
+                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="prepare_plan_detail(item)">
                     <view slot="icon" style="display:flex;">
                         <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
                         </u-checkbox>
@@ -616,6 +616,7 @@ export default {
             tabs: [],
             show_batch_copy: false,
             gallery_index: 0,
+            is_the_order_display_price: false,
             is_allowed_order_return: false,
         }
     },
@@ -1447,6 +1448,15 @@ export default {
         measurement_refresh: function () {
             this.refresh_plans();
             this.show_plan_detail = false;
+        },
+        get_price_display_config: async function () {
+            try {
+                const result = await this.$send_req('/global/get_the_order_display_price', {});
+                this.is_the_order_display_price = result.is_the_order_display_price;
+            } catch (error) {
+                console.error('获取价格显示配置失败:', error);
+                this.is_the_order_display_price = false;
+            }
         }
     },
     onPullDownRefresh() {
@@ -1460,6 +1470,7 @@ export default {
         tom.setDate(tom.getDate() + 1);
         this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
+        this.get_price_display_config();
         this.get_is_allowed_order_return();
     },
 }

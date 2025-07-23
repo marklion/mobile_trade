@@ -48,6 +48,10 @@
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
+                    <el-switch v-model="is_the_order_display_price" active-text="订单列表是否显示价格" @change="set_the_order_display_price">
+                    </el-switch>
+                </vue-cell>
+                <vue-cell width="3of12">
                     <el-switch v-model="is_allowed_order_return" active-text="是否允许订单回退" @change="set_is_allowed_order_return">
                     </el-switch>
                 </vue-cell>
@@ -202,6 +206,7 @@ export default {
             ticket_hasOrhasnt_place: false,
             access_control_permission: false,
             barriergate_control_permission: false,
+            is_the_order_display_price: false,
             support_location_detail: false,
             is_allowed_order_return: false,
             contract_id_selected: 0,
@@ -253,6 +258,7 @@ export default {
         this.get_access_control_permission();
         this.get_support_location_detail();
         this.get_barriergate_control_permission();
+        this.get_the_order_display_price();
         this.get_is_allowed_order_return();
     },
     methods: {
@@ -505,6 +511,15 @@ export default {
             let ret = await this.$send_req('/global/get_barriergate_control_permission', {});
             this.barriergate_control_permission = ret.barriergate_control_permission;
         },
+        get_the_order_display_price: async function () {
+            let ret = await this.$send_req('/global/get_the_order_display_price', {});
+            this.is_the_order_display_price = ret.is_the_order_display_price;
+        },
+        set_the_order_display_price: async function () {
+            await this.$send_req('/stuff/set_the_order_display_price', {
+                is_the_order_display_price: this.is_the_order_display_price
+            });
+            },
         get_is_allowed_order_return: async function () {
             let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
             this.is_allowed_order_return = ret.is_allowed_order_return;
@@ -513,8 +528,8 @@ export default {
             await this.$send_req('/stuff/set_is_allowed_order_return', {
                 is_allowed_order_return: this.is_allowed_order_return
             });
-        },
-    }
+        },,
+        }
 }
 </script>
 
