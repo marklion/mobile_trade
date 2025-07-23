@@ -1470,8 +1470,8 @@ export default {
         tom.setDate(tom.getDate() + 1);
         this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
-        this.get_price_display_config();
         this.get_is_allowed_order_return();
+        this.get_price_display_config();
     },
 }
 </script>

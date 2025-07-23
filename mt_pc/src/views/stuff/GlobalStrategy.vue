@@ -48,11 +48,11 @@
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
-                    <el-switch v-model="is_the_order_display_price" active-text="订单列表是否显示价格" @change="set_the_order_display_price">
+                    <el-switch v-model="is_allowed_order_return" active-text="是否允许订单回退" @change="set_is_allowed_order_return">
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
-                    <el-switch v-model="is_allowed_order_return" active-text="是否允许订单回退" @change="set_is_allowed_order_return">
+                    <el-switch v-model="is_the_order_display_price" active-text="订单列表是否显示价格" @change="set_the_order_display_price">
                     </el-switch>
                 </vue-cell>
             </vue-grid>
@@ -258,8 +258,8 @@ export default {
         this.get_access_control_permission();
         this.get_support_location_detail();
         this.get_barriergate_control_permission();
-        this.get_the_order_display_price();
         this.get_is_allowed_order_return();
+        this.get_the_order_display_price();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -528,7 +528,7 @@ export default {
             await this.$send_req('/stuff/set_is_allowed_order_return', {
                 is_allowed_order_return: this.is_allowed_order_return
             });
-        },,
+        },
         }
 }
 </script>
