@@ -59,7 +59,14 @@
                             <el-tag size="mini" :type="scope.row.enter_time?'success':'info'">{{!!scope.row.enter_time?'已入场':'未入场'}}</el-tag>
                         </template>
                     </el-table-column>
-                    <el-table-column min-width="50" prop="stuff.name" label="物料">
+                    <el-table-column min-width="50" prop="stuff.name" label="物料" width="220">
+                        <template slot-scope="scope">
+                            {{scope.row.stuff.name}}
+                            <el-tag v-if="is_the_order_display_price && scope.row.unit_price" size="mini" type="warning">
+                                单价:{{scope.row.unit_price}}
+                                <span v-if="scope.row.count != 0">(总价:{{(scope.row.unit_price * scope.row.count).toFixed(2)}})</span>
+                            </el-tag>
+                        </template>
                     </el-table-column>
                     <el-table-column min-width="70" label="状态">
                         <template slot-scope="scope">
@@ -143,6 +150,7 @@ export default {
             stuff_id: 0,
             company_id: 0,
             company_search_input: '',
+            is_the_order_display_price: false,
             status_string: function (status) {
                 let status_array = ['未确认', '未付款', '未发车', '已关闭'];
                 let index = status;
@@ -354,9 +362,19 @@ export default {
                 this.refresh_order();
             });
         },
+        get_price_display_config: async function () {
+            try {
+                const result = await this.$send_req('/global/get_the_order_display_price', {});
+                this.is_the_order_display_price = result.is_the_order_display_price;
+            } catch (error) {
+                console.error('获取价格显示配置失败:', error);
+                this.is_the_order_display_price = false;
+            }
+        },
     },
     mounted: function () {
         this.reset_filter();
+        this.get_price_display_config();
     }
 
 }

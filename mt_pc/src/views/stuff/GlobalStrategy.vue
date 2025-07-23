@@ -47,6 +47,10 @@
                     <el-switch v-model="support_location_detail" active-text="卸车地点支持细节输入" @change="set_support_location_detail">
                     </el-switch>
                 </vue-cell>
+                <vue-cell width="3of12">
+                    <el-switch v-model="is_the_order_display_price" active-text="订单列表是否显示价格" @change="set_the_order_display_price">
+                    </el-switch>
+                </vue-cell>
             </vue-grid>
             <h3>代理配置</h3>
             <page-content ref="all_delegates" body_key="delegates" enable req_url="/stuff/get_delegates">
@@ -198,6 +202,7 @@ export default {
             ticket_hasOrhasnt_place: false,
             access_control_permission: false,
             barriergate_control_permission: false,
+            is_the_order_display_price: false,
             support_location_detail: false,
             contract_id_selected: 0,
             focus_delegate_id: 0,
@@ -248,6 +253,7 @@ export default {
         this.get_access_control_permission();
         this.get_support_location_detail();
         this.get_barriergate_control_permission();
+        this.get_the_order_display_price();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -498,8 +504,17 @@ export default {
         get_barriergate_control_permission: async function () {
             let ret = await this.$send_req('/global/get_barriergate_control_permission', {});
             this.barriergate_control_permission = ret.barriergate_control_permission;
+        },
+        get_the_order_display_price: async function () {
+            let ret = await this.$send_req('/global/get_the_order_display_price', {});
+            this.is_the_order_display_price = ret.is_the_order_display_price;
+        },
+        set_the_order_display_price: async function () {
+            await this.$send_req('/stuff/set_the_order_display_price', {
+                is_the_order_display_price: this.is_the_order_display_price
+            });
+        },
     }
-}
 }
 </script>
 

@@ -2069,6 +2069,20 @@ module.exports = {
                 }
                 return { support_location_detail: company.support_location_detail };
             }
+        },
+        get_the_order_display_price: {
+            name: '获取订单列表是否显示价格',
+            description: '获取订单列表是否显示价格',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                is_the_order_display_price: { type: Boolean, mean: '是否显示价格', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { is_the_order_display_price: company.is_the_order_display_price };
+            }
         }
     },
 }

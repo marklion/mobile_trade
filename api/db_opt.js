@@ -127,6 +127,7 @@ let db_opt = {
             access_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
             support_location_detail: { type: DataTypes.BOOLEAN, defaultValue: false },
             barriergate_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
+            is_the_order_display_price: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
