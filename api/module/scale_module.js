@@ -185,7 +185,8 @@ module.exports = {
             },
             result: {
                 devices: { type: Array, mean: '设备状态', explain: api_param_result_define.device_status_define },
-                switchAcc: { type: Boolean, mean: '是否开启设备状态开关', example: true }
+                switchAcc: { type: Boolean, mean: '是否开启设备状态开关', example: true },
+                switchGate: { type: Boolean, mean: '是否开启门控开关', example: true }
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
@@ -193,7 +194,7 @@ module.exports = {
                     throw { err_msg: '公司信息不存在' };
                 }else{
                     let switchAcc = company.access_control_permission;
-                    let switchGate = company.barriergate_control_permission; 
+                    let switchGate = company.barriergate_control_permission;
                     let resp = await field_lib.dev_opt.get_device_status(company)
                     return {
                         devices: resp,
