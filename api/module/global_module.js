@@ -126,7 +126,7 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
 }
 module.exports = {
     name: 'global',
-    description: '全局',
+    description: '全局',    
     methods: {
         driver_phone_online: {
             name: '司机手机号上线',
@@ -2018,6 +2018,20 @@ module.exports = {
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 return { barriergate_control_permission: company.barriergate_control_permission };
+            }
+        },
+        get_is_allowed_order_return: {
+            name: '获取是否允许订单回退',
+            description: '获取是否允许订单回退',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                is_allowed_order_return: { type: Boolean, mean: '是否允许订单回退', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { is_allowed_order_return: company.is_allowed_order_return };
             }
         },
         get_support_location_detail: {
