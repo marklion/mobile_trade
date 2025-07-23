@@ -75,8 +75,7 @@ module.exports = {
                         as:'buy_company',
                     }],
                 });
-                let company = await db_opt.get_sq().models.company.findByPk(contract.saleCompanyId);
-
+                let company = contract.buy_company;
                 return await common.do_export_later(token, company.name + '的余额明细', async () => {
                     return await cash_lib.export_cash_history(token, body.contract_id, body.begin_time, body.end_time);
                 });
