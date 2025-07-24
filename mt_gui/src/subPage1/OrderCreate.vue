@@ -373,8 +373,8 @@ export default {
                         behind_vehicle: row.getCell(2).text.toUpperCase().replaceAll(regStrReplace, ''),
                         driver_name: row.getCell(3).text.toUpperCase().replaceAll(regStrReplace, ''),
                         driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace, ''),
-                        // 模板最后一列放备注信息
-                        comment: row.getCell(row.cellCount).text.replaceAll(regStrReplace, ''),
+                        comment: row.getCell(6).text.replaceAll(regStrReplace, ''),
+                        trans_company_name: row.getCell(7).text.replaceAll(regStrReplace, ''),
                     })
                 }
             });
@@ -390,7 +390,7 @@ export default {
         },
         download_temple: async function () {
             uni.downloadFile({
-                url: this.$convert_attach_url('/uploads/模板1.xlsx'),
+                url: this.$convert_attach_url('/uploads/模板2.xlsx'),
                 success: (res) => {
                     const filePath = res.tempFilePath
                     uni.openDocument({
@@ -465,6 +465,7 @@ export default {
                                     phone: element.driver_phone
                                 },
                                 comment: element.comment || '文件导入',
+                                trans_company_name:element.trans_company_name || '',
 
                             };
                         } catch (error) {
@@ -612,6 +613,9 @@ export default {
                     bidding_id: this.bidding_id,
                     comment: ele.comment,
                 };
+                if (ele.trans_company_name) {
+                    req.trans_company_name = ele.trans_company_name;
+                }
                 if (req.is_proxy) {
                     req.proxy_company_name = this.saler_name;
                 }
