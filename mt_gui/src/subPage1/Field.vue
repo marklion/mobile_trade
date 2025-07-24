@@ -2,7 +2,22 @@
 <view>
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
-        <list-show ref="plans" :fetch_function="get_wait_que" height="90vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field]">
+        <list-show ref="plans" :fetch_function="get_wait_que" height="85vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field,only_show_uncalled]">
+            <view style="padding: 15rpx 20rpx; background-color: #f8f9fa; border-radius: 8rpx; margin: 10rpx; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);">
+                <view style="display: flex; align-items: center;">
+                    <fui-icon name="filter" size="32" color="#666"></fui-icon>
+                    <fui-text text="过滤选项" size="28" color="#666" style="margin-left: 15rpx;"></fui-text>
+                </view>
+                <view style="display: flex; align-items: center;">
+                    <fui-text text="仅显示未叫号" size="28" color="#333" style="margin-right: 15rpx;"></fui-text>
+                    <u-switch
+                        v-model="only_show_uncalled"
+                        @change="refresh_plans"
+                        active-color="#007aff"
+                        inactive-color="#e5e5e5">
+                    </u-switch>
+                </view>
+            </view>
             <view v-for="item in plans" :key="item.id" class="single_card_show">
                 <u-cell :icon="icon_make(item)" :title="item.main_vehicle.plate + '-' + item.behind_vehicle.plate">
                     <view slot="label" style="display:flex; flex-direction: column;">
@@ -116,6 +131,7 @@ export default {
             show_zone_select: false,
             focus_plan: {},
             show_sc_in_field: false,
+            only_show_uncalled: false,
         };
     },
     methods: {
@@ -248,18 +264,24 @@ export default {
             }
             return ret;
         },
-        get_wait_que: async function (pageNo, [show_sc_in_field]) {
+        get_wait_que: async function (pageNo, [show_sc_in_field, only_show_uncalled]) {
             if (show_sc_in_field == undefined) {
                 return [];
             }
             let ret = await this.$send_req('/scale/wait_que', {
                 pageNo: pageNo,
-                include_license: show_sc_in_field
+                include_license: show_sc_in_field,
+                only_show_uncalled: only_show_uncalled
             });
             ret.plans.forEach(ele => {
                 ele.search_cond = ele.main_vehicle.plate + ' ' + ele.behind_vehicle.plate;
             });
             return ret.plans;
+        },
+        refresh_plans() {
+            if (this.$refs.plans) {
+                this.$refs.plans.refresh();
+            }
         },
         copy_text: function (e) {
             $fui.getClipboardData(e, res => {
@@ -281,7 +303,7 @@ export default {
         init_sc_show_switch: async function () {
             this.show_sc_in_field = (await this.$send_req('/global/get_show_sc_in_field', {})).show_sc_in_field;
             this.$refs.sc_confirm.refresh();
-        }
+        },
     },
     onPullDownRefresh: function () {
         if (this.$refs.plans) {

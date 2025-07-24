@@ -1189,7 +1189,7 @@ module.exports = {
         }
         return ret;
     },
-    get_wait_que: async function (pageNo, token, include_license = false) {
+    get_wait_que: async function (pageNo, token, include_license = false, only_show_uncalled = false) {
         let sq = db_opt.get_sq();
         let stuff_array = [0];
         let company = await rbac_lib.get_company_by_token(token);
@@ -1214,6 +1214,11 @@ module.exports = {
         if (!include_license) {
             cond[db_opt.Op.and].push(
                 { register_time: { [db_opt.Op.ne]: null } },
+            );
+        }
+        if (only_show_uncalled) {
+            cond[db_opt.Op.and].push(
+                { call_time: null },
             );
         }
         let plans = await sq.models.plan.findAll({

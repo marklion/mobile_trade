@@ -42,12 +42,13 @@ module.exports = {
             is_get_api: true,
             params: {
                 include_license: { type: Boolean, have_to: false, mean: '是否包含证件检查', example: true },
+                only_show_uncalled: { type: Boolean, have_to: false, mean: '仅显示未叫号', example: true },
             },
             result: {
                 plans: { type: Array, mean: '计划列表', explain: api_param_result_define.plan_detail_define }
             },
             func: async function (body, token) {
-                let ret = await plan_lib.get_wait_que(body.pageNo, token, body.include_license);
+                let ret = await plan_lib.get_wait_que(body.pageNo, token, body.include_license, body.only_show_uncalled);
                 return {
                     plans: ret.rows,
                     total: ret.count
