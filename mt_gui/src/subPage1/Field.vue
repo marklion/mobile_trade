@@ -2,7 +2,7 @@
 <view>
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
-        <list-show ref="plans" :fetch_function="get_wait_que" height="85vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field]">
+        <list-show ref="plans" :fetch_function="get_wait_que" height="85vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field,only_show_uncalled]">
             <view style="padding: 15rpx 20rpx; background-color: #f8f9fa; border-radius: 8rpx; margin: 10rpx; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);">
                 <view style="display: flex; align-items: center;">
                     <fui-icon name="filter" size="32" color="#666"></fui-icon>
@@ -18,7 +18,7 @@
                     </u-switch>
                 </view>
             </view>
-            <view v-for="item in filtered_plans" :key="item.id" class="single_card_show">
+            <view v-for="item in plans" :key="item.id" class="single_card_show">
                 <u-cell :icon="icon_make(item)" :title="item.main_vehicle.plate + '-' + item.behind_vehicle.plate">
                     <view slot="label" style="display:flex; flex-direction: column;">
                         <fui-text :text="item.company.name" size="24"></fui-text>
@@ -133,11 +133,6 @@ export default {
             show_sc_in_field: false,
             only_show_uncalled: false,
         };
-    },
-    computed: {
-        filtered_plans() {
-            return this.plans || [];
-        }
     },
     methods: {
         prepare_sc_confirm: function (item) {
@@ -269,14 +264,14 @@ export default {
             }
             return ret;
         },
-        get_wait_que: async function (pageNo, [show_sc_in_field]) {
+        get_wait_que: async function (pageNo, [show_sc_in_field, only_show_uncalled]) {
             if (show_sc_in_field == undefined) {
                 return [];
             }
             let ret = await this.$send_req('/scale/wait_que', {
                 pageNo: pageNo,
                 include_license: show_sc_in_field,
-                only_show_uncalled: this.only_show_uncalled
+                only_show_uncalled: only_show_uncalled
             });
             ret.plans.forEach(ele => {
                 ele.search_cond = ele.main_vehicle.plate + ' ' + ele.behind_vehicle.plate;
