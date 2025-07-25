@@ -24,198 +24,187 @@
                     <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
                 </view>
                 <fui-white-space size="large"></fui-white-space>
-                <view style="display:flex;justify-content:flex-end;margin-bottom:10rpx;padding-right:32rpx;">
-                <fui-button :text="item.expanded ? '收起' : '展开更多'" btnSize="mini" type="primary" slot="" @click="item.expanded = !item.expanded"/>
-                </view>
-                <view v-show="item.expanded">
-                <fui-row>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="需要安检"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
+                <u-collapse>
+                    <u-collapse-item title="点击展开" name="Docs guide">
+                        <view>
+                            <fui-row>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="需要安检"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="需要进厂前重量"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                            </fui-row>
+                            <fui-white-space size="large"></fui-white-space>
+                            <fui-row>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="需要考试"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="不用排号"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                            </fui-row>
+                            <fui-white-space size="large"></fui-white-space>
+                            <fui-row>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="延迟结算"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.checkout_delay" @change="change_checkout_delay($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="手动计量"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.manual_weight" @change="change_manual_weight($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                                <fui-col v-if="item.manual_weight" :span="24">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="磅单号前缀"></fui-text>
+                                                <fui-input v-model="item.ticket_prefix" placeholder="请输入磅单号前缀"></fui-input>
+                                                <fui-button text="保存" btnSize="mini" type="primary" @click="save_ticket_prefix(item)"></fui-button>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                            </fui-row>
+                            <fui-white-space size="large"></fui-white-space>
+                            <fui-row>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="需要填写期望重量"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.need_expect_weight" @change="change_need_expect_weight($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                            </fui-row>
+                            <fui-white-space size="large"></fui-white-space>
+                            <fui-row>
+                                <fui-col :span="12">
+                                    <fui-label>
+                                        <fui-list-cell>
+                                            <view class="fui-list__cell">
+                                                <fui-text size="28" text="自动确认装卸货"></fui-text>
+                                                <fui-switch :scaleRatio="0.7" :checked="item.auto_confirm_goods" @change="change_auto_confirm_goods($event,item)"></fui-switch>
+                                            </view>
+                                        </fui-list-cell>
+                                    </fui-label>
+                                </fui-col>
+                            </fui-row>
+                            <fui-white-space size="large"></fui-white-space>
+                            <view>
+                                <fui-row>
+                                    <fui-col :span="24">
+                                        <fui-label>
+                                            <fui-list-cell>
+                                                <view class="fui-list__cell" @click="showDelayCheckoutPicker = item.id">
+                                                    <fui-text size="28">延迟结算时间点：
+                                                        <text style="font-size: 34rpx; color: #666;">{{ item.delay_checkout_time || '请选择时间' }}</text>
+                                                    </fui-text>
+                                                </view>
+                                                <fui-date-picker :scaleRatio="0.7" :value="item.delay_checkout_time" type="7" :show="showDelayCheckoutPicker === item.id" @change="confirm_checkout_delay_time($event, item)" @cancel="showDelayCheckoutPicker = null" />
+                                                <fui-button text="一键结算" btnSize="mini" type="success" @click="handleBatchCheckout(item)" />
+                                            </fui-list-cell>
+                                        </fui-label>
+                                    </fui-col>
+                                </fui-row>
+                            </view>
+                            <fui-white-space size="large"></fui-white-space>
+                            <view>
+                                <fui-row>
+                                    <fui-col :span="24">
+                                        <fui-label>
+                                            <fui-list-cell>
+                                                <view class="fui-list__cell">
+                                                    <fui-text size="28" text="第二单位配置"></fui-text>
+                                                    <fui-input v-model="item.second_unit" placeholder="请输入单位" style="flex: 1; margin-left: 20rpx;" />
+                                                </view>
+                                            </fui-list-cell>
+                                        </fui-label>
+                                    </fui-col>
+                                </fui-row>
+                                <fui-row>
+                                    <fui-col :span="24">
+                                        <fui-label>
+                                            <fui-list-cell>
+                                                <view class="fui-list__cell">
+                                                    <fui-text size="28" text="系数配置"></fui-text>
+                                                    <fui-input-number v-model="item.coefficient" :digit="2" :step="0.1" :value="1.00" :min="0" :max="999999" style="flex: 1; margin-left: 20rpx;" />
+                                                </view>
+                                            </fui-list-cell>
+                                        </fui-label>
+                                    </fui-col>
+                                </fui-row>
+                                <fui-row>
+                                    <fui-col :span="24">
+                                        <fui-label>
+                                            <fui-list-cell>
+                                                <view class="fui-list__cell">
+                                                    <fui-text size="28" text="小数位"></fui-text>
+                                                    <fui-input-number v-model="item.second_unit_decimal" :digit="0" :step="1" :value="2" :min="0" :max="6" style="flex: 1; margin-left: 20rpx;" />
+                                                </view>
+                                            </fui-list-cell>
+                                        </fui-label>
+                                    </fui-col>
+                                </fui-row>
+                                <view class="btn-wrapper">
+                                    <fui-button text="保存配置" type="primary" btnSize="medium" @click="set_scunit_coe_configuration(item)" />
                                 </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="需要进厂前重量"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                </fui-row>
-                <fui-white-space size="large"></fui-white-space>
-                <fui-row>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="需要考试"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="不用排号"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                </fui-row>
-                <fui-white-space size="large"></fui-white-space>
-                <fui-row>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="延迟结算"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.checkout_delay" @change="change_checkout_delay($event,item)"></fui-switch>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="手动计量"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.manual_weight" @change="change_manual_weight($event,item)"></fui-switch>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                    <fui-col v-if="item.manual_weight" :span="24">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="磅单号前缀"></fui-text>
-                                    <fui-input v-model="item.ticket_prefix" placeholder="请输入磅单号前缀"></fui-input>
-                                    <fui-button text="保存" btnSize="mini" type="primary" @click="save_ticket_prefix(item)"></fui-button>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                </fui-row>
-                <fui-white-space size="large"></fui-white-space>
-                <fui-row>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="需要填写期望重量"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.need_expect_weight" @change="change_need_expect_weight($event,item)"></fui-switch>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                </fui-row>
-                <fui-white-space size="large"></fui-white-space>
-                <fui-row>
-                    <fui-col :span="12">
-                        <fui-label>
-                            <fui-list-cell>
-                                <view class="fui-list__cell">
-                                    <fui-text size="28" text="自动确认装卸货"></fui-text>
-                                    <fui-switch :scaleRatio="0.7" :checked="item.auto_confirm_goods" @change="change_auto_confirm_goods($event,item)"></fui-switch>
-                                </view>
-                            </fui-list-cell>
-                        </fui-label>
-                    </fui-col>
-                </fui-row>
-                <fui-white-space size="large"></fui-white-space>
-                <view>
-                    <fui-row>
-                        <fui-col :span="24">
-                            <fui-label>
-                                <fui-list-cell>
-                                    <view class="fui-list__cell" @click="showDelayCheckoutPicker = item.id">
-                                    <fui-text size="28">延迟结算时间点：
-                                        <text style="font-size: 34rpx; color: #666;">{{ item.delay_checkout_time || '请选择时间' }}</text>
-                                    </fui-text>
+                            </view>
+                            <fui-divider text="装卸区域配置"></fui-divider>
+                            <view style="display: flex; flex-wrap:wrap;">
+                                <fui-tag v-for="zone in item.drop_take_zones" :key="zone.id" :text="zone.name" theme="light" margin-right="24" :padding="['12rpx','20rpx']">
+                                    <view class="fui-close__icon">
+                                        <fui-icon name="close" color="#465CFF" :size="32" @click="prepare_del_zone(zone.id)"></fui-icon>
                                     </view>
-                                    <fui-date-picker 
-                                        :scaleRatio="0.7" 
-                                        :value="item.delay_checkout_time" 
-                                        type="7"
-                                        :show="showDelayCheckoutPicker === item.id" 
-                                        @change="confirm_checkout_delay_time($event, item)"
-                                        @cancel="showDelayCheckoutPicker = null"
-                                    />
-                                    <fui-button 
-                                    text="一键结算" 
-                                    btnSize="mini" 
-                                    type="success" 
-                                    @click="handleBatchCheckout(item)"
-                                    />
-                                </fui-list-cell>
-                            </fui-label>
-                        </fui-col>
-                    </fui-row>
-                </view>
-                <fui-white-space size="large"></fui-white-space>
-                <view>
-                    <fui-row>
-                        <fui-col :span="24">
-                            <fui-label>
-                                <fui-list-cell>
-                                    <view class="fui-list__cell">
-                                        <fui-text size="28" text="第二单位配置"></fui-text>
-                                        <fui-input v-model="item.second_unit" placeholder="请输入单位" style="flex: 1; margin-left: 20rpx;" />
-                                    </view>
-                                </fui-list-cell>
-                            </fui-label>
-                        </fui-col>
-                    </fui-row>
-                    <fui-row>
-                        <fui-col :span="24">
-                            <fui-label>
-                                <fui-list-cell>
-                                    <view class="fui-list__cell">
-                                        <fui-text size="28" text="系数配置"></fui-text>
-                                        <fui-input-number v-model="item.coefficient" :digit="2" :step="0.1" :value="1.00" :min="0" :max="999999" style="flex: 1; margin-left: 20rpx;" />
-                                    </view>
-                                </fui-list-cell>
-                            </fui-label>
-                        </fui-col>
-                    </fui-row>
-                    <fui-row>
-                        <fui-col :span="24">
-                            <fui-label>
-                                <fui-list-cell>
-                                    <view class="fui-list__cell">
-                                        <fui-text size="28" text="小数位"></fui-text>
-                                        <fui-input-number v-model="item.second_unit_decimal" :digit="0" :step="1" :value="2" :min="0" :max="6" style="flex: 1; margin-left: 20rpx;" />
-                                    </view>
-                                </fui-list-cell>
-                            </fui-label>
-                        </fui-col>
-                    </fui-row>
-                    <view class="btn-wrapper">
-                        <fui-button text="保存配置" type="primary" btnSize="medium" @click="set_scunit_coe_configuration(item)" />
-                    </view>
-                </view>
-                <fui-divider text="装卸区域配置"></fui-divider>
-                <view style="display: flex; flex-wrap:wrap;">
-                    <fui-tag v-for="zone in item.drop_take_zones" :key="zone.id" :text="zone.name" theme="light" margin-right="24" :padding="['12rpx','20rpx']">
-                        <view class="fui-close__icon">
-                            <fui-icon name="close" color="#465CFF" :size="32" @click="prepare_del_zone(zone.id)"></fui-icon>
+                                </fui-tag>
+                                <fui-button text="添加" btnSize="mini" type="primary" @click="prepare_add_zone(item)"></fui-button>
+                            </view>
+                            <fui-white-space size="large"></fui-white-space>
                         </view>
-                    </fui-tag>
-                    <fui-button text="添加" btnSize="mini" type="primary" @click="prepare_add_zone(item)"></fui-button>
-                </view>
-                <fui-white-space size="large"></fui-white-space>
-                </view>
+                    </u-collapse-item>
+                </u-collapse>
             </fui-card>
         </list-show>
         <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
@@ -385,14 +374,16 @@ export default {
     },
     methods: {
         handleBatchCheckout(item, event) {
-        if (event?.stopPropagation) {
-        event.stopPropagation();
-        }
-        this.batch_checkout(item);
+            if (event?.stopPropagation) {
+                event.stopPropagation();
+            }
+            this.batch_checkout(item);
         },
         batch_checkout: async function (item) {
             try {
-                const { confirm } = await uni.showModal({
+                const {
+                    confirm
+                } = await uni.showModal({
                     title: '提示',
                     content: '确定要一键结算吗？',
                     showCancel: true,
@@ -405,11 +396,17 @@ export default {
                     let resp = await this.$send_req('/sale_management/batch_checkout', {
                         stuff_id: item.id
                     });
-                    uni.showToast({ title: `一键结算成功，${resp.order_count}个订单已结算`, icon: 'success' });
+                    uni.showToast({
+                        title: `一键结算成功，${resp.order_count}个订单已结算`,
+                        icon: 'success'
+                    });
                 }
             } catch (error) {
                 console.error(error);
-                uni.showToast({ title: '操作失败，请查看控制台日志', icon: 'none' });
+                uni.showToast({
+                    title: '操作失败，请查看控制台日志',
+                    icon: 'none'
+                });
             }
         },
         confirm_checkout_delay_time(event, stuff) {
@@ -424,10 +421,16 @@ export default {
                     stuff_id: item.id,
                     delay_checkout_time: item.delay_checkout_time || ''
                 });
-                uni.showToast({ title: '保存成功', icon: 'success' });
+                uni.showToast({
+                    title: '保存成功',
+                    icon: 'success'
+                });
                 uni.startPullDownRefresh();
             } catch (error) {
-                uni.showToast({ title: '保存失败：' + error.message, icon: 'none' });
+                uni.showToast({
+                    title: '保存失败：' + error.message,
+                    icon: 'none'
+                });
             }
         },
         save_ticket_prefix: async function (item) {
@@ -747,11 +750,6 @@ export default {
             let ret = await this.$send_req('/stuff/get_all', {
                 pageNo: _pageNo
             });
-            if (Array.isArray(ret.stuff)) {
-                ret.stuff.forEach(item => {
-                    if (typeof item.expanded === 'undefined') item.expanded = false;
-                });
-            }
             return ret.stuff
         },
     },
