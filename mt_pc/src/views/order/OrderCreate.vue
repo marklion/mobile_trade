@@ -101,7 +101,7 @@
                         <el-upload class="upload-demo" ref="upload" :limit="1" accept=".xls,.xlsx" action="https://jsonplaceholder.typicode.com/posts/" :file-list="fileList" :before-upload="handlerBeforeUpload" :auto-upload="true">
                             <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
                             <el-button size="small" type="default" style="margin-left: 10px;" @click="doDownloadTemplate">下载模版</el-button>
-                            <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
+                            <div slot="tip" class="el-upload__tip">只能上传xls或xlsx文件</div>
                         </el-upload>
                     </el-form-item>
                     <el-form-item label="主车牌" prop="main_vehicle_plate" hidden>
@@ -334,7 +334,7 @@ export default {
         },
         get_support_location_detail: async function () {
             let ret = await this.$send_req('/global/get_support_location_detail', {
-                company_id:this.company_id
+                company_id: this.company_id
             });
             this.support_location_detail = ret.support_location_detail;
         },
@@ -389,7 +389,7 @@ export default {
                                     phone: element.driver_phone
                                 },
                                 comment: element.comment || '文件导入',
-
+                                trans_company_name: element.trans_company_name || '',
                             };
                         } catch (error) {
                             console.error('error:', error);
@@ -435,15 +435,15 @@ export default {
                         behind_vehicle_plate: row.getCell(2).text.toUpperCase().replaceAll(regStrReplace, ''),
                         driver_name: row.getCell(3).text.toUpperCase().replaceAll(regStrReplace, ''),
                         driver_phone: row.getCell(4).text.toUpperCase().replaceAll(regStrReplace, ''),
-                        // 模板最后一列放备注信息
-                        comment: row.getCell(row.cellCount).text.replaceAll(regStrReplace, ''),
+                        comment: row.getCell(6).text.replaceAll(regStrReplace, ''),
+                        trans_company_name: row.getCell(7).text.replaceAll(regStrReplace, ''),
                     })
                 }
             });
             return ret;
         },
         doDownloadTemplate: async function () {
-            this.$download_file('/uploads/模板1.xlsx', '导入模版');
+            this.$download_file('/uploads/模板2.xlsx', '导入模版');
         },
         onSubmit: async function () {
             try {
@@ -473,6 +473,9 @@ export default {
                         bidding_id: this.bidding_id,
                         comment: ele.comment,
                     };
+                    if (ele.trans_company_name) {
+                        req.trans_company_name = ele.trans_company_name;
+                    }
                     if (req.is_proxy) {
                         req.proxy_company_name = this.saler_name;
                     }
