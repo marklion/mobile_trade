@@ -24,6 +24,10 @@
                     <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
                 </view>
                 <fui-white-space size="large"></fui-white-space>
+                <view style="display:flex;justify-content:flex-end;margin-bottom:10rpx;padding-right:32rpx;">
+                <fui-button :text="item.expanded ? '收起' : '展开更多'" btnSize="mini" type="primary" slot="" @click="item.expanded = !item.expanded"/>
+                </view>
+                <view v-show="item.expanded">
                 <fui-row>
                     <fui-col :span="12">
                         <fui-label>
@@ -211,6 +215,7 @@
                     <fui-button text="添加" btnSize="mini" type="primary" @click="prepare_add_zone(item)"></fui-button>
                 </view>
                 <fui-white-space size="large"></fui-white-space>
+                </view>
             </fui-card>
         </list-show>
         <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
@@ -742,7 +747,11 @@ export default {
             let ret = await this.$send_req('/stuff/get_all', {
                 pageNo: _pageNo
             });
-
+            if (Array.isArray(ret.stuff)) {
+                ret.stuff.forEach(item => {
+                    if (typeof item.expanded === 'undefined') item.expanded = false;
+                });
+            }
             return ret.stuff
         },
     },
