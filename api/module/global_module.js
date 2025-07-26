@@ -126,7 +126,7 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
 }
 module.exports = {
     name: 'global',
-    description: '全局',    
+    description: '全局',
     methods: {
         driver_phone_online: {
             name: '司机手机号上线',
@@ -1274,7 +1274,7 @@ module.exports = {
 
                         await archive.finalize();
                         console.log('Zip file created successfully', zipName);
-                        return zipName;
+                        return '/uploads/' + zipName;
                     } catch (error) {
                         console.error('磅单导出错误:', error);
                         throw error;
@@ -2006,7 +2006,7 @@ module.exports = {
                 return { access_control_permission: company.access_control_permission };
             }
         },
-        get_barriergate_control_permission: { 
+        get_barriergate_control_permission: {
             name: '获取闸杆权限',
             description: '获取闸杆权限',
             is_write: false,
