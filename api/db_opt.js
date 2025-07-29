@@ -67,6 +67,7 @@ let db_opt = {
             fixed: { type: DataTypes.BOOLEAN },
             prefer_order_begin_offset: { type: DataTypes.INTEGER, defaultValue: 0 },
             prefer_order_end_offset: { type: DataTypes.INTEGER, defaultValue: 1 },
+            signature_pic: { type: DataTypes.STRING },
         },
         global_replace_form : {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

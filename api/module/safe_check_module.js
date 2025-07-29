@@ -361,6 +361,49 @@ module.exports = {
                 return { result: true };
             },
         },
+        update_user_signature: {
+            name: '更新用户签名',
+            description: '更新用户签名图片',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                signature_pic: { type: String, have_to: true, mean: '签名图片路径', example: '/uploads/signature.png' }
+            },
+            result: {
+                result: { type: Boolean, mean: '更新结果', example: true }
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (user) {
+                    user.signature_pic = body.signature_pic;
+                    console.log(user.signature_pic);    
+                    await user.save();
+                    return { result: true };
+                } else {
+                    throw { err_msg: '用户未找到' };
+                }
+            }
+        },
+        get_user_signature: {
+            name: '获取用户签名',
+            description: '获取用户签名图片',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                signature_pic: { type: String, mean: '签名图片路径', example: '/uploads/signature.png' }
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (user) {
+                    return { signature_pic: user.signature_pic || '' };
+                } else {
+                    throw { err_msg: '用户未找到' };
+                }
+            }
+        },
         commit_fc_plan: {
             name: '提交现场检查表',
             description: '提交现场检查表',
