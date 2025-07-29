@@ -386,10 +386,13 @@ module.exports = {
         const archive = archiver('zip', { zlib: { level: 9 } });
 
         output.on('close', async () => {
+            console.log('ZIP文件创建成功,大小:' + archive.pointer() + ' bytes');
+            // 删除打包前的文件
             await Promise.all(filePaths.map(async (filePath) => {
                 try {
                     const absolutePath = path.resolve(filePath);
                     await fs.promises.unlink(absolutePath);
+                    console.log(`文件已删除: ${absolutePath}`);
                 } catch (err) {
                     console.error(`无法删除文件 ${absolutePath}: ${err.message}`);
                 }
@@ -406,6 +409,7 @@ module.exports = {
             try {
                 const fileName = absolutePath.match(/fc_(.*)/)[1];
                 await archive.file(absolutePath, { name: `现场检查表_${fileName}` });
+                console.log(`文件已添加到ZIP: ${absolutePath}`);
             } catch (err) {
                 console.error(`无法访问文件 ${absolutePath}: ${err.message}`);
             }
