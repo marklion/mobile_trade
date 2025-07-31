@@ -248,10 +248,8 @@ module.exports = {
         const xmlContent = renderedZip.files['word/document.xml'].asText();
         
         if (fc_result.user_signature) {
-            const imagePath = path.resolve('/database' + fc_result.user_signature);
-            console.log('imagePath', imagePath);    
+            const imagePath = path.resolve('/database' + fc_result.user_signature);  
             if (fs.existsSync(imagePath)) {
-                console.log('imagePath', imagePath);
                 const imageBuffer = fs.readFileSync(imagePath);
                 
                 const imageFileName = `image_${uuid.v4().split('-')[0]}.png`;
