@@ -1347,16 +1347,10 @@ module.exports = {
         });
     },
     buildTimeCondition(body, sq) {
-        const conditions = [
-            sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
-            }),
-            sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
-            }),
-        ];
+        let conditions = [];
+        
         if (body.m_start_time && body.m_end_time) {
-            conditions.push({
+            conditions = [{
                 [db_opt.Op.or]: [
                     {
                         [db_opt.Op.and]: [
@@ -1379,8 +1373,18 @@ module.exports = {
                         ]
                     }
                 ]
-            });
+            }];
+        } else {
+            conditions = [
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.start_time)
+                }),
+                sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                    [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.end_time)
+                }),
+            ];
         }
+        
         return conditions;
     },
     filter_plan4user: async function (body, token, is_buy = false) {
