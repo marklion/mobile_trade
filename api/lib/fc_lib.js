@@ -131,7 +131,7 @@ module.exports = {
                 include: [{
                     model: sq.models.fc_check_result,
                     include: [sq.models.field_check_item]
-                }]
+                },sq.models.rbac_user]
             });
             if (fc_plan_tables.length == 1) {
                 element.fc_plan_table = fc_plan_tables[0];
@@ -249,8 +249,9 @@ module.exports = {
         
         if (fc_result.user_signature) {
             const imagePath = path.resolve('/database' + fc_result.user_signature);
-            
+            console.log('imagePath', imagePath);    
             if (fs.existsSync(imagePath)) {
+                console.log('imagePath', imagePath);
                 const imageBuffer = fs.readFileSync(imagePath);
                 
                 const imageFileName = `image_${uuid.v4().split('-')[0]}.png`;
