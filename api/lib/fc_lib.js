@@ -131,9 +131,6 @@ module.exports = {
                 include: [{
                     model: sq.models.fc_check_result,
                     include: [sq.models.field_check_item]
-                }, {
-                    model: sq.models.rbac_user,
-                    attributes: ['id', 'name', 'signature_pic', 'phone', 'email'] // 包含更多字段以确保完整性
                 }]
             });
             if (fc_plan_tables.length == 1) {
@@ -173,9 +170,6 @@ module.exports = {
                 let tmp = item.toJSON()
                 if (item.fc_plan_table) {
                     tmp.fc_plan_table = item.fc_plan_table.toJSON();
-                    if (item.fc_plan_table.rbac_user) {
-                        tmp.fc_plan_table.rbac_user = item.fc_plan_table.rbac_user.toJSON();
-                    }
                 }
                 ret.push(tmp);
             });

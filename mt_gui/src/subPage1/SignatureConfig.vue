@@ -43,7 +43,7 @@ export default {
                 // 获取用户已有的签名
                 const result = await this.$send_req('/sc/get_user_signature');
                 if (result && result.signature_pic) {
-                    this.imgUrl = this.$convert_attach_url(result.signature_pic).replace('http://localhost:8081', 'http://localhost:8080');
+                    this.imgUrl = this.$convert_attach_url(result.signature_pic);
                 }
             } catch (error) {
                 console.error('获取用户签名失败:', error);
@@ -88,7 +88,7 @@ export default {
         async uploadSignatureImage(imgPath) {
             return new Promise((resolve, reject) => {
                 uni.uploadFile({
-                    url: this.$remote_url() + '/api/v1/upload_signature',
+                    url: this.$remote_url() + '/api/v1/upload_file',
                     filePath: imgPath,
                     name: 'file',
                     header: {

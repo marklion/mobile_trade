@@ -7,7 +7,6 @@ const jimp = require('jimp').default;
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/uploads', express.static('/database/uploads'));
 app.help_info = [];
 if (!isMainThread) {
     const { pic_list } = workerData;
@@ -137,50 +136,6 @@ else {
         });
     });
     
-    // 专门的签名图片上传接口
-    app.post('/api/v1/upload_signature', upload.single('file'), (req, res) => {
-        const path = require('path');
-        const fs = require('fs');
-        const uuid = require('uuid');
-        
-        try {
-            // 确保上传目录存在
-            const uploadDir = '/database/uploads';
-            if (!fs.existsSync(uploadDir)) {
-                fs.mkdirSync(uploadDir, { recursive: true });
-                console.log('创建上传目录:', uploadDir);
-            }
-            
-            // 获取文件扩展名
-            let fileExtension = path.extname(req.file.originalname);
-            
-            // 生成唯一文件名
-            let real_file_name = uuid.v4();
-            const filePath = '/uploads/' + real_file_name + fileExtension;
-            const fullPath = '/database' + filePath;
-            
-            console.log('签名图片上传开始:', {
-                originalName: req.file.originalname,
-                tempPath: req.file.path,
-                targetPath: fullPath,
-                fileSize: req.file.size
-            });
-            
-            // 直接移动文件到目标位置，避免重复的读写操作
-            fs.renameSync(req.file.path, fullPath);
-            
-            console.log('签名图片上传成功:', filePath);
-            res.send(filePath);
-            
-        } catch (error) {
-            console.error('签名图片上传失败:', error);
-            // 清理临时文件
-            if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-            }
-            res.status(500).send({ err_msg: '签名图片上传失败: ' + error.message });
-        }
-    });
     app.post('/api/v1/merge_pics', async (req, res) => {
         let body = req.body;
         let pic_list = body.pic_list;

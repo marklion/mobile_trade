@@ -377,7 +377,6 @@ module.exports = {
                 let user = await rbac_lib.get_user_by_token(token);
                 if (user) {
                     user.signature_pic = body.signature_pic;
-                    console.log(user.signature_pic);    
                     await user.save();
                     return { result: true };
                 } else {
