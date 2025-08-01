@@ -140,10 +140,13 @@
 					"style": {
 						"enablePullDownRefresh": true
 					}
+				},
+				{
+					"path": "SignatureConfig"
 				}
 			]
 		}
-	],
+	],	
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "掌易助理",

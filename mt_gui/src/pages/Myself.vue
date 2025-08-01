@@ -59,6 +59,9 @@
         <module-filter require_module="rbac">
             <u-cell title="开发选项" isLink url="/pages/DevPage"></u-cell>
         </module-filter>
+        <fui-list-cell arrow @click="show_signature_config">
+            签名配置
+        </fui-list-cell>
     </fui-list>
     <fui-white-space></fui-white-space>
     <fui-button type="danger" text="退出登录" @click="unLogin"></fui-button>
@@ -205,6 +208,11 @@ export default {
         rebind: function () {
             uni.navigateTo({
                 url: '/subPage1/Bind'
+            });
+        },
+        show_signature_config: function () {
+            uni.navigateTo({
+                url: '/subPage1/SignatureConfig'
             });
         },
         config_role: function () {

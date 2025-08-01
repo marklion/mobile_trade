@@ -135,6 +135,7 @@ else {
             res.send(filePath);
         });
     });
+    
     app.post('/api/v1/merge_pics', async (req, res) => {
         let body = req.body;
         let pic_list = body.pic_list;
