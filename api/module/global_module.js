@@ -124,6 +124,27 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
     }
     return ret;
 }
+async function getPlansByTicketType(body, token) {
+    switch (body.ticket_type) {
+        case 'sale_management':
+            return await plan_lib.filter_plan4manager(body, token);
+        case 'buy_management':
+            return await plan_lib.filter_plan4manager(body, token, true);
+        case 'customer':
+            return await plan_lib.filter_plan4user(body, token);
+        case 'supplier':
+            return await plan_lib.filter_plan4user(body, token, true);
+        default:
+            throw { err_msg: '磅单类型错误' };
+    }
+}
+function generateTicketFilename(plan) {
+    const companyName = plan.company.name.replace(/[\\/:*?"<>|]/g, '_'); // 清理特殊字符
+    const mainPlate = plan.main_vehicle.plate || '无主车';
+    const behindPlate = plan.behind_vehicle.plate || '无挂车';
+
+    return `磅单_${companyName}_${mainPlate}-${behindPlate}_${plan.id}.png`;
+}
 module.exports = {
     name: 'global',
     description: '全局',
@@ -1246,7 +1267,7 @@ module.exports = {
                     await fs.promises.mkdir(tempDir, { recursive: true });
 
                     try {
-                        let plans = await module.exports.methods.getPlansByTicketType(body, token);
+                        let plans = await getPlansByTicketType(body, token);
                         if (plans.length === 0) throw { err_msg: '未找到磅单信息' };
 
                         const zipName = `磅单导出_${uuid.v4()}.zip`;
@@ -1256,7 +1277,7 @@ module.exports = {
                         for (let plan of plans)
                         {
                             console.log(`正在生成 ${plan.id}`);
-                            const fileName = module.exports.methods.generateTicketFilename(plan);
+                            const fileName = generateTicketFilename(plan);
                             const filePath = path.join(tempDir, fileName);
                             await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, filePath);
                             console.log(`已生成 ${filePath}`);
@@ -2067,26 +2088,5 @@ module.exports = {
                 return { is_the_order_display_price: company.is_the_order_display_price };
             }
         },
-        getPlansByTicketType: async function(body, token) {
-            switch (body.ticket_type) {
-                case 'sale_management':
-                    return await plan_lib.filter_plan4manager(body, token);
-                case 'buy_management':
-                    return await plan_lib.filter_plan4manager(body, token, true);
-                case 'customer':
-                    return await plan_lib.filter_plan4user(body, token);
-                case 'supplier':
-                    return await plan_lib.filter_plan4user(body, token, true);
-                default:
-                    throw { err_msg: '磅单类型错误' };
-            }
-        },
-        generateTicketFilename(plan) {
-            const companyName = plan.company.name.replace(/[\\/:*?"<>|]/g, '_'); // 清理特殊字符
-            const mainPlate = plan.main_vehicle.plate || '无主车';
-            const behindPlate = plan.behind_vehicle.plate || '无挂车';
-
-            return `磅单_${companyName}_${mainPlate}-${behindPlate}_${plan.id}.png`;
-        }
     },
 }
