@@ -102,6 +102,25 @@ Plan Confirm with Not Enough Cash and Check
     ${c}  Set Variable  ${0}
     # 比较计算结果与实际值
     Should Be Equal As Numbers    ${arrears_third}    ${c}
+Vehicle Number Check When Charge
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${found_contracts}  Req Get to Server  /customer/contract_get  ${bc1_user_token}  contracts
+    Charge To A Company    ${buy_company1}[id]    ${-${found_contracts}[0][balance]}
+    ${found_contracts}  Req Get to Server  /customer/contract_get  ${bc1_user_token}  contracts
+    Should Be Equal As Numbers    ${found_contracts}[0][balance]    ${0}
+    ${plan1}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan2}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan    ${plan1}
+    Confirm A Plan    ${plan2}
+    ${check_plan}  Get Plan By Id    ${plan1}[id]
+    Should Be Equal As Numbers    ${check_plan}[outstanding_vehicles]    ${2}
+    Charge To A Company    ${buy_company1}[id]    ${${test_stuff}[price] * 22}
+    ${check_plan}  Get Plan By Id    ${plan2}[id]
+    Should Be Equal As Numbers    ${check_plan}[outstanding_vehicles]    ${2}
+    Charge To A Company    ${buy_company1}[id]    ${${test_stuff}[price] * -22}
 Plan Confirm with No User Authorized
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0

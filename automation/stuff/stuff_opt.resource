@@ -89,12 +89,12 @@ Del A Stuff From Sale
 Add A Company As Customer
     [Arguments]  ${company_id}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  customer_id=${company_id}
-    Req to Server  /sale_management/contract_make  ${token}  ${req}
+    Req to Server  /sale_management/contract_make  ${token}  ${req}  ${True}
 
 Add A Company As Supplier
     [Arguments]  ${company_id}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  supplier_id=${company_id}
-    Req to Server  /buy_management/contract_make  ${token}  ${req}
+    Req to Server  /buy_management/contract_make  ${token}  ${req}  ${True}
 
 Del A Customer Contract
     [Arguments]  ${contract_id}
