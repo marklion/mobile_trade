@@ -188,7 +188,6 @@ module.exports = {
                 }
             }
             if (fc_plan_table.fc_plan_table.finish_time) {
-                ret.checker = fc_plan_table.fc_plan_table.rbac_user.name;
                 ret.finish_time = fc_plan_table.fc_plan_table.finish_time;
                 
                 try {
@@ -196,8 +195,11 @@ module.exports = {
                         attributes: ['id', 'name', 'signature_pic']
                     });
                     
-                    if (user && user.signature_pic) {
-                        ret.user_signature = user.signature_pic;
+                    if (user) {
+                        ret.checker = user.name;
+                        if (user.signature_pic) {
+                            ret.user_signature = user.signature_pic;
+                        }
                     }
                 } catch (error) {
                     console.error('查询用户信息失败:', error);
@@ -247,66 +249,22 @@ module.exports = {
         const renderedZip = doc.getZip();
         const xmlContent = renderedZip.files['word/document.xml'].asText();
         
+
+        
+        // 处理检查人签名图片
         if (fc_result.user_signature) {
             const imagePath = path.resolve('/database' + fc_result.user_signature);  
             if (fs.existsSync(imagePath)) {
                 const imageBuffer = fs.readFileSync(imagePath);
-                
                 const imageFileName = `image_${uuid.v4().split('-')[0]}.png`;
-                
                 renderedZip.file(`word/media/${imageFileName}`, imageBuffer);
-                
-                const signatureImageXml = `
-                    <w:p>
-                        <w:r>
-                            <w:t>检查人签名：</w:t>
-                        </w:r>
-                    </w:p>
-                    <w:p>
-                        <w:r>
-                            <w:drawing>
-                                <wp:inline distT="0" distB="0" distL="0" distR="0">
-                                    <wp:extent cx="2000000" cy="1000000"/>
-                                    <wp:effectExtent l="0" t="0" r="0" b="0"/>
-                                    <wp:docPr id="1" name="签名图片"/>
-                                    <wp:cNvGraphicFramePr>
-                                        <a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/>
-                                    </wp:cNvGraphicFramePr>
-                                    <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
-                                        <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                                            <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
-                                                <pic:nvPicPr>
-                                                    <pic:cNvPr id="0" name="签名图片"/>
-                                                    <pic:cNvPicPr/>
-                                                </pic:nvPicPr>
-                                                <pic:blipFill>
-                                                    <a:blip r:embed="rId${imageFileName.replace('.png', '')}"/>
-                                                    <a:stretch>
-                                                        <a:fillRect/>
-                                                    </a:stretch>
-                                                </pic:blipFill>
-                                                <pic:spPr>
-                                                    <a:xfrm>
-                                                        <a:off x="0" y="0"/>
-                                                        <a:ext cx="2000000" cy="1000000"/>
-                                                    </a:xfrm>
-                                                    <a:prstGeom prst="rect">
-                                                        <a:avLst/>
-                                                    </a:prstGeom>
-                                                </pic:spPr>
-                                            </pic:pic>
-                                        </a:graphicData>
-                                    </a:graphic>
-                                </wp:inline>
-                            </w:drawing>
-                        </w:r>
-                    </w:p>`;
-                
-                const endBodyIndex = xmlContent.lastIndexOf('</w:body>');
-                if (endBodyIndex !== -1) {
-                    const newXmlContent = xmlContent.substring(0, endBodyIndex) + signatureImageXml + xmlContent.substring(endBodyIndex);
+                const namePattern = /(<w:t[^>]*>\s*检查人[：:]\s*<\/w:t>)(<\/w:r>)(<w:r[^>]*?>[\s\S]*?)(<w:t[^>]*>)([^<]*)(<\/w:t>)([\s\S]*?<\/w:r>)/;
+                const imageXml = `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="500000" cy="250000"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="签名图片"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="签名图片"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId${imageFileName.replace('.png', '')}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="500000" cy="250000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
+                let newXmlContent = xmlContent.replace(namePattern, (match, checkerTag, endR, startR, tStart, name, tEnd, endR2) => {
+                    return `${checkerTag}${endR}${startR}${imageXml}${endR2}`;
+                });
+                if (newXmlContent !== xmlContent) {
                     renderedZip.file('word/document.xml', newXmlContent);
-                    
                     const relsPath = 'word/_rels/document.xml.rels';
                     let relsContent = '';
                     if (renderedZip.files[relsPath]) {
@@ -314,10 +272,8 @@ module.exports = {
                     } else {
                         relsContent = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
                     }
-                    
                     const relId = `rId${imageFileName.replace('.png', '')}`;
                     const relEntry = `<Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imageFileName}"/>`;
-                    
                     const endRelsIndex = relsContent.lastIndexOf('</Relationships>');
                     if (endRelsIndex !== -1) {
                         const newRelsContent = relsContent.substring(0, endRelsIndex) + relEntry + relsContent.substring(endRelsIndex);
