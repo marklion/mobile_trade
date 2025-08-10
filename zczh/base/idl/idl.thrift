@@ -142,6 +142,7 @@ struct running_rule {
     10:double max_m_weight,
     11:double max_j_weight,
     12:double weight_coe,
+    13:bool force_close,
 }
 
 struct device_run_time{

@@ -355,10 +355,37 @@ public:
             log_driver(__FUNCTION__, "faile to snap:%d", zs_ret);
         }
     }
+    bool m_was_blocking = false;
+    void force_close_gate()
+    {
+        bool force_close = false;
+        THR_CALL_BEGIN(config_management);
+        running_rule rule;
+        client->get_rule(rule);
+        force_close = rule.force_close;
+        THR_CALL_END();
+        if (force_close)
+        {
+            int val = 0;
+            auto zs_ret = VzLPRClient_GetGPIOValue(g_zc_handler, 1, &val);
+            if (0 == val)
+            {
+                m_was_blocking = true;
+            }
+            else
+            {
+                if (m_was_blocking)
+                {
+                    gate_ctrl(1, false);
+                }
+                m_was_blocking = false;
+            }
+        }
+    }
     virtual bool gate_is_close(const int64_t gate_id)
     {
         bool ret = false;
-
+        force_close_gate();
         int val = 1;
         auto zs_ret = VzLPRClient_GetGPIOValue(g_zc_handler, 0, &val);
         if (1 == val)

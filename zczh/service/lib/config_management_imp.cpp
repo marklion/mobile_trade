@@ -328,6 +328,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->max_j_weight = rule.max_j_weight;
         er->max_m_weight = rule.max_m_weight;
         er->weight_coe = rule.weight_coe;
+        er->force_close = rule.force_close;
         ret = er->update_record();
     }
     else
@@ -345,6 +346,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         tmp.max_m_weight = rule.max_m_weight;
         tmp.gate_strict = rule.gate_strict;
         tmp.weight_coe = rule.weight_coe;
+        tmp.force_close = rule.force_close;
         ret = tmp.insert_record();
     }
     return ret;
@@ -372,6 +374,7 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.max_j_weight = er->max_j_weight;
         _return.max_m_weight = er->max_m_weight;
         _return.weight_coe = er->weight_coe;
+        _return.force_close = er->force_close;
     }
 }
 
