@@ -1405,6 +1405,15 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
         auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
         if (set)
         {
+            auto fg = set->get_parent<sql_device_meta>("front_gate");
+            auto bg = set->get_parent<sql_device_meta>("back_gate");
+            if (fg && bg)
+            {
+                THR_CALL_DM_BEGIN();
+                client->gate_is_close(fg->get_pri_id());
+                client->gate_is_close(bg->get_pri_id());
+                THR_CALL_DM_END();
+            }
             auto sc = set->get_parent<sql_device_meta>("scale");
             if (sc)
             {
@@ -1416,6 +1425,7 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
                     ret.reset(new scale_state_idle());
                 }
             }
+
         }
     }
 
