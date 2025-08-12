@@ -367,6 +367,7 @@
             <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
             <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
             <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
+            <fui-input label="承运公司" v-model="update_req.trans_company_name"></fui-input>
             <fui-input label="备注" v-model="update_req.comment"></fui-input>
         </fui-form>
     </fui-modal>
@@ -445,6 +446,7 @@ export default {
                 main_vehicle_plate: '',
                 behind_vehicle_plate: '',
                 driver_phone: '',
+                trans_company_name: '',
             },
             rollback_msg: '',
             use_for_array: [
@@ -823,6 +825,9 @@ export default {
                 if (this.update_req.driver_phone == this.focus_plan.driver.phone) {
                     delete this.update_req.driver_phone;
                 }
+                if (this.update_req.trans_company_name == (this.focus_plan.trans_company_name || '')) {
+                    delete this.update_req.trans_company_name;
+                }
                 if (this.update_req.comment == this.focus_plan.comment) {
                     delete this.update_req.comment;
                 }
@@ -838,6 +843,7 @@ export default {
             this.update_req.main_vehicle_plate = this.focus_plan.main_vehicle.plate;
             this.update_req.behind_vehicle_plate = this.focus_plan.behind_vehicle.plate;
             this.update_req.driver_phone = this.focus_plan.driver.phone;
+            this.update_req.trans_company_name = this.focus_plan.trans_company_name || '';
             this.update_req.comment = this.focus_plan.comment;
         },
         choose_use_for: function (_name) {

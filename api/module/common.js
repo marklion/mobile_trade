@@ -77,6 +77,7 @@ module.exports = {
             main_vehicle_plate: { type: String, have_to: false, mean: '主车车牌', example: '主车车牌' },
             behind_vehicle_plate: { type: String, have_to: false, mean: '挂车车牌', example: '挂车车牌' },
             driver_phone: { type: String, have_to: false, mean: '司机电话', example: '19999991111' },
+            trans_company_name: { type: String, have_to: false, mean: '承运公司', example: '承运公司名称' },
             comment: { type: String, have_to: false, mean: '备注', example: '备注' },
             use_for: { type: String, have_to: false, mean: '用途', example: '用途' },
             drop_address: { type: String, have_to: false, mean: '卸货地址', example: '卸货地址' },
@@ -98,7 +99,16 @@ module.exports = {
                 let orig_driver = (await util_lib.get_single_plan_by_id(body.plan_id)).driver;
                 driver_id = (await plan_lib.fetch_driver(orig_driver.name, body.driver_phone, orig_driver.id_card)).id;
             }
-            await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, main_vehicle_id, behind_vehicle_id, driver_id, body.comment, body.use_for, body.drop_address);
+            await plan_lib.update_single_plan(body.plan_id, token, {
+                plan_time: body.plan_time,
+                main_vehicle_id: main_vehicle_id,
+                behind_vehicle_id: behind_vehicle_id,
+                driver_id: driver_id,
+                comment: body.comment,
+                use_for: body.use_for,
+                drop_address: body.drop_address,
+                trans_company_name: body.trans_company_name
+            });
             return { result: true };
         },
     },
