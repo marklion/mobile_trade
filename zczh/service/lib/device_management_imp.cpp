@@ -1422,10 +1422,16 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
                 THR_CALL_DM_END();
                 if (sm.cur_weight == 0)
                 {
+                    if (fg && bg)
+                    {
+                        THR_CALL_DM_BEGIN();
+                        client->gate_is_close(fg->get_pri_id());
+                        client->gate_is_close(bg->get_pri_id());
+                        THR_CALL_DM_END();
+                    }
                     ret.reset(new scale_state_idle());
                 }
             }
-
         }
     }
 
