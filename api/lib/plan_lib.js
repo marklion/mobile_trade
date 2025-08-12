@@ -490,7 +490,7 @@ module.exports = {
         };
         return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
     },
-    update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address) {
+    update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address, _trans_company_name) {
         let sq = db_opt.get_sq();
         let plan = await sq.models.plan.findByPk(_plan_id);
 
@@ -548,6 +548,10 @@ module.exports = {
             if (_drop_address != undefined) {
                 change_comment += '卸货地址由' + plan.drop_address + '改为' + _drop_address + ';\n';
                 plan.drop_address = _drop_address;
+            }
+            if (_trans_company_name != undefined) {
+                change_comment += '承运公司由' + plan.trans_company_name + '改为' + _trans_company_name + ';\n';
+                plan.trans_company_name = _trans_company_name;
             }
             await plan.save();
             this.mark_dup_info(plan);
