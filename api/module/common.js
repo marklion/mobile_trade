@@ -99,7 +99,16 @@ module.exports = {
                 let orig_driver = (await util_lib.get_single_plan_by_id(body.plan_id)).driver;
                 driver_id = (await plan_lib.fetch_driver(orig_driver.name, body.driver_phone, orig_driver.id_card)).id;
             }
-            await plan_lib.update_single_plan(body.plan_id, token, body.plan_time, main_vehicle_id, behind_vehicle_id, driver_id, body.comment, body.use_for, body.drop_address, body.trans_company_name);
+            await plan_lib.update_single_plan(body.plan_id, token, {
+                plan_time: body.plan_time,
+                main_vehicle_id: main_vehicle_id,
+                behind_vehicle_id: behind_vehicle_id,
+                driver_id: driver_id,
+                comment: body.comment,
+                use_for: body.use_for,
+                drop_address: body.drop_address,
+                trans_company_name: body.trans_company_name
+            });
             return { result: true };
         },
     },

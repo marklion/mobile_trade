@@ -490,7 +490,7 @@ module.exports = {
         };
         return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
     },
-    update_single_plan: async function (_plan_id, _token, _plan_time, _main_vehicle_id, _behind_vehicle_id, _driver_id, _comment, _use_for, _drop_address, _trans_company_name) {
+    update_single_plan: async function (_plan_id, _token, _update_data) {
         let sq = db_opt.get_sq();
         let plan = await sq.models.plan.findByPk(_plan_id);
 
@@ -503,55 +503,55 @@ module.exports = {
         let company = await plan.getCompany();
         let owner_company = (await util_lib.get_single_plan_by_id(_plan_id)).stuff.company;
         // 判断是否在黑名单中
-        if (await this.is_in_blacklist(owner_company.id, _driver_id, _main_vehicle_id, _behind_vehicle_id)) {
+        if (await this.is_in_blacklist(owner_company.id, _update_data.driver_id, _update_data.main_vehicle_id, _update_data.behind_vehicle_id)) {
             throw { err_msg: '更新计划失败，司机或车辆已被列入黑名单' };
         }
         let opt_company = await rbac_lib.get_company_by_token(_token);
         if ((company && opt_company && company.id == opt_company.id) || (owner_company && opt_company && owner_company.id == opt_company.id)) {
             let change_comment = '';
-            if (_plan_time != undefined) {
-                change_comment += '计划时间由' + plan.plan_time + '改为' + _plan_time + ';\n';
-                plan.plan_time = _plan_time;
+            if (_update_data.plan_time != undefined) {
+                change_comment += '计划时间由' + plan.plan_time + '改为' + _update_data.plan_time + ';\n';
+                plan.plan_time = _update_data.plan_time;
             }
-            if (_main_vehicle_id != undefined) {
+            if (_update_data.main_vehicle_id != undefined) {
                 let orig_main_vehicle = await plan.getMain_vehicle();
-                let new_main_vehicle = await sq.models.vehicle.findByPk(_main_vehicle_id);
+                let new_main_vehicle = await sq.models.vehicle.findByPk(_update_data.main_vehicle_id);
                 if (orig_main_vehicle && new_main_vehicle) {
                     change_comment += '主车辆由' + orig_main_vehicle.plate + '改为' + new_main_vehicle.plate + ';\n';
                 }
                 plan.setMain_vehicle(new_main_vehicle);
             }
-            if (_behind_vehicle_id != undefined) {
+            if (_update_data.behind_vehicle_id != undefined) {
                 let orig_behind_vehicle = await plan.getBehind_vehicle();
-                let new_behind_vehicle = await sq.models.vehicle.findByPk(_behind_vehicle_id);
+                let new_behind_vehicle = await sq.models.vehicle.findByPk(_update_data.behind_vehicle_id);
                 if (orig_behind_vehicle && new_behind_vehicle) {
                     change_comment += '挂车辆由' + orig_behind_vehicle.plate + '改为' + new_behind_vehicle.plate + ';\n';
                 }
                 plan.setBehind_vehicle(new_behind_vehicle);
             }
-            if (_driver_id != undefined) {
+            if (_update_data.driver_id != undefined) {
                 let orig_driver = await plan.getDriver();
-                let new_driver = await sq.models.driver.findByPk(_driver_id);
+                let new_driver = await sq.models.driver.findByPk(_update_data.driver_id);
                 if (orig_driver && new_driver) {
                     change_comment += '司机电话由' + orig_driver.phone + '改为' + new_driver.phone + ';\n';
                 }
                 plan.setDriver(new_driver);
             }
-            if (_comment != undefined) {
-                change_comment += '备注由' + plan.comment + '改为' + _comment + ';\n';
-                plan.comment = _comment;
+            if (_update_data.comment != undefined) {
+                change_comment += '备注由' + plan.comment + '改为' + _update_data.comment + ';\n';
+                plan.comment = _update_data.comment;
             }
-            if (_use_for != undefined) {
-                change_comment += '用途由' + plan.use_for + '改为' + _use_for + ';\n';
-                plan.use_for = _use_for;
+            if (_update_data.use_for != undefined) {
+                change_comment += '用途由' + plan.use_for + '改为' + _update_data.use_for + ';\n';
+                plan.use_for = _update_data.use_for;
             }
-            if (_drop_address != undefined) {
-                change_comment += '卸货地址由' + plan.drop_address + '改为' + _drop_address + ';\n';
-                plan.drop_address = _drop_address;
+            if (_update_data.drop_address != undefined) {
+                change_comment += '卸货地址由' + plan.drop_address + '改为' + _update_data.drop_address + ';\n';
+                plan.drop_address = _update_data.drop_address;
             }
-            if (_trans_company_name != undefined) {
-                change_comment += '承运公司由' + plan.trans_company_name + '改为' + _trans_company_name + ';\n';
-                plan.trans_company_name = _trans_company_name;
+            if (_update_data.trans_company_name != undefined) {
+                change_comment += '承运公司由' + plan.trans_company_name + '改为' + _update_data.trans_company_name + ';\n';
+                plan.trans_company_name = _update_data.trans_company_name;
             }
             await plan.save();
             this.mark_dup_info(plan);
