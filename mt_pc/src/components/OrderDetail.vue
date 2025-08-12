@@ -143,6 +143,9 @@
             <el-form-item label="司机手机">
                 <el-input v-model="update_req.driver_phone"></el-input>
             </el-form-item>
+            <el-form-item label="承运公司">
+                <el-input v-model="update_req.trans_company_name" placeholder="请输入承运公司名称"></el-input>
+            </el-form-item>
             <el-form-item label="备注">
                 <el-input v-model="update_req.comment"></el-input>
             </el-form-item>
@@ -269,6 +272,7 @@ export default {
                 main_vehicle_plate: '',
                 behind_vehicle_plate: '',
                 driver_phone: '',
+                trans_company_name: '',
                 comment: '',
             },
             show_update: false,
@@ -365,6 +369,7 @@ export default {
                 main_vehicle_plate: this.plan.main_vehicle.plate,
                 behind_vehicle_plate: this.plan.behind_vehicle.plate,
                 driver_phone: this.plan.driver.phone,
+                trans_company_name: this.plan.trans_company_name || '',
                 comment: this.plan.comment,
             }
             this.show_update = true;
@@ -380,6 +385,9 @@ export default {
                     }
                     if (this.update_req.driver_phone == this.plan.driver.phone) {
                         delete this.update_req.driver_phone;
+                    }
+                    if (this.update_req.trans_company_name == (this.plan.trans_company_name || '')) {
+                        delete this.update_req.trans_company_name;
                     }
                     if (this.update_req.comment == this.plan.comment) {
                         delete this.update_req.comment;
