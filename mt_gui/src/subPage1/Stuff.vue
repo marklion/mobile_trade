@@ -529,6 +529,41 @@ export default {
         }
     },
     methods: {
+        // 通用API调用方法 - 减少重复的错误处理代码
+        async apiCall(endpoint, data = {}) {
+            try {
+                return await this.$send_req(endpoint, data);
+            } catch (error) {
+                uni.showToast({
+                    title: error.message || '操作失败',
+                    icon: 'none'
+                });
+                throw error;
+            }
+        },
+
+        // 通用配置获取方法 - 减少重复的配置获取代码
+        async getConfig(endpoint, propertyName) {
+            const ret = await this.apiCall(endpoint, {});
+            this[propertyName] = ret[propertyName];
+        },
+
+        // 通用配置设置方法 - 减少重复的配置设置代码
+        async setConfig(endpoint, data) {
+            await this.apiCall(endpoint, data);
+        },
+
+        async changeStuffConfig(endpoint, event, item, propertyName = null) {
+            const value = event.detail.value;
+            if (propertyName && item) {
+                item[propertyName] = value;
+            }
+            await this.apiCall(endpoint, {
+                stuff_id: item.id,
+                [propertyName || endpoint.split('/').pop()]: value
+            });
+        },
+
         handleBatchCheckout(item, event) {
             if (event?.stopPropagation) {
                 event.stopPropagation();
@@ -590,7 +625,7 @@ export default {
             }
         },
         save_ticket_prefix: async function (item) {
-            await this.$send_req('/stuff/set_ticket_prefix', {
+            await this.apiCall('/stuff/set_ticket_prefix', {
                 stuff_id: item.id,
                 ticket_prefix: item.ticket_prefix
             });
@@ -602,7 +637,7 @@ export default {
         },
         delete_zone: async function (e) {
             if (e.index == 1) {
-                await this.$send_req('/stuff/del_zone', {
+                await this.apiCall('/stuff/del_zone', {
                     id: this.del_zone_id
                 });
                 uni.startPullDownRefresh();
@@ -621,7 +656,7 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                await this.$send_req('/stuff/add_zone', {
+                await this.apiCall('/stuff/add_zone', {
                     stuff_id: this.add_zone_stuff_id,
                     name: this.zone_req.zone_name
                 });
@@ -635,31 +670,29 @@ export default {
             this.show_zone_add = true;
         },
         init_price_profile: async function () {
-            let resp = await this.$send_req('/sale_management/get_price_change_profile', {});
-            this.price_profile = resp;
+            this.price_profile = await this.apiCall('/sale_management/get_price_change_profile', {});
         },
         update_price_profile: async function () {
-            await this.$send_req('/sale_management/set_price_change_profile', this.price_profile);
+            await this.apiCall('/sale_management/set_price_change_profile', this.price_profile);
             await this.init_price_profile();
         },
         set_company_qualification: async function () {
-            await this.$send_req('/stuff/set_check_qualification', {
+            await this.setConfig('/stuff/set_check_qualification', {
                 enable: this.qualification_check
             });
             await this.get_company_qualification();
         },
         set_verify_pay_config: async function () {
-            await this.$send_req('/stuff/set_verify_pay_config', {
+            await this.setConfig('/stuff/set_verify_pay_config', {
                 verify_pay_by_cash: this.verify_pay_by_cash
             });
             await this.get_verify_pay_config();
         },
         get_verify_pay_config: async function () {
-            this.verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+            await this.getConfig('/stuff/get_verify_pay_config', 'verify_pay_by_cash');
         },
         get_company_qualification: async function () {
-            let ret = await this.$send_req('/stuff/get_check_qualification', {});
-            this.qualification_check = ret.enable;
+            await this.getConfig('/stuff/get_check_qualification', 'qualification_check');
         },
         seg_change: function (e) {
             this.cur_seg = e;
@@ -680,47 +713,25 @@ export default {
             this.show_close_time = false;
         },
         change_no_need_register: async function (event, item) {
-            await this.$send_req('/stuff/no_need_register', {
-                stuff_id: item.id,
-                no_need_register: event.detail.value,
-            });
+            await this.changeStuffConfig('/stuff/no_need_register', event, item, 'no_need_register');
         },
         change_need_exam: async function (event, item) {
-            await this.$send_req('/stuff/exam_config', {
-                stuff_id: item.id,
-                need_exam: event.detail.value,
-            });
+            await this.changeStuffConfig('/stuff/exam_config', event, item, 'need_exam');
         },
         change_checkout_delay: async function (event, item) {
-            await this.$send_req('/stuff/checkout_delay_config', {
-                stuff_id: item.id,
-                checkout_delay: event.detail.value,
-            });
+            await this.changeStuffConfig('/stuff/checkout_delay_config', event, item, 'checkout_delay');
         },
         change_manual_weight: async function (event, item) {
-            item.manual_weight = event.detail.value;
-            await this.$send_req('/stuff/manual_weight_config', {
-                stuff_id: item.id,
-                manual_weight: event.detail.value
-            });
+            await this.changeStuffConfig('/stuff/manual_weight_config', event, item, 'manual_weight');
         },
         change_auto_confirm_goods: async function (event, item) {
-            await this.$send_req('/stuff/auto_confirm_goods', {
-                stuff_id: item.id,
-                auto_confirm_goods: event.detail.value
-            });
+            await this.changeStuffConfig('/stuff/auto_confirm_goods', event, item, 'auto_confirm_goods');
         },
         change_need_enter_weight: async function (event, item) {
-            await this.$send_req('/stuff/enter_weight', {
-                stuff_id: item.id,
-                need_enter_weight: event.detail.value
-            });
+            await this.changeStuffConfig('/stuff/enter_weight', event, item, 'need_enter_weight');
         },
         change_need_expect_weight: async function (event, item) {
-            await this.$send_req('/stuff/expect_weight_config', {
-                stuff_id: item.id,
-                need_expect_weight: event.detail.value
-            });
+            await this.changeStuffConfig('/stuff/expect_weight_config', event, item, 'need_expect_weight');
         },
         set_scunit_coe_configuration: async function (item) {
             try {
@@ -752,16 +763,13 @@ export default {
             }
         },
         change_need_sc: async function (event, item) {
-            await this.$send_req('/stuff/sc_config', {
-                stuff_id: item.id,
-                need_sc: event.detail.value
-            });
+            await this.changeStuffConfig('/stuff/sc_config', event, item, 'need_sc');
         },
         get_price_history: async function (_pageNo, params) {
             if (params[0] == 0) {
                 return [];
             }
-            let ret = await this.$send_req('/stuff/get_price_history', {
+            let ret = await this.apiCall('/stuff/get_price_history', {
                 pageNo: _pageNo,
                 stuff_id: params[0]
             });
@@ -797,7 +805,7 @@ export default {
         },
         do_cancel_next_price: async function (e) {
             if (e.index == 1) {
-                await this.$send_req('/stuff/clear_next_price', {
+                await this.apiCall('/stuff/clear_next_price', {
                     stuff_id: this.cancel_next_stuff_id,
                 })
                 uni.startPullDownRefresh();
@@ -917,85 +925,76 @@ export default {
         },
         // 新增的配置方法
         get_show_sc_in_field: async function () {
-            let ret = await this.$send_req('/global/get_show_sc_in_field', {});
-            this.show_sc_in_field = ret.show_sc_in_field;
+            await this.getConfig('/global/get_show_sc_in_field', 'show_sc_in_field');
         },
         set_show_sc_in_field: async function () {
-            await this.$send_req('/stuff/set_show_sc_in_field', {
+            await this.setConfig('/stuff/set_show_sc_in_field', {
                 show_sc_in_field: this.show_sc_in_field
             });
             await this.get_show_sc_in_field();
         },
         get_buy_config_hard: async function () {
-            let ret = await this.$send_req('/global/get_buy_config_hard', {});
-            this.buy_config_hard = ret.buy_config_hard;
+            await this.getConfig('/global/get_buy_config_hard', 'buy_config_hard');
         },
         set_buy_config_hard: async function () {
-            await this.$send_req('/stuff/set_buy_config_hard', {
+            await this.setConfig('/stuff/set_buy_config_hard', {
                 buy_config_hard: this.buy_config_hard
             });
             await this.get_buy_config_hard();
         },
         get_push_messages_writable_roles: async function () {
-            let ret = await this.$send_req('/global/get_push_messages_writable_roles', {});
-            this.push_messages_writable_roles = ret.push_messages_writable_roles;
+            await this.getConfig('/global/get_push_messages_writable_roles', 'push_messages_writable_roles');
         },
         set_push_messages_writable_roles: async function () {
-            await this.$send_req('/stuff/set_push_messages_writable_roles', {
+            await this.setConfig('/stuff/set_push_messages_writable_roles', {
                 push_messages_writable_roles: this.push_messages_writable_roles
             });
         },
         get_ticket_hasOrhasnt_place: async function () {
-            let ret = await this.$send_req('/global/get_ticket_hasOrhasnt_place', {});
-            this.ticket_hasOrhasnt_place = ret.ticket_hasOrhasnt_place;
+            await this.getConfig('/global/get_ticket_hasOrhasnt_place', 'ticket_hasOrhasnt_place');
         },
         set_ticket_hasOrhasnt_place: async function () {
-            await this.$send_req('/stuff/set_ticket_hasOrhasnt_place', {
+            await this.setConfig('/stuff/set_ticket_hasOrhasnt_place', {
                 ticket_hasOrhasnt_place: this.ticket_hasOrhasnt_place
             });
         },
         get_access_control_permission: async function () {
-            let ret = await this.$send_req('/global/get_access_control_permission', {});
-            this.access_control_permission = ret.access_control_permission;
+            await this.getConfig('/global/get_access_control_permission', 'access_control_permission');
         },
         set_access_control_permission: async function () { 
-            await this.$send_req('/stuff/set_access_control_permission', {
+            await this.setConfig('/stuff/set_access_control_permission', {
                 access_control_permission: this.access_control_permission
             });
         },
         set_support_location_detail: async function () {
-            await this.$send_req('/stuff/set_support_location_detail', {
+            await this.setConfig('/stuff/set_support_location_detail', {
                 support_location_detail: this.support_location_detail
             });
         },
         get_support_location_detail: async function () {
-            let ret = await this.$send_req('/global/get_support_location_detail', {});
-            this.support_location_detail = ret.support_location_detail;
+            await this.getConfig('/global/get_support_location_detail', 'support_location_detail');
         },
         set_barriergate_control_permission: async function () {
-            await this.$send_req('/stuff/set_barriergate_control_permission', {
+            await this.setConfig('/stuff/set_barriergate_control_permission', {
                 barriergate_control_permission: this.barriergate_control_permission
             });
         },
         get_barriergate_control_permission: async function () {
-            let ret = await this.$send_req('/global/get_barriergate_control_permission', {});
-            this.barriergate_control_permission = ret.barriergate_control_permission;
+            await this.getConfig('/global/get_barriergate_control_permission', 'barriergate_control_permission');
         },
         get_the_order_display_price: async function () {
-            let ret = await this.$send_req('/global/get_the_order_display_price', {});
-            this.is_the_order_display_price = ret.is_the_order_display_price;
+            await this.getConfig('/global/get_the_order_display_price', 'is_the_order_display_price');
         },
         set_the_order_display_price: async function () {
-            await this.$send_req('/stuff/set_the_order_display_price', {
+            await this.setConfig('/stuff/set_the_order_display_price', {
                 is_the_order_display_price: this.is_the_order_display_price
             });
         },
         get_is_allowed_order_return: async function () {
-            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
-            this.is_allowed_order_return = ret.is_allowed_order_return;
+            await this.getConfig('/global/get_is_allowed_order_return', 'is_allowed_order_return');
         },
         set_is_allowed_order_return: async function () {
-            await this.$send_req('/stuff/set_is_allowed_order_return', {
+            await this.setConfig('/stuff/set_is_allowed_order_return', {
                 is_allowed_order_return: this.is_allowed_order_return
             });
         },
