@@ -2,7 +2,7 @@
 <view>
     <u-subsection :list="seg_list" :current="cur_seg" @change="seg_change"></u-subsection>
     <view v-if="cur_seg == 0">
-        <list-show style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
+        <list-show style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" height="90vh">
             <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name" :tag="item.price + ''" v-for="(item, index) in data2show2" :key="index">
                 <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
                     <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
@@ -210,6 +210,7 @@
         <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
     </view>
     <view v-else-if="cur_seg == 1">
+        <!-- 基础配置 -->
         <u-cell title="默认调价影响计划">
             <u-switch slot="value" v-model="price_profile.default_impact_plan" @change="update_price_profile"></u-switch>
         </u-cell>
@@ -219,9 +220,98 @@
         <u-cell title="检查对方资质">
             <u-switch slot="value" v-model="qualification_check" @change="set_company_qualification"></u-switch>
         </u-cell>
-        <u-cell title="验款权限改为余额管理">
+        <u-cell title="验款权限设为余额管理">
             <u-switch slot="value" v-model="verify_pay_by_cash" @change="set_verify_pay_config"></u-switch>
         </u-cell>
+        <u-cell title="排队车辆界面操作安检">
+            <u-switch slot="value" v-model="show_sc_in_field" @change="set_show_sc_in_field"></u-switch>
+        </u-cell>
+        <u-cell title="采购严格模式">
+            <u-switch slot="value" v-model="buy_config_hard" @change="set_buy_config_hard"></u-switch>
+        </u-cell>
+        <u-cell title="是否只推送消息给可写角色">
+            <u-switch slot="value" v-model="push_messages_writable_roles" @change="set_push_messages_writable_roles"></u-switch>
+        </u-cell>
+        <u-cell title="磅单上是否显示装卸车地点">
+            <u-switch slot="value" v-model="ticket_hasOrhasnt_place" @change="set_ticket_hasOrhasnt_place"></u-switch>
+        </u-cell>
+        <u-cell title="门禁权限是否关闭">
+            <u-switch slot="value" v-model="access_control_permission" @change="set_access_control_permission"></u-switch>
+        </u-cell>
+        <u-cell title="磅上闸杆是否关闭">
+            <u-switch slot="value" v-model="barriergate_control_permission" @change="set_barriergate_control_permission"></u-switch>
+        </u-cell>
+        <u-cell title="卸车地点支持细节输入">
+            <u-switch slot="value" v-model="support_location_detail" @change="set_support_location_detail"></u-switch>
+        </u-cell>
+        <u-cell title="是否允许订单回退">
+            <u-switch slot="value" v-model="is_allowed_order_return" @change="set_is_allowed_order_return"></u-switch>
+        </u-cell>
+        <u-cell title="订单列表是否显示价格">
+            <u-switch slot="value" v-model="is_the_order_display_price" @change="set_the_order_display_price"></u-switch>
+        </u-cell>
+
+        <!-- 磅单配置 -->
+        <u-divider text="磅单配置" style="font-size: 36rpx; font-weight: bold;"></u-divider>
+        <u-cell title="称重单替换文字">
+            <fui-input slot="value" v-model="replace_form.replace_weighingSheet" placeholder="请输入称重单的替换文字" style="width:300px"></fui-input>
+        </u-cell>
+        <u-cell title="装载量替换文字">
+            <fui-input slot="value" v-model="replace_form.replace_count" placeholder="请输入装载量的替换文字" style="width:300px"></fui-input>
+        </u-cell>
+        <u-cell title="一次计量替换文字">
+            <fui-input slot="value" v-model="replace_form.replace_fw_info" placeholder="请输入一次计量的替换文字" style="width:300px"></fui-input>
+        </u-cell>
+        <u-cell title="二次计量替换文字">
+            <fui-input slot="value" v-model="replace_form.replace_sw_info" placeholder="请输入二次计量的替换文字" style="width:300px"></fui-input>
+        </u-cell>
+        <u-cell title="下单公司替换文字">
+            <fui-input slot="value" v-model="replace_form.order_company" placeholder="请输入下单公司的替换文字" style="width:300px"></fui-input>
+        </u-cell>
+        <u-cell title="运输公司替换文字">
+            <fui-input slot="value" v-model="replace_form.transportation_company" placeholder="请输入运输公司的替换文字" style="width:300px"></fui-input>
+        </u-cell>
+        <view style="padding: 20rpx; display: flex; justify-content: center;">
+            <fui-button text="重置" type="warning" @click="onReset" style="margin-right: 20rpx;"></fui-button>
+            <fui-button text="保存" type="primary" @click="onSaveReplace"></fui-button>
+        </view>
+
+        <!-- 订单额外信息 -->
+        <u-divider text="订单额外信息"></u-divider>
+        <list-show ref="all_extra" v-model="extra_info_configs" :fetch_function="get_extra_info_config" height="40vh">
+            <u-cell v-for="(item, index) in extra_info_configs" :key="index" :title="item.title" :value="'ID: ' + item.id">
+                <fui-button slot="value" text="删除" type="danger" btnSize="mini" @click="del_extra_info_config(item)"></fui-button>
+            </u-cell>
+        </list-show>
+        <view style="padding: 20rpx;">
+            <fui-button text="新增额外信息" type="success" @click="show_add_extra_info = true"></fui-button>
+        </view>
+
+        <!-- 代理配置 -->
+        <u-divider text="代理配置"></u-divider>
+        <list-show ref="all_delegates" v-model="delegates" :fetch_function="get_delegates" height="40vh">
+            <u-cell v-for="(item, index) in delegates" :key="index" :title="item.name" :value="item.code">
+                <template #label>
+                    <view style="display:flex;flex-wrap: wrap;">
+                        <fui-tag v-for="contract in item.contracts" :key="contract.id" :text="contract.buy_company.name + ' (' + contract.id + ')'" theme="plain" :scaleRatio="0.8" type="primary" style="margin-right: 10rpx; margin-bottom: 10rpx;">
+                            <view class="fui-close__icon">
+                                <fui-icon name="close" color="#465CFF" :size="32" @click="del_delegate_contract(contract.id, item.id)"></fui-icon>
+                            </view>
+                        </fui-tag>
+                    </view>
+                </template>
+                <view slot="value" style="display:flex;align-items: center;">
+                    <view v-if="item.stamp_pic" style="margin-right: 10rpx;">
+                        <image :src="item.stamp_pic" style="width: 60rpx; height: 60rpx; border-radius: 8rpx;" @click="preview_stamp_pic(item.stamp_pic)"></image>
+                    </view>
+                    <fui-button text="删除" type="danger" btnSize="mini" @click="delete_delegate(item)" style="margin-right: 10rpx;"></fui-button>
+                    <fui-button text="增加合同" type="primary" btnSize="mini" @click="show_add_contract(item)"></fui-button>
+                </view>
+            </u-cell>
+        </list-show>
+        <view style="padding: 20rpx;">
+            <fui-button text="新增代理" type="success" @click="create_delegate = true"></fui-button>
+        </view>
     </view>
     <view v-else-if="cur_seg == 2">
         <BlackList ref="blacklist_ref" />
@@ -278,7 +368,7 @@
     <fui-date-picker :show="show_next_date" :minDate="today_date" :value="today_date" type="5" @change="set_next_date" @cancel="show_next_date = false"></fui-date-picker>
     <fui-bottom-popup :show="show_history" @close="show_history = false">
         <view>
-            <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id]" search_key="comment" height="40vh">
+            <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id]" height="40vh">
                 <u-cell v-for="(item, index) in data2show" :key="index" size="large" :title="item.operator" :value="item.new_price">
                     <template #label>
                         <view style="display:flex;">
@@ -290,6 +380,37 @@
             </list-show>
         </view>
     </fui-bottom-popup>
+
+    <!-- 新增代理弹窗 -->
+    <fui-modal width="600" :show="create_delegate" v-if="create_delegate" @click="add_delegate">
+        <fui-form ref="new_delegate" top="100">
+            <fui-input required label="代理名称" borderTop placeholder="请输入代理名称" v-model="new_delegate.name"></fui-input>
+            <fui-input required label="代理编号" borderTop placeholder="请输入代理编号" v-model="new_delegate.code"></fui-input>
+        </fui-form>
+    </fui-modal>
+
+    <!-- 新增合同弹窗 -->
+    <fui-modal width="600" :show="show_add_contract_diag" v-if="show_add_contract_diag" @click="add_contract_delegate">
+        <fui-form ref="contract_form" top="100">
+            <fui-input required label="合同选择" borderTop placeholder="请选择合同" v-model="contract_selected_name" disabled @click="show_contract_picker = true"></fui-input>
+        </fui-form>
+    </fui-modal>
+
+    <!-- 合同选择器 -->
+    <fui-bottom-popup :show="show_contract_picker" @close="show_contract_picker = false">
+        <view>
+            <list-show ref="contracts" v-model="contracts_list" :fetch_function="get_contracts" height="40vh">
+                <u-cell v-for="(item, index) in contracts_list" :key="index" :title="item.company.name" :value="'ID: ' + item.id" @click="select_contract(item)"></u-cell>
+            </list-show>
+        </view>
+    </fui-bottom-popup>
+
+    <!-- 新增额外信息弹窗 -->
+    <fui-modal width="600" :show="show_add_extra_info" v-if="show_add_extra_info" @click="add_extra_info_config">
+        <fui-form ref="extra_info_form" top="100">
+            <fui-input required label="配置标题" borderTop placeholder="请输入配置标题" v-model="new_extra_info.title"></fui-input>
+        </fui-form>
+    </fui-modal>
 </view>
 </template>
 
@@ -369,7 +490,42 @@ export default {
                 zone_name: ''
             },
             del_zone_id: 0,
-            show_zone_del: false
+            show_zone_del: false,
+            // 新增的配置项
+            show_sc_in_field: false,
+            buy_config_hard: false,
+            push_messages_writable_roles: false,
+            ticket_hasOrhasnt_place: false,
+            access_control_permission: false,
+            barriergate_control_permission: false,
+            support_location_detail: false,
+            is_allowed_order_return: false,
+            is_the_order_display_price: false,
+            replace_form: {
+                replace_weighingSheet: '',
+                replace_count: '',
+                replace_fw_info: '',
+                replace_sw_info: '',
+                order_company: '',
+                transportation_company: ''
+            },
+            extra_info_configs: [],
+            delegates: [],
+            create_delegate: false,
+            new_delegate: {
+                name: '',
+                code: '',
+            },
+            show_add_contract_diag: false,
+            contract_id_selected: 0,
+            contract_selected_name: '',
+            focus_delegate_id: 0,
+            show_contract_picker: false,
+            contracts_list: [],
+            show_add_extra_info: false,
+            new_extra_info: {
+                title: ''
+            }
         }
     },
     methods: {
@@ -507,6 +663,13 @@ export default {
         },
         seg_change: function (e) {
             this.cur_seg = e;
+            // 当切换到全局策略页面时，手动触发数据加载
+            if (e == 1) {
+                this.$nextTick(() => {
+                    this.$refs?.all_extra?.refresh();
+                    this.$refs?.all_delegates?.refresh();
+                });
+            }
         },
         set_next_date: function (e) {
             this.next_price_req.next_time = e.result;
@@ -752,10 +915,389 @@ export default {
             });
             return ret.stuff
         },
+        // 新增的配置方法
+        get_show_sc_in_field: async function () {
+            let ret = await this.$send_req('/global/get_show_sc_in_field', {});
+            this.show_sc_in_field = ret.show_sc_in_field;
+        },
+        set_show_sc_in_field: async function () {
+            await this.$send_req('/stuff/set_show_sc_in_field', {
+                show_sc_in_field: this.show_sc_in_field
+            });
+            await this.get_show_sc_in_field();
+        },
+        get_buy_config_hard: async function () {
+            let ret = await this.$send_req('/global/get_buy_config_hard', {});
+            this.buy_config_hard = ret.buy_config_hard;
+        },
+        set_buy_config_hard: async function () {
+            await this.$send_req('/stuff/set_buy_config_hard', {
+                buy_config_hard: this.buy_config_hard
+            });
+            await this.get_buy_config_hard();
+        },
+        get_push_messages_writable_roles: async function () {
+            let ret = await this.$send_req('/global/get_push_messages_writable_roles', {});
+            this.push_messages_writable_roles = ret.push_messages_writable_roles;
+        },
+        set_push_messages_writable_roles: async function () {
+            await this.$send_req('/stuff/set_push_messages_writable_roles', {
+                push_messages_writable_roles: this.push_messages_writable_roles
+            });
+        },
+        get_ticket_hasOrhasnt_place: async function () {
+            let ret = await this.$send_req('/global/get_ticket_hasOrhasnt_place', {});
+            this.ticket_hasOrhasnt_place = ret.ticket_hasOrhasnt_place;
+        },
+        set_ticket_hasOrhasnt_place: async function () {
+            await this.$send_req('/stuff/set_ticket_hasOrhasnt_place', {
+                ticket_hasOrhasnt_place: this.ticket_hasOrhasnt_place
+            });
+        },
+        get_access_control_permission: async function () {
+            let ret = await this.$send_req('/global/get_access_control_permission', {});
+            this.access_control_permission = ret.access_control_permission;
+        },
+        set_access_control_permission: async function () { 
+            await this.$send_req('/stuff/set_access_control_permission', {
+                access_control_permission: this.access_control_permission
+            });
+        },
+        set_support_location_detail: async function () {
+            await this.$send_req('/stuff/set_support_location_detail', {
+                support_location_detail: this.support_location_detail
+            });
+        },
+        get_support_location_detail: async function () {
+            let ret = await this.$send_req('/global/get_support_location_detail', {});
+            this.support_location_detail = ret.support_location_detail;
+        },
+        set_barriergate_control_permission: async function () {
+            await this.$send_req('/stuff/set_barriergate_control_permission', {
+                barriergate_control_permission: this.barriergate_control_permission
+            });
+        },
+        get_barriergate_control_permission: async function () {
+            let ret = await this.$send_req('/global/get_barriergate_control_permission', {});
+            this.barriergate_control_permission = ret.barriergate_control_permission;
+        },
+        get_the_order_display_price: async function () {
+            let ret = await this.$send_req('/global/get_the_order_display_price', {});
+            this.is_the_order_display_price = ret.is_the_order_display_price;
+        },
+        set_the_order_display_price: async function () {
+            await this.$send_req('/stuff/set_the_order_display_price', {
+                is_the_order_display_price: this.is_the_order_display_price
+            });
+        },
+        get_is_allowed_order_return: async function () {
+            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
+            this.is_allowed_order_return = ret.is_allowed_order_return;
+        },
+        set_is_allowed_order_return: async function () {
+            await this.$send_req('/stuff/set_is_allowed_order_return', {
+                is_allowed_order_return: this.is_allowed_order_return
+            });
+        },
+        // 磅单配置方法
+        fetchReplaceField: async function () {
+            try {
+                const ret = await this.$send_req('/stuff/get_replace_field', {});
+                if (ret && ret.replace_form) {
+                    this.replace_form = ret.replace_form;
+                }
+            } catch (error) {
+                console.error('获取替换字段失败:', error);
+                uni.showToast({
+                    title: '获取替换字段失败',
+                    icon: 'none'
+                });
+            }
+        },
+        onReset: function () {
+            this.replace_form = {
+                replace_weighingSheet: '',
+                replace_count: '',
+                replace_fw_info: '',
+                replace_sw_info: '',
+                order_company: '',
+                transportation_company: ''
+            }
+        },
+        onSaveReplace: async function () {
+            let res = await this.$send_req('/stuff/set_replace_field', {
+                replace_form: {
+                    replace_weighingSheet: this.replace_form.replace_weighingSheet || '称重单',
+                    replace_count: this.replace_form.replace_count || '装载量',
+                    replace_fw_info: this.replace_form.replace_fw_info || '一次计量',
+                    replace_sw_info: this.replace_form.replace_sw_info || '二次计量',
+                    order_company: this.replace_form.order_company || '下单公司',
+                    transportation_company: this.replace_form.transportation_company || '运输公司',
+                }
+            });
+            if (res) {
+                uni.showToast({
+                    title: '保存成功',
+                    icon: 'success'
+                });
+            } else {
+                uni.showToast({
+                    title: '保存失败',
+                    icon: 'none'
+                });
+            }
+        },
+        // 订单额外信息方法
+        get_extra_info_config: async function (_pageNo) {
+            let ret = await this.$send_req('/stuff/get_extra_info_config', {
+                pageNo: _pageNo
+            });
+            if (ret && ret.extra_info_configs) {
+                return ret.extra_info_configs;
+            }
+            return [];
+        },
+        add_extra_info_config: async function (detail) {
+            if (detail.index == 1) {
+                let rules = [{
+                    name: 'title',
+                    rule: ['required'],
+                    msg: ['请输入配置标题']
+                }];
+                let val_ret = await this.$refs.extra_info_form.validator(this.new_extra_info, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                
+                let ret = await this.$send_req('/stuff/add_extra_info_config', {
+                    title: this.new_extra_info.title
+                });
+                if (ret) {
+                    this.show_add_extra_info = false;
+                    this.new_extra_info.title = '';
+                    uni.showToast({
+                        title: '新增成功',
+                        icon: 'success'
+                    });
+                    this.$refs.all_extra.refresh();
+                } else {
+                    uni.showToast({
+                        title: '新增失败',
+                        icon: 'none'
+                    });
+                }
+            } else {
+                // 取消按钮
+                this.show_add_extra_info = false;
+                this.new_extra_info.title = '';
+            }
+        },
+        del_extra_info_config: async function (row) {
+            const { confirm } = await uni.showModal({
+                title: '提示',
+                content: '此操作将永久删除该配置, 是否继续?',
+                showCancel: true,
+                cancelText: '取消',
+                confirmText: '确定'
+            });
+            
+            if (confirm) {
+                let ret = await this.$send_req('/stuff/del_extra_info_config', {
+                    id: row.id
+                });
+                if (ret) {
+                    uni.showToast({
+                        title: '删除成功',
+                        icon: 'success'
+                    });
+                    this.$refs.all_extra.refresh();
+                } else {
+                    uni.showToast({
+                        title: '删除失败',
+                        icon: 'none'
+                    });
+                }
+            }
+        },
+        // 代理配置方法
+        get_delegates: async function (_pageNo) {
+            let ret = await this.$send_req('/stuff/get_delegates', {
+                pageNo: _pageNo
+            });
+            if (ret && ret.delegates) {
+                return ret.delegates;
+            }
+            return [];
+        },
+        add_delegate: async function (detail) {
+            if (detail.index == 1) {
+                let rules = [{
+                    name: 'name',
+                    rule: ['required'],
+                    msg: ['请输入代理名称']
+                }, {
+                    name: 'code',
+                    rule: ['required'],
+                    msg: ['请输入代理编号']
+                }];
+                let val_ret = await this.$refs.new_delegate.validator(this.new_delegate, rules);
+                if (!val_ret.isPassed) {
+                    return;
+                }
+                let ret = await this.$send_req('/stuff/add_delegate', this.new_delegate);
+                if (ret) {
+                    this.create_delegate = false;
+                    this.new_delegate = { name: '', code: '' };
+                    uni.showToast({
+                        title: '新增成功',
+                        icon: 'success'
+                    });
+                    this.$refs.all_delegates.refresh();
+                } else {
+                    uni.showToast({
+                        title: '新增失败',
+                        icon: 'none'
+                    });
+                }
+            } else {
+                // 取消按钮
+                this.create_delegate = false;
+                this.new_delegate = { name: '', code: '' };
+            }
+        },
+        delete_delegate: async function (delegate) {
+            const { confirm } = await uni.showModal({
+                title: '提示',
+                content: '此操作将永久删除该代理, 是否继续?',
+                showCancel: true,
+                cancelText: '取消',
+                confirmText: '确定'
+            });
+            
+            if (confirm) {
+                let ret = await this.$send_req('/stuff/del_delegate', {
+                    id: delegate.id
+                });
+                if (ret) {
+                    uni.showToast({
+                        title: '删除成功',
+                        icon: 'success'
+                    });
+                    this.$refs.all_delegates.refresh();
+                } else {
+                    uni.showToast({
+                        title: '删除失败',
+                        icon: 'none'
+                    });
+                }
+            }
+        },
+        show_add_contract: function (delegate) {
+            this.focus_delegate_id = delegate.id;
+            this.show_add_contract_diag = true;
+        },
+        get_contracts: async function (_pageNo) {
+            let ret = await this.$send_req('/sale_management/contract_get', {
+                pageNo: _pageNo
+            });
+            return ret.contracts || [];
+        },
+        select_contract: function (contract) {
+            this.contract_id_selected = contract.id;
+            this.contract_selected_name = contract.company.name;
+            this.show_contract_picker = false;
+        },
+        add_contract_delegate: async function (detail) {
+            if (detail.index == 1) {
+                if (this.contract_id_selected == 0) {
+                    uni.showToast({
+                        title: '请选择合同',
+                        icon: 'none'
+                    });
+                    return;
+                }
+                let ret = await this.$send_req('/sale_management/add_delegate_contract', {
+                    delegate_id: this.focus_delegate_id,
+                    contract_id: this.contract_id_selected
+                });
+                if (ret) {
+                    this.show_add_contract_diag = false;
+                    this.contract_id_selected = 0;
+                    this.contract_selected_name = '';
+                    uni.showToast({
+                        title: '新增成功',
+                        icon: 'success'
+                    });
+                    this.$refs.all_delegates.refresh();
+                } else {
+                    uni.showToast({
+                        title: '新增失败',
+                        icon: 'none'
+                    });
+                }
+            } else {
+                // 取消按钮
+                this.show_add_contract_diag = false;
+                this.contract_id_selected = 0;
+                this.contract_selected_name = '';
+            }
+        },
+        preview_stamp_pic: function (pic_url) {
+            if (pic_url) {
+                uni.previewImage({
+                    urls: [pic_url],
+                    current: pic_url
+                });
+            }
+        },
+        del_delegate_contract: async function (contract_id, delegate_id) {
+            const { confirm } = await uni.showModal({
+                title: '提示',
+                content: '此操作将永久删除该合同, 是否继续?',
+                showCancel: true,
+                cancelText: '取消',
+                confirmText: '确定'
+            });
+            
+            if (confirm) {
+                let ret = await this.$send_req('/sale_management/del_delegate_contract', {
+                    contract_id: contract_id,
+                    delegate_id: delegate_id
+                });
+                if (ret) {
+                    uni.showToast({
+                        title: '删除成功',
+                        icon: 'success'
+                    });
+                    this.$refs.all_delegates.refresh();
+                } else {
+                    uni.showToast({
+                        title: '删除失败',
+                        icon: 'none'
+                    });
+                }
+            }
+        },
     },
     onPullDownRefresh() {
         this.$refs?.stuff_ref?.refresh();
         this.$refs?.blacklist_ref?.refresh();
+        this.$refs?.all_extra?.refresh();
+        this.$refs?.all_delegates?.refresh();
+        // 刷新配置项
+        this.init_price_profile();
+        this.fetchReplaceField();
+        this.get_company_qualification();
+        this.get_verify_pay_config();
+        this.get_buy_config_hard();
+        this.get_show_sc_in_field();
+        this.get_push_messages_writable_roles();
+        this.get_ticket_hasOrhasnt_place();
+        this.get_access_control_permission();
+        this.get_support_location_detail();
+        this.get_barriergate_control_permission();
+        this.get_is_allowed_order_return();
+        this.get_the_order_display_price();
         this.stuff_ready_fetch = {
             name: '',
             comment: undefined,
@@ -772,6 +1314,16 @@ export default {
         this.init_price_profile();
         this.get_company_qualification();
         this.get_verify_pay_config();
+        this.fetchReplaceField();
+        this.get_buy_config_hard();
+        this.get_show_sc_in_field();
+        this.get_push_messages_writable_roles();
+        this.get_ticket_hasOrhasnt_place();
+        this.get_access_control_permission();
+        this.get_support_location_detail();
+        this.get_barriergate_control_permission();
+        this.get_is_allowed_order_return();
+        this.get_the_order_display_price();
     }
 }
 </script>
