@@ -218,7 +218,7 @@ export default {
                 this.seg.push({
                     name: '采购参与',
                     get_url: '/customer/contract_get',
-                    need_su: false,
+                    need_su: true,
                     motive: false,
                     buy_setting: false,
                 });

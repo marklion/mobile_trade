@@ -37,7 +37,7 @@
                         <div>
                             {{ scope.row.balance }}
                         </div>
-                        <div v-if="is_motive && $hasPermission('cash')">
+                        <div v-if="$hasPermission('cash')">
                             <el-button type="text" size="small" @click="prepare_charge(scope.row)">充值</el-button>
                             <el-button type="text" size="small" @click="show_history(scope.row)">充值历史</el-button>
                         </div>
