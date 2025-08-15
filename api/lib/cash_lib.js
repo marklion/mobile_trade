@@ -47,6 +47,22 @@ module.exports = {
             throw { err_msg: '无权限' }
         }
     },
+    charge_by_company: async function (_token, _contract_id, _cash_increased, _comment) {
+        let user = await rbac_lib.get_user_by_token(_token);
+        let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);
+        if (user && contract) {
+            let buy_company = await user.getCompany();
+            if (buy_company && await buy_company.hasBuy_contract(contract)) {
+                await this.charge_by_username_and_contract(user.name, contract, _cash_increased, _comment);
+            }
+            else {
+                throw { err_msg: '无权限' }
+            }
+        }
+        else {
+            throw { err_msg: '无权限' }
+        }
+    },
 
     get_history_by_company: async function (_token, _contract_id, pageNo, begin_time, end_time) {
         let company = await rbac_lib.get_company_by_token(_token);
