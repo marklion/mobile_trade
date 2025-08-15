@@ -37,7 +37,7 @@
                         <div>
                             {{ scope.row.balance }}
                         </div>
-                        <div v-if="$hasPermission('cash')">
+                        <div v-if="(is_motive || enable_charge) && (!is_buy || $hasPermission('cash'))">
                             <el-button type="text" size="small" @click="prepare_charge(scope.row)">充值</el-button>
                             <el-button type="text" size="small" @click="show_history(scope.row)">充值历史</el-button>
                         </div>
@@ -117,7 +117,7 @@
     </el-dialog>
 
     <el-drawer destroy-on-close title="充值历史" :visible.sync="show_history_drawer" direction="rtl" size="70%">
-        <page-content ref="charge_history" body_key="histories" enable :req_body="{contract_id:focus_contract.id}" req_url="/cash/history">
+        <page-content ref="charge_history" body_key="histories" enable :req_body="{contract_id:focus_contract.id}" :req_url="charge_history_url">
             <template v-slot:default="slotProps">
                 <el-table :data="slotProps.content">
                     <el-table-column prop="cash_increased" label="充值金额"></el-table-column>
@@ -193,6 +193,12 @@ export default {
         req_path: String,
         is_buy: Boolean,
         is_motive: Boolean,
+        enable_charge: Boolean,
+    },
+    computed: {
+        charge_history_url() {
+            return this.req_path === '/customer/contract_get' ? '/customer/history' : '/cash/history';
+        }
     },
     methods: {
         reverseCharge: function (charge) { 
@@ -201,7 +207,11 @@ export default {
             cancelButtonText: '取消',
             type: 'warning'
         }).then(async () => {
-            await this.$send_req('/cash/charge', {
+            let charge_url = '/cash/charge';
+            if (this.req_path === '/customer/contract_get') {
+                charge_url = '/customer/charge';
+            }
+            await this.$send_req(charge_url, {
                 contract_id: this.focus_contract.id,
                 cash_increased: -parseFloat(charge.cash_increased),
                 comment: `回退${charge.time}的充值: ${charge.comment}`
@@ -230,7 +240,11 @@ export default {
         do_charge: async function () {
             this.$refs.charge_form.validate(async (valid) => {
                 if (valid) {
-                    await this.$send_req('/cash/charge', {
+                    let charge_url = '/cash/charge';
+                    if (this.req_path === '/customer/contract_get') {
+                        charge_url = '/customer/charge';
+                    }
+                    await this.$send_req(charge_url, {
                         contract_id: this.focus_contract.id,
                         cash_increased: parseFloat(this.charge_req.cash_increased),
                         comment: this.charge_req.comment,

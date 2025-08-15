@@ -1,6 +1,6 @@
 <template>
 <div>
-    <contract-show-table req_path="/customer/contract_get"></contract-show-table>
+    <contract-show-table req_path="/customer/contract_get" enable_charge></contract-show-table>
 </div>
 </template>
 
