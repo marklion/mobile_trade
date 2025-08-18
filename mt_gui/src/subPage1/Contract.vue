@@ -39,8 +39,8 @@
                 <view style="display:flex; flex-wrap: wrap;">
                     <module-filter require_module="cash" v-if="cur_urls.need_su">
                         <fui-tag :scaleRatio="0.8" originLeft type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
-                        <fui-tag :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
                     </module-filter>
+                    <fui-tag v-if="cur_urls.get_url === '/customer/contract_get' || cur_urls.need_su" :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
                     <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="purple" text="修改" @click="prepare_update(item)"></fui-tag>
                     <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
                 </view>
@@ -218,7 +218,7 @@ export default {
                 this.seg.push({
                     name: '采购参与',
                     get_url: '/customer/contract_get',
-                    need_su: true,
+                    need_su: false,
                     motive: false,
                     buy_setting: false,
                 });
@@ -309,9 +309,6 @@ export default {
                     return;
                 }
                 let charge_url = '/cash/charge';
-                if (this.cur_urls.get_url === '/customer/contract_get') {
-                    charge_url = '/customer/charge';
-                }
                 await this.$send_req(charge_url, {
                     contract_id: this.focus_item.id,
                     cash_increased: parseFloat(this.cash),

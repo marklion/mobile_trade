@@ -109,25 +109,7 @@ module.exports = {
                 }
             },
         },
-        charge: {
-            name: '充值',
-            description: '充值',
 
-            is_write: true,
-            is_get_api: false,
-            params: {
-                contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },
-                cash_increased: { type: Number, have_to: false, mean: '增加金额', example: 100 },
-                comment: { type: String, have_to: false, mean: '备注', example: '充值100元' },
-            },
-            result: {
-                result: { type: Boolean, mean: '结果', example: true }
-            },
-            func: async function (body, token) {
-                await cash_lib.charge_by_company(token, body.contract_id, body.cash_increased, body.comment);
-                return { result: true };
-            },
-        },
         get_stuff_on_sale: {
             name: '获取在售货物',
             description: '获取在售货物',

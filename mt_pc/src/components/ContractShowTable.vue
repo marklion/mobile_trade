@@ -37,8 +37,8 @@
                         <div>
                             {{ scope.row.balance }}
                         </div>
-                        <div v-if="(is_motive || enable_charge) && (!is_buy || $hasPermission('cash'))">
-                            <el-button type="text" size="small" @click="prepare_charge(scope.row)">充值</el-button>
+                        <div v-if="is_motive || req_path === '/customer/contract_get'">
+                            <el-button v-if="is_motive" type="text" size="small" @click="prepare_charge(scope.row)">充值</el-button>
                             <el-button type="text" size="small" @click="show_history(scope.row)">充值历史</el-button>
                         </div>
                     </template>
@@ -193,7 +193,7 @@ export default {
         req_path: String,
         is_buy: Boolean,
         is_motive: Boolean,
-        enable_charge: Boolean,
+
     },
     computed: {
         charge_history_url() {
@@ -207,11 +207,7 @@ export default {
             cancelButtonText: '取消',
             type: 'warning'
         }).then(async () => {
-            let charge_url = '/cash/charge';
-            if (this.req_path === '/customer/contract_get') {
-                charge_url = '/customer/charge';
-            }
-            await this.$send_req(charge_url, {
+            await this.$send_req('/cash/charge', {
                 contract_id: this.focus_contract.id,
                 cash_increased: -parseFloat(charge.cash_increased),
                 comment: `回退${charge.time}的充值: ${charge.comment}`
@@ -240,11 +236,7 @@ export default {
         do_charge: async function () {
             this.$refs.charge_form.validate(async (valid) => {
                 if (valid) {
-                    let charge_url = '/cash/charge';
-                    if (this.req_path === '/customer/contract_get') {
-                        charge_url = '/customer/charge';
-                    }
-                    await this.$send_req(charge_url, {
+                    await this.$send_req('/cash/charge', {
                         contract_id: this.focus_contract.id,
                         cash_increased: parseFloat(this.charge_req.cash_increased),
                         comment: this.charge_req.comment,
