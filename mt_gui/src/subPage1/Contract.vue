@@ -39,8 +39,8 @@
                 <view style="display:flex; flex-wrap: wrap;">
                     <module-filter require_module="cash" v-if="cur_urls.need_su">
                         <fui-tag :scaleRatio="0.8" originLeft type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
-                        <fui-tag :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
                     </module-filter>
+                    <fui-tag v-if="cur_urls.get_url === '/customer/contract_get' || cur_urls.need_su" :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
                     <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="purple" text="修改" @click="prepare_update(item)"></fui-tag>
                     <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
                 </view>
@@ -270,7 +270,11 @@ export default {
             if (id == 0) {
                 return [];
             }
-            let ret = await this.$send_req('/cash/history', {
+            let history_url = '/cash/history';
+            if (this.cur_urls.get_url === '/customer/contract_get') {
+                history_url = '/customer/history';
+            }
+            let ret = await this.$send_req(history_url, {
                 contract_id: id,
                 pageNo: _pageNo
             });
@@ -304,7 +308,8 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                await this.$send_req('/cash/charge', {
+                let charge_url = '/cash/charge';
+                await this.$send_req(charge_url, {
                     contract_id: this.focus_item.id,
                     cash_increased: parseFloat(this.cash),
                     comment: this.comment

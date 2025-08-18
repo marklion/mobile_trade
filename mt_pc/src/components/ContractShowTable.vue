@@ -37,8 +37,8 @@
                         <div>
                             {{ scope.row.balance }}
                         </div>
-                        <div v-if="is_motive && $hasPermission('cash')">
-                            <el-button type="text" size="small" @click="prepare_charge(scope.row)">充值</el-button>
+                        <div v-if="is_motive || req_path === '/customer/contract_get'">
+                            <el-button v-if="is_motive" type="text" size="small" @click="prepare_charge(scope.row)">充值</el-button>
                             <el-button type="text" size="small" @click="show_history(scope.row)">充值历史</el-button>
                         </div>
                     </template>
@@ -117,7 +117,7 @@
     </el-dialog>
 
     <el-drawer destroy-on-close title="充值历史" :visible.sync="show_history_drawer" direction="rtl" size="70%">
-        <page-content ref="charge_history" body_key="histories" enable :req_body="{contract_id:focus_contract.id}" req_url="/cash/history">
+        <page-content ref="charge_history" body_key="histories" enable :req_body="{contract_id:focus_contract.id}" :req_url="charge_history_url">
             <template v-slot:default="slotProps">
                 <el-table :data="slotProps.content">
                     <el-table-column prop="cash_increased" label="充值金额"></el-table-column>
@@ -193,6 +193,12 @@ export default {
         req_path: String,
         is_buy: Boolean,
         is_motive: Boolean,
+
+    },
+    computed: {
+        charge_history_url() {
+            return this.req_path === '/customer/contract_get' ? '/customer/history' : '/cash/history';
+        }
     },
     methods: {
         reverseCharge: function (charge) { 

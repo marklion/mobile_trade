@@ -47,7 +47,6 @@ module.exports = {
             throw { err_msg: '无权限' }
         }
     },
-
     get_history_by_company: async function (_token, _contract_id, pageNo, begin_time, end_time) {
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);
