@@ -220,6 +220,7 @@ export default {
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
             this.tmp_seal_no = item.seal_no;
+            this.zone_name = ''; 
             this.show_confirm_vehicle = true;
             this.focus_company = item.stuff.company;
             this.zones = item.stuff.drop_take_zones;
@@ -236,6 +237,8 @@ export default {
             });
             this.refresh_wait_que();
             this.show_confirm_vehicle = false;
+            this.zone_name = '';
+            this.tmp_seal_no = '';
         },
         call_vehicle: async function (item) {
             await this.$send_req('/scale/call_vehicle', {
