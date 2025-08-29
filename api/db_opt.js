@@ -161,7 +161,6 @@ let db_opt = {
             is_proxy: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_repeat: { type: DataTypes.BOOLEAN, defaultValue: false },
             fapiao_delivered: { type: DataTypes.BOOLEAN, defaultValue: false },
-            version: { type: DataTypes.INTEGER, defaultValue: 1 },
             drop_take_zone_name: { type: DataTypes.STRING },
             checkout_delay: { type: DataTypes.BOOLEAN, defaultValue: false },
             first_weight: { type: DataTypes.STRING, defaultValue: '' },
