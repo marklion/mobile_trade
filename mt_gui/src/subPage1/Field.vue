@@ -237,6 +237,7 @@ export default {
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
             this.tmp_seal_no = item.seal_no;
+            this.zone_name = '';
             this.show_confirm_vehicle = true;
             this.focus_company = item.stuff.company;
             this.zones = item.stuff.drop_take_zones;
@@ -253,6 +254,8 @@ export default {
             });
             uni.startPullDownRefresh();
             this.show_confirm_vehicle = false;
+            this.zone_name = '';
+            this.tmp_seal_no = '';
         },
         icon_make: function (item) {
             let ret = 'hourglass';
