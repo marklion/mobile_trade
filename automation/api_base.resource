@@ -1,6 +1,7 @@
 *** Settings ***
 Library  RequestsLibrary
 Library  Collections
+Library  custom_library.py
 Resource  var.resource
 
 *** Variables ***
@@ -20,7 +21,7 @@ No Permission Req to Server
     Should Contain  ${resp.json()}[err_msg]  权限
 
 Req to Server
-    [Arguments]  ${url}  ${token}  ${body}  ${exception}=${False}
+    [Arguments]  ${url}  ${token}  ${body}  ${exception}=${False}  ${parallel}=${False}
     ${real_url}  Set Variable  ${remote_url}${url}
     IF  $server_base != ''
         ${real_url}  Set Variable  ${server_base}${url}
@@ -32,14 +33,19 @@ Req to Server
         ${real_token}  Set Variable  ${resp}[token]
     END
     ${headers}  Create Dictionary  token=${real_token}
-    ${resp}  POST  url=${real_url}  headers=${headers}  json=${body}
-    Log  ${resp.json()}
-    IF  $exception
-        Should Not Be Empty  ${resp.json()}[err_msg]
-        RETURN  ${resp.json()}[err_msg]
+    IF  $parallel == ${True}
+        ${results}  Send Parallel Requests  ${real_url}  ${headers}  ${body}
+        Log  Parallel requests completed: ${results}
     ELSE
-        Should Be Empty  ${resp.json()}[err_msg]
-        RETURN  ${resp.json()}[result]
+        ${resp}  POST  url=${real_url}  headers=${headers}  json=${body}
+        Log  ${resp.json()}
+        IF  $exception
+            Should Not Be Empty  ${resp.json()}[err_msg]
+            RETURN  ${resp.json()}[err_msg]
+        ELSE
+            Should Be Empty  ${resp.json()}[err_msg]
+            RETURN  ${resp.json()}[result]
+        END
     END
 
 Req Get to Server

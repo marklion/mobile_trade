@@ -846,15 +846,35 @@ module.exports = {
 
     },
     manual_pay_plan: async function (_plan_id, _token) {
-        await this.action_in_plan(_plan_id, _token, 1, async (plan) => {
+        // 使用数据库事务和行级锁来防止并发问题
+        await db_opt.get_sq().transaction(async (t) => {
+            // 使用 SELECT FOR UPDATE 获取行级锁
+            let plan = await db_opt.get_sq().models.plan.findByPk(_plan_id, {
+                lock: t.LOCK.UPDATE,
+                transaction: t,
+                include: util_lib.plan_detail_include()
+            });
+            
+            if (!plan || !plan.stuff || plan.stuff.company.id != (await rbac_lib.get_company_by_token(_token))?.id) {
+                throw { err_msg: '无权限' };
+            }
+            
+            if (plan.status != 1) {
+                throw { err_msg: '计划状态错误' };
+            }
+
             if (!plan.is_buy) {
                 plan.status = 2;
-                wx_api_util.send_plan_status_msg(plan);
-                await plan.save();
-                await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                await plan.save({ transaction: t });
+                await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name, t);
                 hook_plan('order_ready', plan);
             }
         });
+
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
+        if (plan && !plan.is_buy) {
+            wx_api_util.send_plan_status_msg(plan);
+        }
     },
     dup_plan: async function (plan, token) {
         let sq = db_opt.get_sq();
@@ -923,12 +943,23 @@ module.exports = {
         return ret;
     },
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
-        let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
-        let status_req = 2;
-        if (tmp_plan && tmp_plan.is_buy) {
-            status_req = 1;
-        }
-        await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
+        // 使用数据库事务和行级锁来防止并发问题
+        await db_opt.get_sq().transaction(async (t) => {
+            // 使用 SELECT FOR UPDATE 获取行级锁
+            let plan = await db_opt.get_sq().models.plan.findByPk(_plan_id, {
+                lock: t.LOCK.UPDATE,
+                transaction: t,
+                include: util_lib.plan_detail_include()
+            });
+            
+            if (!plan || !plan.stuff || plan.stuff.company.id != (await rbac_lib.get_company_by_token(_token))?.id) {
+                throw { err_msg: '无权限' };
+            }
+            
+            if (plan.status != (plan.is_buy ? 1 : 2)) {
+                throw { err_msg: '计划状态错误' };
+            }
+
             plan.count = _count;
             plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.p_weight = p_weight;
@@ -937,10 +968,11 @@ module.exports = {
             if (seal_no) {
                 plan.seal_no = seal_no;
             }
-            await plan.save();
-            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no);
+            await plan.save({ transaction: t });
+            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no, t);
+            
             if (!plan.checkout_delay) {
-                await this.close_a_plan(plan, _token);
+                await this.close_a_plan(plan, _token, t);
             }
         });
     },

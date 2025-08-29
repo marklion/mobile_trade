@@ -339,6 +339,11 @@ Deliver A Plan
     [Arguments]  ${plan}  ${count}
     ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
     Req to Server  /scale/deliver  ${sc_admin_token}  ${req}
+
+Deliver A Plan Dup
+    [Arguments]  ${plan}  ${count}
+    ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
+    Req to Server  /scale/deliver  ${sc_admin_token}  ${req}  parallel=${True}
 Rollback Order
     [Arguments]  ${plan}
     ${req}  Create Dictionary  plan_id=${plan}[id]  msg=reason

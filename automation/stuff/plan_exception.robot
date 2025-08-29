@@ -448,6 +448,21 @@ Pay Plan by Different Role
     Manual Pay A Plan    ${plan}  ${sale_user}  ${True}  ${True}
     Manual Pay A Plan    ${plan}  ${sale_user}  ${False}  ${True}
 
+Dup Deliver Protect
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    ${before_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    Deliver A Plan Dup    ${plan}    ${1}
+    ${after_balance}  Get Cash Of A Company  ${buy_company1}[name]
+    ${minus}  Evaluate  ${before_balance} - ${after_balance}
+    Should Be Equal As Numbers    ${minus}    ${plan}[unit_price]
+
+
 *** Keywords ***
 Add User Only Having Cash
     ${user_token}  New User Login    19911  ${sale_company}[name]  19911opid  cash_user
