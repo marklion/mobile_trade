@@ -443,7 +443,7 @@ module.exports = {
     getBalanceHistoryWithAfterValue: async function (contract_id, begin_time, end_time) {
         let sq = db_opt.get_sq();
         let resp;
-        await db_opt.get_sq().transaction(async (t) => {
+        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
             let contract = await db_opt.get_sq().models.contract.findByPk(contract_id);
             const currentBalance = contract.balance;
             resp = await contract.getBalance_histories({
@@ -630,7 +630,7 @@ module.exports = {
     },
     do_subsidy_by_filter: async function (filter, company, subsidy_record) {
         let ret = 0;
-        await db_opt.get_sq().transaction(async (t) => {
+        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
             let total_plans = await this.search_subsidy_related_plans(filter, company);
             let plan_stuff_group = await this.split_plans_by_stuff(total_plans);
             for (let index = 0; index < plan_stuff_group.length; index++) {
@@ -650,7 +650,7 @@ module.exports = {
         return ret;
     },
     undo_subsidy_by_id: async function (sid, token) {
-        await db_opt.get_sq().transaction(async (t) => {
+        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
             let sr = await db_opt.get_sq().models.subsidy_record.findByPk(sid, {
                 include: [{
                     model: db_opt.get_sq().models.company,

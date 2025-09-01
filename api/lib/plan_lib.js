@@ -263,7 +263,7 @@ module.exports = {
         for (let i = 0; i < yesterday_result.length; i++) {
             const item = yesterday_result[i];
             if (!statistic[item.name]) {
-                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal : 0 };
+                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal: 0 };
             }
             statistic[item.name].yesterday_count = item.count;
             statistic[item.name].second_unit = item.second_unit;
@@ -275,7 +275,7 @@ module.exports = {
         for (let i = 0; i < today_result.length; i++) {
             const item = today_result[i];
             if (!statistic[item.name] && item.second_unit) {
-                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal : 0 };
+                statistic[item.name] = { yesterday_count: 0, today_count: 0, second_unit: '吨', second_unit_decimal: 0 };
             }
             statistic[item.name].today_count = item.count;
             statistic[item.name].second_unit = item.second_unit;
@@ -287,7 +287,7 @@ module.exports = {
             yesterday_count: statistic[key].yesterday_count,
             today_count: statistic[key].today_count,
             second_unit: statistic[key].second_unit,
-            second_unit_decimal : statistic[key].second_unit_decimal
+            second_unit_decimal: statistic[key].second_unit_decimal
         }));
         return resultArray;
     },
@@ -590,7 +590,7 @@ module.exports = {
         }
     },
     confirm_single_plan: async function (_plan_id, _token, force = false) {
-        await this.action_in_plan(_plan_id, _token, 0, async (plan) => {
+        await this.action_in_plan(_plan_id, _token, 0, async (plan, t) => {
             let company_id = 0;
             if (plan.company) {
                 company_id = plan.company.id;
@@ -620,7 +620,7 @@ module.exports = {
                 wx_api_util.send_plan_status_msg(plan);
                 await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 if (!plan.is_buy) {
-                    await this.verify_plan_pay(plan);
+                    await this.verify_plan_pay(plan, t);
                 }
                 else {
                     hook_plan('order_ready', plan);
@@ -657,7 +657,7 @@ module.exports = {
         await plan.save();
         let buy_company = plan.company;
         if (buy_company && need_verify_balance) {
-            let plans = await buy_company.getPlans({ where: { status: 1, is_buy:false } });
+            let plans = await buy_company.getPlans({ where: { status: 1, is_buy: false } });
             for (let index = 0; index < plans.length; index++) {
                 const element = plans[index];
                 await this.verify_plan_pay(element)
@@ -795,47 +795,55 @@ module.exports = {
             });
         }
     },
-    verify_plan_pay: async function (_plan) {
+    verify_plan_pay: async function (_plan, _t) {
+        let opt_func = async () => {
+            if (_plan.status == 1) {
+                let plan = await util_lib.get_single_plan_by_id(_plan.id);
+                let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+                let cur_balance = 0;
+                if (contracts.length == 1) {
+                    cur_balance = contracts[0].balance;
+                }
+                let one_vehicle_cost = plan.stuff.price * plan.stuff.expect_count;
+                let paid_vehicle_count = await plan.company.countPlans({
+                    where: {
+                        [db_opt.Op.and]: [
+                            {
+                                status: 2,
+                            },
+                            {
+                                stuffId: plan.stuff.id
+                            }
+                        ]
+                    },
+                });
+                let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
+                let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
+                if (arrears <= 0) {
+                    plan.status = 2;
+                    plan.arrears = 0;
+                    plan.outstanding_vehicles = 0;
+                    await plan.save();
+                    await this.rp_history_pay(plan, '自动');
+                    plan4next = plan;
+                } else {
+                    plan.arrears = arrears;
+                    plan.outstanding_vehicles = paid_vehicle_count + 1;
+                    await plan.save();
+                }
+            }
+        }
         let rl = await mutex.acquire();
         try {
             let plan4next = undefined;
-            await db_opt.get_sq().transaction(async (t) => {
-                if (_plan.status == 1) {
-                    let plan = await util_lib.get_single_plan_by_id(_plan.id);
-                    let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
-                    let cur_balance = 0;
-                    if (contracts.length == 1) {
-                        cur_balance = contracts[0].balance;
-                    }
-                    let one_vehicle_cost = plan.stuff.price * plan.stuff.expect_count;
-                    let paid_vehicle_count = await plan.company.countPlans({
-                        where: {
-                            [db_opt.Op.and]: [
-                                {
-                                    status: 2,
-                                },
-                                {
-                                    stuffId: plan.stuff.id
-                                }
-                            ]
-                        },
-                    });
-                    let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
-                    let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
-                    if (arrears <= 0) {
-                        plan.status = 2;
-                        plan.arrears = 0;
-                        plan.outstanding_vehicles = 0;
-                        await plan.save();
-                        await this.rp_history_pay(plan, '自动');
-                        plan4next = plan;
-                    } else {
-                        plan.arrears = arrears;
-                        plan.outstanding_vehicles = paid_vehicle_count + 1;
-                        await plan.save();
-                    }
-                }
-            });
+            if (_t) {
+                await opt_func();
+            }
+            else {
+                await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
+                    await opt_func();
+                });
+            }
             if (plan4next) {
                 wx_api_util.send_plan_status_msg(plan4next);
                 hook_plan('order_ready', plan4next);
@@ -843,38 +851,17 @@ module.exports = {
         } finally {
             rl();
         }
-
     },
     manual_pay_plan: async function (_plan_id, _token) {
-        // 使用数据库事务和行级锁来防止并发问题
-        await db_opt.get_sq().transaction(async (t) => {
-            // 使用 SELECT FOR UPDATE 获取行级锁
-            let plan = await db_opt.get_sq().models.plan.findByPk(_plan_id, {
-                lock: t.LOCK.UPDATE,
-                transaction: t,
-                include: util_lib.plan_detail_include()
-            });
-            
-            if (!plan || !plan.stuff || plan.stuff.company.id != (await rbac_lib.get_company_by_token(_token))?.id) {
-                throw { err_msg: '无权限' };
-            }
-            
-            if (plan.status != 1) {
-                throw { err_msg: '计划状态错误' };
-            }
-
+        await this.action_in_plan(_plan_id, _token, 1, async (plan) => {
             if (!plan.is_buy) {
                 plan.status = 2;
-                await plan.save({ transaction: t });
-                await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name, t);
+                wx_api_util.send_plan_status_msg(plan);
+                await plan.save();
+                await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 hook_plan('order_ready', plan);
             }
         });
-
-        let plan = await util_lib.get_single_plan_by_id(_plan_id);
-        if (plan && !plan.is_buy) {
-            wx_api_util.send_plan_status_msg(plan);
-        }
     },
     dup_plan: async function (plan, token) {
         let sq = db_opt.get_sq();
@@ -943,23 +930,12 @@ module.exports = {
         return ret;
     },
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
-        // 使用数据库事务和行级锁来防止并发问题
-        await db_opt.get_sq().transaction(async (t) => {
-            // 使用 SELECT FOR UPDATE 获取行级锁
-            let plan = await db_opt.get_sq().models.plan.findByPk(_plan_id, {
-                lock: t.LOCK.UPDATE,
-                transaction: t,
-                include: util_lib.plan_detail_include()
-            });
-            
-            if (!plan || !plan.stuff || plan.stuff.company.id != (await rbac_lib.get_company_by_token(_token))?.id) {
-                throw { err_msg: '无权限' };
-            }
-            
-            if (plan.status != (plan.is_buy ? 1 : 2)) {
-                throw { err_msg: '计划状态错误' };
-            }
-
+        let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
+        let status_req = 2;
+        if (tmp_plan && tmp_plan.is_buy) {
+            status_req = 1;
+        }
+        await this.action_in_plan(_plan_id, _token, status_req, async (plan) => {
             plan.count = _count;
             plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.p_weight = p_weight;
@@ -968,11 +944,10 @@ module.exports = {
             if (seal_no) {
                 plan.seal_no = seal_no;
             }
-            await plan.save({ transaction: t });
-            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no, t);
-            
+            await plan.save();
+            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no);
             if (!plan.checkout_delay) {
-                await this.close_a_plan(plan, _token, t);
+                await this.close_a_plan(plan, _token);
             }
         });
     },
@@ -993,37 +968,40 @@ module.exports = {
         }, true);
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
-        let plan = await util_lib.get_single_plan_by_id(_plan_id);
-        if (force) {
-            await _action(plan);
-        }
-        else {
-            let opt_company = await rbac_lib.get_company_by_token(_token);
-            if (plan) {
-                let stuff = plan.stuff;
-                if (stuff) {
-                    let company = stuff.company;
-                    if (company && opt_company && opt_company.id == company.id) {
-                        if (-1 == _expect_status || plan.status == _expect_status) {
-                            await _action(plan);
+        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
+            let plan = await util_lib.get_single_plan_by_id(_plan_id, t);
+            if (force) {
+                await _action(plan, t);
+            }
+            else {
+                let opt_company = await rbac_lib.get_company_by_token(_token);
+                if (plan) {
+                    let stuff = plan.stuff;
+                    if (stuff) {
+                        let company = stuff.company;
+                        if (company && opt_company && opt_company.id == company.id) {
+                            if (-1 == _expect_status || plan.status == _expect_status) {
+                                await _action(plan, t);
+                            }
+                            else {
+                                throw { err_msg: '计划状态错误' };
+                            }
                         }
                         else {
-                            throw { err_msg: '计划状态错误' };
+                            throw { err_msg: '无权限' };
                         }
                     }
                     else {
-                        throw { err_msg: '无权限' };
+                        throw { err_msg: '未找到货物' };
                     }
                 }
                 else {
-                    throw { err_msg: '未找到货物' };
+                    throw { err_msg: '未找到计划' };
                 }
             }
-            else {
-                throw { err_msg: '未找到计划' };
-            }
-        }
-        this.mark_dup_info(plan);
+            this.mark_dup_info(plan);
+        });
+
     },
     mark_dup_info: function (plan) {
         setTimeout(() => {
@@ -1297,7 +1275,7 @@ module.exports = {
     },
     batch_confirm: async function (body, token, is_buy = false) {
         let err_msg = '';
-        await db_opt.get_sq().transaction(async (t) => {
+        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
             let company = await rbac_lib.get_company_by_token(token);
             let all_plans = [];
             let pageNo = 0;
@@ -1323,7 +1301,7 @@ module.exports = {
     },
     batch_copy: async function (body, token, is_buy, new_plan_req) {
         let err_msg = '';
-        await db_opt.get_sq().transaction(async (t) => {
+        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
             let user = await rbac_lib.get_user_by_token(token);
             let all_plans = [];
             let pageNo = 0;
@@ -1384,7 +1362,7 @@ module.exports = {
     },
     buildTimeCondition(body, sq) {
         let conditions = [];
-        
+
         if (body.m_start_time && body.m_end_time) {
             conditions = [{
                 [db_opt.Op.or]: [
@@ -1420,7 +1398,7 @@ module.exports = {
                 }),
             ];
         }
-        
+
         return conditions;
     },
     filter_plan4user: async function (body, token, is_buy = false) {
@@ -1542,7 +1520,7 @@ module.exports = {
                 subsidy_total_price: this.place_hold(element.subsidy_price, 0) * this.place_hold(element.count, 0),
                 subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price * 10).toFixed(1),
                 second_unit: this.place_hold(element.stuff.second_unit, ''),
-                drop_take_zone_name:element.drop_take_zone_name,
+                drop_take_zone_name: element.drop_take_zone_name,
                 second_value: (() => {
                     const coefficient = this.place_hold(element.stuff.coefficient, 2);
                     const value = coefficient * element.count;
@@ -1551,7 +1529,7 @@ module.exports = {
                     }
                     return value.toFixed(dp);
                 })(),
-                plan_counts:countVal,
+                plan_counts: countVal,
                 total_orders: totalOrders,
             });
         }
@@ -1643,11 +1621,11 @@ module.exports = {
         worksheet.addRows(json);
         worksheet.addRow({
             create_company: `合计:共${totalOrders}单`,
-            count: totalLoad, 
-            total_price: totalPriceSum, 
+            count: totalLoad,
+            total_price: totalPriceSum,
         })
         const lastRow = worksheet.lastRow;
-        lastRow.font = { bold: true, color: { argb: 'FFFF0000' }, }; 
+        lastRow.font = { bold: true, color: { argb: 'FFFF0000' }, };
         lastRow.getCell('count').numFmt = '0.00';
         lastRow.getCell('total_price').numFmt = '0.00';
         worksheet.getColumn('p_weight').numFmt = '0.00';
@@ -1951,7 +1929,7 @@ module.exports = {
         for (let index = 0; index < stuff.length; index++) {
             const element = stuff[index];
             try {
-                await sq.transaction(async (t) => {
+                await sq.transaction({ savepoint: true }, async (t) => {
                     let company = await element.getCompany();
                     let admin_user = await company.getRbac_users({
                         where: {
