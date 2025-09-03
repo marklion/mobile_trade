@@ -590,61 +590,49 @@ module.exports = {
         }
     },
     confirm_single_plan: async function (_plan_id, _token, force = false) {
-        // 使用锁保护计划确认操作，防止重复确认
-        const rl = await mutex.acquire();
-        try {
-            await this.action_in_plan(_plan_id, _token, 0, async (plan, t) => {
-                // 重新检查计划状态，防止重复确认
-                const currentPlan = await util_lib.get_single_plan_by_id(_plan_id, t);
-                if (currentPlan.status !== 0) {
-                    throw { err_msg: '该计划状态已改变，不能重复确认' };
+        await this.action_in_plan(_plan_id, _token, 0, async (plan, t) => {
+            let company_id = 0;
+            if (plan.company) {
+                company_id = plan.company.id;
+            }
+            // 开启资质检查
+            if (plan.stuff.company.check_qualification) {
+                // 只有下单方上传过资质附件，填写过有效期并且有效期没过期时才能确认计划
+                let hasValidQualification = plan.company.attachment && plan.company.qualification_expiration_date && new Date(plan.company.qualification_expiration_date) > new Date();
+                if (!hasValidQualification) {
+                    throw { err_msg: '下单方的资质附件未上传或未填写有效期' };
                 }
-                
-                let company_id = 0;
-                if (plan.company) {
-                    company_id = plan.company.id;
-                }
-                // 开启资质检查
-                if (plan.stuff.company.check_qualification) {
-                    // 只有下单方上传过资质附件，填写过有效期并且有效期没过期时才能确认计划
-                    let hasValidQualification = plan.company.attachment && plan.company.qualification_expiration_date && new Date(plan.company.qualification_expiration_date) > new Date();
-                    if (!hasValidQualification) {
-                        throw { err_msg: '下单方的资质附件未上传或未填写有效期' };
-                    }
-                }
+            }
 
-                let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
-                let creator = await plan.getRbac_user();
-                if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
-                    plan.status = 1;
-                    plan.checkout_delay = plan.stuff.checkout_delay;
-                    let delegate = undefined;
-                    if (contracts.length == 1) {
-                        delegate = await contracts[0].getDelegate();
-                    }
-                    if (delegate) {
-                        await plan.setDelegate(delegate);
-                    }
-                    await plan.save({ transaction: t });
-                    wx_api_util.send_plan_status_msg(plan);
-                    await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
-                    if (!plan.is_buy) {
-                        await this.verify_plan_pay(plan, t);
-                    }
-                    else {
-                        hook_plan('order_ready', plan);
-                    }
+            let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
+            let creator = await plan.getRbac_user();
+            if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
+                plan.status = 1;
+                plan.checkout_delay = plan.stuff.checkout_delay;
+                let delegate = undefined;
+                if (contracts.length == 1) {
+                    delegate = await contracts[0].getDelegate();
+                }
+                if (delegate) {
+                    await plan.setDelegate(delegate);
+                }
+                await plan.save();
+                wx_api_util.send_plan_status_msg(plan);
+                await this.rp_history_confirm(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                if (!plan.is_buy) {
+                    await this.verify_plan_pay(plan, t);
                 }
                 else {
-                    throw { err_msg: plan.company.name + '的报计划人未授权' };
+                    hook_plan('order_ready', plan);
                 }
-                if (plan.stuff.manual_weight) {
-                    await this.prepare_sct_value(plan);
-                }
-            }, force);
-        } finally {
-            rl();
-        }
+            }
+            else {
+                throw { err_msg: plan.company.name + '的报计划人未授权' };
+            }
+            if (plan.stuff.manual_weight) {
+                await this.prepare_sct_value(plan);
+            }
+        }, force);
     },
     plan_close: async function (plan, name, is_cancel = false, no_need_cast = false) {
         let need_verify_balance = false;
@@ -686,42 +674,33 @@ module.exports = {
         }
     },
     plan_enter: async function (_plan_id, _token, is_exit = false) {
-        // 使用锁保护进厂/出厂操作，防止重复操作
-        const rl = await mutex.acquire();
-        try {
-            let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
-            let status_req = 2;
-            if (tmp_plan && tmp_plan.is_buy) {
-                status_req = 1;
-            }
-            await this.action_in_plan(_plan_id, _token, status_req, async (plan, t) => {
-                if (is_exit) {
-                    if (plan.enter_time && plan.enter_time.length > 0) {
-                        await field_lib.handle_cancel_enter(plan);
-                        await this.rp_history_exit(plan, (await rbac_lib.get_user_by_token(_token)).name);
-                    }
-                    else {
-                        throw { err_msg: '未进厂' };
-                    }
+        let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
+        let status_req = 2;
+        if (tmp_plan && tmp_plan.is_buy) {
+            status_req = 1;
+        }
+        await this.action_in_plan(_plan_id, _token, status_req, async (plan, t) => {
+            if (is_exit) {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    await field_lib.handle_cancel_enter(plan);
+                    await this.rp_history_exit(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 }
                 else {
-                    if (plan.enter_time && plan.enter_time.length > 0) {
-                        throw { err_msg: '已进厂' };
-                    }
-                    plan.enter_time = moment().format('YYYY-MM-DD HH:mm:ss');
-                    await plan.save({ transaction: t });
-                    await this.rp_history_enter(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                    throw { err_msg: '未进厂' };
                 }
-            });
-        } finally {
-            rl();
-        }
+            }
+            else {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    throw { err_msg: '已进厂' };
+                }
+                plan.enter_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                await plan.save({ transaction: t });
+                await this.rp_history_enter(plan, (await rbac_lib.get_user_by_token(_token)).name);
+            }
+        });
     },
     plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false) {
-        // 使用锁保护计划回退操作，防止并发回退
-        const rl = await mutex.acquire();
-        try {
-            await this.action_in_plan(_plan_id, _token, -1, async (plan, t) => {
+        await this.action_in_plan(_plan_id, _token, -1, async (plan, t) => {
             let rollback_content = '';
             if (plan.manual_close) {
                 throw { err_msg: '已关闭,无法回退' };
@@ -776,7 +755,7 @@ module.exports = {
                 plan.p_weight = 0;
                 plan.m_time = '';
                 plan.m_weight = 0;
-                rollback_content = '回退发车';
+                    rollback_content = '回退发车';
             } else {
                 throw { err_msg: '无法回退' };
             }
@@ -784,10 +763,7 @@ module.exports = {
             await plan.save({ transaction: t });
             wx_api_util.send_plan_status_msg(plan)
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
-            });
-        } finally {
-            rl();
-        }
+        });
     },
     plan_cost: async function (plan) {
         let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
@@ -877,27 +853,15 @@ module.exports = {
         }
     },
     manual_pay_plan: async function (_plan_id, _token) {
-        // 使用锁保护手工验款操作，防止重复验款
-        const rl = await mutex.acquire();
-        try {
-            await this.action_in_plan(_plan_id, _token, 1, async (plan, t) => {
-                if (!plan.is_buy) {
-                    // 重新检查计划状态，防止重复验款
-                    const currentPlan = await util_lib.get_single_plan_by_id(_plan_id, t);
-                    if (currentPlan.status !== 1) {
-                        throw { err_msg: '该计划状态已改变，不能重复验款' };
-                    }
-                    
-                    plan.status = 2;
-                    wx_api_util.send_plan_status_msg(plan);
-                    await plan.save({ transaction: t });
-                    await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
-                    hook_plan('order_ready', plan);
-                }
-            });
-        } finally {
-            rl();
-        }
+        await this.action_in_plan(_plan_id, _token, 1, async (plan, t) => {
+            if (!plan.is_buy) {
+                plan.status = 2;
+                wx_api_util.send_plan_status_msg(plan);
+                await plan.save({ transaction: t });
+                await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
+                hook_plan('order_ready', plan);
+            }
+        });
     },
     dup_plan: async function (plan, token) {
         let sq = db_opt.get_sq();
@@ -966,51 +930,26 @@ module.exports = {
         return ret;
     },
     deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
-        // 使用全局锁保护整个deliver操作，防止并发重复出货
-        const rl = await mutex.acquire();
-        try {
-            let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
-            let status_req = 2;
-            if (tmp_plan && tmp_plan.is_buy) {
-                status_req = 1;
-            }
-            
-            await this.action_in_plan(_plan_id, _token, status_req, async (plan, t) => {
-                // 重新检查计划状态，防止在获取锁之前状态已经改变
-                const currentPlan = await util_lib.get_single_plan_by_id(_plan_id, t);
-                
-                // 检查是否已经出货（状态为3表示已完成）
-                if (currentPlan.status === 3) {
-                    throw { err_msg: '该计划已经出货完成，不能重复操作' };
-                }
-                
-                // 检查是否已经有出货记录（通过count字段判断）
-                if (currentPlan.count && currentPlan.count > 0) {
-                    throw { err_msg: '该计划已经出货，不能重复操作' };
-                }
-                
-                // 检查是否已经有重量记录
-                if ((currentPlan.p_weight && currentPlan.p_weight > 0) || (currentPlan.m_weight && currentPlan.m_weight > 0)) {
-                    throw { err_msg: '该计划已经有重量记录，不能重复出货' };
-                }
-                
-                plan.count = _count;
-                plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
-                plan.p_weight = p_weight;
-                plan.m_time = (m_time ? m_time : moment().format('YYYY-MM-DD HH:mm:ss'));
-                plan.m_weight = m_weight;
-                if (seal_no) {
-                    plan.seal_no = seal_no;
-                }
-                await plan.save({ transaction: t });
-                await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no);
-                if (!plan.checkout_delay) {
-                    await this.close_a_plan(plan, _token);
-                }
-            });
-        } finally {
-            rl();
+        let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
+        let status_req = 2;
+        if (tmp_plan && tmp_plan.is_buy) {
+            status_req = 1;
         }
+        await this.action_in_plan(_plan_id, _token, status_req, async (plan, t) => {
+            plan.count = _count;
+            plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
+            plan.p_weight = p_weight;
+            plan.m_time = (m_time ? m_time : moment().format('YYYY-MM-DD HH:mm:ss'));
+            plan.m_weight = m_weight;
+            if (seal_no) {
+                plan.seal_no = seal_no;
+            }
+            await plan.save({ transaction: t });
+            await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no);
+            if (!plan.checkout_delay) {
+                await this.close_a_plan(plan, _token);
+            }
+        });
     },
     manual_deliver_plan: async function (_plan, _token) {
         await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name, "");
@@ -1019,20 +958,14 @@ module.exports = {
         }
     },
     checkout_plan: async function (_plan_id, token) {
-        // 使用锁保护结算操作，防止重复结算
-        const rl = await mutex.acquire();
-        try {
-            await this.action_in_plan(_plan_id, token, 2, async (plan, t) => {
-                if (plan.checkout_delay && plan.status == 2 && plan.count != 0) {
-                    await this.close_a_plan(plan, token);
-                }
-                else {
-                    throw { err_msg: '无法结算' };
-                }
-            }, true);
-        } finally {
-            rl();
-        }
+        await this.action_in_plan(_plan_id, token, 2, async (plan, t) => {
+            if (plan.checkout_delay && plan.status == 2 && plan.count != 0) {
+                await this.close_a_plan(plan, token);
+            }
+            else {
+                throw { err_msg: '无法结算' };
+            }
+        }, true);
     },
     action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
         await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
@@ -1408,34 +1341,24 @@ module.exports = {
         return err_msg;
     },
     plan_call_vehicle: async function (plan_id, token) {
-        // 使用锁保护叫车操作，防止重复叫车
-        const rl = await mutex.acquire();
-        try {
-            await this.action_in_plan(plan_id, token, -1, async (plan, t) => {
-                let expect_status = 2;
-                if (plan.is_buy) {
-                    expect_status = 1;
+        await this.action_in_plan(plan_id, token, -1, async (plan, t) => {
+            let expect_status = 2;
+            if (plan.is_buy) {
+                expect_status = 1;
+            }
+            if (expect_status != plan.status) {
+                throw { err_msg: '计划状态错误' };
+            }
+            if (plan.register_time && plan.register_time.length > 0) {
+                if (plan.enter_time && plan.enter_time.length > 0) {
+                    throw { err_msg: '已经进厂' };
                 }
-                if (expect_status != plan.status) {
-                    throw { err_msg: '计划状态错误' };
-                }
-                if (plan.register_time && plan.register_time.length > 0) {
-                    if (plan.enter_time && plan.enter_time.length > 0) {
-                        throw { err_msg: '已经进厂' };
-                    }
-                    // 检查是否已经叫车
-                    if (plan.call_time && plan.call_time.length > 0) {
-                        throw { err_msg: '已经叫车，不能重复操作' };
-                    }
-                    await field_lib.handle_call_vehicle(plan);
-                }
-                else {
-                    throw { err_msg: '未签到' };
-                }
-            });
-        } finally {
-            rl();
-        }
+                await field_lib.handle_call_vehicle(plan);
+            }
+            else {
+                throw { err_msg: '未签到' };
+            }
+        });
     },
     buildTimeCondition(body, sq) {
         let conditions = [];
@@ -1949,20 +1872,14 @@ module.exports = {
         }
     },
     set_fapiao_delivered: async function (plan_id, token, delivered) {
-        // 使用锁保护发票交付操作，防止重复操作
-        const rl = await mutex.acquire();
-        try {
-            await this.action_in_plan(plan_id, token, -1, async (plan, t) => {
-                if (plan.status == 0) {
-                    throw { err_msg: '计划需要先确认' };
-                }
-                plan.fapiao_delivered = delivered;
-                await plan.save({ transaction: t });
-                await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, delivered ? '发票已交付' : '发票未交付');
-            });
-        } finally {
-            rl();
-        }
+        await this.action_in_plan(plan_id, token, -1, async (plan, t) => {
+            if (plan.status == 0) {
+                throw { err_msg: '计划需要先未确认' };
+            }
+            plan.fapiao_delivered = delivered;
+            await plan.save({ transaction: t });
+            await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, delivered ? '发票已交付' : '发票未交付', t);
+        });
     },
     is_in_blacklist: async function (companyId, driverId, mainVehicleId, behindVehicleId) {
         let blacklist = await db_opt.get_sq().models.blacklist.findOne({
