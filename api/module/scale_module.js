@@ -84,7 +84,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan, t) => {
                     let stuff = await plan.getStuff();
                     if (stuff && stuff.auto_confirm_goods && !body.is_exit) {
                         module.exports.methods.confirm_vehicle.func({
@@ -92,7 +92,7 @@ module.exports = {
                             plan_id: body.plan_id
                         }, token);
                     }
-                    await plan_lib.plan_enter(body.plan_id, token, body.is_exit);
+                    await plan_lib.plan_enter(body.plan_id, token, body.is_exit, t);
                 });
                 return { result: true };
             },

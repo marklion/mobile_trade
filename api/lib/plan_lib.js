@@ -12,11 +12,15 @@ const fc_lib = require('./fc_lib');
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 module.exports = {
-    close_a_plan: async function (plan, token) {
+    close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
         plan.arrears = 0;
         plan.outstanding_vehicles = 0;
-        await plan.save();
+        if (t) {
+            await plan.save({ transaction: t });
+        } else {
+            await plan.save();
+        }
         await this.rp_history_checkout(plan, (await rbac_lib.get_user_by_token(token)).name);
         if (!plan.is_buy) {
             await this.plan_cost(plan);
@@ -673,7 +677,7 @@ module.exports = {
             await this.rp_history_close(plan, name);
         }
     },
-    plan_enter: async function (_plan_id, _token, is_exit = false) {
+    plan_enter: async function (_plan_id, _token, is_exit = false, existing_t = null) {
         let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
         let status_req = 2;
         if (tmp_plan && tmp_plan.is_buy) {
@@ -697,9 +701,9 @@ module.exports = {
                 await plan.save({ transaction: t });
                 await this.rp_history_enter(plan, (await rbac_lib.get_user_by_token(_token)).name);
             }
-        });
+        }, false, existing_t);
     },
-    plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false) {
+    plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false, existing_t = null) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan, t) => {
             let rollback_content = '';
             if (plan.manual_close) {
@@ -716,7 +720,7 @@ module.exports = {
                 }
             } else if (plan.status == 1) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
-                    await this.plan_enter(_plan_id, _token, true);
+                    await this.plan_enter(_plan_id, _token, true, t);
                     return;
                 }
                 else {
@@ -735,7 +739,7 @@ module.exports = {
                     plan.m_weight = 0;
                     rollback_content = '回退发车';
                 } else if (plan.enter_time && plan.enter_time.length > 0) {
-                    await this.plan_enter(_plan_id, _token, true);
+                    await this.plan_enter(_plan_id, _token, true, t);
                     return;
                 }
                 else {
@@ -746,7 +750,7 @@ module.exports = {
                     }
                 }
             } else if (plan.status == 3) {
-                await this.plan_rollback(plan.id, _token, msg, true);
+                await this.plan_rollback(plan.id, _token, msg, true, t);
                 if (plan.checkout_delay) {
                     return;
                 }
@@ -755,7 +759,7 @@ module.exports = {
                 plan.p_weight = 0;
                 plan.m_time = '';
                 plan.m_weight = 0;
-                    rollback_content = '回退发车';
+                rollback_content = '回退发车';
             } else {
                 throw { err_msg: '无法回退' };
             }
@@ -763,7 +767,7 @@ module.exports = {
             await plan.save({ transaction: t });
             wx_api_util.send_plan_status_msg(plan)
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
-        });
+        }, false, existing_t);
     },
     plan_cost: async function (plan) {
         let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
@@ -947,7 +951,7 @@ module.exports = {
             await plan.save({ transaction: t });
             await this.rp_history_deliver(plan, (await rbac_lib.get_user_by_token(_token)).name, ticket_no);
             if (!plan.checkout_delay) {
-                await this.close_a_plan(plan, _token);
+                await this.close_a_plan(plan, _token, t);
             }
         });
     },
@@ -960,15 +964,17 @@ module.exports = {
     checkout_plan: async function (_plan_id, token) {
         await this.action_in_plan(_plan_id, token, 2, async (plan, t) => {
             if (plan.checkout_delay && plan.status == 2 && plan.count != 0) {
-                await this.close_a_plan(plan, token);
+                await this.close_a_plan(plan, token, t);
             }
             else {
                 throw { err_msg: '无法结算' };
             }
         }, true);
     },
-    action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false) {
-        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
+    action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false, t = null) {
+        // 如果传入了事务参数t，直接使用该事务；否则创建新事务
+        if (t) {
+            // 使用现有事务，避免嵌套事务
             let plan = await util_lib.get_single_plan_by_id(_plan_id, t);
             if (force) {
                 await _action(plan, t);
@@ -1000,8 +1006,42 @@ module.exports = {
                 }
             }
             this.mark_dup_info(plan);
-        });
-
+        } else {
+            // 创建新事务
+            await db_opt.get_sq().transaction({ savepoint: true }, async (new_t) => {
+                let plan = await util_lib.get_single_plan_by_id(_plan_id, new_t);
+                if (force) {
+                    await _action(plan, new_t);
+                }
+                else {
+                    let opt_company = await rbac_lib.get_company_by_token(_token);
+                    if (plan) {
+                        let stuff = plan.stuff;
+                        if (stuff) {
+                            let company = stuff.company;
+                            if (company && opt_company && opt_company.id == company.id) {
+                                if (-1 == _expect_status || plan.status == _expect_status) {
+                                    await _action(plan, new_t);
+                                }
+                                else {
+                                    throw { err_msg: '计划状态错误' };
+                                }
+                            }
+                            else {
+                                throw { err_msg: '无权限' };
+                            }
+                        }
+                        else {
+                            throw { err_msg: '未找到货物' };
+                        }
+                    }
+                    else {
+                        throw { err_msg: '未找到计划' };
+                    }
+                }
+                this.mark_dup_info(plan);
+            });
+        }
     },
     mark_dup_info: function (plan) {
         setTimeout(() => {
