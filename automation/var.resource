@@ -1,6 +1,6 @@
 *** Variables ***
 ${server_base}
-${db_name}  test_20250903143510
-${db_host}  rm-2ze6222dda7fe8427eo.mysql.rds.aliyuncs.com
-${db_user}  sysadmin
-${db_pass}  P@ssw0rd
+${db_name}
+${db_host}
+${db_user}
+${db_pass}
