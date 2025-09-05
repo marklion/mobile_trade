@@ -56,12 +56,16 @@ module.exports = {
             }
         ];
     },
-    get_single_plan_by_id: async function (_plan_id) {
+    get_single_plan_by_id: async function (_plan_id, _t) {
         let ret = {};
         let sq = db_opt.get_sq();
-        ret = await sq.models.plan.findByPk(_plan_id, {
+        let options = {
             include: this.plan_detail_include()
-        });
+        }
+        if (_t != undefined) {
+            options.lock = _t.LOCK.UPDATE;
+        }
+        ret = await sq.models.plan.findByPk(_plan_id, options);
 
         return ret;
     }

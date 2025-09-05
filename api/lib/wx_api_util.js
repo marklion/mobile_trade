@@ -395,24 +395,28 @@ module.exports = {
         return ret;
     },
     send_plan_status_msg: async function (plan) {
-        let req = {
-            template_id: await this.get_template_id('plan_status'),
-            // miniprogram: {
-            //     appid: appid,
-            //     pagepath: 'pages/OrderList'
-            // },
-            data: make_plan_status_msg(plan),
-        }
-        let tar_array = [plan.rbac_user.open_id];
-        let users = await plan.stuff.company.getRbac_users();
-        let module_name = 'sale_management';
-        if (plan.is_buy) {
-            module_name = 'buy_management';
-        }
-        tar_array = tar_array.concat(await filter_related_users(module_name, users));
-        tar_array.forEach(async item => {
-            req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req }, item);
+        setImmediate(async () => {
+            await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
+                let req = {
+                    template_id: await this.get_template_id('plan_status'),
+                    // miniprogram: {
+                    //     appid: appid,
+                    //     pagepath: 'pages/OrderList'
+                    // },
+                    data: make_plan_status_msg(plan),
+                }
+                let tar_array = [plan.rbac_user.open_id];
+                let users = await plan.stuff.company.getRbac_users();
+                let module_name = 'sale_management';
+                if (plan.is_buy) {
+                    module_name = 'buy_management';
+                }
+                tar_array = tar_array.concat(await filter_related_users(module_name, users));
+                tar_array.forEach(async item => {
+                    req.touser = this.openid_map.get_pub_openid(item);
+                    send_wx_msg({ ...req }, item);
+                });
+            });
         });
     },
     call_vehicle_msg: async function (plan) {
