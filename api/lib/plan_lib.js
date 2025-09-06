@@ -26,7 +26,7 @@ module.exports = {
             await this.plan_cost(plan);
         }
         if (plan.is_repeat) {
-            await this.dup_plan(plan, token);
+            await this.dup_plan(plan, token, t);
         }
         await hook_plan('deliver_plan', plan);
     },
@@ -593,7 +593,7 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
-    confirm_single_plan: async function (_plan_id, _token, force = false) {
+    confirm_single_plan: async function (_plan_id, _token, force = false, t = null) {
         await this.action_in_plan(_plan_id, _token, 0, async (plan, t) => {
             let company_id = 0;
             if (plan.company) {
@@ -636,7 +636,7 @@ module.exports = {
             if (plan.stuff.manual_weight) {
                 await this.prepare_sct_value(plan);
             }
-        }, force);
+        }, force, t);
     },
     plan_close: async function (plan, name, is_cancel = false, no_need_cast = false) {
         let need_verify_balance = false;
@@ -867,7 +867,7 @@ module.exports = {
             }
         });
     },
-    dup_plan: async function (plan, token) {
+    dup_plan: async function (plan, token, t) {
         let sq = db_opt.get_sq();
         let new_plan_req = {
             plan_time: moment().format('YYYY-MM-DD'),
@@ -889,7 +889,7 @@ module.exports = {
         new_plan.is_buy = plan.is_buy
         new_plan.trans_company_name = plan.trans_company_name;
         await new_plan.save();
-        await this.confirm_single_plan(new_plan.id, token, true);
+        await this.confirm_single_plan(new_plan.id, token, true, t);
     },
     generate_ticket_no: async function (plan, external_ticket_no) {
         let ret = '';
