@@ -149,7 +149,7 @@
                 <el-button type="primary" @click="submitForm('add_bc')">确定</el-button>
             </span>
         </el-dialog>
-        <el-dialog title="开启竞价" :visible.sync="show_start_bid" width="600px" @close="show_start_bid = false">
+        <el-dialog title="开启竞价" :visible.sync="show_start_bid" width="600px" @close="reset_start_bid_form">
             <el-form ref="start_bid" label-width="120px">
                 <el-form-item label="时间范围">
                     <el-date-picker v-model="bt_time_range" format="yyyy-MM-dd HH:mm" value-format="yyyy-MM-dd HH:mm" type="datetimerange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期">
@@ -165,7 +165,7 @@
                 </el-form-item>
             </el-form>
             <template #footer>
-                <el-button @click="show_start_bid = false">取消</el-button>
+                <el-button @click="reset_start_bid_form">取消</el-button>
                 <el-button type="primary" @click="start_bid">确定</el-button>
             </template>
         </el-dialog>
@@ -308,6 +308,11 @@ export default {
             this.show_stuff_select = false;
             this.search_stuff_info = '';
         },
+        reset_start_bid_form: function () {
+            this.show_start_bid = false;
+            this.start_bid_req.joiner_ids = [];
+            this.selected_companies = [];
+        },
         submitForm(formName) {
             this.$refs[formName].validate((valid) => {
                 if (valid) {
@@ -372,6 +377,8 @@ export default {
             console.log('handleCustomerSelect', value);
         },
         start_bid: async function () {
+            // 清空之前的joiner_ids，避免重复添加
+            this.start_bid_req.joiner_ids = [];
             this.selected_companies.forEach(item => {
                 this.start_bid_req.joiner_ids.push({
                     id: item
@@ -383,7 +390,7 @@ export default {
             }
             await this.$send_req('/bid/add_turn', this.start_bid_req);
             this.refresh();
-            this.show_start_bid = false;
+            this.reset_start_bid_form();
         },
         next_bid: async function () {
             this.$confirm('确定要开启下一轮竞价吗?', '提示', {
