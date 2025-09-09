@@ -531,33 +531,9 @@ module.exports = {
                                         ],
                                         transaction
                                     });
-                                    let contracts = await full_plan.stuff.company.getSale_contracts({ 
-                                        where: { buyCompanyId: full_plan.company.id },
-                                        transaction 
-                                    });
-                                    let cur_balance = 0;
-                                    if (contracts.length == 1) {
-                                        cur_balance = contracts[0].balance;
-                                    }
-                                    let one_vehicle_cost = unitPrice * full_plan.stuff.expect_count;
-                                    let paid_vehicle_count = await full_plan.company.countPlans({
-                                        where: {
-                                            [db_opt.Op.and]: [
-                                                { status: 2 },
-                                                { stuffId: full_plan.stuff.id }
-                                            ]
-                                        },
-                                        transaction
-                                    });
-                                    let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
-                                    let new_arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
-                                    if (new_arrears <= 0) {
-                                        plan.arrears = 0;
-                                        plan.outstanding_vehicles = 0;
-                                    } else {
-                                        plan.arrears = new_arrears;
-                                        plan.outstanding_vehicles = paid_vehicle_count + 1;
-                                    }
+                                    let { arrears, outstanding_vehicles } = await plan_lib.calculate_plan_arrears(full_plan, unitPrice, transaction);
+                                    plan.arrears = arrears;
+                                    plan.outstanding_vehicles = outstanding_vehicles;
                                 }
                                 
                                 await plan.save({ transaction });

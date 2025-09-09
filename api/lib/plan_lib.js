@@ -803,26 +803,7 @@ module.exports = {
         let opt_func = async () => {
             if (_plan.status == 1) {
                 let plan = await util_lib.get_single_plan_by_id(_plan.id);
-                let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
-                let cur_balance = 0;
-                if (contracts.length == 1) {
-                    cur_balance = contracts[0].balance;
-                }
-                let one_vehicle_cost = plan.stuff.price * plan.stuff.expect_count;
-                let paid_vehicle_count = await plan.company.countPlans({
-                    where: {
-                        [db_opt.Op.and]: [
-                            {
-                                status: 2,
-                            },
-                            {
-                                stuffId: plan.stuff.id
-                            }
-                        ]
-                    },
-                });
-                let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
-                let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
+                let { arrears, outstanding_vehicles } = await this.calculate_plan_arrears(plan, plan.unit_price);
                 if (arrears <= 0) {
                     plan.status = 2;
                     plan.arrears = 0;
@@ -832,7 +813,7 @@ module.exports = {
                     plan4next = plan;
                 } else {
                     plan.arrears = arrears;
-                    plan.outstanding_vehicles = paid_vehicle_count + 1;
+                    plan.outstanding_vehicles = outstanding_vehicles;
                     await plan.save();
                 }
             }
@@ -1114,7 +1095,40 @@ module.exports = {
     rp_history_price_change: async function (_plan, _operator, _new_price) {
         await this.record_plan_history(_plan, _operator, '价格变为:' + _new_price);
     },
-
+    calculate_plan_arrears: async function (plan, unit_price = null, transaction = null) {
+        if (!plan || plan.is_buy || plan.status !== 1) {
+            return { arrears: 0, outstanding_vehicles: 0 };
+        }
+        const price_to_use = unit_price !== null ? unit_price : plan.unit_price;
+        let contracts = await plan.stuff.company.getSale_contracts({ 
+            where: { buyCompanyId: plan.company.id },
+            ...(transaction && { transaction })
+        });
+        let cur_balance = 0;
+        if (contracts.length == 1) {
+            cur_balance = contracts[0].balance;
+        }
+        let one_vehicle_cost = price_to_use * plan.stuff.expect_count;
+        let paid_vehicle_count = await plan.company.countPlans({
+            where: {
+                [db_opt.Op.and]: [
+                    { status: 2 },
+                    { stuffId: plan.stuff.id }
+                ]
+            },
+            ...(transaction && { transaction })
+        });
+        let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
+        let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
+        if (arrears <= 0) {
+            return { arrears: 0, outstanding_vehicles: 0 };
+        } else {
+            return { 
+                arrears: arrears, 
+                outstanding_vehicles: paid_vehicle_count + 1 
+            };
+        }
+    },
     pri_change_stuff_price: async function (stuff, _new_price, _comment, _operator, _to_plan) {
         stuff.price = _new_price;
         await stuff.save();
