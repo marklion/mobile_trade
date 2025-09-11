@@ -102,6 +102,54 @@ Plan Confirm with Not Enough Cash and Check
     ${c}  Set Variable  ${0}
     # 比较计算结果与实际值
     Should Be Equal As Numbers    ${arrears_third}    ${c}
+
+Plan Price Change With Recalculation
+    [Teardown]  Plan Reset
+    ${unit_price}  Set Variable  ${test_stuff}[price]
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    # 获取确认后的欠款信息
+    ${data_plan}  Get Plan By Id  ${plan}[id]
+    ${original_arrears}  Get From Dictionary  ${data_plan}  arrears  false
+    ${original_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
+    ${original_unit_price}  Get From Dictionary  ${data_plan}  unit_price
+    ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
+    ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
+    ${expected_original_arrears}  Evaluate  ${original_unit_price} * ${data_stuff}[expect_count]
+    Should Be Equal As Numbers    ${original_arrears}    ${expected_original_arrears}
+    Should Be Equal As Numbers    ${original_outstanding_vehicles}  ${1}
+    
+    # 改价为更高的价格
+    ${new_price}  Evaluate  ${original_unit_price} * 1.5
+    ${plan_id_string}  Convert To String    ${plan}[id]
+    ${req}=    Create Dictionary    unit_price=${new_price}  plan_id=${plan_id_string}  comment=测试改价重新计算
+    ${resp}=    Req to Server    /stuff/change_price_by_plan    ${sc_admin_token}  ${req}
+    Sleep    1s
+    ${data_plan_after}  Get Plan By Id  ${plan}[id]
+    ${new_arrears}  Get From Dictionary  ${data_plan_after}  arrears  false
+    ${new_outstanding_vehicles}  Get From Dictionary  ${data_plan_after}  outstanding_vehicles  false
+    ${new_unit_price}  Get From Dictionary  ${data_plan_after}  unit_price
+    
+    # 验证价格已更新
+    Should Be Equal As Numbers    ${new_unit_price}    ${new_price}
+    ${expected_new_arrears}  Evaluate  ${new_price} * ${data_stuff}[expect_count]
+    Should Be Equal As Numbers    ${new_arrears}    ${expected_new_arrears}
+    Should Be Equal As Numbers    ${new_outstanding_vehicles}  ${1}
+    
+    # 验证新欠款大于原欠款（因为涨价了）
+    Should Be True    ${new_arrears} > ${original_arrears}
+    Charge To A Company  ${buy_company1}[id]  ${expected_new_arrears}
+    ${data_plan_final}  Get Plan By Id  ${plan}[id]
+    ${final_arrears}  Get From Dictionary  ${data_plan_final}  arrears  false
+    ${final_outstanding_vehicles}  Get From Dictionary  ${data_plan_final}  outstanding_vehicles  false
+    Should Be Equal As Numbers    ${final_arrears}    ${0}
+    Should Be Equal As Numbers    ${final_outstanding_vehicles}  ${0}
+    ${negative_amount}  Evaluate  -${expected_new_arrears}
+    Charge To A Company  ${buy_company1}[id]  ${negative_amount}
+
 Plan Confirm with No User Authorized
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
