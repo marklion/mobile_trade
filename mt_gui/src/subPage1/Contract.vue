@@ -6,21 +6,21 @@
             <view style="padding: 0 20rpx;position: relative;">
                 <view v-if="item.expired" class="expired_text">已过期</view>
                 <module-filter require_module="sale_management">
-                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su || cur_urls.buy_setting">
+                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
                         <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" originLeft :scaleRatio="0.8" type="purple">
                             {{single_stuff.name}}
                             <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
                         </fui-tag>
-                        <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su">
+                        <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && cur_urls.need_su">
                             <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" originLeft :scaleRatio="0.8" type="success">
                                 {{single_user.name?single_user.name +'|'+single_user.phone: single_user.phone}}
                                 <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
                             </fui-tag>
                         </view>
                     </view>
-                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls.need_su || cur_urls.buy_setting">
+                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
                         <fui-tag text="新增物料" :scaleRatio="0.8" originLeft type="purple" @click="prepare_add_stuff(item)"></fui-tag>
-                        <fui-tag v-if="cur_urls.need_su" :scaleRatio="0.8" originLeft type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
+                        <fui-tag v-if="cur_urls && cur_urls.need_su" :scaleRatio="0.8" originLeft type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
                     </view>
                 </module-filter>
                 <fui-tag text="查看资质" :scaleRatio="0.8" originLeft type="primary" @click="show_attach_pic(item)"></fui-tag>
@@ -37,12 +37,12 @@
 
                 </view>
                 <view style="display:flex; flex-wrap: wrap;">
-                    <module-filter require_module="cash" v-if="cur_urls.need_su">
+                    <module-filter require_module="cash" v-if="cur_urls && cur_urls.need_su">
                         <fui-tag :scaleRatio="0.8" originLeft type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
                     </module-filter>
-                    <fui-tag v-if="cur_urls.get_url === '/customer/contract_get' || cur_urls.need_su" :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
-                    <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="purple" text="修改" @click="prepare_update(item)"></fui-tag>
-                    <fui-tag v-if="cur_urls.motive" :scaleRatio="0.8" originLeft type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
+                    <fui-tag v-if="cur_urls && (cur_urls.get_url === '/customer/contract_get' || cur_urls.need_su)" :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
+                    <fui-tag v-if="cur_urls && cur_urls.motive" :scaleRatio="0.8" originLeft type="purple" text="修改" @click="prepare_update(item)"></fui-tag>
+                    <fui-tag v-if="cur_urls && cur_urls.motive" :scaleRatio="0.8" originLeft type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
                 </view>
             </view>
             <fui-white-space size="large"></fui-white-space>
@@ -53,7 +53,7 @@
     <view v-if="show_attach" class="download-button-container">
         <fui-text color="#fff" text="下载" @click="download_img"></fui-text>
     </view>
-    <fui-button v-if="cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
+    <fui-button v-if="cur_urls && cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
     <fui-modal width="600" :show="show_update_contract" @click="update_contract" v-if="show_update_contract">
         <fui-form ref="update_contract" top="100">
             <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="show_date_range = true"></fui-input>
@@ -83,7 +83,7 @@
     <fui-date-picker range :show="show_date_range" type="3" :value="new_contract.begin_time" :valueEnd="new_contract.end_time" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
-            <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls.buy_setting]" search_key="name" height="40vh">
+            <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls && cur_urls.buy_setting]" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2contract(item)">
                     {{item.name}}
                 </fui-list-cell>
@@ -489,6 +489,10 @@ export default {
             });
             return ret.contracts;
         }
+    },
+    created: function () {
+        // 在组件创建时立即初始化，防止模板渲染时访问未定义属性
+        this.init_top_seg();
     },
     onShow: function () {
         this.init_top_seg();
