@@ -522,6 +522,20 @@ module.exports = {
                                 await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, { transaction })
                                 // 更新价格
                                 plan.unit_price = unitPrice;
+                                if (plan.status == 1 && !plan.is_buy) {
+                                    let full_plan = await sq.models.plan.findOne({
+                                        where: { id: plan.id },
+                                        include: [
+                                            { model: sq.models.stuff, include: [{ model: sq.models.company }] },
+                                            { model: sq.models.company }
+                                        ],
+                                        transaction
+                                    });
+                                    let { arrears, outstanding_vehicles } = await plan_lib.calculate_plan_arrears(full_plan, unitPrice, transaction);
+                                    plan.arrears = arrears;
+                                    plan.outstanding_vehicles = outstanding_vehicles;
+                                }
+                                
                                 await plan.save({ transaction });
                                 if (plan.status == 3) {
                                     setTimeout(async () => {
