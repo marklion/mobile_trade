@@ -1,7 +1,7 @@
 <template>
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
-    <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls]">
+    <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls]" v-if="cur_urls && cur_urls.get_url">
         <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']" :title="item.company.name" color="black" :tag="'￥' + item.balance.toFixed(2)">
             <view style="padding: 0 20rpx;position: relative;">
                 <view v-if="item.expired" class="expired_text">已过期</view>
@@ -200,6 +200,18 @@ export default {
             }
         },
         change_seg: function (e) {
+            // 确保 cur_urls 对象存在
+            if (!this.cur_urls) {
+                this.cur_urls = {
+                    get_url: '',
+                    make_url: '',
+                    update_url: '',
+                    del_url: '',
+                    need_su: false,
+                    motive: false,
+                    buy_setting: false,
+                };
+            }
             this.cur_urls.get_url = e.get_url;
             this.cur_urls.make_url = e.make_url;
             this.cur_urls.update_url = e.update_url;
@@ -264,6 +276,17 @@ export default {
                 this.cur_urls.motive = this.seg[0].motive;
                 this.cur_urls.need_su = this.seg[0].need_su;
                 this.cur_urls.buy_setting = this.seg[0].buy_setting;
+            } else {
+                // 如果没有可用的模块，确保 cur_urls 有默认值
+                this.cur_urls = {
+                    get_url: '',
+                    make_url: '',
+                    update_url: '',
+                    del_url: '',
+                    need_su: false,
+                    motive: false,
+                    buy_setting: false,
+                };
             }
         },
         get_history: async function (_pageNo, [id]) {
@@ -271,7 +294,7 @@ export default {
                 return [];
             }
             let history_url = '/cash/history';
-            if (this.cur_urls.get_url === '/customer/contract_get') {
+            if (this.cur_urls && this.cur_urls.get_url === '/customer/contract_get') {
                 history_url = '/customer/history';
             }
             let ret = await this.$send_req(history_url, {
@@ -324,6 +347,10 @@ export default {
         },
         del_contract: async function (detail) {
             if (detail.index == 1) {
+                if (!this.cur_urls || !this.cur_urls.del_url) {
+                    console.error('cur_urls.del_url 未定义');
+                    return;
+                }
                 await this.$send_req(this.cur_urls.del_url, {
                     contract_id: this.focus_item.id
                 });
@@ -384,7 +411,7 @@ export default {
         del_stuff: async function (detail) {
             if (detail.index == 1) {
                 let url = '/sale_management/contract_del_stuff';
-                if (this.cur_urls.buy_setting) {
+                if (this.cur_urls && this.cur_urls.buy_setting) {
                     url = "/buy_management/contract_del_stuff"
                 }
                 await this.$send_req(url, {
@@ -401,7 +428,7 @@ export default {
                 stuff_id: item.id
             };
             let url = '/sale_management/contract_add_stuff';
-            if (this.cur_urls.buy_setting) {
+            if (this.cur_urls && this.cur_urls.buy_setting) {
                 url = "/buy_management/contract_add_stuff"
             }
             await this.$send_req(url, req);
@@ -447,6 +474,10 @@ export default {
         },
         update_contract: async function (detail) {
             if (detail.index == 1) {
+                if (!this.cur_urls || !this.cur_urls.update_url) {
+                    console.error('cur_urls.update_url 未定义');
+                    return;
+                }
                 await this.$send_req(this.cur_urls.update_url, this.new_contract);
                 uni.startPullDownRefresh();
             }
@@ -454,6 +485,10 @@ export default {
         },
         add_contract: async function (detail) {
             if (detail.index == 1) {
+                if (!this.cur_urls || !this.cur_urls.make_url) {
+                    console.error('cur_urls.make_url 未定义');
+                    return;
+                }
                 let rules = [{
                     name: 'company_name',
                     rule: ['required'],
@@ -481,6 +516,11 @@ export default {
             this.focus_user = single_user;
         },
         get_sale_contract: async function (pageNo, [cur_urls]) {
+            // 添加安全检查，防止访问未定义对象的属性
+            if (!cur_urls || !cur_urls.get_url) {
+                console.error('cur_urls 或 cur_urls.get_url 未定义');
+                return [];
+            }
             let ret = await this.$send_req(cur_urls.get_url, {
                 pageNo: pageNo
             });
@@ -502,7 +542,9 @@ export default {
         this.new_contract.end_time = utils.dateFormatter(end_date, 'y-m-d', 4, false);
     },
     onPullDownRefresh: function () {
-        this.$refs.contracts.refresh();
+        if (this.$refs.contracts) {
+            this.$refs.contracts.refresh();
+        }
         uni.stopPullDownRefresh();
     }
 }
