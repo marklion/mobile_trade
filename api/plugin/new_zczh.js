@@ -22,11 +22,21 @@ async function get_vo(plan) {
     let resp = await push_req2zc({
         plate_number: plan.main_vehicle.plate,
         driver_phone: plan.driver.phone,
-        // 移除 exp_status: 100 限制，避免时序问题导致找不到派车单
+        exp_status: 100
     }, make_url('/api/order/search', plan), make_token(plan));
     if (resp.result.length > 0) {
         ret = resp.result[0].order_number;
+    } else {
+        resp = await push_req2zc({
+            plate_number: plan.main_vehicle.plate,
+            driver_phone: plan.driver.phone
+        }, make_url('/api/order/search', plan), make_token(plan));
+        
+        if (resp.result.length > 0) {
+            ret = resp.result[0].order_number;
+        }
     }
+    
     return ret;
 }
 
