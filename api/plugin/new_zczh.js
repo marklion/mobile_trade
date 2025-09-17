@@ -22,7 +22,7 @@ async function get_vo(plan) {
     let resp = await push_req2zc({
         plate_number: plan.main_vehicle.plate,
         driver_phone: plan.driver.phone,
-        exp_status: 100,
+        // 移除 exp_status: 100 限制，避免时序问题导致找不到派车单
     }, make_url('/api/order/search', plan), make_token(plan));
     if (resp.result.length > 0) {
         ret = resp.result[0].order_number;
@@ -73,15 +73,19 @@ module.exports = {
     },
     cancel_check_in: async function (plan) {
         let vo = await get_vo(plan);
-        await push_req2zc({
-            order_number: vo,
-        }, make_url('/api/order/del', plan), make_token(plan));
+        if (vo) {
+            await push_req2zc({
+                order_number: vo,
+            }, make_url('/api/order/del', plan), make_token(plan));
+        }
     },
     cancel_enter: async function (plan) {
         let vo = await get_vo(plan);
-        await push_req2zc({
-            order_number: vo,
-        }, make_url('/api/order/rollback', plan), make_token(plan));
+        if (vo) {
+            await push_req2zc({
+                order_number: vo,
+            }, make_url('/api/order/rollback', plan), make_token(plan));
+        }
     },
     confirm_vehicle: async function (plan) {
         let vo = await get_vo(plan);
