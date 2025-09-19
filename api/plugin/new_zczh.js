@@ -26,15 +26,6 @@ async function get_vo(plan) {
     }, make_url('/api/order/search', plan), make_token(plan));
     if (resp.result.length > 0) {
         ret = resp.result[0].order_number;
-    } else {
-        resp = await push_req2zc({
-            plate_number: plan.main_vehicle.plate,
-            driver_phone: plan.driver.phone
-        }, make_url('/api/order/search', plan), make_token(plan));
-        
-        if (resp.result.length > 0) {
-            ret = resp.result[0].order_number;
-        }
     }
     
     return ret;
@@ -91,11 +82,9 @@ module.exports = {
     },
     cancel_enter: async function (plan) {
         let vo = await get_vo(plan);
-        if (vo) {
-            await push_req2zc({
-                order_number: vo,
-            }, make_url('/api/order/rollback', plan), make_token(plan));
-        }
+        await push_req2zc({
+            order_number: vo,
+        }, make_url('/api/order/rollback', plan), make_token(plan));
     },
     confirm_vehicle: async function (plan) {
         let vo = await get_vo(plan);
