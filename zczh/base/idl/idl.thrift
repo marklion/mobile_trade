@@ -145,6 +145,14 @@ struct running_rule {
     13:bool force_close,
 }
 
+struct weight_ref_config {
+    1:string stuff_name,
+    2:double weight_ref,
+    3:double flu_permission,
+    4:i64 id,
+    5:bool is_p_weight,
+}
+
 struct device_run_time{
     1:i64 id,
     2:string name,
@@ -172,6 +180,9 @@ service config_management{
     bool update_vehicle(1:vehicle_config input) throws(1:gen_exp e),
     running_rule get_rule() throws(1:gen_exp e),
     bool set_rule(1:running_rule rule) throws (1:gen_exp e),
+    list<weight_ref_config> get_weight_ref() throws (1:gen_exp e),
+    bool add_weight_ref(1:weight_ref_config new_one) throws (1:gen_exp e),
+    bool del_weight_ref(1:i64 ref_id) throws (1:gen_exp e),
     void reboot_system() throws (1:gen_exp e),
 }
 

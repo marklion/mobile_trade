@@ -299,6 +299,72 @@ static void clear(std::ostream &out, std::vector<std::string> _params)
     }
 }
 
+static void add_weight_ref(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 4)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            weight_ref_config tmp;
+            tmp.stuff_name = _params[0];
+            tmp.weight_ref = atof(_params[1].c_str());
+            tmp.flu_permission = atof(_params[2].c_str());
+            if (_params[3] == "p")
+            {
+                tmp.is_p_weight = true;
+            }
+            else
+            {
+                tmp.is_p_weight = false;
+            }
+            client->add_weight_ref(tmp);
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
+
+static void del_weight_ref(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 2)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            std::vector<weight_ref_config> tmp;
+            client->get_weight_ref(tmp);
+            for (auto &itr : tmp)
+            {
+                bool is_p_weight = ( _params[1] == "p");
+                if (itr.stuff_name == _params[0] && itr.is_p_weight == is_p_weight)
+                {
+                    client->del_weight_ref(itr.id);
+                    break;
+                }
+            }
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
+
 std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
 {
     auto root_menu = std::unique_ptr<cli::Menu>(new cli::Menu(_menu_name));
@@ -315,6 +381,8 @@ std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
     root_menu->Insert(CLI_MENU_ITEM(set_oem_name), "设置OEM名称", {"OEM名称"});
     root_menu->Insert(CLI_MENU_ITEM(set_weight_coe), "设置称重系数", {"系数"});
     root_menu->Insert(CLI_MENU_ITEM(set_force_close), "设置强制关闭道闸");
+    root_menu->Insert(CLI_MENU_ITEM(add_weight_ref), "添加货物重量参考", {"货物名称", "参考重量", "允许误差", "p/m"});
+    root_menu->Insert(CLI_MENU_ITEM(del_weight_ref), "删除货物重量参考", {"货物名称", "p/m"});
     root_menu->Insert(CLI_MENU_ITEM(clear), "清除配置");
 
     return root_menu;
@@ -327,8 +395,10 @@ std::string rule_cli::make_bdr()
 {
     std::vector<std::string> ret;
     running_rule tmp;
+    std::vector<weight_ref_config> weight_ref;
     THR_CALL_BEGIN(config_management);
     client->get_rule(tmp);
+    client->get_weight_ref(weight_ref);
     THR_CALL_END();
 
     if (tmp.auto_call_count != 0)
@@ -374,6 +444,20 @@ std::string rule_cli::make_bdr()
     if (tmp.weight_coe != 1)
     {
         ret.push_back("set_weight_coe " + std::to_string(tmp.weight_coe));
+    }
+
+    for (auto &itr : weight_ref)
+    {
+        std::string pm_config = "p";
+        if (itr.is_p_weight)
+        {
+            pm_config = "p";
+        }
+        else
+        {
+            pm_config = "m";
+        }
+        ret.push_back("add_weight_ref " + itr.stuff_name + " " + std::to_string(itr.weight_ref) + " " + std::to_string(itr.flu_permission) + " " + pm_config);
     }
 
     return util_join_string(ret, "\n");

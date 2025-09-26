@@ -138,6 +138,7 @@ public:
     void trigger_cam_plate();
     bool is_over_weight(double _p_weight = 0);
     void cast_is_over_weight(double _p_weight);
+    void cast_weight_illegal(double _exceeded_weight);
 };
 
 class device_management_handler : public device_managementIf
