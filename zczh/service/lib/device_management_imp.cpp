@@ -1135,6 +1135,18 @@ void scale_sm::cast_is_over_weight(double _p_weight)
     cast_common("超重了, 皮重:" + util_double_to_string(_p_weight) + "吨, 毛重:" + util_double_to_string(cur_weight) + "吨, 净重:" + util_double_to_string(cur_weight - _p_weight) + "吨");
 }
 
+void scale_sm::cast_weight_illegal(double _exceeded_weight)
+{
+    auto real_exceeded = _exceeded_weight;
+    std::string content = "超重";
+    if (_exceeded_weight < 0)
+    {
+        real_exceeded = -_exceeded_weight;
+        content = "欠重";
+    }
+    cast_common(content + util_double_to_string(real_exceeded) + "吨");
+}
+
 void scale_state_idle::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
@@ -1177,6 +1189,30 @@ void scale_state_scale::before_enter(abs_state_machine &_sm)
 
 void scale_state_scale::after_exit(abs_state_machine &_sm)
 {
+}
+
+double weight_make_scense(double _cur_weight, const std::string &_stuff_name, bool _is_p)
+{
+    double ret = 0;
+    std::vector<weight_ref_config> wrcs;
+    THR_CALL_BEGIN(config_management);
+    client->get_weight_ref(wrcs);
+    THR_CALL_END();
+
+    for (auto &itr : wrcs)
+    {
+        if (_stuff_name.find(itr.stuff_name) != std::string::npos && itr.is_p_weight == _is_p)
+        {
+            ret = _cur_weight - itr.weight_ref;
+            if (std::abs(ret) <= itr.flu_permission)
+            {
+                ret = 0;
+            }
+            break;
+        }
+    }
+
+    return ret;
 }
 
 std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_sm)
@@ -1245,9 +1281,15 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 THR_CALL_BEGIN(order_center);
                 client->get_order(tmp, sm.order_number);
                 THR_CALL_END();
+                bool cur_is_p_weight = (tmp.is_sale && tmp.p_weight == 0) || (!tmp.is_sale && tmp.p_weight > 0);
+                auto exceeded_weight = weight_make_scense(sm.cur_weight, tmp.stuff_name, cur_is_p_weight);
                 if (sm.is_over_weight(tmp.p_weight))
                 {
                     sm.cast_is_over_weight(tmp.p_weight);
+                }
+                else if (exceeded_weight != 0)
+                {
+                    sm.cast_weight_illegal(exceeded_weight);
                 }
                 else
                 {

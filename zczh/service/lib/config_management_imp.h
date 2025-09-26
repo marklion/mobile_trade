@@ -28,6 +28,9 @@ public:
     virtual void get_rule(running_rule &_return);
     virtual bool set_rule(const running_rule &rule);
     virtual void reboot_system();
+    virtual void get_weight_ref(std::vector<weight_ref_config> &_return);
+    virtual bool add_weight_ref(const weight_ref_config &new_one);
+    virtual bool del_weight_ref(const int64_t ref_id);
 
     void db_2_rpc(sql_stuff &_db, stuff_config &_rpc);
     void db_2_rpc(sql_contract &_db, contract_config &_rpc);
@@ -36,5 +39,7 @@ public:
     void db_2_rpc(sql_device_meta &_db, device_meta &_rpc);
     void db_2_rpc(sql_device_set &_db, device_scale_set &_rpc);
     void db_2_rpc(sql_device_set &_db, device_gate_set &_rpc);
+    void db_2_rpc(sql_weight_ref_config &_db, weight_ref_config &_rpc);
+    void rpc_2_db(const weight_ref_config &_rpc, sql_weight_ref_config &_db);
 };
 #endif // _CONFIG_MANAGEMENT_H_

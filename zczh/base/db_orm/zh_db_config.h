@@ -441,6 +441,29 @@ public:
     }
 };
 
+class sql_weight_ref_config : public sql_tree_base {
+public:
+    std::string stuff_name;
+    double ref_weight = 0;
+    double flu_permission = 0;
+    long is_p_weight = 0;
+    virtual std::vector<sqlite_orm_column> self_columns_defined()
+    {
+        std::vector<sqlite_orm_column> ret;
+
+        ret.push_back(sqlite_orm_column("stuff_name", sqlite_orm_column::STRING, &stuff_name));
+        ret.push_back(sqlite_orm_column("ref_weight", sqlite_orm_column::REAL, &ref_weight));
+        ret.push_back(sqlite_orm_column("flu_permission", sqlite_orm_column::REAL, &flu_permission));
+        ret.push_back(sqlite_orm_column("is_p_weight", sqlite_orm_column::INTEGER, &is_p_weight));
+
+        return ret;
+    }
+    virtual std::string table_name()
+    {
+        return "weight_ref_table";
+    }
+};
+
 class sql_file_store : public sql_tree_base
 {
 public:

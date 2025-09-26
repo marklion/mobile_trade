@@ -357,6 +357,47 @@ void config_management_handler::reboot_system()
     exit(0);
 }
 
+void config_management_handler::get_weight_ref(std::vector<weight_ref_config> &_return)
+{
+    auto all_records = sqlite_orm::search_record_all<sql_weight_ref_config>();
+    for (auto &itr : all_records)
+    {
+        weight_ref_config tmp;
+        db_2_rpc(itr, tmp);
+        _return.push_back(tmp);
+    }
+}
+
+bool config_management_handler::add_weight_ref(const weight_ref_config &new_one)
+{
+    bool ret = false;
+
+    auto er = sqlite_orm::search_record<sql_weight_ref_config>("stuff_name == '%s' AND is_p_weight == %d", new_one.stuff_name.c_str(), new_one.is_p_weight);
+    if (er)
+    {
+        rpc_2_db(new_one, *er);
+        ret = er->update_record();
+    }
+    else
+    {
+        sql_weight_ref_config tmp;
+        rpc_2_db(new_one, tmp);
+        ret = tmp.insert_record();
+    }
+
+    return ret;
+}
+
+bool config_management_handler::del_weight_ref(const int64_t ref_id)
+{
+    auto er = sqlite_orm::search_record<sql_weight_ref_config>(ref_id);
+    if (er)
+    {
+        er->remove_record();
+    }
+    return true;
+}
+
 void config_management_handler::get_rule(running_rule &_return)
 {
     auto er = sqlite_orm::search_record<sql_rule_config>(1);
@@ -497,4 +538,21 @@ void config_management_handler::db_2_rpc(sql_device_set &_db, device_gate_set &_
     DEV_FROM_SET_TO_RPC(back_led, _rpc.led.back);
     DEV_FROM_SET_TO_RPC(front_speaker, _rpc.speaker.front);
     DEV_FROM_SET_TO_RPC(back_speaker, _rpc.speaker.back);
+}
+
+void config_management_handler::db_2_rpc(sql_weight_ref_config &_db, weight_ref_config &_rpc)
+{
+    _rpc.id = _db.get_pri_id();
+    _rpc.stuff_name = _db.stuff_name;
+    _rpc.weight_ref = _db.ref_weight;
+    _rpc.flu_permission = _db.flu_permission;
+    _rpc.is_p_weight = _db.is_p_weight;
+}
+
+void config_management_handler::rpc_2_db(const weight_ref_config &_rpc, sql_weight_ref_config &_db)
+{
+    _db.stuff_name = _rpc.stuff_name;
+    _db.ref_weight = _rpc.weight_ref;
+    _db.flu_permission = _rpc.flu_permission;
+    _db.is_p_weight = _rpc.is_p_weight;
 }
