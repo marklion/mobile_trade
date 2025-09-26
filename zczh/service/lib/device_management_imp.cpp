@@ -1281,15 +1281,7 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 THR_CALL_BEGIN(order_center);
                 client->get_order(tmp, sm.order_number);
                 THR_CALL_END();
-                bool cur_is_p_weight = false;
-                if (tmp.is_sale && tmp.p_weight == 0)
-                {
-                    cur_is_p_weight = true;
-                }
-                else if (!tmp.is_sale && tmp.p_weight > 0)
-                {
-                    cur_is_p_weight = true;
-                }
+                bool cur_is_p_weight = (tmp.is_sale && tmp.p_weight == 0) || (!tmp.is_sale && tmp.p_weight > 0);
                 auto exceeded_weight = weight_make_scense(sm.cur_weight, tmp.stuff_name, cur_is_p_weight);
                 if (sm.is_over_weight(tmp.p_weight))
                 {
