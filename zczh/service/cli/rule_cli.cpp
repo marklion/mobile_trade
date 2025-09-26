@@ -448,15 +448,7 @@ std::string rule_cli::make_bdr()
 
     for (auto &itr : weight_ref)
     {
-        std::string pm_config = "p";
-        if (itr.is_p_weight)
-        {
-            pm_config = "p";
-        }
-        else
-        {
-            pm_config = "m";
-        }
+        std::string pm_config = itr.is_p_weight ? "p" : "m";
         ret.push_back("add_weight_ref " + itr.stuff_name + " " + std::to_string(itr.weight_ref) + " " + std::to_string(itr.flu_permission) + " " + pm_config);
     }
 
