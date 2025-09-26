@@ -349,7 +349,7 @@ static void del_weight_ref(std::ostream &out, std::vector<std::string> _params)
             client->get_weight_ref(tmp);
             for (auto &itr : tmp)
             {
-                bool is_p_weight = ( _params[1] == "p");
+                bool is_p_weight = (_params[1] == "p");
                 if (itr.stuff_name == _params[0] && itr.is_p_weight == is_p_weight)
                 {
                     client->del_weight_ref(itr.id);
