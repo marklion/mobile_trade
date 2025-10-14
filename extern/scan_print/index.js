@@ -1,3 +1,4 @@
+const moment = require('moment');
 function getStringAfter(str, substr) {
 	const index = str.indexOf(substr);
 	if (index !== -1) {
@@ -5,8 +6,7 @@ function getStringAfter(str, substr) {
 	}
 	return ''; // 如果子字符串不存在，返回空字符串
 }
-async function get_ticket(id)
-{
+async function get_ticket(id) {
 	var myHeaders = new Headers();
 	myHeaders.append("Authorization", "APPCODE ");
 	myHeaders.append("Content-Type", "application/json");
@@ -23,11 +23,10 @@ async function get_ticket(id)
 	};
 
 	let ret = await fetch("https://www.d8sis.cn/mt_api/api/v1/global/get_ticket", requestOptions);
-	return await  ret.json()
+	return await ret.json()
 
 }
-async function print(ip, content)
-{
+async function print(ip, content) {
 	console.log(ip)
 	const escpos = require('escpos');
 	escpos.Network = require('escpos-network');
@@ -39,10 +38,16 @@ async function print(ip, content)
 	const printer = new escpos.Printer(device, options);
 	let trans_company_name = content.trans_company_name;
 
-	device.open(function(error){
+	device.open(function (error) {
 		console.log(error)
 		let width = 0.15;
 		let sec_width = width * 2
+		let p_time_time = moment(content.p_time);
+		let m_time_time = moment(content.m_time);
+		let weight_title = '装车净重';
+		if (p_time_time.isAfter(m_time_time)) {
+			weight_title = '卸车净重';
+		}
 		printer
 			.align('ct')
 			.size(0.5, 0.5)
@@ -51,52 +56,52 @@ async function print(ip, content)
 			.align('LT')
 			.tableCustom(
 				[
-					{ text:'物料名称', align:"LEFT", width:width},
-					{ text:content.stuff_name, align:"LEFT", width:sec_width},
+					{ text: '物料名称', align: "LEFT", width: width },
+					{ text: content.stuff_name, align: "LEFT", width: sec_width },
 				])
 			.tableCustom([
-				{ text:'磅单号码', align:"LEFT", width:width},
-				{ text:content.ticket_no, align:"LEFT", width:sec_width},
+				{ text: '磅单号码', align: "LEFT", width: width },
+				{ text: content.ticket_no, align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'主车车号', align:"LEFT", width:width},
-				{ text:content.plate, align:"LEFT", width:sec_width},
+				{ text: '主车车号', align: "LEFT", width: width },
+				{ text: content.plate, align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'挂车车号', align:"LEFT", width:width},
-				{ text:content.behind_plate, align:"LEFT", width:sec_width },
+				{ text: '挂车车号', align: "LEFT", width: width },
+				{ text: content.behind_plate, align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'过皮重量', align:"LEFT", width:width},
-				{ text:content.p_weight.toFixed(2) + '吨', align:"LEFT", width:sec_width },
+				{ text: '过皮重量', align: "LEFT", width: width },
+				{ text: content.p_weight.toFixed(2) + '吨', align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'过皮日期', align:"LEFT", width:width},
-				{ text:content.p_time.substr(0, 10), align:"LEFT", width:sec_width },
+				{ text: '过皮日期', align: "LEFT", width: width },
+				{ text: content.p_time.substr(0, 10), align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'过皮时间', align:"LEFT", width:width},
-				{ text:content.p_time.substr(10), align:"LEFT", width:sec_width },
+				{ text: '过皮时间', align: "LEFT", width: width },
+				{ text: content.p_time.substr(10), align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'过毛重量', align:"LEFT", width:width},
-				{ text:content.m_weight.toFixed(2) + '吨', align:"LEFT", width:sec_width },
+				{ text: '过毛重量', align: "LEFT", width: width },
+				{ text: content.m_weight.toFixed(2) + '吨', align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'过毛日期', align:"LEFT", width:width},
-				{ text:content.m_time.substr(0, 10), align:"LEFT", width:sec_width },
+				{ text: '过毛日期', align: "LEFT", width: width },
+				{ text: content.m_time.substr(0, 10), align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'过毛时间', align:"LEFT", width:width},
-				{ text:content.m_time.substr(10), align:"LEFT", width:sec_width },
+				{ text: '过毛时间', align: "LEFT", width: width },
+				{ text: content.m_time.substr(10), align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'装车净重', align:"LEFT", width:width},
-				{ text:content.count + '吨', align:"LEFT", width:sec_width },
+				{ text: weight_title, align: "LEFT", width: width },
+				{ text: content.count + '吨', align: "LEFT", width: sec_width },
 			])
 			.tableCustom([
-				{ text:'铅封号码', align:"LEFT", width:width},
-				{ text:(content.seal_no?content.seal_no:''), align:"LEFT", width:sec_width },
+				{ text: '铅封号码', align: "LEFT", width: width },
+				{ text: (content.seal_no ? content.seal_no : ''), align: "LEFT", width: sec_width },
 			],)
 			.tableCustom([
 				{ text: (trans_company_name ? '运输公司' : ''), align: "LEFT", width: width },
