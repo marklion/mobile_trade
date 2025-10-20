@@ -184,6 +184,7 @@ let db_opt = {
             phone: { type: DataTypes.STRING, unique: true },
             id_card: { type: DataTypes.STRING },
             open_id: { type: DataTypes.STRING },
+            signature_pic:{type: DataTypes.STRING},
         },
         stuff: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -216,6 +217,7 @@ let db_opt = {
             second_unit_decimal: { type: DataTypes.INTEGER, defaultValue: 2 },
             delay_checkout_time:{type: DataTypes.STRING},
             last_delay_checkout:{type: DataTypes.STRING},
+            need_driver_sign:{type: DataTypes.BOOLEAN, defaultValue: false},
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

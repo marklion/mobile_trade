@@ -106,6 +106,7 @@ module.exports = {
                             }
                         },
                         delay_checkout_time: { type: String, mean: '延迟结算时间', example: '2025' },
+                        need_driver_sign: { type: Boolean, mean: '是否需要司机签字', example: false },
                     }
                 },
             },
@@ -535,7 +536,7 @@ module.exports = {
                                     plan.arrears = arrears;
                                     plan.outstanding_vehicles = outstanding_vehicles;
                                 }
-                                
+
                                 await plan.save({ transaction });
                                 if (plan.status == 3) {
                                     setTimeout(async () => {
@@ -1314,7 +1315,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_ticket_hasOrhasnt_place:{
+        set_ticket_hasOrhasnt_place: {
             name: '榜单上是否显示装卸车地点',
             description: '榜单上是否显示装卸车地点',
             is_write: true,
@@ -1374,7 +1375,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_barriergate_control_permission:{
+        set_barriergate_control_permission: {
             name: '设置门禁权限控制权限',
             description: '设置门禁权限控制权限',
             is_write: true,
@@ -1434,7 +1435,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        set_delay_checkout_time: {  
+        set_delay_checkout_time: {
             name: '设置延迟结算定时时间',
             description: '设置延迟结算定时时间',
             is_write: true,
@@ -1455,6 +1456,22 @@ module.exports = {
                     }, token);
                 }
                 return { result: true };
+            }
+        },
+        need_driver_sign:{
+            name: '设置是否需要司机签字',
+            description: '设置是否需要司机签字',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                need_driver_sign: { type: Boolean, have_to: true, mean: '是否需要司机签字', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'need_driver_sign', body.need_driver_sign, token);
             }
         },
         add_extra_info_config: {

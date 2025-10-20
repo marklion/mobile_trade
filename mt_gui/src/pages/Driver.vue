@@ -346,6 +346,13 @@ export default {
                         item: item,
                     });
                 }
+                if (item.stuff.need_driver_sign) {
+                    ret.buttons.push({
+                        text: '签名',
+                        color:'black',
+                        item: item,
+                    });
+                }
                 if (item.call_time) {
                     for (let index = 0; index < ret.list.length; index++) {
                         const reg_com = ret.list[index];
@@ -568,6 +575,10 @@ export default {
             } else if (e.text == '期望重量') {
                 vue_this.focus_plan = e.item;
                 vue_this.show_expect_weight = true;
+            } else if (e.text == '签名') {
+                uni.navigateTo({
+                    url: '/subPage1/DriverSign?open_id=' + this.driver_self.open_id,
+                });
             }
         },
         set_expect_weight: async function (e) {
