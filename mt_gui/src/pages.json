@@ -143,10 +143,14 @@
 				},
 				{
 					"path": "SignatureConfig"
+				},
+				{
+					"path": "DriverSign"
 				}
+
 			]
 		}
-	],	
+	],
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "掌易助理",

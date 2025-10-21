@@ -300,6 +300,7 @@ module.exports = {
                 ticket_prefix: { type: String, mean: '磅单号前缀', example: 'LNG' },
                 need_expect_weight: { type: Boolean, mean: '是否需要预计重量', example: false },
                 close_today: { type: Boolean, mean: '是否需要今日关闭', example: false },
+                need_driver_sign:{ type: Boolean, mean: '是否需要司机签字', example: false },
             }
         },
         company: {

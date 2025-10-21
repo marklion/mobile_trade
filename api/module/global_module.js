@@ -2088,5 +2088,52 @@ module.exports = {
                 return { is_the_order_display_price: company.is_the_order_display_price };
             }
         },
+        update_user_signature: {
+            name: '更新司机签名',
+            description: '更新司机签名图片',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                signature_pic: { type: String, have_to: true, mean: '签名图片路径', example: '/uploads/signature.png' },
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' }
+            },
+            result: {
+                result: { type: Boolean, mean: '更新结果', example: true }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                if (driver) {
+                    driver.signature_pic = body.signature_pic;
+                    await driver.save();
+                    return { result: true };
+                } else {
+                    throw { err_msg: '司机未找到' };
+                }
+            }
+        },
+        get_user_signature: {
+            name: '获取司机签名',
+            description: '获取司机签名图片',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+            },
+            result: {
+                signature_pic: { type: String, mean: '签名图片路径', example: '/uploads/signature.png' }
+            },
+            func: async function (body, token) {
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                if (driver) {
+                    return { signature_pic: driver.signature_pic || '' };
+                } else {
+                    throw { err_msg: '司机未找到' };
+                }
+            }
+        },
     },
 }
