@@ -122,6 +122,7 @@ export default {
                     end_time: filter.end_time,
                     ticket_type: module,
                     company_id: filter.company_id,
+                    only_finished: true,
                 });
                 this.show_export_success();
             } catch (error) {
