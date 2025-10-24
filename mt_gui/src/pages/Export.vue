@@ -240,6 +240,7 @@ export default {
                     start_time: this.begin_date,
                     end_time: this.end_date,
                     ticket_type: ticket_type,
+                    only_finished: true,
                 });
                 this.cur_page = 1;
             } catch (error) {
