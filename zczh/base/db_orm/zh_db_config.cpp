@@ -34,7 +34,9 @@ bool sql_device_set::is_empty_set()
         GET_DEVICE_FROM_SET(back_qr_reader)||
         GET_DEVICE_FROM_SET(front_printer)||
         GET_DEVICE_FROM_SET(back_printer)||
-        GET_DEVICE_FROM_SET(scale)
+        GET_DEVICE_FROM_SET(scale) ||
+        GET_DEVICE_FROM_SET(card_reader) ||
+        GET_DEVICE_FROM_SET(card_deliver)
         )
     {
         ret = false;

@@ -171,6 +171,7 @@ public:
         add_parent_type<sql_device_meta>("back_printer");
         add_parent_type<sql_device_meta>("scale");
         add_parent_type<sql_device_meta>("card_reader");
+        add_parent_type<sql_device_meta>("card_deliver");
     }
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {

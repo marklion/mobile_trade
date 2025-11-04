@@ -92,6 +92,7 @@ struct device_scale_set {
     10:device_couple printer,
     11:device_meta scale,
     12:device_meta card_reader,
+    13:device_meta card_deliver,
 }
 
 struct device_gate_set{
@@ -316,4 +317,5 @@ service device_management {
     string last_card_no(1:i64 card_reader_id) throws (1:gen_exp e),
     oneway void push_card_no(1:i64 card_reader_id, 2:string card_no),
     oneway void clear_card_no(1:i64 card_reader_id),
+    string deliver_card(1:i64 card_deliver_id, 2:string plate, 3:i64 ser_no, 4:i64 expect_load) throws (1:gen_exp e),
 }
