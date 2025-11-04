@@ -15,6 +15,7 @@ config_management_handler::config_management_handler()
         {"wl_style_scale", "/bin/wl_style_scale_driver"},
         {"card_reader_driver", "/bin/card_reader_driver"},
         {"tld_style_scale", "/bin/tld_style_scale_driver"},
+        {"card_deliver_driver", "/bin/card_deliver_driver"},
     };
 
     for (auto &itr : dmt_array)
@@ -518,6 +519,7 @@ void config_management_handler::db_2_rpc(sql_device_set &_db, device_scale_set &
     DEV_FROM_SET_TO_RPC(back_printer, _rpc.printer.back);
     DEV_FROM_SET_TO_RPC(scale, _rpc.scale);
     DEV_FROM_SET_TO_RPC(card_reader, _rpc.card_reader);
+    DEV_FROM_SET_TO_RPC(card_deliver, _rpc.card_deliver);
 }
 
 void config_management_handler::db_2_rpc(sql_device_set &_db, device_gate_set &_rpc)

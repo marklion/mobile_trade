@@ -138,6 +138,7 @@ void device_management_handler::init_all_set()
         start_device_no_exp(itr.printer.front.id);
         start_device_no_exp(itr.scale.id);
         start_device_no_exp(itr.card_reader.id);
+        start_device_no_exp(itr.card_deliver.id);
         sm_init_add(std::make_shared<scale_sm>(itr.id, this), itr.id);
     }
 }
@@ -642,6 +643,17 @@ void device_management_handler::clear_card_no(const int64_t card_reader_id)
         THR_DEF_CIENT(device_management);
         THR_CONNECT_DEV(device_management, sp->port);
         client->clear_card_no(0);
+        TRH_CLOSE();
+    }
+}
+void device_management_handler::deliver_card(std::string &_return, const int64_t card_deliver_id, const std::string &plate, const int64_t ser_no, const int64_t expect_load)
+{
+    auto sp = get_status_from_map(card_deliver_id);
+    if (sp)
+    {
+        THR_DEF_CIENT(device_management);
+        THR_CONNECT_DEV(device_management, sp->port);
+        client->deliver_card(_return, 0, plate, ser_no, expect_load);
         TRH_CLOSE();
     }
 }
@@ -1564,6 +1576,7 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
         if (set)
         {
             auto cr = set->get_parent<sql_device_meta>("card_reader");
+            auto cd = set->get_parent<sql_device_meta>("card_deliver");
             if (cr)
             {
                 std::string card_no;
@@ -1580,6 +1593,25 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
                     {
                         sm.cast_common("发卡失败");
                     }
+                }
+            }
+            else if (cd)
+            {
+                std::string card_deliver_ret;
+                vehicle_order_info tmp;
+                THR_CALL_BEGIN(order_center);
+                client->get_order(tmp, sm.order_number);
+                THR_CALL_END();
+                THR_CALL_DM_BEGIN();
+                client->deliver_card(card_deliver_ret, cd->get_pri_id(), tmp.plate_number, tmp.id, tmp.expect_weight);
+                THR_CALL_DM_END();
+                if (card_deliver_ret.empty())
+                {
+                    ret.reset(new scale_state_clean());
+                }
+                else
+                {
+                    sm.cast_common("发卡失败");
                 }
             }
         }

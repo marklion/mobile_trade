@@ -175,6 +175,7 @@ public:
     virtual void last_card_no(std::string &_return, const int64_t card_reader_id);
     virtual void push_card_no(const int64_t card_reader_id, const std::string &card_no);
     virtual void clear_card_no(const int64_t card_reader_id);
+    virtual void deliver_card(std::string& _return, const int64_t card_deliver_id, const std::string& plate, const int64_t ser_no, const int64_t expect_load);
 
     void walk_zombie_process();
     void start_device_no_exp(int64_t id);

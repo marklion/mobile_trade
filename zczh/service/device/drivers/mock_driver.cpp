@@ -141,6 +141,16 @@ public:
     {
         card_no = _card_no;
     }
+
+    virtual void deliver_card(std::string &_return, const int64_t card_deliver_id, const std::string &plate, const int64_t ser_no, const int64_t expect_load) override
+    {
+        _return = "no";
+        if (card_no == "yes")
+        {
+            card_no = "no";
+            _return = "";
+        }
+    }
 };
 
 int main(int argc, char **argv)

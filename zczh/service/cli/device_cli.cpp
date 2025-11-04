@@ -112,6 +112,7 @@ void show_device_scale(std::ostream &out, std::vector<std::string> _params)
         PUT_DEVICE_TO_SET(printer.back);
         PUT_DEVICE_TO_SET(scale);
         PUT_DEVICE_TO_SET(card_reader);
+        PUT_DEVICE_TO_SET(card_deliver);
         tab.add_row({std::to_string(itr.id), itr.name, util_join_string(device_info, "\n")});
     }
     tab.format().multi_byte_characters(true);
@@ -843,6 +844,7 @@ std::string device_cli::make_bdr()
         ret += sub_bdr_make(itr.printer.front, "front_printer", itr.name);
         ret += sub_bdr_make(itr.scale, "scale", itr.name);
         ret += sub_bdr_make(itr.card_reader, "card_reader", itr.name);
+        ret += sub_bdr_make(itr.card_deliver, "card_deliver", itr.name);
     }
     THR_CALL_END();
 
