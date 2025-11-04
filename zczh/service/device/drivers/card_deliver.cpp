@@ -94,9 +94,11 @@ public:
             if (modbus_connect(ctx) == 0)
             {
                 bool modbus_ret = true;
+                // 读原始卡号
                 modbus_ret &= write_modbus_reg(ctx, 8, &CONST_READ_CARD_CMD, 1);
                 auto orig_card_no = read_modbus_reg_uint16(ctx, 9);
 
+                // 写车号,流水号,预装量
                 unsigned short plate_array[7] = {0};
                 plate_array[0] = CONST_ZONE_PLATE_MAP.at(plate.substr(0, 3));
                 for (size_t i = 1; i < plate.size() && i < 7; ++i)
@@ -104,16 +106,23 @@ public:
                     plate_array[i] = static_cast<unsigned short>(plate[i + 2]);
                 }
                 modbus_ret &= write_modbus_reg(ctx, 15, plate_array, 7);
+
                 unsigned short ser_no_reg[2] = {0};
                 ser_no_reg[0] = static_cast<unsigned short>((ser_no >> 16) & 0xFFFF);
                 ser_no_reg[1] = static_cast<unsigned short>(ser_no & 0xFFFF);
                 modbus_ret &= write_modbus_reg(ctx, 13, ser_no_reg, 2);
+
                 unsigned short expect_load_reg[2] = {0};
                 expect_load_reg[0] = static_cast<unsigned short>((expect_load >> 16) & 0xFFFF);
                 expect_load_reg[1] = static_cast<unsigned short>(expect_load & 0xFFFF);
                 modbus_ret &= write_modbus_reg(ctx, 11, expect_load_reg, 2);
                 modbus_ret &= write_modbus_reg(ctx, 8, &CONST_WRITE_CARD_CMD, 1);
 
+                // 清除读卡器内的预装量
+                unsigned short clear_expect_load_reg[2] = {0};
+                modbus_ret &= write_modbus_reg(ctx, 11, clear_expect_load_reg, 2);
+
+                // 读回卡号,预装量,车号
                 modbus_ret &= write_modbus_reg(ctx, 8, &CONST_READ_CARD_CMD, 1);
                 auto new_card_no = read_modbus_reg_uint16(ctx, 9);
                 auto new_expect_load =
@@ -127,7 +136,7 @@ public:
                     new_plate_print.push_back(static_cast<char>(num));
                 }
                 modbus_close(ctx);
-                if (modbus_ret && orig_card_no == new_card_no)
+                if (modbus_ret && orig_card_no == new_card_no && expect_load == new_expect_load)
                 {
                     _return = "";
                     log_driver(
@@ -139,8 +148,7 @@ public:
                     _return = "发卡失败";
                     log_driver(
                         __FUNCTION__,
-                        "deliver card failed,modbus_ret=%d,orig_card_no=%u,new_card_no=%u,plate=%s,ser_no=%u,expect_load=%u",
-                        modbus_ret, orig_card_no, new_card_no, plate.c_str(), ser_no, expect_load);
+                        "deliver card failed,card_no=%u,plate=%s,ser_no=%u,expect_load=%u,new_expect_load=%u,new_plate=%s", new_card_no, plate.c_str(), ser_no, expect_load, new_expect_load, new_plate_print.c_str());
                 }
             }
             else
