@@ -1603,7 +1603,7 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
                 client->get_order(tmp, sm.order_number);
                 THR_CALL_END();
                 THR_CALL_DM_BEGIN();
-                client->deliver_card(card_deliver_ret, cd->get_pri_id(), tmp.plate_number, tmp.id, tmp.expect_weight);
+                client->deliver_card(card_deliver_ret, cd->get_pri_id(), tmp.plate_number, tmp.id, (int)(tmp.expect_weight * 1000));
                 THR_CALL_DM_END();
                 if (card_deliver_ret.empty())
                 {

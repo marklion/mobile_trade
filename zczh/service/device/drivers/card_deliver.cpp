@@ -4,9 +4,10 @@
 #include <modbus/modbus.h>
 #include <map>
 std::string g_dev_ip;
-
-const unsigned short CONST_WRITE_CARD_CMD = 1 << 1;
-const unsigned short CONST_READ_CARD_CMD = 1 << 2;
+unsigned long g_wait_ms = 300;
+const unsigned short CONST_WRITE_CARD_CMD = 4;
+const unsigned short CONST_READ_CARD_CMD = 8;
+const unsigned short CONST_RESET_CARD_CMD = 0;
 const std::map<std::string, unsigned short> CONST_ZONE_PLATE_MAP = {
     {"京", 1},
     {"津", 2},
@@ -95,8 +96,8 @@ public:
             {
                 bool modbus_ret = true;
                 // 读原始卡号
-                modbus_ret &= write_modbus_reg(ctx, 8, &CONST_READ_CARD_CMD, 1);
-                auto orig_card_no = read_modbus_reg_uint16(ctx, 9);
+                modbus_ret &= write_modbus_reg(ctx, 7, &CONST_READ_CARD_CMD, 1);
+                auto orig_card_no = read_modbus_reg_uint16(ctx, 8);
 
                 // 写车号,流水号,预装量
                 unsigned short plate_array[7] = {0};
@@ -105,30 +106,36 @@ public:
                 {
                     plate_array[i] = static_cast<unsigned short>(plate[i + 2]);
                 }
-                modbus_ret &= write_modbus_reg(ctx, 15, plate_array, 7);
+                modbus_ret &= write_modbus_reg(ctx, 14, plate_array, 7);
 
                 unsigned short ser_no_reg[2] = {0};
                 ser_no_reg[0] = static_cast<unsigned short>((ser_no >> 16) & 0xFFFF);
                 ser_no_reg[1] = static_cast<unsigned short>(ser_no & 0xFFFF);
-                modbus_ret &= write_modbus_reg(ctx, 13, ser_no_reg, 2);
+                modbus_ret &= write_modbus_reg(ctx, 12, ser_no_reg, 2);
 
                 unsigned short expect_load_reg[2] = {0};
                 expect_load_reg[0] = static_cast<unsigned short>((expect_load >> 16) & 0xFFFF);
                 expect_load_reg[1] = static_cast<unsigned short>(expect_load & 0xFFFF);
-                modbus_ret &= write_modbus_reg(ctx, 11, expect_load_reg, 2);
-                modbus_ret &= write_modbus_reg(ctx, 8, &CONST_WRITE_CARD_CMD, 1);
+                modbus_ret &= write_modbus_reg(ctx, 10, expect_load_reg, 2);
+                modbus_ret &= write_modbus_reg(ctx, 7, &CONST_WRITE_CARD_CMD, 1);
+                usleep(g_wait_ms * 1000);
+                // sleep(3);
+                // modbus_ret &= write_modbus_reg(ctx, 7, &CONST_RESET_CARD_CMD, 1);
 
                 // 清除读卡器内的预装量
                 unsigned short clear_expect_load_reg[2] = {0};
-                modbus_ret &= write_modbus_reg(ctx, 11, clear_expect_load_reg, 2);
+                modbus_ret &= write_modbus_reg(ctx, 10, clear_expect_load_reg, 2);
 
                 // 读回卡号,预装量,车号
-                modbus_ret &= write_modbus_reg(ctx, 8, &CONST_READ_CARD_CMD, 1);
-                auto new_card_no = read_modbus_reg_uint16(ctx, 9);
+                modbus_ret &= write_modbus_reg(ctx, 7, &CONST_READ_CARD_CMD, 1);
+                // sleep(3);
+                // modbus_ret &= write_modbus_reg(ctx, 7, &CONST_RESET_CARD_CMD, 1);
+
+                auto new_card_no = read_modbus_reg_uint16(ctx, 8);
                 auto new_expect_load =
-                    (static_cast<int64_t>(read_modbus_reg_uint16(ctx, 11)) << 16) |
-                    static_cast<int64_t>(read_modbus_reg_uint16(ctx, 12));
-                auto new_plate_str = read_modbus_reg(ctx, 15, 7);
+                    (static_cast<int64_t>(read_modbus_reg_uint16(ctx, 10)) << 16) |
+                    static_cast<int64_t>(read_modbus_reg_uint16(ctx, 11));
+                auto new_plate_str = read_modbus_reg(ctx, 14, 7);
                 std::string new_plate_print;
                 for (size_t i = 0; i < 7; ++i)
                 {
@@ -171,7 +178,8 @@ int main(int argc, char **argv)
     unsigned short self_id;
     auto cli = (required("-p") & value("port", run_port),
                 required("-i") & value("self_id", self_id),
-                required("-a") & value("device_ip", g_dev_ip));
+                required("-a") & value("device_ip", g_dev_ip),
+                required("-w") & value("wait_ms", g_wait_ms));
     if (!parse(argc, argv, cli))
     {
         std::cerr << "Usage:\n"
