@@ -68,10 +68,10 @@ module.exports = {
             "POST",
             {
                 bill_date: moment().format('YYYY-MM-DD'),
-                customer_id: customer_id,
+                customer_number: customer_id,
                 emp_number: king_dee_start_config.emp_number,
                 material_entity: [{
-                    material_id: stuff.stuff_code,
+                    material_number: stuff.stuff_code,
                     tax_price: unit_price,
                     qty: count,
                     stock_id: king_dee_start_config.stock_id,
