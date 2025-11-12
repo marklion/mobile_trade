@@ -7,11 +7,6 @@
   "engines": {
     "node": ">= 4"
   },
-  "husky": {
-    "hooks": {
-      "pre-push": "npm run prettier:fix && npm run lint && npm run tsc && npm run test:update"
-    }
-  },
   "scripts": {
     "ci-check": "npm run prettier && npm run lint && npm run tsc && npm run test",
     "reinstall": "rm -rf node_modules/ dist/ && npm install",
