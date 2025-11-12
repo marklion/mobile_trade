@@ -8,11 +8,13 @@ const util_lib = require('./util_lib');
 const sq = db_opt.get_sq();
 const archiver = require('archiver');
 const uuid = require('uuid');
-const fc_content = [
-    sq.models.field_check_item,
-    sq.models.rbac_role,
-    sq.models.stuff,
-];
+function get_fc_content() {
+    return [
+        sq.models.field_check_item,
+        sq.models.rbac_role,
+        sq.models.stuff,
+    ];
+}
 module.exports = {
     should_run_action: async function (action, plan) {
         let ret = true;
@@ -72,7 +74,7 @@ module.exports = {
     get_fc_table: async function (id, full = false) {
         let include_content = [];
         if (full) {
-            include_content = fc_content
+            include_content = get_fc_content();
         }
 
         return await sq.models.field_check_table.findByPk(id, {
@@ -86,7 +88,7 @@ module.exports = {
             fc_table: await stuff.getField_check_tables({
                 offset: 20 * pageNo,
                 limit: 20,
-                include: fc_content,
+                include: get_fc_content(),
             }),
         };
     },

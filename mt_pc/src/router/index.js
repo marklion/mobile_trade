@@ -225,19 +225,19 @@ export const asyncRoutes = [
         path: 'queue',
         name: 'queue',
         component: () => import('@/views/field/Queue'),
-        meta: { title: '排队车辆', roles: ['scale'] }
+        meta: { title: '排队车辆' }
       },
       {
         path: 'devopt',
         name: 'devopt',
         component: () => import('@/views/field/DevOpt'),
-        meta: { title: '设备管理', roles: [] }
+        meta: { title: '设备管理' }
       },
       {
         path: 'seal_pic',
         name: 'seal_pic',
         component: () => import('@/views/field/SealPic'),
-        meta: { title: '磅单印章', roles: ['scale'] }
+        meta: { title: '磅单印章' }
       }
     ]
   },

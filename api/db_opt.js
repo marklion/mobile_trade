@@ -172,6 +172,7 @@ let db_opt = {
             arrears: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('arrears') },
             outstanding_vehicles: { type: DataTypes.INTEGER, defaultValue: 0, },
             subsidy_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get:getDecimalValue('subsidy_price') },
+            king_dee_comment: { type: DataTypes.STRING },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -446,6 +447,19 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             content:{ type: DataTypes.STRING },
         },
+        king_dee_start_config:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            clientId:{ type: DataTypes.STRING },
+            clientSecret:{ type: DataTypes.STRING },
+            app_key:{ type: DataTypes.STRING },
+            app_secret:{ type: DataTypes.STRING},
+            stock_id:{ type: DataTypes.STRING},
+            unit_id:{type: DataTypes.STRING},
+            last_check_timestamp:{ type: DataTypes.STRING},
+            outerInstanceId:{ type: DataTypes.STRING},
+            emp_number:{ type: DataTypes.STRING},
+            cess:{ type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('cess')},
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -614,6 +628,9 @@ let db_opt = {
         _sq.models.extra_info_content.belongsTo(_sq.models.extra_info_config);
         _sq.models.plan.hasMany(_sq.models.extra_info_content);
         _sq.models.extra_info_content.belongsTo(_sq.models.plan);
+
+        _sq.models.king_dee_start_config.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasOne(_sq.models.king_dee_start_config);
     },
     install: async function () {
         console.log('run install');

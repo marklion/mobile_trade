@@ -1,0 +1,25 @@
+{
+  "include": ["src/**/*", "types/*"],
+  "exclude": ["src/**/*.snap.ts"],
+  "compilerOptions": {
+    /* Strict Type-Checking Options */
+    "strict": true,
+    /* Others */
+    "lib": ["dom", "es2017"],
+    "types": ["jest","node" ],
+    "outDir": "out/", // target for compiled files
+    "target": "es5",
+    "jsx": "react", // process JSX
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "declaration": true, // emit declarations
+    "importHelpers": false, // importing helper functions from tslib
+    "noEmitHelpers": false, // disable emitting inline helper functions
+    "noEmitOnError": true,
+    // "noUnusedLocals": true,
+    "pretty": true,
+    "removeComments": true,
+    "sourceMap": false,
+    "stripInternal": true
+  }
+}
