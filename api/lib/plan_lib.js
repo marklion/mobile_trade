@@ -11,6 +11,7 @@ const sc_lib = require('./sc_lib');
 const fc_lib = require('./fc_lib');
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
+const king_dee_start_lib = require('./king_dee_start_lib');
 module.exports = {
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
@@ -782,6 +783,17 @@ module.exports = {
                 comment: '出货扣除',
                 cash_increased: -decrease_cash
             });
+            if (await plan.stuff.getKing_dee_start_config()) {
+                try {
+                    let ticket_code = await king_dee_start_lib.sale_out(contract.customer_code, plan.stuff, plan.unit_price, plan.count);
+                    plan.king_dee_comment = '金蝶出库成功,单据编号:' + ticket_code;
+                } catch (error) {
+                    console.error('金蝶出库失败:', error);
+                    plan.king_dee_comment = '金蝶出库失败:' + error
+                } finally {
+                    await plan.save();
+                }
+            }
         }
     },
     plan_undo_cost: async function (plan) {
@@ -1100,7 +1112,7 @@ module.exports = {
             return { arrears: 0, outstanding_vehicles: 0 };
         }
         const price_to_use = unit_price !== null ? unit_price : plan.unit_price;
-        let contracts = await plan.stuff.company.getSale_contracts({ 
+        let contracts = await plan.stuff.company.getSale_contracts({
             where: { buyCompanyId: plan.company.id },
             ...(transaction && { transaction })
         });
@@ -1123,9 +1135,9 @@ module.exports = {
         if (arrears <= 0) {
             return { arrears: 0, outstanding_vehicles: 0 };
         } else {
-            return { 
-                arrears: arrears, 
-                outstanding_vehicles: paid_vehicle_count + 1 
+            return {
+                arrears: arrears,
+                outstanding_vehicles: paid_vehicle_count + 1
             };
         }
     },
@@ -1575,6 +1587,7 @@ module.exports = {
                 subsidy_discount: (this.place_hold(element.subsidy_price, element.unit_price) / element.unit_price * 10).toFixed(1),
                 second_unit: this.place_hold(element.stuff.second_unit, ''),
                 drop_take_zone_name: element.drop_take_zone_name,
+                king_dee_comment: element.king_dee_comment,
                 second_value: (() => {
                     const coefficient = this.place_hold(element.stuff.coefficient, 2);
                     const value = coefficient * element.count;
@@ -1668,6 +1681,9 @@ module.exports = {
         }, {
             header: '第二单位装卸量',
             key: 'second_value'
+        },{
+            header:'金蝶星辰同步信息',
+            key: 'king_dee_comment'
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');

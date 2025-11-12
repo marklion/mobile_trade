@@ -4,6 +4,8 @@ const { Worker, isMainThread, parentPort, workerData } = require('worker_threads
 const moment = require('moment');
 const mergeImg = require('merge-img');
 const jimp = require('jimp').default;
+const king_dee_start_lib = require('./lib/king_dee_start_lib');
+const cash_lib = require('./lib/cash_lib');
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -135,7 +137,7 @@ else {
             res.send(filePath);
         });
     });
-    
+
     app.post('/api/v1/merge_pics', async (req, res) => {
         let body = req.body;
         let pic_list = body.pic_list;
@@ -283,8 +285,16 @@ else {
         plan_lib.stuff_price_timeout();
         field_lib.auto_uncheck_in();
     });
-    add_min_timer(2, async () => {
-        console.log('2 min timer');
+    add_min_timer(6, async () => {
+        let sq = db_opt.get_sq();
+        let all_configs = await sq.models.king_dee_start_config.findAll({ group: ['clientId'] });
+        for (let one_config of all_configs) {
+            let new_charge_array = await king_dee_start_lib.get_pre_credit(one_config)
+            for (let one_charge of new_charge_array) {
+                let contract = await sq.models.contract.findOne({ where: { customer_code: one_charge.customer_code } });
+                await cash_lib.charge_by_username_and_contract('金蝶系统', contract, one_charge.amount, '金蝶预存款同步');
+            }
+        }
     });
     add_min_timer(5, async () => {
         console.log('5 min timer');

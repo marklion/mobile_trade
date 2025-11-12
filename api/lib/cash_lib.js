@@ -10,13 +10,13 @@ const { Utils } = require('sequelize');
 const httpsAgent = require('https').Agent;
 module.exports = {
     charge_by_username_and_contract: async function (user_name, contract, _cash_increased, _comment, subsidy_record) {
-        contract.balance += _cash_increased;
+        contract.balance += parseFloat(_cash_increased);
         await contract.save();
         let bh = await contract.createBalance_history({
             time: moment().format('YYYY-MM-DD HH:mm:ss'),
             operator: user_name,
             comment: _comment,
-            cash_increased: _cash_increased,
+            cash_increased: parseFloat(_cash_increased),
         });
         if (subsidy_record && bh) {
             await bh.setSubsidy_record(subsidy_record);
