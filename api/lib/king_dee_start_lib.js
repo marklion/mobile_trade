@@ -75,7 +75,7 @@ module.exports = {
                     tax_price: unit_price,
                     qty: count,
                     stock_id: king_dee_start_config.stock_id,
-                    unit_id: king_dee_start_config.unit_id,
+                    unit_number: king_dee_start_config.unit_id,
                     cess: king_dee_start_config.cess || 0,
                 }],
             });
