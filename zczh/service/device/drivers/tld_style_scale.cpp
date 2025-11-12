@@ -2,6 +2,7 @@
 #include "common_scale_driver.h"
 
 static std::string g_dev_ip;
+static int g_packet_len = 18;
 
 class tld_style_scale : public common_scale_driver
 {
@@ -14,9 +15,9 @@ class tld_style_scale : public common_scale_driver
         {
             buffer_ready.erase(0, 1);
         }
-        if (buffer_ready.length() >= 18)
+        if (buffer_ready.length() >= g_packet_len)
         {
-            ret = buffer_ready.substr(0, 18);
+            ret = buffer_ready.substr(0, g_packet_len);
             buffer_ready.clear();
         }
 
@@ -28,7 +29,7 @@ public:
     {
         double ret = 0;
         std::string frame = prepare_valid_buff(_frame);
-        if (frame.length() >= 18 && frame[0] == 0x02)
+        if (frame.length() >= g_packet_len && frame[0] == 0x02)
         {
             int dot_pos = frame[1] & 0x07;
             int pow_number = 2 - dot_pos;
@@ -61,7 +62,8 @@ int main(int argc, char **argv)
     unsigned short self_id;
     auto cli = (required("-p") & value("port", run_port),
                 required("-i") & value("self_id", self_id),
-                required("-a") & value("device_ip", g_dev_ip));
+                required("-a") & value("device_ip", g_dev_ip),
+                (option("-l") & value("packet_len", g_packet_len).doc("packet length, default 18")));
     if (!parse(argc, argv, cli))
     {
         std::cerr << "Usage:\n"
