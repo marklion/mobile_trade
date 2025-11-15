@@ -82,7 +82,7 @@
                     let token = "abc";
                     let resp = await axios.post(`https://${row.zczh_domain}.d8sis.cn/api/login`, {
                         phone: '18911992582',
-                        pwd: "161EBD7D45089B3446EE4E0D86DBCF92",
+                        pwd: zczh_password.value,
                     })
                     token = resp.data.result
                     let new_url = 'https://zczh.d8sis.cn' +
