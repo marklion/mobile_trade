@@ -63,32 +63,39 @@ async function req_to_king_dee_start_full(king_dee_start_config, api_path, metho
 module.exports = {
     sale_out: async function (customer_id, stuff, unit_price, count) {
         let king_dee_start_config = await stuff.getKing_dee_start_config();
+        let req = {
+            bill_date: moment().format('YYYY-MM-DD'),
+            customer_number: customer_id,
+            emp_number: king_dee_start_config.emp_number,
+            material_entity: [{
+                material_number: stuff.stuff_code,
+                tax_price: unit_price,
+                qty: count,
+                stock_number: king_dee_start_config.stock_id,
+                unit_number: king_dee_start_config.unit_id,
+                cess: king_dee_start_config.cess || 0,
+            }],
+        }
+        if (king_dee_start_config.need_checkout) {
+            req.deduction_balance = parseFloat((unit_price * count).toFixed(2));
+        }
         let resp = await req_to_king_dee_start_full(king_dee_start_config,
             "https://api.kingdee.com/jdy/v2/scm/sal_out_bound",
             "POST",
-            {
-                bill_date: moment().format('YYYY-MM-DD'),
-                customer_number: customer_id,
-                emp_number: king_dee_start_config.emp_number,
-                material_entity: [{
-                    material_number: stuff.stuff_code,
-                    tax_price: unit_price,
-                    qty: count,
-                    stock_number: king_dee_start_config.stock_id,
-                    unit_number: king_dee_start_config.unit_id,
-                    cess: king_dee_start_config.cess || 0,
-                }],
-            });
+            req);
         let ticket_code = resp.id_number_map[resp.ids[0]]
-        resp = await req_to_king_dee_start_full(king_dee_start_config,
-            "https://api.kingdee.com/jdy/v2/sys/common_operate",
-            "POST",
-            {
-                entity_number: "sal_bill_outbound",
-                ids: resp.ids,
-                operate_type: "audit",
-            },
-        );
+        if (king_dee_start_config.need_audit) {
+            await req_to_king_dee_start_full(king_dee_start_config,
+                "https://api.kingdee.com/jdy/v2/sys/common_operate",
+                "POST",
+                {
+                    entity_number: "sal_bill_outbound",
+                    ids: resp.ids,
+                    operate_type: "audit",
+                },
+            );
+        }
+
         return ticket_code;
     },
     get_pre_credit: async function (king_dee_start_config) {
@@ -96,20 +103,22 @@ module.exports = {
             "https://api.kingdee.com/jdy/v2/arap/ar_pre_credit",
             "GET",
             {
-                bill_status:"C",
-                create_start_time: king_dee_start_config.last_check_timestamp,
-                page_size:100,
+                bill_status: "C",
+                modify_start_time: king_dee_start_config.last_check_timestamp,
+                page_size: 100,
             });
         king_dee_start_config.last_check_timestamp = Date.now().toString();
         await king_dee_start_config.save();
         let rows = resp.rows || [];
         let ret = [];
         for (let row of rows) {
-            let customer_code = row.customer_id;
+            let customer_code = row.customer_number;
             let amount = row.total_amount;
+            let bill_no = row.bill_no;
             ret.push({
                 customer_code: customer_code,
                 amount: amount,
+                bill_no: bill_no,
             });
         }
         return ret;

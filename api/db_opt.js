@@ -459,6 +459,8 @@ let db_opt = {
             outerInstanceId:{ type: DataTypes.STRING},
             emp_number:{ type: DataTypes.STRING},
             cess:{ type: DataTypes.DECIMAL(12, 2), defaultValue: 0 , get:getDecimalValue('cess')},
+            need_checkout:{ type: DataTypes.BOOLEAN, defaultValue: false },
+            need_audit:{ type: DataTypes.BOOLEAN, defaultValue: false },
         },
     },
     make_associate: function (_sq) {

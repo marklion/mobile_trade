@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <title>Vue 3 单文件应用</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <script src="https://unpkg.com/vue@3"></script>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <el-table :data="system_info" style="width: 100%">
+            <el-table-column prop="name" label="名称"> </el-table-column>
+            <el-table-column label="登录">
+                <template #default="scope">
+                    <div>
+                        <el-button @click="login_zyzl(scope.row, false)" type="primary">掌易助理-PC</el-button>
+                        <el-button @click="login_zyzl(scope.row, true)" type="warning">掌易助理-手机</el-button>
+                        <el-button @click="login_zczh(scope.row)" type="success">卓创智汇-过磅系统</el-button>
+                    </div>
+                </template>
+            </el-table-column>
+        </el-table>
+    </div>
+
+    <script>
+        const { createApp, ref, reactive, computed, onMounted } = Vue;
+        let app = createApp({
+            setup() {
+                const redirect_url = ref('');
+                const zyzl_token = ref('');
+                const zczh_token = ref('');
+                const zyzl_password = ref('');
+                const zczh_password = ref('');
+                const system_info = ref([
+                    { name: '内部测试公司', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'sample', phone: '18911992582' },
+                    { name: '万瑞', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'wrtrq', phone: '15048700868' },
+                    { name: '伟联', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'wltrq', phone: '13038052021' },
+                    { name: '盈通乌兰察布', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'ytyc', phone: '13804722451' },
+                    { name: '天昱园', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'tyy', phone: '15344270208' },
+                    { name: '信亿达', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'xyd', phone: '18536119900' },
+                    { name: '兴圣', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'xstrq', phone: '15847098680' },
+                    { name: '水发', zyzl_url: 'https://sfrq.d8sis.cn:39913', zczh_domain: 'sfgb', phone: '18911992582' },
+                ]);
+                onMounted(() => {
+                    const params = new URLSearchParams(window.location.search);
+                    redirect_url.value = params.get('redirect_url') || '';
+                    zyzl_token.value = params.get('zyzl_token') || '';
+                    zczh_token.value = params.get('zczh_token') || '';
+                    zczh_password.value = params.get('zczh_password') || '';
+                    zyzl_password.value = params.get('zyzl_password') || '';
+                    if (redirect_url.value) {
+                        if (zyzl_token.value) {
+                            window.localStorage.setItem('token', zyzl_token.value);
+                            window.cookieStore.set('mt_pc_token', zyzl_token.value);
+                        }
+                        else if (zczh_token.value) {
+                            window.localStorage.setItem('token', zczh_token.value);
+                        }
+                        window.location.href = redirect_url.value;
+                    }
+                });
+                async function login_zyzl(row, isMobile) {
+                    let token = "abc";
+                    let resp = await axios.post(row.zyzl_url + '/api/v1/global/pwd_login', {
+                        phone: row.phone,
+                        password: zyzl_password.value,
+                    });
+                    token = resp.data.result.token;
+                    let new_url = row.zyzl_url +
+                        window.location.pathname +
+                        `?redirect_url=${encodeURIComponent(row.zyzl_url + (isMobile ? '/mobile/#' : ''))}&zyzl_token=${token}`;
+                    window.location.href = new_url;
+                }
+                async function login_zczh(row) {
+                    let token = "abc";
+                    let resp = await axios.post(`https://${row.zczh_domain}.d8sis.cn/api/login`, {
+                        phone: '18911992582',
+                        pwd: zczh_password.value,
+                    })
+                    token = resp.data.result
+                    let new_url = 'https://zczh.d8sis.cn' +
+                        window.location.pathname +
+                        `?redirect_url=${encodeURIComponent('https://zczh.d8sis.cn/#/?domain=' + row.zczh_domain)}&zczh_token=${token}`;
+                    window.location.href = new_url;
+                }
+                return {
+                    zyzl_password,
+                    zczh_password,
+                    system_info,
+                    login_zyzl,
+                    login_zczh,
+                };
+            }
+        })
+
+        app.use(ElementPlus);
+        app.mount('#app');
+    </script>
+</body>
+
+</html>

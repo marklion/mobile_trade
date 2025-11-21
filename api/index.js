@@ -291,8 +291,17 @@ else {
         for (let one_config of all_configs) {
             let new_charge_array = await king_dee_start_lib.get_pre_credit(one_config)
             for (let one_charge of new_charge_array) {
-                let contract = await sq.models.contract.findOne({ where: { customer_code: one_charge.customer_code } });
-                await cash_lib.charge_by_username_and_contract('金蝶系统', contract, one_charge.amount, '金蝶预存款同步');
+                let contract = await sq.models.contract.findOne({
+                    where: {
+                        customer_code: one_charge.customer_code,
+                    },
+                    include: [{
+                        model: sq.models.stuff,
+                        required: true,
+                        where: { id: one_config.stuffId }
+                    }]
+                });
+                await cash_lib.charge_by_username_and_contract('金蝶系统', contract, one_charge.amount, '金蝶预存款同步:' + one_charge.bill_no);
             }
         }
     });
