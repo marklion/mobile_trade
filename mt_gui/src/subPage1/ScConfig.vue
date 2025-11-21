@@ -24,6 +24,10 @@
                 <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name" :tag="item.rbac_role?item.rbac_role.name:'未绑定角色'">
                     <view v-for="single_item in item.field_check_items" :key="single_item.id">
                         <u-cell :title="single_item.name">
+                            <view slot="label">
+                                <fui-tag theme="plain" :scaleRatio="0.8" v-if="single_item.need_input" text="输入" type="success"></fui-tag>
+                                <fui-tag theme="plain" :scaleRatio="0.8" v-else text="打钩" type="primary"></fui-tag>
+                            </view>
                             <view slot="right-icon">
                                 <fui-button type="danger" btnSize="mini" text="删除" @click="prepare_delete_item(single_item)"></fui-button>
                             </view>
@@ -92,6 +96,12 @@
 
     <fui-modal width="600" :show="show_add_item2fc_table" v-if="show_add_item2fc_table" @click="add_item2fc_table">
         <fui-input required label="名称" borderTop placeholder="请输入名称" v-model="new_fc_item.name"></fui-input>
+        <fui-form-item label="检查方式">
+            <fui-radio-group v-model="new_fc_item.check_method">
+                <fui-radio value="0" checked></fui-radio><text>打钩</text>
+                <fui-radio value="1"></fui-radio><text>输入</text>
+            </fui-radio-group>
+        </fui-form-item>
     </fui-modal>
     <fui-modal width="600" :show="show_fc_item_delete" v-if="show_fc_item_delete" @click="delete_fc_item" :descr="'确定要删除吗?'">
     </fui-modal>
@@ -186,6 +196,7 @@ export default {
             new_fc_item: {
                 "name": "",
                 "table_id": 0,
+                "check_method": '0',
             },
             fc_item_to_delete: undefined,
             show_fc_item_delete: false,
@@ -301,7 +312,11 @@ export default {
         add_item2fc_table: async function (e) {
             if (e.index == 1) {
                 this.new_fc_item.table_id = this.focus_fc_table.id;
-                await this.$send_req('/sc/add_item2fc_table', this.new_fc_item);
+                await this.$send_req('/sc/add_item2fc_table', {
+                    name: this.new_fc_item.name,
+                    table_id: this.new_fc_item.table_id,
+                    need_input: this.new_fc_item.check_method == '1',
+                });
                 uni.startPullDownRefresh();
             }
             this.show_add_item2fc_table = false;

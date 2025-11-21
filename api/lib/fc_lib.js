@@ -92,13 +92,13 @@ module.exports = {
             }),
         };
     },
-    add_item2fc_table: async function (fc_id, item_name) {
+    add_item2fc_table: async function (fc_id, item_name, need_input = false) {
         let fc_table = await this.get_fc_table(fc_id);
         let exist_fc_item = await fc_table.getField_check_items({ where: { name: item_name } });
         if (exist_fc_item.length > 0) {
             return;
         }
-        let new_one = await sq.models.field_check_item.create({ name: item_name });
+        let new_one = await sq.models.field_check_item.create({ name: item_name, need_input: need_input });
         await new_one.setField_check_table(fc_table);
     },
     get_fc_item: async function (item_id) {
@@ -191,12 +191,12 @@ module.exports = {
             }
             if (fc_plan_table.fc_plan_table.finish_time) {
                 ret.finish_time = fc_plan_table.fc_plan_table.finish_time;
-                
+
                 try {
                     const user = await sq.models.rbac_user.findByPk(fc_plan_table.fc_plan_table.rbac_user.id, {
                         attributes: ['id', 'name', 'signature_pic']
                     });
-                    
+
                     if (user) {
                         ret.checker = user.name;
                         if (user.signature_pic) {
@@ -224,7 +224,7 @@ module.exports = {
         if (!fs.existsSync(template_path)) {
             throw new Error(`模板文件不存在: ${template_path}`);
         }
-        
+
         const content = fs.readFileSync(template_path, 'binary');
 
         const zip = new PizZip(content);
@@ -238,9 +238,9 @@ module.exports = {
                 serializer: XMLSerializer
             }
         });
-        
+
         doc.setData(fc_result);
-        
+
         try {
             doc.render();
         } catch (error) {
@@ -250,12 +250,12 @@ module.exports = {
 
         const renderedZip = doc.getZip();
         const xmlContent = renderedZip.files['word/document.xml'].asText();
-        
 
-        
+
+
         // 处理检查人签名图片
         if (fc_result.user_signature) {
-            const imagePath = path.resolve('/database' + fc_result.user_signature);  
+            const imagePath = path.resolve('/database' + fc_result.user_signature);
             if (fs.existsSync(imagePath)) {
                 const imageBuffer = fs.readFileSync(imagePath);
                 const imageFileName = `image_${uuid.v4().split('-')[0]}.png`;
@@ -287,7 +287,7 @@ module.exports = {
 
         let filename = `fc_${fc_result.main_vehicle}-${fc_result.behind_vehicle}-${fc_result.finish_time}.docx`;
         let download_path = path.resolve('/database/uploads/', filename);
-        
+
         const buf = renderedZip.generate({ type: 'nodebuffer' });
         fs.writeFileSync(download_path, buf);
 
@@ -296,27 +296,27 @@ module.exports = {
     export_fc: async function (plans) {
         let ret = '';
         let filePaths = [];
-        
+
         for (let index = 0; index < plans.length; index++) {
             const plan = plans[index];
-            
+
             let fc_plan_tables = plan.fc_info;
-            
+
             if (!fc_plan_tables || fc_plan_tables.length === 0) {
                 continue;
             }
-            
+
             for (let jndex = 0; jndex < fc_plan_tables.length; jndex++) {
                 const fc_plan_table = fc_plan_tables[jndex];
-                
+
                 let fc_result_table = await this.make_fc_for_export(fc_plan_table, plan);
-                
+
                 if (fc_result_table) {
                     let template_path = fc_plan_table.template_path;
-                    
+
                     if (template_path) {
                         let full_template_path = '/database' + template_path;
-                        
+
                         if (fs.existsSync(full_template_path)) {
                             let tmp_doc = await this.make_file_by_fc_result(fc_result_table, full_template_path);
                             filePaths.push(tmp_doc);
@@ -332,7 +332,7 @@ module.exports = {
 
         let download_path = `/uploads/fc_${uuid.v4().split('-')[0]}.zip`;
         const outputPath = `/database${download_path}`;
-        
+
         const output = fs.createWriteStream(outputPath);
         const archive = archiver('zip', { zlib: { level: 9 } });
 

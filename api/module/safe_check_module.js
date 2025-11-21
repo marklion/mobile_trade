@@ -29,6 +29,7 @@ function fc_table_explain(has_plan = false) {
             type: Array, mean: '检查项', explain: {
                 id: { type: Number, mean: '检查项ID', example: 1 },
                 name: { type: String, mean: '检查项名', example: '检查项名' },
+                need_input: { type: Boolean, mean: '是否需要输入', example: false },
             }
         },
         rbac_role: {
@@ -51,6 +52,7 @@ function fc_table_explain(has_plan = false) {
                             type: Object, mean: '检查项', explain: {
                                 id: { type: Number, mean: '检查项ID', example: 1 },
                                 name: { type: String, mean: '检查项名', example: '检查项名' },
+                                need_input: { type: Boolean, mean: '是否需要输入', example: false },
                             }
                         },
                     }
@@ -271,7 +273,8 @@ module.exports = {
             is_get_api: false,
             params: {
                 table_id: { type: Number, have_to: true, mean: '表ID', example: 1 },
-                name: { type: String, have_to: true, mean: '检查项名', example: '检查项名' }
+                name: { type: String, have_to: true, mean: '检查项名', example: '检查项名' },
+                need_input:{ type: Boolean, have_to: false, mean: '是否需要输入', example: false },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -281,7 +284,7 @@ module.exports = {
                 if (!await could_config_stuff(fc_table.stuff.id, token)) {
                     throw { err_msg: '无权限' };
                 }
-                await fc_lib.add_item2fc_table(body.table_id, body.name);
+                await fc_lib.add_item2fc_table(body.table_id, body.name, body.need_input);
                 return { result: true };
             }
         },
