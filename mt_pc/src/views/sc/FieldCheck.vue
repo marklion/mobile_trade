@@ -5,6 +5,11 @@
             <template #default="scope">
                 <el-table :data="scope.row.field_check_items" size="mini" style="padding-left: 50px;">
                     <el-table-column prop="name" label="检查项"></el-table-column>
+                    <el-table-column label="是否需要输入" width="150px">
+                        <template slot-scope="sub_scope">
+                            {{sub_scope.row.need_input ? '是' : '否'}}
+                        </template>
+                    </el-table-column>
                     <el-table-column fixed="right" width="80px" label="操作">
                         <template slot-scope="sub_scope">
                             <el-button size="mini" type="danger" @click="del_fc_item(sub_scope.row)">删除</el-button>
@@ -51,7 +56,7 @@
         <el-table-column label="操作" fixed="right" width="300px">
             <template slot-scope="scope">
                 <div>
-                    <el-button size="mini" type="success" @click="new_fc_item(scope.row)">新增检查项</el-button>
+                    <el-button size="mini" type="success" @click="show_new_fc_item(scope.row)">新增检查项</el-button>
                     <el-button size="mini" type="primary" @click="prepare_set_role(scope.row)">设定角色</el-button>
                     <el-button size="mini" type="danger" @click="del_fc_table(scope.row)">删除</el-button>
                 </div>
@@ -64,6 +69,23 @@
         <span slot="footer">
             <el-button @click="role_set_diag= false">取 消</el-button>
             <el-button type="primary" @click="do_role_set">确 定</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog title="新增检查项" :visible.sync="new_check_item_diag" width="50%">
+        <el-form :model="new_check_item" ref="new_check_item_form" :rules="new_check_item_rule">
+            <el-form-item label="检查项名称" prop="name">
+                <el-input v-model="new_check_item.name"></el-input>
+            </el-form-item>
+            <el-form-item label="检查方式">
+                <el-radio-group v-model="new_check_item.check_method">
+                    <el-radio label="0">打钩</el-radio>
+                    <el-radio label="1">输入</el-radio>
+                </el-radio-group>
+            </el-form-item>
+        </el-form>
+        <span slot="footer">
+            <el-button @click="new_check_item_diag= false">取 消</el-button>
+            <el-button type="primary" @click="new_fc_item">确 定</el-button>
         </span>
     </el-dialog>
 </div>
@@ -84,6 +106,19 @@ export default {
             role_set_diag: false,
             focus_table_id: 0,
             role_id_selected: 0,
+            new_check_item_diag: false,
+            new_check_item: {
+                name: '',
+                check_method: '0',
+                table_id: 0,
+            },
+            new_check_item_rule: {
+                name: [{
+                    required: true,
+                    message: '请输入检查项名称',
+                    trigger: 'blur'
+                }],
+            },
         }
     },
     methods: {
@@ -111,19 +146,20 @@ export default {
             this.focus_table_id = fc_table.id;
             this.role_set_diag = true;
         },
-        new_fc_item: function (fc_table) {
-            this.$prompt('请输入检查项名称', '提示', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-            }).then(async ({
-                value
-            }) => {
-                await this.$send_req('/sc/add_item2fc_table', {
-                    name: value,
-                    table_id: fc_table.id
-                });
-                this.$refs.fc_list.refresh_list();
+        new_fc_item: async function () {
+            await this.$send_req('/sc/add_item2fc_table', {
+                name: this.new_check_item.name,
+                table_id: this.new_check_item.table_id,
+                need_input: this.new_check_item.check_method == 1,
             });
+            this.new_check_item_diag = false;
+            this.$refs.fc_list.refresh_list();
+        },
+        show_new_fc_item: function (fc_table) {
+            this.new_check_item.table_id = fc_table.id;
+            this.new_check_item.name = '';
+            this.new_check_item.check_method = '0';
+            this.new_check_item_diag = true;
         },
         del_fc_table: function (fc_table) {
             this.$confirm('确认删除该表吗?', '提示', {

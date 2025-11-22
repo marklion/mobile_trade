@@ -7,7 +7,13 @@
                     <fui-text text="一键检查" type="primary" @click="toggleAll(single_table)"></fui-text>
                 </view>
                 <view v-for="item in single_table.fc_plan_table.fc_check_results" :key="item.id">
-                    <u-cell :title="item.field_check_item.name">
+                    <u--form v-if="item.field_check_item.need_input" labelPosition="left">
+                        <u-form-item :label="item.field_check_item.name" borderBottom>
+                            <u--input v-model="item.input" border="none"></u--input>
+                            <u-button slot="right" @tap="input_fc(item.input, item)" text="保存" type="success" size="mini"></u-button>
+                        </u-form-item>
+                    </u--form>
+                    <u-cell v-else :title="item.field_check_item.name">
                         <u-switch slot="value" inactiveColor="red" asyncChange :value="item.checked" @change="pass_fc($event, item)"></u-switch>
                     </u-cell>
                 </view>
@@ -40,6 +46,13 @@ export default {
             });
             uni.startPullDownRefresh();
         },
+        input_fc:async function(value, item) {
+            await this.$send_req('/sc/input_fc_item', {
+                fc_result_id: item.id,
+                input: value,
+            });
+            item.input = value;
+        },
         pass_fc: async function (value, item) {
             await this.$send_req('/sc/set_fc_pass', {
                 fc_result_id: item.id,
@@ -62,7 +75,7 @@ export default {
         toggleAll: async function (table) {
             for (let item of table.fc_plan_table.fc_check_results) {
                 await this.pass_fc(true, item);
-                }
+            }
             await this.commit(table);
         },
     },

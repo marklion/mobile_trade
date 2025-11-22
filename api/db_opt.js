@@ -375,6 +375,7 @@ let db_opt = {
         field_check_item: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
+            need_input: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         fc_plan_table: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -383,6 +384,7 @@ let db_opt = {
         fc_check_result: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             pass_time: { type: DataTypes.STRING },
+            input: { type: DataTypes.STRING },
         },
         u8c_config: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

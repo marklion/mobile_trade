@@ -121,9 +121,9 @@ Search FC Table
     RETURN  ${found_one}
 
 Add Item to FC Table
-    [Arguments]  ${table_name}  ${item_name}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
+    [Arguments]  ${table_name}  ${item_name}  ${need_input}=${False}  ${token}=${sc_admin_token}  ${stuff_id}=${test_stuff}[id]
     ${table}  Search FC Table    ${table_name}
-    ${req}  Create Dictionary  table_id=${table}[id]  name=${item_name}
+    ${req}  Create Dictionary  table_id=${table}[id]  name=${item_name}  need_input=${need_input}
     Req to Server    /sc/add_item2fc_table  ${token}  ${req}
 
 Set Requirement to FC
@@ -194,6 +194,18 @@ Set FC Item Passed
         IF  $fc_item_name == $item_name
             ${req}  Create Dictionary  fc_result_id=${fc_rc}[id]  is_pass=${passed}
             Req to Server    /sc/set_fc_pass  ${token}  ${req}  ${expect_failure}
+            Exit For Loop
+        END
+    END
+
+Input FC Item
+    [Arguments]  ${plan}  ${table_name}  ${item_name}  ${content}  ${token}=${sc_admin_token}  ${expect_failure}=${False}
+    ${fc_plan_table}  Search FC Plan Table    ${plan}    ${table_name}  ${token}
+    FOR  ${fc_rc}  IN  @{fc_plan_table}[fc_plan_table][fc_check_results]
+        ${fc_item_name}  Get From Dictionary    ${fc_rc}[field_check_item]    name    ${None}
+        IF  $fc_item_name == $item_name
+            ${req}  Create Dictionary  fc_result_id=${fc_rc}[id]  input=${content}
+            Req to Server    /sc/input_fc_item  ${token}  ${req}  ${expect_failure}
             Exit For Loop
         END
     END
