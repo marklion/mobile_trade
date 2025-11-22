@@ -384,6 +384,7 @@ let db_opt = {
         fc_check_result: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             pass_time: { type: DataTypes.STRING },
+            input: { type: DataTypes.STRING },
         },
         u8c_config: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

@@ -4,10 +4,87 @@ const PizZip = require('pizzip');
 const Docxtemplater = require('docxtemplater');
 const { DOMParser, XMLSerializer } = require('@xmldom/xmldom');
 const db_opt = require('../db_opt');
-const util_lib = require('./util_lib');
 const sq = db_opt.get_sq();
 const archiver = require('archiver');
 const uuid = require('uuid');
+function replace_content2pic(renderedZip, xmlContent, sig, orig_content) {
+    const imagePath = path.resolve('/database' + sig);
+    let ret = xmlContent;
+    if (fs.existsSync(imagePath)) {
+        const imageBuffer = fs.readFileSync(imagePath);
+        const ext = path.extname(imagePath) || '.png';
+        const mediaName = `img_${uuid.v4()}${ext}`;
+        // add image into the docx media folder
+        renderedZip.file(`word/media/${mediaName}`, imageBuffer);
+
+        // ensure document rels exists and add a relationship for the new image
+        const relsPath = 'word/_rels/document.xml.rels';
+        let relsXml = renderedZip.files[relsPath] ? renderedZip.files[relsPath].asText() : '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
+
+        // find next available rId number
+        let maxId = 0;
+        for (const m of relsXml.matchAll(/Id="rId(\d+)"/g)) {
+            const n = parseInt(m[1], 10);
+            if (n > maxId) maxId = n;
+        }
+        const newIdNum = maxId + 1;
+        const newRId = `rId${newIdNum}`;
+
+        // append Relationship entry
+        const relEntry = `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${mediaName}"/>`;
+        relsXml = relsXml.replace('</Relationships>', `${relEntry}</Relationships>`);
+        renderedZip.file(relsPath, relsXml);
+
+        // size in EMU (1cm = 360000 EMU)
+        const cx = 2 * 360000; // 3cm
+        const cy = 0.7 * 360000; // 1cm
+
+        // build drawing xml for a floating (anchor) picture placed above text (behindDoc="1")
+        const drawingXml = `
+        <w:r xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+          <w:rPr/>
+          <w:drawing>
+          <wp:inline distT="0" distB="0" distL="0" distR="0">
+              <wp:extent cx="${cx}" cy="${cy}"/>
+              <wp:docPr id="${newIdNum}" name="${mediaName}"/>
+              <a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
+                <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                  <pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
+                    <pic:nvPicPr>
+                      <pic:cNvPr id="0" name="${mediaName}"/>
+                      <pic:cNvPicPr/>
+                    </pic:nvPicPr>
+                    <pic:blipFill>
+                      <a:blip r:embed="${newRId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>
+                      <a:stretch><a:fillRect/></a:stretch>
+                    </pic:blipFill>
+                    <pic:spPr>
+                      <a:xfrm>
+                        <a:off x="0" y="0"/>
+                        <a:ext cx="${cx}" cy="${cy}"/>
+                      </a:xfrm>
+                      <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                    </pic:spPr>
+                  </pic:pic>
+                </a:graphicData>
+              </a:graphic>
+            </wp:inline>
+          </w:drawing>
+        </w:r>`;
+
+        // replace the text node containing orig_content with the drawing run
+        function escapeForRegex(s) {
+            return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+        const escaped = escapeForRegex(orig_content);
+        const replacedXml = xmlContent.replace(new RegExp(`${escaped}</w:t>`, 'g'), `</w:t>${drawingXml}`);
+        ret = replacedXml;
+        // write back modified document.xml
+        renderedZip.file('word/document.xml', replacedXml);
+    }
+
+    return ret;
+}
 function get_fc_content() {
     return [
         sq.models.field_check_item,
@@ -133,7 +210,7 @@ module.exports = {
                 include: [{
                     model: sq.models.fc_check_result,
                     include: [sq.models.field_check_item]
-                },sq.models.rbac_user]
+                }, sq.models.rbac_user]
             });
             if (fc_plan_tables.length == 1) {
                 element.fc_plan_table = fc_plan_tables[0];
@@ -186,7 +263,11 @@ module.exports = {
             for (let index = 0; index < fc_plan_table.fc_plan_table.fc_check_results.length; index++) {
                 const element = fc_plan_table.fc_plan_table.fc_check_results[index];
                 if (element && element.field_check_item) {
-                    ret[element.field_check_item.name] = element.pass_time ? '通过' : '未通过';
+                    let fc_content = element.pass_time ? '通过' : '未通过';
+                    if (element.field_check_item.need_input) {
+                        fc_content = element.input ? element.input : '未填写';
+                    }
+                    ret[element.field_check_item.name] = fc_content;
                 }
             }
             if (fc_plan_table.fc_plan_table.finish_time) {
@@ -212,6 +293,8 @@ module.exports = {
             ret.company_name = plan.stuff.company.name;
             ret.main_vehicle = plan.main_vehicle.plate;
             ret.behind_vehicle = plan.behind_vehicle.plate;
+            ret.driver_signature = plan.driver.signature_pic;
+            ret.driver_name = plan.driver.name;
         }
         if (!ret.finish_time) {
             ret = undefined;
@@ -249,40 +332,14 @@ module.exports = {
         }
 
         const renderedZip = doc.getZip();
-        const xmlContent = renderedZip.files['word/document.xml'].asText();
-
-
+        let xmlContent = renderedZip.files['word/document.xml'].asText();
 
         // 处理检查人签名图片
         if (fc_result.user_signature) {
-            const imagePath = path.resolve('/database' + fc_result.user_signature);
-            if (fs.existsSync(imagePath)) {
-                const imageBuffer = fs.readFileSync(imagePath);
-                const imageFileName = `image_${uuid.v4().split('-')[0]}.png`;
-                renderedZip.file(`word/media/${imageFileName}`, imageBuffer);
-                const namePattern = /(<w:t[^>]*>\s*检查人[：:]\s*<\/w:t>)(<\/w:r>)(<w:r[^>]*?>[\s\S]*?)(<w:t[^>]*>)([^<]*)(<\/w:t>)([\s\S]*?<\/w:r>)/;
-                const imageXml = `<w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="500000" cy="250000"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="1" name="签名图片"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="签名图片"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rId${imageFileName.replace('.png', '')}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="500000" cy="250000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>`;
-                let newXmlContent = xmlContent.replace(namePattern, (match, checkerTag, endR, startR, tStart, name, tEnd, endR2) => {
-                    return `${checkerTag}${endR}${startR}${imageXml}${endR2}`;
-                });
-                if (newXmlContent !== xmlContent) {
-                    renderedZip.file('word/document.xml', newXmlContent);
-                    const relsPath = 'word/_rels/document.xml.rels';
-                    let relsContent = '';
-                    if (renderedZip.files[relsPath]) {
-                        relsContent = renderedZip.files[relsPath].asText();
-                    } else {
-                        relsContent = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>';
-                    }
-                    const relId = `rId${imageFileName.replace('.png', '')}`;
-                    const relEntry = `<Relationship Id="${relId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imageFileName}"/>`;
-                    const endRelsIndex = relsContent.lastIndexOf('</Relationships>');
-                    if (endRelsIndex !== -1) {
-                        const newRelsContent = relsContent.substring(0, endRelsIndex) + relEntry + relsContent.substring(endRelsIndex);
-                        renderedZip.file(relsPath, newRelsContent);
-                    }
-                }
-            }
+            xmlContent = replace_content2pic(renderedZip, xmlContent, fc_result.user_signature, fc_result.checker);
+        }
+        if (fc_result.driver_signature) {
+            xmlContent = replace_content2pic(renderedZip, xmlContent, fc_result.driver_signature, fc_result.driver_name);
         }
 
         let filename = `fc_${fc_result.main_vehicle}-${fc_result.behind_vehicle}-${fc_result.finish_time}.docx`;

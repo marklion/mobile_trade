@@ -17,6 +17,20 @@ async function could_config_stuff(stuff_id, token) {
     }
     return ret;
 }
+async function get_fc_result(fc_result_id, token) {
+    let fc_result = await sq.models.fc_check_result.findByPk(fc_result_id);
+    let fc_item = await fc_lib.get_fc_item(fc_result.fieldCheckItemId);
+    if (!await could_config_stuff(fc_item.field_check_table.stuff.id, token)) {
+        throw { err_msg: '无权限' };
+    }
+    let fc_table = await fc_lib.get_fc_table(fc_item.field_check_table.id, true);
+    let user = await rbac_lib.get_user_by_token(token);
+    if (!await user.hasRbac_role(fc_table.rbac_role)) {
+        throw { err_msg: '无权限' };
+    }
+
+    return fc_result;
+}
 
 function fc_table_explain(has_plan = false) {
     let ret = {
@@ -48,6 +62,7 @@ function fc_table_explain(has_plan = false) {
                     type: Array, mean: '检查结果', explain: {
                         id: { type: Number, mean: '结果ID', example: 1 },
                         pass_time: { type: String, mean: '通过时间', example: '2020-01-01' },
+                        input: { type: String, mean: '输入内容', example: '内容' },
                         field_check_item: {
                             type: Object, mean: '检查项', explain: {
                                 id: { type: Number, mean: '检查项ID', example: 1 },
@@ -274,7 +289,7 @@ module.exports = {
             params: {
                 table_id: { type: Number, have_to: true, mean: '表ID', example: 1 },
                 name: { type: String, have_to: true, mean: '检查项名', example: '检查项名' },
-                need_input:{ type: Boolean, have_to: false, mean: '是否需要输入', example: false },
+                need_input: { type: Boolean, have_to: false, mean: '是否需要输入', example: false },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -330,6 +345,33 @@ module.exports = {
                 return await fc_lib.get_fc_plan_table(body.plan_id, body.pageNo);
             }
         },
+        input_fc_item: {
+            name: '输入现场检查项内容',
+            description: '输入现场检查项内容',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                fc_result_id: { type: Number, have_to: true, mean: '检查结果ID', example: 1 },
+                input: { type: String, have_to: true, mean: '输入内容', example: '内容' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let fc_result = await get_fc_result(body.fc_result_id, token);
+                if (body.input) {
+                    fc_result.pass_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                    fc_result.input = body.input;
+                }
+                else {
+                    fc_result.pass_time = null;
+                    fc_result.input = null;
+                }
+                await fc_result.save();
+
+                return { result: true };
+            }
+        },
         set_fc_pass: {
             name: '设置现场检查项通过',
             description: '设置现场检查项通过',
@@ -343,16 +385,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let fc_result = await sq.models.fc_check_result.findByPk(body.fc_result_id);
-                let fc_item = await fc_lib.get_fc_item(fc_result.fieldCheckItemId);
-                if (!await could_config_stuff(fc_item.field_check_table.stuff.id, token)) {
-                    throw { err_msg: '无权限' };
-                }
-                let fc_table = await fc_lib.get_fc_table(fc_item.field_check_table.id, true);
-                let user = await rbac_lib.get_user_by_token(token);
-                if (!await user.hasRbac_role(fc_table.rbac_role)) {
-                    throw { err_msg: '无权限' };
-                }
+                let fc_result = await get_fc_result(body.fc_result_id, token);
                 if (body.is_pass) {
                     fc_result.pass_time = moment().format('YYYY-MM-DD HH:mm:ss');
                 }

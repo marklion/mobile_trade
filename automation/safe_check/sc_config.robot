@@ -217,8 +217,11 @@ FC Excute
     [Setup]  Prepare FC Configured
     [Teardown]  FC Reset
     Set FC Item Passed  ${test_plan}    t1    i11
+    Input FC Item    ${test_plan}    t1    i14    abc
     Set FC Item Passed  ${test_plan}    t2    i21
     ${fc_cr}  Search FC Result    ${test_plan}    t1    i11
+    Should Not Be Empty    ${fc_cr}[pass_time]
+    ${fc_cr}  Search FC Result    ${test_plan}    t1    i14
     Should Not Be Empty    ${fc_cr}[pass_time]
     ${fc_cr}  Search FC Result    ${test_plan}    t2    i21
     Should Not Be Empty    ${fc_cr}[pass_time]
@@ -239,9 +242,11 @@ FC Block Plan
     Call A Plan    ${test_plan}  ${True}
     Set FC Item Passed    ${test_plan}    t1    i11
     Set FC Item Passed    ${test_plan}    t1    i12
+    Input FC Item    ${test_plan}    t1    i14    ${EMPTY}
     Set FC Plan Table Finish    ${test_plan}    t1
     Call A Plan    ${test_plan}  ${True}
     Set FC Item Passed    ${test_plan}    t1    i13
+    Input FC Item    ${test_plan}    t1    i14    abc
     Call A Plan    ${test_plan}
     Confirm Vehicle    ${test_plan}
     Confirm Vehicle    ${test_plan}  is_confirm=${False}
@@ -288,6 +293,7 @@ Prepare FC Configured
     Add Item to FC Table    t1    i11
     Add Item to FC Table    t1    i12
     Add Item to FC Table    t1    i13
+    Add Item to FC Table    t1    i14  ${True}
     Add FC Table    t2
     Add Item to FC Table    t2    i21
     Add Item to FC Table    t2    i22
