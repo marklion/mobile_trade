@@ -284,6 +284,7 @@ else {
         bidding_lib.stop_timeup_bt();
         plan_lib.stuff_price_timeout();
         field_lib.auto_uncheck_in();
+        plan_lib.walk_through2checkout();
     });
     add_min_timer(6, async () => {
         let sq = db_opt.get_sq();
@@ -308,7 +309,6 @@ else {
     add_min_timer(5, async () => {
         console.log('5 min timer');
         old_zczh.proc_timeout_5min();
-        plan_lib.walk_through2checkout();
     });
 
     app.post('/api/v1/internal_timeout', async (req, res) => {
