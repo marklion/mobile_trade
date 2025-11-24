@@ -76,6 +76,7 @@ module.exports = {
             plan_time: { type: String, have_to: false, mean: '计划时间', example: '2020-01-01 12:00:00' },
             main_vehicle_plate: { type: String, have_to: false, mean: '主车车牌', example: '主车车牌' },
             behind_vehicle_plate: { type: String, have_to: false, mean: '挂车车牌', example: '挂车车牌' },
+            driver_name: { type: String, have_to: false, mean: '司机姓名', example: '张三' },
             driver_phone: { type: String, have_to: false, mean: '司机电话', example: '19999991111' },
             trans_company_name: { type: String, have_to: false, mean: '承运公司', example: '承运公司名称' },
             comment: { type: String, have_to: false, mean: '备注', example: '备注' },
@@ -95,9 +96,17 @@ module.exports = {
                 behind_vehicle_id = (await plan_lib.fetch_vehicle(body.behind_vehicle_plate, true)).id;
             }
             let driver_id = undefined;
-            if (body.driver_phone) {
+            if (body.driver_phone || body.driver_name) {
                 let orig_driver = (await util_lib.get_single_plan_by_id(body.plan_id)).driver;
-                driver_id = (await plan_lib.fetch_driver(orig_driver.name, body.driver_phone, orig_driver.id_card)).id;
+                let driver_name = body.driver_name || orig_driver.name;
+                let driver_phone = body.driver_phone || orig_driver.phone;
+                let driver = await plan_lib.fetch_driver(driver_name, driver_phone, orig_driver.id_card);
+                // 如果提供了新的司机姓名，更新司机姓名
+                if (body.driver_name && driver.name != body.driver_name) {
+                    driver.name = body.driver_name;
+                    await driver.save();
+                }
+                driver_id = driver.id;
             }
             await plan_lib.update_single_plan(body.plan_id, token, {
                 plan_time: body.plan_time,

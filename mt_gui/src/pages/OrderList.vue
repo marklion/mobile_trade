@@ -366,6 +366,7 @@
         <fui-form ref="plan_update" :model="update_req">
             <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
             <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
+            <fui-input label="司机姓名" v-model="update_req.driver_name"></fui-input>
             <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
             <fui-input label="承运公司" v-model="update_req.trans_company_name"></fui-input>
             <fui-input label="备注" v-model="update_req.comment"></fui-input>
@@ -445,6 +446,7 @@ export default {
             update_req: {
                 main_vehicle_plate: '',
                 behind_vehicle_plate: '',
+                driver_name: '',
                 driver_phone: '',
                 trans_company_name: '',
             },
@@ -822,6 +824,9 @@ export default {
                 if (this.update_req.behind_vehicle_plate == this.focus_plan.behind_vehicle.plate) {
                     delete this.update_req.behind_vehicle_plate;
                 }
+                if (this.update_req.driver_name == this.focus_plan.driver.name) {
+                    delete this.update_req.driver_name;
+                }
                 if (this.update_req.driver_phone == this.focus_plan.driver.phone) {
                     delete this.update_req.driver_phone;
                 }
@@ -842,6 +847,7 @@ export default {
             this.show_update = true;
             this.update_req.main_vehicle_plate = this.focus_plan.main_vehicle.plate;
             this.update_req.behind_vehicle_plate = this.focus_plan.behind_vehicle.plate;
+            this.update_req.driver_name = this.focus_plan.driver.name;
             this.update_req.driver_phone = this.focus_plan.driver.phone;
             this.update_req.trans_company_name = this.focus_plan.trans_company_name || '';
             this.update_req.comment = this.focus_plan.comment;
