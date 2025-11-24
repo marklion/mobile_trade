@@ -53,6 +53,7 @@
     <fui-modal width="600" :show="show_paper_add" @click="add_paper" v-if="show_paper_add">
         <fui-form ref="add_paper" top="100">
             <fui-input required label="试卷名称" borderTop placeholder="请输入名称" v-model="new_paper.name"></fui-input>
+            <fui-input required label="通过分数" borderTop placeholder="请输入通过分数" type="number" v-model="new_paper.pass_score"></fui-input>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :show="show_unlink_confirm" @click="unlink_question" v-if="show_unlink_confirm" descr="确定要从试卷中删除该题吗？">
@@ -118,7 +119,8 @@ export default {
             show_link_question: false,
             show_paper_add: false,
             new_paper: {
-                name: ''
+                name: '',
+                pass_score: 80
             },
             focus_question: {},
             all_stuff: [],
@@ -180,13 +182,18 @@ export default {
         add_paper: async function (e) {
             let new_paper = {
                 name: this.new_paper.name,
-                stuff_id: this.focus_stuff_id
+                stuff_id: this.focus_stuff_id,
+                pass_score: parseInt(this.new_paper.pass_score) || 80
             };
             if (e.index == 1) {
                 await this.$send_req('/exam/add_paper', new_paper);
                 this.refresh_paper();
             }
             this.show_paper_add = false;
+            this.new_paper = {
+                name: '',
+                pass_score: 80
+            };
         },
         get_papers: async function (pageNo, [focus_stuff_id]) {
             if (focus_stuff_id == undefined) {
