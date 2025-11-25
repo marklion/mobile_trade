@@ -79,6 +79,7 @@ module.exports = {
             params: {
                 name: { type: String, have_to: true, mean: '试卷', example: '试卷' },
                 stuff_id:{type:Number, have_to:true, mean:'物料ID', example:1},
+                pass_score:{type:Number, have_to:false, mean:'通过分数', example:80},
             },
             result:{
                 result:{type:Boolean, mean:'结果', example:true},
@@ -90,7 +91,7 @@ module.exports = {
                 {
                     throw {err_msg:'物料不存在'}
                 }
-                await exam_lib.add_exam_paper(body.name, stuff[0]);
+                await exam_lib.add_exam_paper(body.name, stuff[0], body.pass_score);
                 return {result:true}
             },
         },

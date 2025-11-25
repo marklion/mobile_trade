@@ -69,13 +69,13 @@ module.exports = {
 
         return {questions:resp, total:count}
     },
-    add_exam_paper:async function(name, stuff) {
+    add_exam_paper:async function(name, stuff, pass_score) {
         let er = await stuff.getExam_papers({where: {name: name}})
         if (er.length > 0)
         {
             throw {err_msg:'试卷已存在'}
         }
-        await stuff.createExam_paper({name: name})
+        await stuff.createExam_paper({name: name, pass_score: pass_score || 80})
     },
     del_exam_paper:async function(id, company) {
         let er = await db_opt.get_sq().models.exam_paper.findByPk(id)

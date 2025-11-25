@@ -84,6 +84,7 @@ const sc_req_detail = {
 const exam_paper_info = {
     id: { type: Number, mean: 'ID', example: 1 },
     name: { type: String, mean: '试卷', example: '试卷' },
+    pass_score: { type: Number, mean: '通过分数', example: 80 },
     questions: {
         type: Array, mean: '题目', explain: {
             id: { type: Number, mean: 'ID', example: 1 },
