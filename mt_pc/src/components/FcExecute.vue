@@ -14,13 +14,15 @@
                         <el-form ref="form" :model="form" label-width="auto" label-position="left">
                             <div v-for="item of fc.fc_plan_table.fc_check_results" :key="item.id">
                                 <el-row>
-                                    <el-col :span="3">
-                                        <el-form-item>
+                                    <el-col :span="4">
+                                        <el-form-item v-if="!item.field_check_item.need_input">
                                             <el-switch v-model="form[item.id]" @change="(value) => pass_fc(value, item)"></el-switch>
                                         </el-form-item>
+                                        <el-button v-else @click="input_fc_item(item)">输入</el-button>
                                     </el-col>
-                                    <el-col :span="21">
+                                    <el-col :span="20">
                                         <span>{{ item.field_check_item.name  }}</span>
+                                        <span v-if="item.input">-{{item.input}}</span>
                                     </el-col>
                                 </el-row>
                             </div>
@@ -34,8 +36,6 @@
 </div>
 </template>
 
-    
-    
 <script>
 import {
     VueGrid,
@@ -68,6 +68,24 @@ export default {
     },
 
     methods: {
+        input_fc_item: async function (item) {
+            let that = this;
+            this.$prompt('请输入' + item.field_check_item.name, '输入检查项', {
+                confirmButtonText: '保存',
+                cancelButtonText: '取消',
+                inputValue: item.input || '',
+            }).then(async ({
+                value
+            }) => {
+                await that.$send_req('/sc/input_fc_item', {
+                    fc_result_id: item.id,
+                    input: value,
+                });
+                item.input = value;
+            }).catch(() => {
+                // 取消
+            });
+        },
         on_page_data_loaded(data) {
             this.loading = false;
             this.fc_plan_tables = data;
@@ -93,8 +111,7 @@ export default {
     mounted: async function () {},
 }
 </script>
-    
-    
+
 <style scoped>
 .container {
     margin: 12px
