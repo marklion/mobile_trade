@@ -52,9 +52,9 @@ async function get_ticket_func(body, token) {
         });
     });
     let drop_address = '';
-    if (plan.company.ticket_hasOrhasnt_place){
+    if (plan.company.ticket_hasOrhasnt_place) {
         drop_address = plan.drop_address
-    }else{
+    } else {
         drop_address = null
     }
 
@@ -81,13 +81,13 @@ async function get_ticket_func(body, token) {
         fw_info: plan.first_weight,
         sw_info: plan.second_weight,
         delegate_name: delegate_name,
-        replace_weighingSheet:plan.stuff.company.global_replace_form?.replace_weighingSheet || '称重单',
+        replace_weighingSheet: plan.stuff.company.global_replace_form?.replace_weighingSheet || '称重单',
         replace_count: plan.stuff.company.global_replace_form?.replace_count || '装载量',
         replace_fw_info: plan.stuff.company.global_replace_form?.replace_fw_info || '一次计量',
         replace_sw_info: plan.stuff.company.global_replace_form?.replace_sw_info || '二次计量',
         order_company: plan.stuff.company.global_replace_form?.order_company || '下单公司',
         transportation_company: plan.stuff.company.global_replace_form?.transportation_company || '运输公司',
-        plan_sct_infos:plan.plan_sct_infos,
+        plan_sct_infos: plan.plan_sct_infos,
         delegate_stamp_path: delegate_stamp_path,
         extra_infos: extra_infos,
         drop_address: drop_address,
@@ -256,7 +256,7 @@ module.exports = {
                         status: 2,
                         is_buy: false,
                     }],
-                    count:0,
+                    count: 0,
                 };
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 if (driver) {
@@ -973,7 +973,7 @@ module.exports = {
                                 {
                                     status: 2,
                                     checkout_delay: true,
-                                    count:{[db_opt.Op.gt]: 0}
+                                    count: { [db_opt.Op.gt]: 0 }
                                 }
                             ]
                         }
@@ -1274,8 +1274,7 @@ module.exports = {
                         const zipPath = path.join('/database/uploads/', zipName);
                         console.log(`正在生成 ${zipPath}`);
                         const filePaths = []
-                        for (let plan of plans)
-                        {
+                        for (let plan of plans) {
                             console.log(`正在生成 ${plan.id}`);
                             const fileName = generateTicketFilename(plan);
                             const filePath = path.join(tempDir, fileName);
@@ -1999,9 +1998,9 @@ module.exports = {
                 return { push_messages_writable_roles: company.push_messages_writable_roles };
             }
         },
-        get_ticket_hasOrhasnt_place:{
-            name:'获取榜单是否显示装卸车地点',
-            description:'获取榜单是否显示装卸车地点',
+        get_ticket_hasOrhasnt_place: {
+            name: '获取榜单是否显示装卸车地点',
+            description: '获取榜单是否显示装卸车地点',
             is_write: false,
             is_get_api: false,
             params: {},
@@ -2025,6 +2024,20 @@ module.exports = {
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 return { access_control_permission: company.access_control_permission };
+            }
+        },
+        get_change_finished_order_price_switch: {
+            name: '获取已完成订单改价开关',
+            description: '获取已完成订单改价开关',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                change_finished_order_price_switch: { type: Boolean, mean: '是否开启已完成订单改价', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { change_finished_order_price_switch: company.change_finished_order_price_switch };
             }
         },
         get_barriergate_control_permission: {
@@ -2061,7 +2074,7 @@ module.exports = {
             is_write: false,
             is_get_api: false,
             params: {
-                company_id:{ type: Number, have_to: false, mean: '公司ID', example: 1 }
+                company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 }
             },
             result: {
                 support_location_detail: { type: Boolean, mean: '是否支持卸车地点细节输入', example: true }

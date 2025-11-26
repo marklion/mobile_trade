@@ -261,6 +261,9 @@
         <u-cell title="订单列表是否显示价格">
             <u-switch slot="value" v-model="is_the_order_display_price" @change="set_the_order_display_price"></u-switch>
         </u-cell>
+        <u-cell title="是否允许已完成订单调价">
+            <u-switch slot="value" v-model="change_finished_order_price_switch" @change="set_change_finished_order_price_switch"></u-switch>
+        </u-cell>
     </view>
     <view v-else-if="cur_seg == 2">
         <BlackList ref="blacklist_ref" />
@@ -420,6 +423,7 @@ export default {
             support_location_detail: false,
             is_allowed_order_return: false,
             is_the_order_display_price: false,
+            change_finished_order_price_switch: false,
             // 全局配置管理
             globalConfigs: {
                 show_sc_in_field: {
@@ -466,6 +470,11 @@ export default {
                     getUrl: '/global/get_the_order_display_price',
                     setUrl: '/stuff/set_the_order_display_price',
                     key: 'is_the_order_display_price'
+                },
+                change_finished_order_price_switch: {
+                    getUrl: '/global/get_change_finished_order_price_switch',
+                    setUrl: '/stuff/set_change_finished_order_price_switch',
+                    key: 'change_finished_order_price_switch'
                 }
             }
         }
@@ -954,6 +963,12 @@ export default {
         },
         set_the_order_display_price: function () {
             return this.setGlobalConfig('is_the_order_display_price');
+        },
+        get_change_finished_order_price_switch: function () {
+            return this.getGlobalConfig('change_finished_order_price_switch');
+        },
+        set_change_finished_order_price_switch: function () {
+            return this.setGlobalConfig('change_finished_order_price_switch');
         },
     },
     onPullDownRefresh() {

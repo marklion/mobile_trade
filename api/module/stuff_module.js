@@ -2,6 +2,7 @@ const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
+const cash_lib = require('../lib/cash_lib');
 const sq = db_opt.get_sq();
 async function change_stuff_single_switch(stuff_id, switch_name, switch_value, token) {
     let sq = db_opt.get_sq();
@@ -496,6 +497,7 @@ module.exports = {
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 const transaction = await sq.transaction();
+                let user = await rbac_lib.get_user_by_token(token);
                 try {
                     let planIds = JSON.parse(`[${body.plan_id}]`);
                     let company = await rbac_lib.get_company_by_token(token);
@@ -518,8 +520,16 @@ module.exports = {
                             throw new Error('Invalid unit price');
                         }
                         if (plan) {
-                            if (plan.is_buy || plan.status != 3) {
-                                let comment = `单价由${plan.unit_price}改为${unitPrice},${body.comment}`
+                            let orig_price = plan.unit_price;
+                            if (!plan.is_buy && orig_price != unitPrice) {
+                                if (plan.status == 3)
+                                {
+                                    if (!company.change_finished_order_price_switch)
+                                    {
+                                        throw new Error('已完成订单不允许调价');
+                                    }
+                                }
+                                let comment = `单价由${orig_price}改为${unitPrice},${body.comment}`
                                 await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, { transaction })
                                 // 更新价格
                                 plan.unit_price = unitPrice;
@@ -539,14 +549,22 @@ module.exports = {
 
                                 await plan.save({ transaction });
                                 if (plan.status == 3) {
+                                    let orig_total_price = parseFloat(orig_price * plan.count);
+                                    let total_increased = parseFloat(unitPrice * plan.count - orig_total_price);
                                     setTimeout(async () => {
+                                        let contract = await sq.models.contract.findOne({
+                                            where: {
+                                                buyCompanyId: plan.companyId,
+                                                saleCompanyId: company.id,
+                                            }
+                                        });
+                                        if (contract && !plan.is_buy) {
+                                            await cash_lib.charge_by_username_and_contract(user.name, contract, total_increased, `${comment} 导致`);
+                                        }
                                         let full_plan = await util_lib.get_single_plan_by_id(plan.id);
                                         await plan_lib.updateArchivePlan(full_plan)
                                     }, 200);
                                 }
-                            }
-                            else {
-                                throw new Error('计划已关闭');
                             }
                         } else {
                             throw new Error('计划不存在');
@@ -1395,6 +1413,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_change_finished_order_price_switch: {
+            name: '设置已完成订单修改价格开关',
+            description: '设置已完成订单修改价格开关',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                change_finished_order_price_switch: { type: Boolean, have_to: true, mean: '是否允许已完成订单修改价格', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.change_finished_order_price_switch = body.change_finished_order_price_switch;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_the_order_display_price: {
             name: '设置订单列表是否显示价格',
             description: '设置订单列表是否显示价格',
@@ -1458,7 +1496,7 @@ module.exports = {
                 return { result: true };
             }
         },
-        need_driver_sign:{
+        need_driver_sign: {
             name: '设置是否需要司机签字',
             description: '设置是否需要司机签字',
             is_write: true,

@@ -130,6 +130,7 @@ let db_opt = {
             barriergate_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_the_order_display_price: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_allowed_order_return: { type: DataTypes.BOOLEAN, defaultValue: false },
+            change_finished_order_price_switch:{ type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

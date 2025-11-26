@@ -2,8 +2,8 @@
 Resource    ../stuff/stuff_opt.resource
 Resource    ../database.resource
 Library     DateTime
-Suite Setup    Create Test Data
-Suite Teardown  Run Keywords  Clean Up Sale and Buy  AND  Plan Reset
+Suite Setup    Prepare Sale and Buy
+Suite Teardown  Clean Up Sale and Buy
 *** Variables ***
 ${NEW_PRICE}   ${66.88}
 ${COMMENT}    测试备注
@@ -15,7 +15,6 @@ ${COMMENT}    测试备注
 *** Keywords ***
 Create Test Data
     #销售/采购流程
-    Prepare Sale and Buy
     @{plan_ids}=    Create List
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
@@ -48,15 +47,24 @@ Change And Verify Price
     ${plan}  Get Plan By Id    ${plan_id}
     Should Be Equal As Numbers    ${plan}[unit_price]    ${expected_price}
 
+Set Finished Price Change Switch
+    [Arguments]   ${is_open}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  change_finished_order_price_switch=${is_open}
+    Req to Server    /stuff/set_change_finished_order_price_switch  ${token}    ${req}
+
 *** Test Cases ***
 Change Price With Muti Plan
     [Documentation]    测试更改计划价格（批量）
+    [Setup]  Create Test Data
+    [Teardown]  Plan Reset
     ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
     Do Change Price By Plan    ${plan_ids}    ${NEW_PRICE}
     Verify Plan Prices Updated    ${plan_ids}    ${NEW_PRICE}
 
 Change Price With Single Plan
     [Documentation]    测试更改计划价格（单个）
+    [Setup]  Create Test Data
+    [Teardown]  Plan Reset
     ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
     @{plan_ids}  Create List  ${plan_ids}[0]
     Do Change Price By Plan    ${plan_ids}    ${123}
@@ -69,6 +77,7 @@ Change Price With Single Plan
     Do Change Price By Plan    ${plan_ids}    ${123}  expect_failure=${True}
 
 Change Price of One Order
+    [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
     ${dv}  Search Driver by Index  0
@@ -77,3 +86,41 @@ Change Price of One Order
     Change And Verify Price    ${plan}[id]
     Deliver A Plan  ${plan}  ${23}
     Change And Verify Price    ${plan}[id]  expected_price=${5541}
+
+Change Price When Finished Order Change Price Switch Off
+    [Documentation]    测试已完成订单调价开关关闭时不允许调价
+    [Setup]  Create Test Data
+    [Teardown]  Plan Reset
+    FOR    ${plan_id}    IN    @{TEST_PLAN_IDS}
+        ${plan}  Get Plan By Id    ${plan_id}
+        Confirm A Plan    ${plan}
+        Manual Pay A Plan    ${plan}
+        Deliver A Plan    ${plan}    ${20}
+    END
+    ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
+    @{plan_ids}  Create List  ${plan_ids}[1]
+    Do Change Price By Plan    ${plan_ids}    ${4567}  expect_failure=${True}
+
+Change Price of Finished Plan
+    [Documentation]    测试已完成计划调价
+    [Setup]  Set Finished Price Change Switch    ${True}
+    [Teardown]  Set Finished Price Change Switch    ${False}
+    Create Test Data
+    Do Change Price By Plan    ${TEST_PLAN_IDS}    ${50}
+    ${plan}  Get Plan By Id    ${TEST_PLAN_IDS}[0]
+    Confirm A Plan    ${plan}
+    Manual Pay A Plan    ${plan}
+    Deliver A Plan    ${plan}    ${20}
+    @{plan_ids}  Create List  ${TEST_PLAN_IDS}[1]
+    ${plan}  Get Plan By Id    ${TEST_PLAN_IDS}[1]
+    Do Change Price By Plan    ${plan_ids}    ${55}
+    Confirm A Plan    ${plan}
+    Manual Pay A Plan    ${plan}
+    Deliver A Plan    ${plan}    ${21}
+    ${orig_balance}  Get Cash Of A Company    ${plan}[company][name]
+    Do Change Price By Plan    ${TEST_PLAN_IDS}    ${55}
+    Sleep    600ms
+    Verify Plan Prices Updated    ${TEST_PLAN_IDS}    ${55}
+    ${new_balance}  Get Cash Of A Company    ${plan}[company][name]
+    ${increased}=    Evaluate    (${new_balance} - ${orig_balance})
+    Should Be Equal As Numbers    ${increased}    ${100}
