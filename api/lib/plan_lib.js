@@ -349,8 +349,33 @@ module.exports = {
         if (_condition.company_id != undefined) {
             where_condition[db_opt.Op.and].push({ companyId: _condition.company_id });
         }
-        if (_condition.hide_manual_close) {
-            where_condition[db_opt.Op.and].push({ manual_close: false });
+        if (_condition.hide_manual_close != undefined) {
+            if (_condition.hide_manual_close) {
+                where_condition[db_opt.Op.and].push({ manual_close: false });
+            }
+            else {
+                where_condition[db_opt.Op.and].push({ manual_close: true });
+            }
+        }
+        if (_condition.only_entered != undefined) {
+            if (_condition.only_entered) {
+                where_condition[db_opt.Op.and].push({
+                    enter_time: {
+                        [db_opt.Op.ne]: null
+                    }
+                });
+                where_condition[db_opt.Op.and].push({
+                    enter_time: {
+                        [db_opt.Op.ne]: ''
+                    }
+                });
+            } else {
+                where_condition[db_opt.Op.and].push({
+                    enter_time: {
+                        [db_opt.Op.or]: [null, '']
+                    }
+                });
+            }
         }
         return where_condition;
     },
@@ -1681,8 +1706,8 @@ module.exports = {
         }, {
             header: '第二单位装卸量',
             key: 'second_value'
-        },{
-            header:'金蝶星辰同步信息',
+        }, {
+            header: '金蝶星辰同步信息',
             key: 'king_dee_comment'
         }];
         let workbook = new ExcelJS.Workbook();

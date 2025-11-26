@@ -14,9 +14,11 @@ Vue.prototype.$remote_url = function () {
     return process.env.REMOTE_HOST;
   }
 };
-Vue.prototype.$send_req = function (_url, _data) {
+Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
   return new Promise((resolve, reject) => {
-    uni.showLoading({ title: '加载中...', mask: true });
+    if (!noneed_loading) {
+      uni.showLoading({ title: '加载中...', mask: true });
+    }
     uni.request({
       url: Vue.prototype.$remote_url() + '/api/v1' + _url,
       data: _data,
@@ -45,7 +47,10 @@ Vue.prototype.$send_req = function (_url, _data) {
         reject(res)
       },
       complete: () => {
-        uni.hideLoading({ noConflict: true });
+        if (!noneed_loading)
+        {
+          uni.hideLoading({ noConflict: true });
+        }
       }
     })
   })
@@ -78,8 +83,7 @@ Vue.prototype.$convert_attach_url = function (url) {
     let urlObj = new URL(prefix);
     baseUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.port ? ':' + urlObj.port : ''}`;
   }
-  else
-  {
+  else {
     baseUrl = prefix;
   }
   let ret = baseUrl + url;

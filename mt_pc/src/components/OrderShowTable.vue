@@ -3,25 +3,42 @@
     <div class="filter_bar">
         <el-tabs v-model="status" @tab-click="refresh_order">
             <el-tab-pane label="全部" name="all"></el-tab-pane>
-            <el-tab-pane name="0">
+            <el-tab-pane name="unconfirmed">
                 <template slot="label">
                     <span>未确认</span>
-                    <el-badge v-if="count_by_status.need_confirm != 0" :value="count_by_status.need_confirm" size="mini"></el-badge>
+                    <el-badge v-if="count_by_status.unconfirmed != 0" :value="count_by_status.unconfirmed" size="mini"></el-badge>
                 </template>
             </el-tab-pane>
-            <el-tab-pane v-if="!is_buy" name="1">
+            <el-tab-pane v-if="!is_buy" name="unpayed">
                 <template slot="label">
                     <span>未付款</span>
-                    <el-badge v-if="count_by_status.need_pay!= 0" :value="count_by_status.need_pay" size="mini"></el-badge>
+                    <el-badge v-if="count_by_status.unpayed != 0" :value="count_by_status.unpayed" size="mini"></el-badge>
                 </template>
             </el-tab-pane>
-            <el-tab-pane :name="is_buy?'1':'2'">
+            <el-tab-pane name="unentered">
                 <template slot="label">
-                    <span>未发车</span>
-                    <el-badge v-if="count_by_status.need_deliver!= 0" :value="count_by_status.need_deliver" size="mini"></el-badge>
+                    <span>未入场</span>
+                    <el-badge v-if="count_by_status.unentered!= 0" :value="count_by_status.unentered" size="mini"></el-badge>
                 </template>
             </el-tab-pane>
-            <el-tab-pane label="已关闭" name="3"></el-tab-pane>
+            <el-tab-pane name="entered">
+                <template slot="label">
+                    <span>已入场</span>
+                    <el-badge v-if="count_by_status.entered != 0" :value="count_by_status.entered" size="mini"></el-badge>
+                </template>
+            </el-tab-pane>
+            <el-tab-pane name="finished">
+                <template slot="label">
+                    <span>已完成</span>
+                    <el-badge v-if="count_by_status.finished != 0" :value="count_by_status.finished" size="mini"></el-badge>
+                </template>
+            </el-tab-pane>
+            <el-tab-pane name="canceled">
+                <template slot="label">
+                    <span>已取消</span>
+                    <el-badge v-if="count_by_status.canceled != 0" :value="count_by_status.canceled" size="mini"></el-badge>
+                </template>
+            </el-tab-pane>
         </el-tabs>
         <el-dropdown v-if="order_selected.length > 0" size="small" split-button type="primary" @command="do_batch_operate">
             {{order_selected.length}}条批量操作
@@ -47,10 +64,10 @@
             <div style="height: 80vh">
                 <el-table ref="order_table" :data="slotProps.content" style="width: 100%" stripe height="100%" @selection-change="record_selection">
                     <el-table-column type="selection"></el-table-column>
-                    <el-table-column min-width="170" v-if="motived"  label="接单公司">
+                    <el-table-column min-width="170" v-if="motived" label="接单公司">
                         <template slot-scope="scope">
-                        {{ scope.row.stuff.company.name }}
-                        <el-tag size="mini" :type="scope.row.enter_time?'success':'warning'">{{!!scope.row.enter_time?'已入场':'未入场'}}</el-tag>
+                            {{ scope.row.stuff.company.name }}
+                            <el-tag size="mini" :type="scope.row.enter_time?'success':'warning'">{{!!scope.row.enter_time?'已入场':'未入场'}}</el-tag>
                         </template>
                     </el-table-column>
                     <el-table-column min-width="170" v-else label="下单公司">
@@ -167,9 +184,12 @@ export default {
                 end_time: '',
             },
             count_by_status: {
-                need_confirm: 0,
-                need_pay: 0,
-                need_deliver: 0,
+                unconfirmed: 0,
+                unpayed: 0,
+                unentered: 0,
+                entered: 0,
+                finished: 0,
+                canceled: 0,
             },
             filter_ready: false,
             pickerOptions: this.$quik_date_option,
@@ -302,37 +322,48 @@ export default {
             this.$refs.order.do_search();
         },
         refresh_order_count: async function () {
-            this.count_by_status.need_confirm = (await this.$send_req(this.req_url, {
-                ...this.filter,
+            let brief_filter = { ...this.filter };
+            brief_filter.hide_manual_close = undefined;
+            brief_filter.only_entered = undefined;
+            brief_filter.status = undefined;
+            this.count_by_status.unconfirmed = (await this.$send_req(this.req_url, {
+                ...brief_filter,
                 status: 0,
                 only_count: true
-            })).total;
-            if (this.is_buy) {
-                this.count_by_status.need_deliver = (await this.$send_req(this.req_url, {
-                    ...this.filter,
+            }, true)).total;
+            if (!this.is_buy) {
+                this.count_by_status.unpayed = (await this.$send_req(this.req_url, {
+                    ...brief_filter,
                     status: 1,
                     only_count: true
-                })).total;
-            } else {
-                this.count_by_status.need_pay = (await this.$send_req(this.req_url, {
-                    ...this.filter,
-                    status: 1,
-                    only_count: true
-                })).total;
-                this.count_by_status.need_deliver = (await this.$send_req(this.req_url, {
-                    ...this.filter,
-                    status: 2,
-                    only_count: true
-                })).total;
+                }, true)).total;
             }
-
+            this.count_by_status.unentered = (await this.$send_req(this.req_url, {
+                ...brief_filter,
+                status: this.is_buy ? 1 : 2,
+                only_entered: false,
+                only_count: true
+            }, true)).total;
+            this.count_by_status.entered = (await this.$send_req(this.req_url, {
+                ...brief_filter,
+                status: this.is_buy ? 1 : 2,
+                only_entered: true,
+                only_count: true
+            }, true)).total;
+            this.count_by_status.finished = (await this.$send_req(this.req_url, {
+                ...brief_filter,
+                status: 3,
+                only_count: true,
+                hide_manual_close: true,
+            }, true)).total;
+            this.count_by_status.canceled = (await this.$send_req(this.req_url, {
+                ...brief_filter,
+                status: 3,
+                only_count: true,
+                hide_manual_close: false,
+            }, true)).total;
         },
         refresh_order: function () {
-            if (this.status != 'all') {
-                this.filter.status = parseInt(this.status);
-            } else {
-                this.filter.status = undefined;
-            }
             if (this.stuff_id != 0) {
                 this.filter.stuff_id = this.stuff_id;
             } else {
@@ -343,11 +374,38 @@ export default {
             } else {
                 this.filter.company_id = undefined;
             }
+            this.filter.status = undefined;
+            this.filter.only_entered = undefined;
+            this.filter.hide_manual_close = undefined;
+            switch (this.status) {
+                case 'unconfirmed':
+                    this.filter.status = 0;
+                    break;
+                case 'unpayed':
+                    this.filter.status = 1;
+                    break;
+                case 'unentered':
+                    this.filter.status = this.is_buy ? 1 : 2;
+                    this.filter.only_entered = false;
+                    break;
+                case 'entered':
+                    this.filter.status = this.is_buy ? 1 : 2;
+                    this.filter.only_entered = true;
+                    break;
+                case 'finished':
+                    this.filter.status = 3;
+                    this.filter.hide_manual_close = true;
+                    break;
+                case 'canceled':
+                    this.filter.status = 3;
+                    this.filter.hide_manual_close = false;
+                    break;
+            }
             this.filter.start_time = moment(this.date_range[0]).format('YYYY-MM-DD');
             this.filter.end_time = moment(this.date_range[1]).format('YYYY-MM-DD');
             this.$nextTick(async () => {
-                await this.refresh_order_count();
                 this.$refs.order.refresh(1);
+                this.refresh_order_count();
             });
         },
         reset_filter: function () {

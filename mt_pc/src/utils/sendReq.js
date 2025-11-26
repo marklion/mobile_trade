@@ -1,10 +1,13 @@
 import request from './request'
 import { Loading } from 'element-ui'
 export default {
-    send_req: async function (url, data) {
-        let li = Loading.service({
-            fullscreen: true,
-        });
+    send_req: async function (url, data, noneed_loading = false) {
+        let li
+        if (!noneed_loading) {
+            li = Loading.service({
+                fullscreen: true,
+            });
+        }
         let resp;
         try {
             resp = await request({
@@ -16,7 +19,9 @@ export default {
             console.log(error);
             throw error;
         } finally {
-            li.close();
+            if (li) {
+                li.close();
+            }
         }
         return resp;
     }
