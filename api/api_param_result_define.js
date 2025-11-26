@@ -217,6 +217,7 @@ module.exports = {
         company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
         hide_manual_close: { type: Boolean, have_to: false, mean: '隐藏手动关闭', example: true },
         only_count: { type: Boolean, have_to: false, mean: '只返回数量', example: true },
+        only_entered: { type: Boolean, have_to: false, mean: '只返回已入场', example: true },
     },
     sc_req_detail: sc_req_detail,
 

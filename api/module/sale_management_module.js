@@ -79,15 +79,7 @@ module.exports = {
             description: '销售订单查询',
             is_write: false,
             is_get_api: true,
-            params: {
-                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
-                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
-                status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
-                stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
-                company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
-                hide_manual_close: { type: Boolean, have_to: false, mean: '隐藏手动关闭', example: true },
-                only_count: { type: Boolean, have_to: false, mean: '只返回数量', example: true },
-            },
+            params: api_param_result_define.order_search_cond,
             result: {
                 plans: {
                     type: Array, mean: '计划', explain: api_param_result_define.plan_detail_define,

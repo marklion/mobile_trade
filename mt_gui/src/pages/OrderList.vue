@@ -1,49 +1,43 @@
 <template>
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
-    <fui-tabs :current="tab_current" :tabs="tabs" @change="change_tab"></fui-tabs>
+    <fui-tabs scroll alignLeft :current="tab_current" :tabs="tabs" @change="change_tab"></fui-tabs>
     <view style="padding: 10rpx;">
-        <module-filter :rm_array="['sale_management', 'buy_management']">
-            <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
-                {{stuff_filter.name}}
-                <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
-                <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
-            </fui-tag>
-            <fui-tag theme="plain" type="success" @click="show_company_filter = true" marginLeft="20">
-                {{company_filter.name}}
-                <fui-icon v-if="!company_filter.id" name="arrowright" size="32"></fui-icon>
-                <fui-icon v-else name="close" size="32" @click.native.stop="reset_company_filter"></fui-icon>
-            </fui-tag>
-        </module-filter>
+        <fui-row :gutter="20">
+            <fui-col :span="16" v-if="!select_active">
+                <module-filter :rm_array="['sale_management', 'buy_management']">
+                    <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
+                        {{stuff_filter.name}}
+                        <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
+                        <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
+                    </fui-tag>
+                    <fui-tag theme="plain" type="success" @click="show_company_filter = true" marginLeft="20">
+                        {{company_filter.name}}
+                        <fui-icon v-if="!company_filter.id" name="arrowright" size="32"></fui-icon>
+                        <fui-icon v-else name="close" size="32" @click.native.stop="reset_company_filter"></fui-icon>
+                    </fui-tag>
+                </module-filter>
+            </fui-col>
+            <fui-col :span="8">
+                <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
+                </fui-tag>
+                <view v-else style="display:flex; align-items: center;">
+                    <fui-tag type="warning" text="关闭多选" @click="select_active = false">
+                    </fui-tag>
+                    <fui-tag type="success" text="全选" @click="select_all">
+                    </fui-tag>
+                    <fui-tag type="danger" text="反选" @click="select_other">
+                    </fui-tag>
+                    <fui-tag type="primary" v-if="plan_selected.length > 0" :text="plan_selected.length + '项批量操作'" @click="action_show = true">
+                    </fui-tag>
+                </view>
+            </fui-col>
+        </fui-row>
+
         <module-filter :rm_array="['customer', 'supplier']">
             <fui-tag type="primary" text="全部复制" @click="show_batch_copy = true" marginLeft="20">
             </fui-tag>
         </module-filter>
-
-        <view style="padding-top: 10rpx;">
-            <fui-row :gutter="20">
-                <fui-col :span="7" v-if="!select_active">
-                    显示取消计划
-                </fui-col>
-                <fui-col :span="4" v-if="!select_active">
-                    <u-switch v-model="need_show_close" @change="change_need_show"></u-switch>
-                </fui-col>
-                <fui-col :span="13">
-                    <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
-                    </fui-tag>
-                    <view v-else style="display:flex; align-items: center;">
-                        <fui-tag type="warning" text="关闭多选" @click="select_active = false">
-                        </fui-tag>
-                        <fui-tag type="success" text="全选" @click="select_all">
-                        </fui-tag>
-                        <fui-tag type="danger" text="反选" @click="select_other">
-                        </fui-tag>
-                        <fui-tag type="primary" v-if="plan_selected.length > 0" :text="plan_selected.length + '项批量操作'" @click="action_show = true">
-                        </fui-tag>
-                    </view>
-                </fui-col>
-            </fui-row>
-        </view>
     </view>
     <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
@@ -86,7 +80,7 @@
                             <fui-text size="22" type="danger" :text="item.duplicateInfo.message"></fui-text>
                         </view>
                     </template>
-                    
+
                 </u-cell>
             </view>
         </list-show>
@@ -511,7 +505,6 @@ export default {
             one_att: [''],
             sc_passed: false,
             show_sc_confirm: false,
-            need_show_close: false,
             show_deliver_date: false,
             show_scale_input: false,
             deliver_req: {
@@ -691,7 +684,7 @@ export default {
                 status: this.focus_status,
                 stuff_id: this.stuff_filter.id,
                 company_id: this.company_filter.id,
-                hide_manual_close: !this.need_show_close,
+                ...this.tabs[this.tab_current].filter,
             }
         },
         plan_owner: function () {
@@ -1029,10 +1022,6 @@ export default {
                 }
             });
         },
-
-        change_need_show: function () {
-            this.refresh_plans();
-        },
         calc_count: function () {
             this.deliver_req.count = Math.abs(this.deliver_req.p_weight - this.deliver_req.m_weight);
             this.deliver_req.count = utils.moneyFormatter(this.deliver_req.count)
@@ -1200,22 +1189,68 @@ export default {
         init_tabs: function () {
             this.tabs = [{
                 name: "全部",
+                filter: {
+                    status: undefined,
+                    hide_manual_close: undefined,
+                    only_entered: undefined,
+                },
             }, {
                 name: "未确认",
                 badge: 0,
+                filter: {
+                    status: 0,
+                    hide_manual_close: undefined,
+                    only_entered: undefined,
+                },
             }, ]
+            let enter_status = 1;
             if (!this.cur_is_buy) {
                 this.tabs.push({
                     name: "未付款",
                     badge: 0,
+                    filter: {
+                        status: 1,
+                        hide_manual_close: undefined,
+                        only_entered: undefined,
+                    },
                 });
+                enter_status = 2;
             }
             this.tabs.push({
-                name: "未发车",
+                name: "未入场",
                 badge: 0,
+                filter: {
+                    status: enter_status,
+                    hide_manual_close: undefined,
+                    only_entered: false,
+                },
             });
             this.tabs.push({
-                name: "已关闭",
+                name: "已入场",
+                badge: 0,
+                filter: {
+                    status: enter_status,
+                    hide_manual_close: undefined,
+                    only_entered: true,
+                },
+            });
+            this.tabs.push({
+                name: "已完成",
+                badge: 0,
+                filter: {
+                    status: 3,
+                    hide_manual_close: true,
+                    only_entered: undefined,
+                },
+            });
+            this.tabs.push({
+                name: "已取消",
+                badge: 0,
+                filter: {
+                    status: 3,
+                    hide_manual_close: false,
+                    only_entered: undefined,
+                },
             });
         },
         change_seg: function (e) {
@@ -1280,10 +1315,7 @@ export default {
         change_tab: function (e) {
             let index = e.index
             if (index > 0) {
-                this.focus_status = index - 1;
-                if (this.focus_status == 2 && this.cur_is_buy) {
-                    this.focus_status = 3;
-                }
+                this.focus_status = this.tabs[index].filter.status;
             } else {
                 this.focus_status = undefined;
             }
@@ -1311,17 +1343,16 @@ export default {
             return ret;
         },
         init_number_of_sold_plan: async function () {
-            let max_status = 3;
-            if (this.cur_is_buy) {
-                max_status = 2;
-            }
-            for (let i = 0; i < max_status; i++) {
+            for (let single_tab of this.tabs) {
+                if (single_tab.badge === undefined) {
+                    continue;
+                }
                 let res = await this.$send_req(this.make_plan_get_url(), {
                     ...this.plan_filter,
-                    status: i,
-                    only_count: true
-                });
-                this.tabs[i + 1].badge = res.total;
+                    only_count: true,
+                    ...single_tab.filter,
+                }, true);
+                single_tab.badge = res.total;
             }
         },
         get_stuff: async function (pageNo) {
