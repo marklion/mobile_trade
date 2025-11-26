@@ -55,6 +55,10 @@
                     <el-switch v-model="is_the_order_display_price" active-text="订单列表是否显示价格" @change="set_the_order_display_price">
                     </el-switch>
                 </vue-cell>
+                <vue-cell width="3of12">
+                    <el-switch v-model="change_finished_order_price_switch" active-text="是否允许已完成订单调价" @change="set_change_finished_order_price_switch">
+                    </el-switch>
+                </vue-cell>
             </vue-grid>
             <h3>代理配置</h3>
             <page-content ref="all_delegates" body_key="delegates" enable req_url="/stuff/get_delegates">
@@ -207,6 +211,7 @@ export default {
             access_control_permission: false,
             barriergate_control_permission: false,
             is_the_order_display_price: false,
+            change_finished_order_price_switch: false,
             support_location_detail: false,
             is_allowed_order_return: false,
             contract_id_selected: 0,
@@ -260,6 +265,7 @@ export default {
         this.get_barriergate_control_permission();
         this.get_is_allowed_order_return();
         this.get_the_order_display_price();
+        this.get_change_finished_order_price_switch();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -488,7 +494,7 @@ export default {
             let ret = await this.$send_req('/global/get_access_control_permission', {});
             this.access_control_permission = ret.access_control_permission;
         },
-        set_access_control_permission: async function () { 
+        set_access_control_permission: async function () {
             await this.$send_req('/stuff/set_access_control_permission', {
                 access_control_permission: this.access_control_permission
             });
@@ -515,11 +521,20 @@ export default {
             let ret = await this.$send_req('/global/get_the_order_display_price', {});
             this.is_the_order_display_price = ret.is_the_order_display_price;
         },
+        get_change_finished_order_price_switch: async function () {
+            let ret = await this.$send_req('/global/get_change_finished_order_price_switch', {});
+            this.change_finished_order_price_switch = ret.change_finished_order_price_switch;
+        },
+        set_change_finished_order_price_switch: async function () {
+            await this.$send_req('/stuff/set_change_finished_order_price_switch', {
+                change_finished_order_price_switch: this.change_finished_order_price_switch
+            });
+        },
         set_the_order_display_price: async function () {
             await this.$send_req('/stuff/set_the_order_display_price', {
                 is_the_order_display_price: this.is_the_order_display_price
             });
-            },
+        },
         get_is_allowed_order_return: async function () {
             let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
             this.is_allowed_order_return = ret.is_allowed_order_return;
@@ -529,7 +544,7 @@ export default {
                 is_allowed_order_return: this.is_allowed_order_return
             });
         },
-        }
+    }
 }
 </script>
 
