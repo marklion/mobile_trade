@@ -123,4 +123,4 @@ Change Price of Finished Plan
     Verify Plan Prices Updated    ${TEST_PLAN_IDS}    ${55}
     ${new_balance}  Get Cash Of A Company    ${plan}[company][name]
     ${increased}=    Evaluate    (${new_balance} - ${orig_balance})
-    Should Be Equal As Numbers    ${increased}    ${100}
+    Should Be Equal As Numbers    ${increased}    ${-100}

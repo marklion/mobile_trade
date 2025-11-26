@@ -559,7 +559,7 @@ module.exports = {
                                             }
                                         });
                                         if (contract && !plan.is_buy) {
-                                            await cash_lib.charge_by_username_and_contract(user.name, contract, total_increased, `${comment} 导致`);
+                                            await cash_lib.charge_by_username_and_contract(user.name, contract, -total_increased, `${comment} 导致`);
                                         }
                                         let full_plan = await util_lib.get_single_plan_by_id(plan.id);
                                         await plan_lib.updateArchivePlan(full_plan)
