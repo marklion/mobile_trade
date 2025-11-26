@@ -104,7 +104,7 @@ Change Price When Finished Order Change Price Switch Off
 Change Price of Finished Plan
     [Documentation]    测试已完成计划调价
     [Setup]  Set Finished Price Change Switch    ${True}
-    [Teardown]  Set Finished Price Change Switch    ${False}
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Finished Price Change Switch    ${False}
     Create Test Data
     Do Change Price By Plan    ${TEST_PLAN_IDS}    ${50}
     ${plan}  Get Plan By Id    ${TEST_PLAN_IDS}[0]
