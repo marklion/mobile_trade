@@ -521,8 +521,8 @@ module.exports = {
                         }
                         if (plan) {
                             let orig_price = plan.unit_price;
-                            if (!plan.is_buy && orig_price != unitPrice) {
-                                if (plan.status == 3)
+                            if (orig_price != unitPrice) {
+                                if (plan.status == 3 && !plan.is_buy)
                                 {
                                     if (!company.change_finished_order_price_switch)
                                     {
