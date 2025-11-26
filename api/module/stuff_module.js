@@ -495,86 +495,52 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let sq = db_opt.get_sq();
-                const transaction = await sq.transaction();
-                let user = await rbac_lib.get_user_by_token(token);
+                let company = await rbac_lib.get_company_by_token(token);
                 try {
                     let planIds = JSON.parse(`[${body.plan_id}]`);
-                    let company = await rbac_lib.get_company_by_token(token);
-                    // 并行处理所有计划
                     await Promise.all(planIds.map(async (item) => {
-                        let plan = await sq.models.plan.findOne({
-                            where: { id: item },
-                            include: [{ model: sq.models.stuff }, { model: sq.models.bidding_item }],
-                            transaction
-                        });
-
-                        if (!plan || !company && !(await company.hasStuff(plan.stuff, { transaction }))) {
-                            return { result: false };
-                        }
-                        if (plan.bidding_item) {
-                            throw new Error('竞价计划不允许调价');
-                        }
-                        let unitPrice = Number(body.unit_price);
-                        if (isNaN(unitPrice)) {
-                            throw new Error('Invalid unit price');
-                        }
-                        if (plan) {
+                        await plan_lib.action_in_plan(item, token, 0, async (plan, t) => {
+                            if (!plan || !company && !(await company.hasStuff(plan.stuff))) {
+                                return { result: false };
+                            }
+                            if (plan.bidding_item) {
+                                throw new Error('竞价计划不允许调价');
+                            }
+                            let unitPrice = Number(body.unit_price);
+                            if (isNaN(unitPrice)) {
+                                throw new Error('Invalid unit price');
+                            }
                             let orig_price = plan.unit_price;
                             if (orig_price != unitPrice) {
-                                if (plan.status == 3 && !plan.is_buy)
-                                {
-                                    if (!company.change_finished_order_price_switch)
-                                    {
+                                if (plan.status == 3 && !plan.is_buy) {
+                                    if (!company.change_finished_order_price_switch) {
                                         throw new Error('已完成订单不允许调价');
                                     }
+                                    await plan_lib.plan_rollback(plan.id, token, '调价回滚', false, t);
                                 }
                                 let comment = `单价由${orig_price}改为${unitPrice},${body.comment}`
-                                await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, { transaction })
-                                // 更新价格
+                                await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment)
                                 plan.unit_price = unitPrice;
                                 if (plan.status == 1 && !plan.is_buy) {
-                                    let full_plan = await sq.models.plan.findOne({
-                                        where: { id: plan.id },
-                                        include: [
-                                            { model: sq.models.stuff, include: [{ model: sq.models.company }] },
-                                            { model: sq.models.company }
-                                        ],
-                                        transaction
-                                    });
-                                    let { arrears, outstanding_vehicles } = await plan_lib.calculate_plan_arrears(full_plan, unitPrice, transaction);
+                                    let { arrears, outstanding_vehicles } = await plan_lib.calculate_plan_arrears(plan, unitPrice);
                                     plan.arrears = arrears;
                                     plan.outstanding_vehicles = outstanding_vehicles;
                                 }
-
-                                await plan.save({ transaction });
+                                plan.checkout_delay = false;
+                                await plan.save();
                                 if (plan.status == 3) {
-                                    let orig_total_price = parseFloat(orig_price * plan.count);
-                                    let total_increased = parseFloat(unitPrice * plan.count - orig_total_price);
-                                    setTimeout(async () => {
-                                        let contract = await sq.models.contract.findOne({
-                                            where: {
-                                                buyCompanyId: plan.companyId,
-                                                saleCompanyId: company.id,
-                                            }
-                                        });
-                                        if (contract && !plan.is_buy) {
-                                            await cash_lib.charge_by_username_and_contract(user.name, contract, -total_increased, `${comment} 导致`);
-                                        }
-                                        let full_plan = await util_lib.get_single_plan_by_id(plan.id);
-                                        await plan_lib.updateArchivePlan(full_plan)
-                                    }, 200);
+                                    if (plan.is_buy) {
+                                        await plan_lib.updateArchivePlan(plan);
+                                    }
+                                    else {
+                                        await plan_lib.deliver_plan(plan.id, token, plan.count, plan.p_weight, plan.m_weight, plan.p_time, plan.m_time, plan.ticket_no, plan.seal_no, t);
+                                    }
                                 }
                             }
-                        } else {
-                            throw new Error('计划不存在');
-                        }
+                        }, true);
                     }));
-                    await transaction.commit();
                     return { result: true };
-
                 } catch (error) {
-                    await transaction.rollback();
                     throw { err_msg: error.message }
                 }
             }
