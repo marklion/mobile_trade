@@ -500,7 +500,7 @@ module.exports = {
                     let planIds = JSON.parse(`[${body.plan_id}]`);
                     await Promise.all(planIds.map(async (item) => {
                         await plan_lib.action_in_plan(item, token, 0, async (plan, t) => {
-                            if (!plan || !company && !(await company.hasStuff(plan.stuff))) {
+                            if (!plan || !company || !(await company.hasStuff(plan.stuff))) {
                                 return { result: false };
                             }
                             if (plan.bidding_item) {
