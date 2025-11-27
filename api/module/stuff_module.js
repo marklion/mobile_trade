@@ -519,7 +519,7 @@ module.exports = {
                                     await plan_lib.plan_rollback(plan.id, token, '调价回滚', false, t);
                                 }
                                 let comment = `单价由${orig_price}改为${unitPrice},${body.comment}`
-                                await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment)
+                                await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, t)
                                 plan.unit_price = unitPrice;
                                 if (plan.status == 1 && !plan.is_buy) {
                                     let { arrears, outstanding_vehicles } = await plan_lib.calculate_plan_arrears(plan, unitPrice);
