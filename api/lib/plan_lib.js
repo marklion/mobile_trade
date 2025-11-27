@@ -836,7 +836,7 @@ module.exports = {
                 cash_increased: decrease_cash
             });
             try {
-                let last_line = plan.king_dee_comment.split('\n').pop();
+                let last_line = (plan.king_dee_comment || '').split('\n').pop();
                 if (last_line.indexOf('金蝶出库成功,单据编号:') == 0) {
                     let ticket_code = last_line.replace('金蝶出库成功,单据编号:', '');
                     await king_dee_start_lib.undo_sale_out(ticket_code, plan.stuff);
