@@ -810,8 +810,9 @@ module.exports = {
             });
             if (await plan.stuff.getKing_dee_start_config()) {
                 try {
+                    let kdc = plan.king_dee_comment ? plan.king_dee_comment + ';\n' : '';
                     let ticket_code = await king_dee_start_lib.sale_out(contract.customer_code, plan.stuff, plan.unit_price, plan.count);
-                    plan.king_dee_comment = '金蝶出库成功,单据编号:' + ticket_code;
+                    plan.king_dee_comment = kdc + '金蝶出库成功,单据编号:' + ticket_code;
                 } catch (error) {
                     console.error('金蝶出库失败:', error);
                     plan.king_dee_comment = '金蝶出库失败:' + error
@@ -834,6 +835,19 @@ module.exports = {
                 comment: '回退出货增加',
                 cash_increased: decrease_cash
             });
+            try {
+                let last_line = (plan.king_dee_comment || '').split('\n').pop();
+                if (last_line.indexOf('金蝶出库成功,单据编号:') == 0) {
+                    let ticket_code = last_line.replace('金蝶出库成功,单据编号:', '');
+                    await king_dee_start_lib.undo_sale_out(ticket_code, plan.stuff);
+                    plan.king_dee_comment += '\n金蝶出库已回退,单据编号:' + ticket_code;
+                }
+            } catch (error) {
+                console.error('金蝶回退出库失败:', error);
+                plan.king_dee_comment += '\n金蝶回退出库失败:' + error;
+            } finally {
+                await plan.save();
+            }
         }
     },
     verify_plan_pay: async function (_plan, _t) {
@@ -951,7 +965,7 @@ module.exports = {
         }
         return ret;
     },
-    deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no) {
+    deliver_plan: async function (_plan_id, _token, _count, p_weight, m_weight, p_time, m_time, ticket_no, seal_no, existing_t) {
         let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
         let status_req = 2;
         if (tmp_plan && tmp_plan.is_buy) {
@@ -971,7 +985,7 @@ module.exports = {
             if (!plan.checkout_delay) {
                 await this.close_a_plan(plan, _token, t);
             }
-        });
+        }, false, existing_t);
     },
     manual_deliver_plan: async function (_plan, _token) {
         await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name, "");

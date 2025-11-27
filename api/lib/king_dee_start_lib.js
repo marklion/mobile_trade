@@ -61,6 +61,20 @@ async function req_to_king_dee_start_full(king_dee_start_config, api_path, metho
 
 }
 module.exports = {
+    undo_sale_out: async function (ticket_code, stuff) {
+        let king_dee_start_config = await stuff.getKing_dee_start_config();
+        if (king_dee_start_config) {
+            await req_to_king_dee_start_full(king_dee_start_config,
+                "https://api.kingdee.com/jdy/v2/sys/common_operate",
+                "POST",
+                {
+                    entity_number: "sal_bill_outbound",
+                    numbers: [ticket_code],
+                    operate_type: "delete",
+                },
+            );
+        }
+    },
     sale_out: async function (customer_id, stuff, unit_price, count) {
         let king_dee_start_config = await stuff.getKing_dee_start_config();
         let req = {
