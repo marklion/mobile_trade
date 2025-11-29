@@ -11,11 +11,17 @@ class tld_style_scale : public common_scale_driver
     {
         std::string ret;
         buffer_ready += _frame;
-        while (buffer_ready.length() > 0 && buffer_ready[0] != 0x02)
+
+        auto pos = buffer_ready.find(static_cast<char>(0x02));
+        if (pos == std::string::npos)
         {
-            buffer_ready.erase(0, 1);
+            buffer_ready.clear();
         }
-        if (buffer_ready.length() >= g_packet_len)
+        else if (pos > 0)
+        {
+            buffer_ready.erase(0, pos);
+        }
+        if (buffer_ready.length() >= static_cast<size_t>(g_packet_len))
         {
             ret = buffer_ready.substr(0, g_packet_len);
             buffer_ready.clear();
@@ -23,6 +29,7 @@ class tld_style_scale : public common_scale_driver
 
         return ret;
     }
+
 public:
     using common_scale_driver::common_scale_driver;
     virtual double handle_buff(const std::string &_frame)
