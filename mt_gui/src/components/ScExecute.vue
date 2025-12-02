@@ -54,15 +54,17 @@
     <sc-upload ref="sc_up" @uploaded="refresh" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
     <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" v-if="show_delete_sc_content" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
-    <fui-backdrop :zIndex="8888" :show="show_one_att">
-        <movable-area scale-area class="movable-area">
-            <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
-                <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
-            </movable-view>
+    <fui-backdrop :zIndex="8888" :show="show_one_att" @click="show_one_att = false">
+        <view class="image-viewer-container" @click.stop>
+            <movable-area scale-area class="movable-area">
+                <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
+                    <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
+                </movable-view>
+            </movable-area>
             <view class="close-button-container">
                 <fui-icon @click="show_one_att=false" name="close" size="80" color="white"></fui-icon>
             </view>
-        </movable-area>
+        </view>
     </fui-backdrop>
 
     <fui-modal :zIndex="1004" width="600" v-if="show_reject_sc" :show="show_reject_sc" @click="reject_sc">
@@ -212,13 +214,22 @@ export default {
     z-index: 8889;
 }
 
+.image-viewer-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .movable-view {
     height: 100%;
     width: 100%;
 }
 
 .movable-area {
-    height: 90%;
+    height: 100%;
     width: 100%;
     overflow: hidden;
     z-index: 9999;
@@ -232,7 +243,6 @@ export default {
 .lookimg {
     width: 100%;
     height: 100%;
-    position: absolute;
-    top:-10vh;
+    display: block;
 }
 </style>
