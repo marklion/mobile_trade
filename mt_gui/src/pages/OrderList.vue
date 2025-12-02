@@ -248,7 +248,7 @@
                                     <view>
                                         {{sc_node.sc_content.input}}
                                     </view>
-                                    <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc = true"></fui-avatar>
+                                    <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc_image(index)"></fui-avatar>
                                 </view>
                             </view>
                         </u-cell>
@@ -287,7 +287,25 @@
 
         </scroll-view>
     </fui-bottom-popup>
-    <fui-gallery :urls="sc_attach_urls" :show="show_sc" @hide="show_sc = false"></fui-gallery>
+    <fui-backdrop :zIndex="8888" :show="show_sc" @click="show_sc = false">
+        <view class="sc-image-viewer" @click.stop>
+            <swiper class="sc-swiper" :current="sc_current_index" @change="on_sc_swiper_change" :indicator-dots="sc_attach_urls.length > 1" :indicator-color="'rgba(255,255,255,0.5)'" :indicator-active-color="'#ffffff'">
+                <swiper-item v-for="(item, index) in sc_attach_urls" :key="index">
+                    <movable-area scale-area class="sc-movable-area">
+                        <movable-view class="sc-movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
+                            <image class="sc-lookimg" :src="item.src" mode="aspectFit"></image>
+                        </movable-view>
+                    </movable-area>
+                </swiper-item>
+            </swiper>
+            <view class="sc-close-button-container">
+                <fui-icon @click="show_sc = false" name="close" size="80" color="white"></fui-icon>
+            </view>
+            <view class="sc-index-wrap" v-if="sc_attach_urls.length > 1">
+                <text class="sc-index">{{sc_current_index + 1}}/{{sc_attach_urls.length}}</text>
+            </view>
+        </view>
+    </fui-backdrop>
 
     <fui-bottom-popup :show="choose_company_show" @close="choose_company_show= false" z-index="1002">
         <fui-list>
@@ -519,6 +537,7 @@ export default {
             show_xxx_confirm: false,
             show_rollback_confirm: false,
             show_sc: false,
+            sc_current_index: 0,
             focus_plan: {
                 "behind_vehicle": {
                     "id": 1,
@@ -1124,6 +1143,27 @@ export default {
             this.select_active = false;
             this.plan_selected = [];
         },
+        show_sc_image: function (index) {
+            // 找到当前点击的图片在所有图片中的索引
+            let currentIndex = 0;
+            let count = 0;
+            if (this.focus_plan.sc_info) {
+                for (let i = 0; i < this.focus_plan.sc_info.length; i++) {
+                    if (this.focus_plan.sc_info[i].sc_content && this.focus_plan.sc_info[i].sc_content.attachment) {
+                        if (i === index) {
+                            currentIndex = count;
+                            break;
+                        }
+                        count++;
+                    }
+                }
+            }
+            this.sc_current_index = currentIndex;
+            this.show_sc = true;
+        },
+        on_sc_swiper_change: function (e) {
+            this.sc_current_index = e.detail.current;
+        },
         do_rollback: async function (e) {
             if (e.index == 1) {
                 let rules = [{
@@ -1546,5 +1586,62 @@ export default {
     z-index: 2000;
     top: 20rpx;
     right: 20rpx;
+}
+
+.sc-image-viewer {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.sc-swiper {
+    width: 100%;
+    height: 100%;
+}
+
+.sc-movable-area {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+.sc-movable-view {
+    height: 100%;
+    width: 100%;
+}
+
+.sc-lookimg {
+    width: 100%;
+    height: 100%;
+}
+
+.sc-close-button-container {
+    position: absolute;
+    bottom: 40rpx;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 8889;
+}
+
+.sc-index-wrap {
+    position: absolute;
+    top: 40rpx;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 8889;
+}
+
+.sc-index {
+    color: white;
+    font-size: 32rpx;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10rpx 20rpx;
+    border-radius: 20rpx;
 }
 </style>
