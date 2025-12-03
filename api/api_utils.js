@@ -173,6 +173,7 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
             ret.push({ code: { content: this.path } });
             ret.push({ h2: '描述' });
             ret.push({ p: description });
+            ret.push({ p: ((is_write && need_rbac && module != 'global')?'需要':'不需要') + '写权限验证' });
             ret.push({ h2: '参数' });
             ret = ret.concat(make_params_help_info(this.params));
             ret.push({ h2: '返回值' });

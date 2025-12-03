@@ -52,6 +52,9 @@ Company Reset
 Stuff Reset
     Clear Table  stuff
 
+Audit Reset
+    Clear Table  audit_config
+
 Contract Reset
     Clear Table  contract
     Clear Table  contract_stuff

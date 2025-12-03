@@ -78,13 +78,13 @@
             <el-button type="primary" @click="add_module">确定</el-button>
         </span>
     </el-dialog>
-    
+
 </div>
 </template>
 
 <script>
-import PageContent from '../components/PageContent.vue'
-import SelectSearch from '../components/SelectSearch.vue';
+import PageContent from '../../components/PageContent.vue'
+import SelectSearch from '../../components/SelectSearch.vue';
 export default {
     name: "Rbac",
     components: {
@@ -169,8 +169,8 @@ export default {
             });
         },
         add_user: function (row) {
-            this.add_user_diag = true; 
-            this.current_role_id = row.id; 
+            this.add_user_diag = true;
+            this.current_role_id = row.id;
         },
         confirm_add_user: async function () {
         if (!this.new_user_phone) {

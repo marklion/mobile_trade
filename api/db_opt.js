@@ -465,6 +465,10 @@ let db_opt = {
             need_checkout:{ type: DataTypes.BOOLEAN, defaultValue: false },
             need_audit:{ type: DataTypes.BOOLEAN, defaultValue: false },
         },
+        audit_config:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            url:{ type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -636,6 +640,9 @@ let db_opt = {
 
         _sq.models.king_dee_start_config.belongsTo(_sq.models.stuff);
         _sq.models.stuff.hasOne(_sq.models.king_dee_start_config);
+
+        _sq.models.audit_config.belongsTo(_sq.models.rbac_role);
+        _sq.models.rbac_role.hasMany(_sq.models.audit_config);
     },
     install: async function () {
         console.log('run install');

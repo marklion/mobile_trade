@@ -31,6 +31,7 @@ Prepare Companies And Users
     Add Module To Company  ${sale_company}[id]  sale_management
     Add Module To Company  ${sale_company}[id]  buy_management
     Add Module To Company  ${sale_company}[id]  exam
+    Add Module To Company  ${sale_company}[id]  audit
     Add Module To User  ${sc_admin_token}  1234  stuff
     Add Module To User  ${sc_admin_token}  1234  cash
     Add Module To User  ${sc_admin_token}  1234  scale
@@ -38,6 +39,7 @@ Prepare Companies And Users
     Add Module To User  ${sc_admin_token}  1234  sale_management
     Add Module To User  ${sc_admin_token}  1234  buy_management
     Add Module To User  ${sc_admin_token}  1234  exam
+    Add Module To User  ${sc_admin_token}  1234  audit
     ${no_need_sale_company}  Create One Company  sc_no_need
     Company Set Script  ${no_need_sale_company}[id]  normal
     ${sc_admin_no_need_token}  Login As Admin Of Company  ${no_need_sale_company}[id]  12341  sc_admin_no_need

@@ -61,7 +61,7 @@ export default {
                     name: this.$refs.select.selectedLabel,
                     id: this.filter_id
                 });
-                this.$refs.filter.cancel_search();
+                this.$refs.filter.cancel_search(this.$refs.filter.cur_page);
             });
         },
         search_item: function (input) {
