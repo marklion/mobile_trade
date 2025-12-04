@@ -313,7 +313,7 @@ export const asyncRoutes = [
         path: 'audit',
         name: 'audit',
         component: () => import('@/views/admin/Audit'),
-        meta: { title: '审批配置', roles: ['rbac', 'audit'] }
+        meta: { title: '审批管理', roles: ['audit'] }
       },
       {
         path: 'wx_msg',

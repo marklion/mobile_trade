@@ -54,6 +54,7 @@ Stuff Reset
 
 Audit Reset
     Clear Table  audit_config
+    Clear Table  audit_record
 
 Contract Reset
     Clear Table  contract

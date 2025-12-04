@@ -1,5 +1,6 @@
 const result_maker = require('./result');
 const rbac_lib = require('./lib/rbac_lib');
+const audit_lib = require('./lib/audit_lib');
 //params = {
 //         version:{have_to:true, type:String, mean:'版本号', example:'V1.1'},
 //         detail:{have_to:false,  type:Object, mean:'详细信息',
@@ -35,7 +36,8 @@ function make_params_help_info(params, is_params = true) {
         if (params[itr].type == Object || params[itr].type == Array) {
             let one_sub_p = {
                 ...
-                params[itr] };
+                params[itr]
+            };
             one_sub_p.name = itr;
             sub_p.push(one_sub_p);
         }
@@ -136,7 +138,7 @@ function api_param_walk_check(api_param_req, input) {
 function api_param_check(param_req, input) {
     let ret = '';
     let all_cols = Object.keys(param_req);
-    let tmp = {...input};
+    let tmp = { ...input };
     input = [];
     all_cols.forEach(itr => {
         let sub_ret = api_param_walk_check(param_req[itr], tmp[itr]);
@@ -144,8 +146,7 @@ function api_param_check(param_req, input) {
             ret = itr + sub_ret;
             return ret;
         }
-        else
-        {
+        else {
             input[itr] = tmp[itr];
         }
     });
@@ -173,7 +174,7 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
             ret.push({ code: { content: this.path } });
             ret.push({ h2: '描述' });
             ret.push({ p: description });
-            ret.push({ p: ((is_write && need_rbac && module != 'global')?'需要':'不需要') + '写权限验证' });
+            ret.push({ p: ((is_write && need_rbac && module != 'global') ? '需要' : '不需要') + '写权限验证' });
             ret.push({ h2: '参数' });
             ret = ret.concat(make_params_help_info(this.params));
             ret.push({ h2: '返回值' });
@@ -207,19 +208,25 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                 }
                 else {
                     try {
-                        let rbac_verify_ret = '';
-                        if (this.need_rbac) {
-                            rbac_verify_ret = await rbac_lib.rbac_check(token, this.module, this.is_write);
-                        }
-                        if (rbac_verify_ret.length > 0) {
-                            ret = result_maker(null, rbac_verify_ret);
+                        let guard_ret = await audit_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
+                        if (0 == guard_ret) {
+                            let rbac_verify_ret = '';
+                            if (this.need_rbac) {
+                                rbac_verify_ret = await rbac_lib.rbac_check(token, this.module, this.is_write);
+                            }
+                            if (rbac_verify_ret.length > 0) {
+                                ret = result_maker(null, rbac_verify_ret);
+                            }
+                            else {
+                                if (is_get_api && body.pageNo == undefined) {
+                                    body.pageNo = 0;
+                                }
+                                let result = await this.handler(body, token);
+                                ret = result_maker(result, '', make_req_example(this.result))
+                            }
                         }
                         else {
-                            if (is_get_api && body.pageNo == undefined) {
-                                body.pageNo = 0;
-                            }
-                            let result = await this.handler(body, token);
-                            ret = result_maker(result, '', make_req_example(this.result))
+                            ret = { audit_id: guard_ret, result: {result:true}, err_msg:'' };
                         }
                     } catch (error) {
                         console.log(error);

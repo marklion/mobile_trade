@@ -29,3 +29,19 @@ Del Audit Config
 
 Clear Audit Config
     Audit Reset
+
+Approve Audit Record
+    [Arguments]  ${record_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary    id=${record_id}  is_approve=${True}
+    Req to Server    /audit/audit_req  ${token}    ${req}
+
+Reject Audit Record
+    [Arguments]  ${record_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary    id=${record_id}  is_approve=${False}
+    Req to Server    /audit/audit_req  ${token}    ${req}
+
+Get Audit Records
+    [Arguments]  ${token}=${sc_admin_token}  ${status}=${None}
+    ${req}  Create Dictionary  status=${status}
+    ${records}  Req Get to Server    /audit/get_audit4req   ${token}    records  ${-1}  &{req}
+    RETURN  ${records}

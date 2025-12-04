@@ -165,7 +165,7 @@ Del A Stuff From Contract
     Req to Server  /sale_management/contract_del_stuff  ${sc_admin_token}  ${req}
 
 Charge To A Company
-    [Arguments]  ${company_id}  ${cash}  ${comment}=test_charge
+    [Arguments]  ${company_id}  ${cash}  ${comment}=test_charge  ${check_audit}=${False}
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
     ${contract_id}  Set Variable
     FOR  ${itr}  IN  @{found_contracts}
@@ -176,7 +176,7 @@ Charge To A Company
         END
     END
     ${req}  Create Dictionary  contract_id=${contract_id}   cash_increased=${cash}  comment=${comment}
-    Req to Server  /cash/charge  ${sc_admin_token}  ${req}
+    Req to Server  /cash/charge  ${sc_admin_token}  ${req}  check_audit=${check_audit}
     RETURN  ${contract_id}
 
 Get Cash Of A Company

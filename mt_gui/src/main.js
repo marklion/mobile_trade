@@ -14,6 +14,23 @@ Vue.prototype.$remote_url = function () {
     return process.env.REMOTE_HOST;
   }
 };
+function showInputDialog(title = '请输入', placeholder = '') {
+  return new Promise((resolve, reject) => {
+    uni.showModal({
+      title,
+      editable: true,
+      placeholderText: placeholder,
+      success: (res) => {
+        if (res.confirm) {
+          resolve(res.content)
+        } else {
+          reject(new Error('用户取消输入'))
+        }
+      },
+      fail: reject
+    })
+  })
+}
 Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
   return new Promise((resolve, reject) => {
     if (!noneed_loading) {
@@ -26,7 +43,7 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
       header: {
         'token': uni.getStorageSync('token'),
       },
-      success: (res) => {
+      success: async (res) => {
         let data = res.data;
         if (data.err_msg.length > 0) {
           uni.showToast({
@@ -40,6 +57,18 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
           });
         }
         else {
+          if (data.audit_id != undefined && data.audit_id > 0) {
+            let comment;
+            try {
+              comment = await showInputDialog('该操作需要审批', '请描述审批事项');
+            } catch (error) {
+
+            }
+            await Vue.prototype.$send_req('/audit/append_comment', {
+              id: data.audit_id,
+              comment: comment,
+            }, true);
+          }
           resolve(data.result)
         }
       },
@@ -47,8 +76,7 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
         reject(res)
       },
       complete: () => {
-        if (!noneed_loading)
-        {
+        if (!noneed_loading) {
           uni.hideLoading({ noConflict: true });
         }
       }
