@@ -4,7 +4,7 @@
 		:style="wrapStyles" @tap="handleClick">
 		<image class="fui-avatar__img" :style="styles"
 			:class="[radius===-1?'fui-avatar__'+shape:'',width?'':'fui-avatar__size-'+size]" :src="showImg" :mode="mode"
-			v-if="src && src!==true" :webp="webp" :lazy-load="lazyLoad" @error="handleError"></image>
+			v-if="src && src!==true" :webp="webp" :lazy-load="lazyLoad" @load="handleLoad" @error="handleError"></image>
 		<text class="fui-avatar__text" :class="[width?'':'fui-avatar__text-'+size]" v-if="!src && src!==true && text"
 			:style="textStyles">{{text}}</text>
 		<slot></slot>
@@ -141,7 +141,15 @@
 			this.src && (this.showImg = this.src);
 		},
 		methods: {
+			handleLoad(e) {
+				// #ifdef MP-WEIXIN
+				console.log('[fui-avatar] 图片加载成功:', this.showImg);
+				// #endif
+			},
 			handleError(e) {
+				// #ifdef MP-WEIXIN
+				console.error('[fui-avatar] 图片加载失败:', this.showImg, e);
+				// #endif
 				if (this.src) {
 					this.errorSrc && (this.showImg = this.errorSrc);
 					this.$emit('error', {

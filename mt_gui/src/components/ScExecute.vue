@@ -38,7 +38,7 @@
                 <view slot="value">
                     <view v-if="item.sc_content">
                         {{item.sc_content.input}}
-                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
+                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_image(item.sc_content.attachment)"></fui-avatar>
                     </view>
                 </view>
                 <view slot="right-icon">
@@ -112,6 +112,9 @@ export default {
     },
     methods: {
         refresh: function () {
+            // 每次刷新安检列表时，重置图片预览状态，避免再次打开审批时自动弹出上次查看的大图
+            this.show_one_att = false;
+            this.one_att = [''];
             this.$refs.sc_confirm.refresh();
         },
         prepare_reject_sc: function (item) {
@@ -197,6 +200,10 @@ export default {
                 await this.pass_sc(this.focus_sc_content_id, this.reject_sc_comment);
             }
             this.show_reject_sc = false;
+        },
+        show_image: function (attachment) {
+            this.show_one_att = true;
+            this.one_att = [this.$convert_attach_url(attachment)];
         },
     },
 }

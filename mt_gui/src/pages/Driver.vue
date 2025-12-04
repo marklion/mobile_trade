@@ -443,6 +443,9 @@ export default {
             console.log(e);
         },
         prepare_sc_confirm: function () {
+            // 打开安检结果弹窗前，重置图片预览状态，避免沿用上一次查看的大图
+            this.show_one_att = false;
+            this.one_att = [''];
             this.show_sc = true;
             this.$nextTick(() => {
                 this.$refs.sc_confirm.refresh();
@@ -526,6 +529,9 @@ export default {
             console.log(e);
             if (e.text == '安检') {
                 this.focus_plan = e.item;
+                // 每次进入安检前都重置图片预览，避免还没选择图片时就自动弹出旧图片
+                this.show_one_att = false;
+                this.one_att = [''];
                 this.show_sc = true;
                 this.$nextTick(() => {
                     this.$refs.sc_confirm.refresh();
