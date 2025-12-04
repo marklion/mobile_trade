@@ -37,9 +37,9 @@ export default {
         search_key: Array,
     },
     methods: {
-        cancel_search: function () {
+        cancel_search: function (pageNo = 1) {
             this.for_search = false;
-            this.refresh(1);
+            this.refresh(pageNo);
         },
         do_search: async function () {
             this.for_search = true;
@@ -84,6 +84,7 @@ export default {
                 req_body.pageNo = this.search_page - 1;
                 let resp = await this.$send_req(this.req_url, req_body);
                 fetch_ret = resp[this.body_key];
+                this.cur_page = req_body.pageNo+1;
             }
             return fetch_ret;
         },

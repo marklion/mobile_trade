@@ -300,14 +300,20 @@ export const asyncRoutes = [
       {
         path: 'rbac',
         name: 'rbac',
-        component: () => import('@/views/Rbac'),
+        component: () => import('@/views/admin/Rbac'),
         meta: { title: '权限配置', roles: ['rbac'] }
       },
       {
         path: 'u8c',
         name: 'u8c',
-        component: () => import('@/views/u8c'),
+        component: () => import('@/views/admin/u8c'),
         meta: { title: 'u8c同步', roles: ['u8c'] }
+      },
+      {
+        path: 'audit',
+        name: 'audit',
+        component: () => import('@/views/admin/Audit'),
+        meta: { title: '审批管理', roles: ['audit'] }
       },
       {
         path: 'wx_msg',

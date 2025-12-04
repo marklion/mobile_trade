@@ -1,4 +1,4 @@
-                <template>
+<template>
 <div>
     <vue-grid align="stretch" justify="around">
         <vue-cell width="12of12">
