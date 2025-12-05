@@ -1093,7 +1093,7 @@ module.exports = {
     mark_dup_info: function (plan) {
         setTimeout(async () => {
             plan = await util_lib.get_single_plan_by_id(plan.id);
-            if (plan.stuff.company.dup_not_limit) {
+            if (plan.stuff.company.dup_not_permit) {
                 this.checkDuplicatePlans(plan).then((resp) => {
                     plan.dup_info = resp.message;
                     plan.save();
