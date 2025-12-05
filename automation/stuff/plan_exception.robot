@@ -462,7 +462,20 @@ Dup Deliver Protect
     ${minus}  Evaluate  ${before_balance} - ${after_balance}
     Should Be Equal As Numbers    ${minus}    ${plan}[unit_price]
 
-Dup Plan Limit Verify
+Dup Plan Permit Verify
+    [Teardown]  Plan Reset
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan1}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan2}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan    ${plan1}
+    Confirm A Plan    ${plan2}
+    Sleep  600ms
+    ${plan}  Get Plan By Id  ${plan1}[id]
+    Should Not Be Empty    ${plan}[duplicateInfo]
+
+Dup Plan Not Permit Verify
     [Teardown]  Run Keywords  Plan Reset  AND  Set Dup Not Permit    ${True}
     [Setup]  Set Dup Not Permit    ${False}
     ${mv}  Search Main Vehicle by Index  0
