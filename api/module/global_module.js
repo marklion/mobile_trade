@@ -1970,6 +1970,20 @@ module.exports = {
                 return { show_sc_in_field: company.show_sc_in_field };
             }
         },
+        get_dup_not_permit:{
+            name: '获取重复不允许录入',
+            description: '获取重复不允许录入',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                dup_not_permit: { type: Boolean, mean: '是否开启重复不允许录入', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { dup_not_permit: company.dup_not_permit };
+            }
+        },
         get_buy_config_hard: {
             name: '获取采购严格模式',
             description: '获取采购严格模式',

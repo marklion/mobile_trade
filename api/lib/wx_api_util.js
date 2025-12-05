@@ -414,7 +414,9 @@ module.exports = {
                 tar_array = tar_array.concat(await filter_related_users(module_name, users));
                 tar_array.forEach(async item => {
                     req.touser = this.openid_map.get_pub_openid(item);
-                    send_wx_msg({ ...req }, item);
+                    if (req.touser.length > 0) {
+                        send_wx_msg({ ...req }, item);
+                    }
                 });
             });
         });
@@ -439,7 +441,9 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(plan.driver.open_id)
         }
-        await send_wx_msg(req, plan.driver.open_id);
+        if (req.touser.length > 0) {
+            await send_wx_msg(req, plan.driver.open_id);
+        }
     },
     plan_scale_msg: async function (plan) {
         let req = {
@@ -475,7 +479,9 @@ module.exports = {
         tar_array = tar_array.concat(await filter_related_users(module_name, users));
         tar_array.forEach(item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req }, item);
+            if (req.touser.length > 0) {
+                send_wx_msg({ ...req }, item);
+            }
         });
     },
     bidding_start_msg: async function (bidding_name, begin_time, user_open_id) {
@@ -494,7 +500,9 @@ module.exports = {
             },
             touser: this.openid_map.get_pub_openid(user_open_id)
         }
-        await send_wx_msg(req, user_open_id)
+        if (req.touser.length > 0) {
+            await send_wx_msg(req, user_open_id)
+        }
     },
     bidding_price_msg: async function (bc, price_user, price) {
         let stuff = await bc.getStuff()
@@ -520,7 +528,9 @@ module.exports = {
         tar_array.forEach(async item => {
             if (price != '隐藏') {
                 req.touser = this.openid_map.get_pub_openid(item);
-                send_wx_msg({ ...req }, item);
+                if (req.touser.length > 0) {
+                    send_wx_msg({ ...req }, item);
+                }
             }
         });
     },
@@ -542,7 +552,9 @@ module.exports = {
             }
         }
         req.touser = this.openid_map.get_pub_openid(bc.bidding_turns[0].bidding_items[0].rbac_user.open_id);
-        send_wx_msg({ ...req }, bc.bidding_turns[0].bidding_items[0].rbac_user.open_id);
+        if (req.touser.length > 0) {
+            send_wx_msg({ ...req }, bc.bidding_turns[0].bidding_items[0].rbac_user.open_id);
+        }
     },
     bidding_finish_msg: async function (bc) {
         let stuff = await bc.getStuff()
@@ -579,7 +591,9 @@ module.exports = {
 
         tar_array.forEach(async item => {
             req.touser = this.openid_map.get_pub_openid(item);
-            send_wx_msg({ ...req }, item);
+            if (req.touser.length > 0) {
+                send_wx_msg({ ...req }, item);
+            }
         });
     },
     send_sc_check_msg_to_driver: async function (check_msg, order_id, openId) {

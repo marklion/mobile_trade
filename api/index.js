@@ -276,7 +276,7 @@ else {
         });
     }
 
-    add_min_timer(207, async () => {
+    add_min_timer(60*24, async () => {
         await wx_api_util.openid_map.sync_map();
     });
     add_min_timer(10, async () => {

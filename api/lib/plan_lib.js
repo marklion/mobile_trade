@@ -393,7 +393,7 @@ module.exports = {
 
         return ret;
     },
-    checkDuplicatePlans: async function (current_plan) {
+    checkDuplicatePlans: async function (current_plan, only_one_company = false) {
         try {
             let sq = db_opt.get_sq();
             // 查找 plan 表中除了当前 planId 以外的未关闭状态的重复计划
@@ -403,22 +403,31 @@ module.exports = {
                     is_behind: true
                 }
             });
+            let emp_vehicle_id = empty_plate_vehicle ? empty_plate_vehicle.id : 0;
+            let where_condition = {
+                id: { [db_opt.Op.ne]: current_plan.id },
+                status: { [db_opt.Op.ne]: 3 },
+                [db_opt.Op.or]: [
+                    { mainVehicleId: current_plan.main_vehicle.id },
+                    {
+                        [db_opt.Op.and]: [
+                            { behindVehicleId: current_plan.behind_vehicle.id },
+                            { behindVehicleId: { [db_opt.Op.ne]: emp_vehicle_id } }
+                        ],
+                    },
+                    { driverId: current_plan.driver.id }
+                ],
+                plan_time: current_plan.plan_time
+            };
+            if (only_one_company) {
+                where_condition.stuffId = current_plan.stuffId;
+                where_condition.status = {
+                    [db_opt.Op.in]: [1, 2]
+                }
+            }
+
             const duplicatePlan = await sq.models.plan.findOne({
-                where: {
-                    id: { [db_opt.Op.ne]: current_plan.id },
-                    status: { [db_opt.Op.ne]: 3 },
-                    [db_opt.Op.or]: [
-                        { mainVehicleId: current_plan.main_vehicle.id },
-                        {
-                            [db_opt.Op.and]: [
-                                { behindVehicleId: current_plan.behind_vehicle.id },
-                                { behindVehicleId: { [db_opt.Op.ne]: empty_plate_vehicle.id } }
-                            ],
-                        },
-                        { driverId: current_plan.driver.id }
-                    ],
-                    plan_time: current_plan.plan_time
-                },
+                where: where_condition,
                 include: util_lib.plan_detail_include()
             });
 
@@ -624,6 +633,12 @@ module.exports = {
             let company_id = 0;
             if (plan.company) {
                 company_id = plan.company.id;
+            }
+            if (!plan.stuff.company.dup_not_limit) {
+                let duplicateCheck = await this.checkDuplicatePlans(plan, true);
+                if (duplicateCheck.isDuplicate) {
+                    throw { err_msg: duplicateCheck.message };
+                }
             }
             // 开启资质检查
             if (plan.stuff.company.check_qualification) {
@@ -1076,11 +1091,14 @@ module.exports = {
         }
     },
     mark_dup_info: function (plan) {
-        setTimeout(() => {
-            this.checkDuplicatePlans(plan).then((resp) => {
-                plan.dup_info = resp.message;
-                plan.save();
-            })
+        setTimeout(async () => {
+            plan = await util_lib.get_single_plan_by_id(plan.id);
+            if (plan.stuff.company.dup_not_limit) {
+                this.checkDuplicatePlans(plan).then((resp) => {
+                    plan.dup_info = resp.message;
+                    plan.save();
+                })
+            }
         }, 500);
     },
     record_plan_history: async function (_plan, _operator, _action_type, _transation) {

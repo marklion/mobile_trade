@@ -1259,6 +1259,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_dup_not_permit: {
+            name: '设置不允许重复录入',
+            description: '设置不允许重复录入',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                dup_not_permit: { type: Boolean, have_to: true, mean: '是否允许重复录入', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.dup_not_permit = body.dup_not_permit;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_buy_config_hard: {
             name: '设置采购严格模式',
             description: '设置采购严格模式',

@@ -462,6 +462,16 @@ Dup Deliver Protect
     ${minus}  Evaluate  ${before_balance} - ${after_balance}
     Should Be Equal As Numbers    ${minus}    ${plan}[unit_price]
 
+Dup Plan Limit Verify
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Dup Not Permit    ${True}
+    [Setup]  Set Dup Not Permit    ${False}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan1}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    ${plan2}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan    ${plan1}
+    Confirm Failed    ${plan2}
 
 *** Keywords ***
 Add User Only Having Cash
