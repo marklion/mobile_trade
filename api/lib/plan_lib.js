@@ -634,7 +634,7 @@ module.exports = {
             if (plan.company) {
                 company_id = plan.company.id;
             }
-            if (!plan.stuff.company.dup_not_limit) {
+            if (!plan.stuff.company.dup_not_permit) {
                 let duplicateCheck = await this.checkDuplicatePlans(plan, true);
                 if (duplicateCheck.isDuplicate) {
                     throw { err_msg: duplicateCheck.message };
