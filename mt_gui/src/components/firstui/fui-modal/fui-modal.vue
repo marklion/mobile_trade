@@ -173,7 +173,9 @@
 			},
 			handleClick(e, index) {
 				// #ifdef APP-NVUE
-				e.stopPropagation();
+				if (e && e.stopPropagation) {
+					e.stopPropagation();
+				}
 				// #endif
 				if (!this.isShow) return;
 				this.$emit('click', {

@@ -38,7 +38,7 @@
                 <view slot="value">
                     <view v-if="item.sc_content">
                         {{item.sc_content.input}}
-                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
+                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_image(item.sc_content.attachment)"></fui-avatar>
                     </view>
                 </view>
                 <view slot="right-icon">
@@ -54,15 +54,17 @@
     <sc-upload ref="sc_up" @uploaded="refresh" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
     <fui-modal :zIndex="1003" width="600" descr="确定要删除吗？" v-if="show_delete_sc_content" :show="show_delete_sc_content" @click="delete_sc_content">
     </fui-modal>
-    <fui-backdrop :zIndex="8888" :show="show_one_att">
-        <movable-area scale-area class="movable-area">
-            <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
-                <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
-            </movable-view>
+    <fui-backdrop :zIndex="8888" :show="show_one_att" @click="show_one_att = false">
+        <view class="image-viewer-container" @click.stop>
+            <movable-area scale-area class="movable-area">
+                <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
+                    <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
+                </movable-view>
+            </movable-area>
             <view class="close-button-container">
                 <fui-icon @click="show_one_att=false" name="close" size="80" color="white"></fui-icon>
             </view>
-        </movable-area>
+        </view>
     </fui-backdrop>
 
     <fui-modal :zIndex="1004" width="600" v-if="show_reject_sc" :show="show_reject_sc" @click="reject_sc">
@@ -110,6 +112,9 @@ export default {
     },
     methods: {
         refresh: function () {
+            // 每次刷新安检列表时，重置图片预览状态，避免再次打开审批时自动弹出上次查看的大图
+            this.show_one_att = false;
+            this.one_att = [''];
             this.$refs.sc_confirm.refresh();
         },
         prepare_reject_sc: function (item) {
@@ -196,6 +201,10 @@ export default {
             }
             this.show_reject_sc = false;
         },
+        show_image: function (attachment) {
+            this.show_one_att = true;
+            this.one_att = [this.$convert_attach_url(attachment)];
+        },
     },
 }
 </script>
@@ -212,13 +221,22 @@ export default {
     z-index: 8889;
 }
 
+.image-viewer-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .movable-view {
     height: 100%;
     width: 100%;
 }
 
 .movable-area {
-    height: 90%;
+    height: 100%;
     width: 100%;
     overflow: hidden;
     z-index: 9999;
@@ -232,7 +250,6 @@ export default {
 .lookimg {
     width: 100%;
     height: 100%;
-    position: absolute;
-    top:-10vh;
+    display: block;
 }
 </style>
