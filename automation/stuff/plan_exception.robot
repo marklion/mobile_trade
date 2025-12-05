@@ -476,8 +476,8 @@ Dup Plan Permit Verify
     Should Not Be Empty    ${plan}[duplicateInfo]
 
 Dup Plan Not Permit Verify
-    [Teardown]  Run Keywords  Plan Reset  AND  Set Dup Not Permit    ${True}
-    [Setup]  Set Dup Not Permit    ${False}
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Dup Not Permit    ${False}
+    [Setup]  Set Dup Not Permit    ${True}
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
     ${dv}  Search Driver by Index  0
@@ -485,6 +485,9 @@ Dup Plan Not Permit Verify
     ${plan2}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Plan    ${plan1}
     Confirm Failed    ${plan2}
+    Sleep  600ms
+    ${plan}  Get Plan By Id  ${plan2}[id]
+    Should Be Empty    ${plan}[duplicateInfo]
 
 *** Keywords ***
 Add User Only Having Cash
