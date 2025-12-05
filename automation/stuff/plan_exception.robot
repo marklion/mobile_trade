@@ -473,7 +473,7 @@ Dup Plan Permit Verify
     Confirm A Plan    ${plan2}
     Sleep  600ms
     ${plan}  Get Plan By Id  ${plan1}[id]
-    Should Not Be Empty    ${plan}[duplicateInfo]
+    Should Not Be Empty    ${plan}[duplicateInfo][message]
 
 Dup Plan Not Permit Verify
     [Teardown]  Run Keywords  Plan Reset  AND  Set Dup Not Permit    ${False}
@@ -487,7 +487,7 @@ Dup Plan Not Permit Verify
     Confirm Failed    ${plan2}
     Sleep  600ms
     ${plan}  Get Plan By Id  ${plan2}[id]
-    Should Be Empty    ${plan}[duplicateInfo]
+    Should Be Empty    ${plan}[duplicateInfo][message]
 
 *** Keywords ***
 Add User Only Having Cash
