@@ -1265,7 +1265,7 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
-                dup_not_permit: { type: Boolean, have_to: true, mean: '是否允许重复录入', example: true }
+                dup_not_permit: { type: Boolean, have_to: true, mean: '是否不允许重复录入', example: true }
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
