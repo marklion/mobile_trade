@@ -219,7 +219,7 @@ function writeStringToFile(filePath, content) {
 
 async function send_wx_msg(req, mp_open_id) {
     let token = await get_pub_token()
-    if (token) {
+    if (token && req.touser.length > 0) {
         if (proxy_is_open()) {
             await call_wx_api('https://api.weixin.qq.com/cgi-bin/message/template/send', req, 'POST');
         }

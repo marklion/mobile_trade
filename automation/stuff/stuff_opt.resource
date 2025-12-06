@@ -605,3 +605,8 @@ Set Extra Info to Plan
     [Arguments]  ${plan_id}  ${title_id}  ${content}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan_id}  extra_info_config_id=${title_id}  extra_info=${content}
     Req to Server    /sale_management/set_extra_info    ${token}    ${req}
+
+Set Dup Not Permit
+    [Arguments]   ${is_open}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  dup_not_permit=${is_open}
+    Req to Server    /stuff/set_dup_not_permit  ${token}    ${req}
