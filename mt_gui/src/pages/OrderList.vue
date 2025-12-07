@@ -1592,6 +1592,8 @@ export default {
     width: 100%;
     height: 100%;
     position: relative;
+    padding-bottom: 200rpx;
+    box-sizing: border-box;
 }
 
 .sc-swiper {
