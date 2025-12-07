@@ -225,9 +225,8 @@ export default {
     width: 100%;
     height: 100%;
     position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    padding-bottom: 200rpx;
+    box-sizing: border-box;
 }
 
 .movable-view {
