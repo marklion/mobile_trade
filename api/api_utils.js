@@ -208,7 +208,10 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                 }
                 else {
                     try {
-                        let guard_ret = await audit_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
+                        let guard_ret = 0;
+                        if (token) {
+                            guard_ret = await audit_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
+                        }
                         if (0 == guard_ret) {
                             let rbac_verify_ret = '';
                             if (this.need_rbac) {
@@ -226,7 +229,7 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                             }
                         }
                         else {
-                            ret = { audit_id: guard_ret, result: {result:true}, err_msg:'' };
+                            ret = { audit_id: guard_ret, result: { result: true }, err_msg: '' };
                         }
                     } catch (error) {
                         console.log(error);
