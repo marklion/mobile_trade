@@ -339,7 +339,9 @@ Confirm Vehicle
 
 Deliver A Plan
     [Arguments]  ${plan}  ${count}
-    ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=2018-01-01  m_time=2018-01-01
+    ${p_time}  Get Current Date  result_format=%Y-%m-%d %H:%M:%S
+    ${m_time}  Get Current Date  result_format=%Y-%m-%d %H:%M:%S
+    ${req}  Create Dictionary  plan_id=${plan}[id]  p_weight=${10}  m_weight=${30}  count=${count}  p_time=${p_time}  m_time=${m_time}
     Req to Server  /scale/deliver  ${sc_admin_token}  ${req}
 
 Deliver A Plan Dup
@@ -470,6 +472,11 @@ Set Stuff Need Expect Weight
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${expect_weight}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  need_expect_weight=${expect_weight}
     Req to Server   /stuff/expect_weight_config     ${token}  ${req}
+
+Set Stuff Ticket Prefix
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${prefix}=TPX
+    ${req}  Create Dictionary  stuff_id=${stuff_id}  ticket_prefix=${prefix}
+    Req to Server   /stuff/set_ticket_prefix     ${token}  ${req}
 
 Checkout A Plan
     [Arguments]  ${plan}  ${token}=${bc1_user_token}
