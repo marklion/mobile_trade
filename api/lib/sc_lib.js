@@ -46,7 +46,7 @@ module.exports = {
                 if (hasChanged) {
                     let sc_contents = await tar_req.getSc_contents();
                     for (let sc_content of sc_contents) {
-                        if (sc_content.passed) {    
+                        if (sc_content.passed) {
                             sc_content.passed = false;
                             sc_content.comment = '安检配置项已变更';
                             await sc_content.save();
@@ -108,8 +108,11 @@ module.exports = {
         let count = await plan.stuff.countSc_reqs();
         for (let index = 0; index < found_ret.length; index++) {
             const element = found_ret[index].toJSON();
-            if (element.sc_contents.length == 1) {
+            if (element.sc_contents.length >= 1) {
                 element.sc_content = element.sc_contents[0];
+                for (let extra_content of element.sc_contents.slice(1)) {
+                    await sq.models.sc_content.destroy({ where: { id: extra_content.id } });
+                }
             }
             delete element.sc_contents;
             ret.reqs.push(element);

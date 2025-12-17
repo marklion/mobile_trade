@@ -1104,6 +1104,23 @@ module.exports = {
     record_plan_history: async function (_plan, _operator, _action_type, _transation) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type }, _transation);
     },
+    rp_history_checkin:async function(_plan) {
+        await this.record_plan_history(_plan, _plan.driver.name, "排号")
+    },
+    rp_history_call:async function(_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, "叫号");
+    },
+    rp_history_confirm_deliver:async function(_plan, _operator) {
+        let content = "取消确认装卸货";
+        if (_plan.confirmed)
+        {
+            content = "确认装卸货";
+        }
+        await this.record_plan_history(_plan, _operator, content);
+    },
+    rp_history_cancel_checkin:async function(_plan, _operator) {
+        await this.record_plan_history(_plan, _operator, "取消排号");
+    },
     rp_history_create: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '创建');
     },

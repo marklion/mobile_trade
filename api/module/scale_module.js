@@ -3,6 +3,7 @@ const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const util_lib = require('../lib/util_lib');
 module.exports = {
     name: 'scale',
     description: '计量管理',
@@ -31,6 +32,8 @@ module.exports = {
                         throw { err_msg: '已经进厂' };
                     }
                     await field_lib.handle_cancel_check_in(plan);
+                    let user = await rbac_lib.get_user_by_token(token);
+                    await plan_lib.rp_history_cancel_checkin(plan, user.name);
                 });
                 return { result: true };
             },
@@ -68,6 +71,9 @@ module.exports = {
             },
             func: async function (body, token) {
                 await plan_lib.plan_call_vehicle(body.plan_id, token);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                let user = await rbac_lib.get_user_by_token(token);
+                await plan_lib.rp_history_call(plan, user.name);
                 return { result: true };
             },
         },
@@ -173,6 +179,8 @@ module.exports = {
                     plan.drop_take_zone_name = body.drop_take_zone_name;
                     await field_lib.handle_confirm_vehicle(plan, body.is_confirm);
                     await plan.save();
+                    let user = await rbac_lib.get_user_by_token(token);
+                    await plan_lib.rp_history_confirm_deliver(plan, user.name);
                 });
                 return { result: true };
             }

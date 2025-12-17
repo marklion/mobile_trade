@@ -533,6 +533,7 @@ module.exports = {
                     let reason = await checkif_plan_checkinable(plan, driver, body.lat, body.lon);
                     if (reason === '') {
                         await require('../lib/field_lib').handle_driver_check_in(plan);
+                        await plan_lib.rp_history_checkin(plan);
                         return { result: true };
                     }
                     else {
