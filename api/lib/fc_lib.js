@@ -295,6 +295,8 @@ module.exports = {
             ret.behind_vehicle = plan.behind_vehicle.plate;
             ret.driver_signature = plan.driver.signature_pic;
             ret.driver_name = plan.driver.name;
+            ret.seal_no = plan.seal_no;
+            ret.count = plan.count;
         }
         if (!ret.finish_time) {
             ret = undefined;
