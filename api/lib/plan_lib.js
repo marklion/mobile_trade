@@ -388,6 +388,12 @@ module.exports = {
                 ret.stuff.concern_fapiao = _plan.stuff.concern_fapiao;
                 ret.fapiao_delivered = _plan.fapiao_delivered;
                 ret.extra_info_contents = _plan.extra_info_contents;
+                if (ret.fc_info ) {
+                    for (let fc_table_key in ret.fc_info) {
+                        let orig_fc_info = await fc_lib.get_all_fc_plan_table(_plan);
+                        ret.fc_info[fc_table_key].template_path = orig_fc_info[fc_table_key]?.template_path;
+                    }
+                }
             }
         }
 
@@ -1104,21 +1110,20 @@ module.exports = {
     record_plan_history: async function (_plan, _operator, _action_type, _transation) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type }, _transation);
     },
-    rp_history_checkin:async function(_plan) {
+    rp_history_checkin: async function (_plan) {
         await this.record_plan_history(_plan, _plan.driver.name, "排号")
     },
-    rp_history_call:async function(_plan, _operator) {
+    rp_history_call: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, "叫号");
     },
-    rp_history_confirm_deliver:async function(_plan, _operator) {
+    rp_history_confirm_deliver: async function (_plan, _operator) {
         let content = "取消确认装卸货";
-        if (_plan.confirmed)
-        {
+        if (_plan.confirmed) {
             content = "确认装卸货";
         }
         await this.record_plan_history(_plan, _operator, content);
     },
-    rp_history_cancel_checkin:async function(_plan, _operator) {
+    rp_history_cancel_checkin: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, "取消排号");
     },
     rp_history_create: async function (_plan, _operator) {

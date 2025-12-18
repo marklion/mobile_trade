@@ -3,11 +3,12 @@ const path = require('path')
 
 const currentScript = process.env.npm_lifecycle_event;
 module.exports = {
+    transpileDependencies: ['uview-ui'],
     devServer: {
         open: true,
         hot: true,
         proxy: {
-            '/api/v1/upload_file':{
+            '/api/v1/upload_file': {
                 target: process.env.REMOTE_HOST,
                 changeOrigin: true,
             },
@@ -15,11 +16,11 @@ module.exports = {
                 target: 'http://localhost:8080',
                 changeOrigin: true,
             },
-            '/uploads':{
+            '/uploads': {
                 target: process.env.REMOTE_HOST,
                 changeOrigin: true,
             },
-            '/logo_res':{
+            '/logo_res': {
                 target: process.env.REMOTE_HOST,
                 changeOrigin: true,
             },
