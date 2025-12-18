@@ -124,3 +124,25 @@ Change Price of Finished Plan
     ${new_balance}  Get Cash Of A Company    ${plan}[company][name]
     ${increased}=    Evaluate    (${new_balance} - ${orig_balance})
     Should Be Equal As Numbers    ${increased}    ${-100}
+
+Change Price Finished Plan Keep Ticket No
+    [Setup]  Set Finished Price Change Switch    ${True}
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Finished Price Change Switch    ${False}
+    Set Stuff Ticket Prefix
+    Create Test Data
+    ${plan}  Get Plan By Id    ${TEST_PLAN_IDS}[0]
+    Confirm A Plan    ${plan}
+    Manual Pay A Plan    ${plan}
+    Deliver A Plan    ${plan}    ${20}
+    ${plan}  Get Plan By Id    ${TEST_PLAN_IDS}[1]
+    Confirm A Plan    ${plan}
+    Manual Pay A Plan    ${plan}
+    Deliver A Plan    ${plan}    ${20}
+    ${plan}  Get Plan By Id    ${TEST_PLAN_IDS}[0]
+    ${orig_ticket_no}  Set Variable  ${plan}[ticket_no]
+    @{plan_ids}  Create List  ${TEST_PLAN_IDS}[0]
+    Do Change Price By Plan    ${plan_ids}    ${55}
+    ${plan}  Get Plan By Id    ${TEST_PLAN_IDS}[0]
+    ${new_ticket_no}  Set Variable  ${plan}[ticket_no]
+    Should Be Equal    ${new_ticket_no}    ${orig_ticket_no}
+    Set Stuff Ticket Prefix  ${test_stuff}[id]  ${sc_admin_token}  ${EMPTY}

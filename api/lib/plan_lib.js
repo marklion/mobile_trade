@@ -1121,7 +1121,10 @@ module.exports = {
     },
     rp_history_deliver: async function (_plan, _operator, _ticket_no) {
         if (_plan.count > 0) {
-            _plan.ticket_no = await this.generate_ticket_no(_plan, _ticket_no);
+            if (!_plan.ticket_no || _plan.ticket_no.length == 0) {
+                _plan.ticket_no = await this.generate_ticket_no(_plan, _ticket_no);
+            }
+
             await _plan.save();
         }
         await wx_api_util.plan_scale_msg(_plan);
