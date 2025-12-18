@@ -10,11 +10,7 @@
                 </view>
                 <view style="display: flex; align-items: center;">
                     <fui-text text="仅显示未叫号" size="28" color="#333" style="margin-right: 15rpx;"></fui-text>
-                    <u-switch
-                        v-model="only_show_uncalled"
-                        @change="refresh_plans"
-                        active-color="#007aff"
-                        inactive-color="#e5e5e5">
+                    <u-switch v-model="only_show_uncalled" @change="refresh_plans" active-color="#007aff" inactive-color="#e5e5e5">
                     </u-switch>
                 </view>
             </view>
@@ -35,7 +31,10 @@
                     </view>
                     <view slot="right-icon">
                         <view v-if="item.register_time">
-                            <fui-button btnSize="mini" v-if="!item.call_time" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
+                            <view v-if="!item.call_time">
+                                <fui-button btnSize="mini" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
+                                <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
+                            </view>
                             <view v-else-if="!item.enter_time">
                                 <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
                                 <fui-button v-if="item.stuff.manual_weight" btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
@@ -123,7 +122,7 @@ export default {
             tmp_seal_no: '',
             stamp_pic: '',
             all_dev: [],
-            current_company:'',
+            current_company: '',
             is_exit_confirm: false,
             focus_company: {},
             zones: [],
