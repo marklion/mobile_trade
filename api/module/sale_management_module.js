@@ -412,6 +412,7 @@ module.exports = {
             is_get_api: false,
             params: {
                 day_offset: { type: Number, have_to: false, mean: '偏移天数', example: 1 },
+                base_day: { type: String, have_to: false, mean: '基准日期，格式yyyy-MM-dd', example: '2020-01-01' },
             },
             result: {
                 statistic: {
@@ -424,7 +425,9 @@ module.exports = {
                         confirm_count: { type: Number, mean: '确认订单数量', example: 1 },
                         finish_count: { type: Number, mean: '完成订单数量', example: 1 },
                     }
-                }
+                },
+                total_confirm_count:{type: Number, mean: '确认订单总数量', example: 1},
+                total_finish_count:{type: Number, mean: '完成订单总数量', example: 1},
             },
             func: async function (body, token) {
                 let ret = [];
@@ -433,8 +436,12 @@ module.exports = {
                 if (body.day_offset) {
                     day_offset = body.day_offset;
                 }
+                let base_moment = moment();
+                if (body.base_day) {
+                    base_moment = moment(body.base_day, 'YYYY-MM-DD');
+                }
                 let condition = {
-                    plan_time: moment().add(day_offset, 'days').format('YYYY-MM-DD'), stuffId: {
+                    plan_time: base_moment.add(day_offset, 'days').format('YYYY-MM-DD'), stuffId: {
                         [db_opt.Op.in]: [],
                     },
                     is_buy: false
@@ -460,7 +467,7 @@ module.exports = {
                                 },
                                 '$plan_histories.action_type$': '确认'
                             }
-                            if (body.day_offset == 0) {
+                            if (body.day_offset == 0 && body.base_day == moment().format('YYYY-MM-DD')) {
                                 total_cond.manual_close = false;
                             }
                             return total_cond;
@@ -491,7 +498,13 @@ module.exports = {
                         finish_count: finish_count
                     })
                 }
-                return { statistic: ret };
+                let total_confirm_count = 0;
+                let total_finish_count = 0;
+                for (let i = 0; i < ret.length; i++) {
+                    total_confirm_count += ret[i].confirm_count;
+                    total_finish_count += ret[i].finish_count;
+                }
+                return { statistic: ret, total_confirm_count: total_confirm_count, total_finish_count: total_finish_count };
             },
         },
         set_fapiao_delivered: {

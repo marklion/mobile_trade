@@ -10,7 +10,7 @@
         </fui-col>
     </fui-row>
     <fui-divider style="background-color: white;"></fui-divider>
-    <fui-card title="数据统计" full color="black" size="35">
+    <fui-card title="数据一览" full color="black" size="35">
         <view style="display: flex;flex-wrap: wrap;">
             <view :class="charts.length>1?'charts-box':'charts-box-full'" v-for="(single_cts, index) in charts" :key="index">
                 <qiun-data-charts v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0)>0" type="column" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
@@ -18,14 +18,15 @@
                 <view style="display: flex; justify-content: center;font-size: 13px;font-weight: 500;">{{single_cts.opts.title}}</view>
             </view>
         </view>
-        <module-filter style="margin-top: 60rpx;" require_module="sale_management">
-            <fui-white-space size="large"></fui-white-space>
+        <fui-divider text="物料统计"></fui-divider>
+        <module-filter require_module="sale_management">
+            <fui-input label="统计日期" disabled borderTop placeholder="请输入时间" v-model="base_day" @click="show_pick_date = true"></fui-input>
             <u-row style="margin: 20rpx 20rpx;">
                 <u-col span="10">
                     <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
-                        <u-radio label="昨天" :name="-1"></u-radio>
-                        <u-radio label="今天" :name="0"></u-radio>
-                        <u-radio label="明天" :name="1"></u-radio>
+                        <u-radio label="前日" :name="-1"></u-radio>
+                        <u-radio label="当天" :name="0"></u-radio>
+                        <u-radio label="翌天" :name="1"></u-radio>
                     </u-radio-group>
                 </u-col>
                 <u-col v-if="tableData.length > 7" span="2">
@@ -35,6 +36,7 @@
             <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
         </module-filter>
     </fui-card>
+    <fui-date-picker zIndex="1004" :show="show_pick_date" type="3" :value="base_day" @change="choose_expired_date" @cancel="show_pick_date = false"></fui-date-picker>
     <fui-white-space size="default"></fui-white-space>
     <module-filter require_module="customer">
         <fui-card title="采购提单" full color="black" size="35">
@@ -96,7 +98,8 @@ export default {
     },
     data() {
         return {
-            totalCountData:[],
+            base_day: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
+            totalCountData: [],
             self_info: {
                 company: '',
                 company_logo: '',
@@ -121,7 +124,7 @@ export default {
                 prop: 'today_count',
                 label: '今日',
                 width: '150',
-            },{
+            }, {
                 prop: 'second_unit',
                 label: '单位',
                 width: '140',
@@ -143,10 +146,16 @@ export default {
             expand_text: '展开',
             table_height: 700,
             tmp_tableData: [],
-            dataCount: 7
+            dataCount: 7,
+            show_pick_date: false,
         }
     },
     methods: {
+        choose_expired_date: function (e) {
+            this.base_day = e.result;
+            this.show_pick_date = false;
+            this.init_statistic();
+        },
         handle_expand() {
             if (this.expand_text == "展开") {
                 this.expand_text = "收缩"
@@ -162,8 +171,14 @@ export default {
             }
             let resp = await this.$send_req('/sale_management/get_count_by_customer', {
                 day_offset: this.day_offset,
+                base_day: this.base_day
             });
             this.tableData = [];
+            this.tableData.push({
+                company_name: '合计',
+                confirm_count: resp.total_confirm_count,
+                finish_count: resp.total_finish_count,
+            });
             for (let index = 0; index < resp.statistic.length; index++) {
                 const element = resp.statistic[index];
                 this.tableData.push({
@@ -269,10 +284,10 @@ export default {
                 let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
                 this.totalCountData = res.statistic
                 this.totalCountData.forEach(item => {
-                    if(item.second_unit == '吨'){
+                    if (item.second_unit == '吨') {
                         item.yesterday_count = item.yesterday_count.toFixed(2)
                         item.today_count = item.today_count.toFixed(2)
-                    }else{
+                    } else {
                         item.yesterday_count = item.yesterday_count.toFixed(item.second_unit_decimal)
                         item.today_count = item.today_count.toFixed(item.second_unit_decimal)
                     }
