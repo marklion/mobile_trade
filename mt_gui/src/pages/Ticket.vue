@@ -141,7 +141,7 @@ export default {
                 value: ticket.m_weight,
             });
             this.ticket_content.list.push({
-                label: '过毛时间',
+                label: ticket.replace_m_time || '过毛时间',
                 value: ticket.m_time,
             });
             this.ticket_content.list.push({
@@ -149,7 +149,7 @@ export default {
                 value: ticket.p_weight,
             });
             this.ticket_content.list.push({
-                label: '过皮时间',
+                label: ticket.replace_p_time || '过皮时间',
                 value: ticket.p_time,
             });
         } else if ((ticket.m_time || ticket.p_time) && ticket.plan_sct_infos.length <= 0) {
@@ -160,7 +160,7 @@ export default {
         }
         if (ticket.seal_no) {
             this.ticket_content.list.push({
-                label: '封签号',
+                label: ticket.replace_seal_no || '封签号',
                 value: ticket.seal_no,
             });
         }
