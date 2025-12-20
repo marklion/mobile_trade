@@ -15,22 +15,24 @@
         <el-col :span="12">
             <el-card class="box-card" :body-style="{padding : 0}" v-if="module_filter('sale_management')">
                 <div slot="header" class="clearfix">
-                    <span>统计</span>
+                    <span>客户统计</span>
+                    <el-date-picker v-model="statistic_day" type="date" placeholder="选择日期" @change="base_day_change" value-format="yyyy-MM-dd">
+                    </el-date-picker>
                     <el-radio-group v-model="day_offset" size="medium" @change="init_statistic" style="float: right; padding: 3px 0">
-                        <el-radio-button label="-1">昨日</el-radio-button>
-                        <el-radio-button label="0">今日</el-radio-button>
-                        <el-radio-button label="1">明日</el-radio-button>
+                        <el-radio-button label="-1">前日</el-radio-button>
+                        <el-radio-button label="0">当日</el-radio-button>
+                        <el-radio-button label="1">翌日</el-radio-button>
                     </el-radio-group>
                 </div>
                 <div class="grid-content bg-purple-dark">
-                    <page-content ref="statistic" body_key="statistic" :req_body="{day_offset: +day_offset}" :req_url="req_url" :enable="true" @data_loaded="stat_loading = false">
+                    <page-content ref="statistic" body_key="statistic" :req_body="{day_offset: +day_offset, base_day:statistic_day}" :req_url="req_url" :enable="true" @data_loaded="stat_loading = false">
                         <template v-slot:default="slotProps">
-                            <el-table ref="stat_table" v-loading="stat_loading" :data="slotProps.content" stripe style="width: 100%" max-height="300">
+                            <el-table ref="stat_table" v-loading="stat_loading" :data="slotProps.content" stripe style="width: 100%" max-height="300" show-summary>
                                 <el-table-column prop="company.name" label="客户">
                                 </el-table-column>
-                                <el-table-column prop="confirm_count" label="总数" min-width="25">
+                                <el-table-column prop="confirm_count" min-width="25" label="总数">
                                 </el-table-column>
-                                <el-table-column prop="finish_count" label="完成" min-width="25">
+                                <el-table-column prop="finish_count" min-width="25" label="完成">
                                 </el-table-column>
                             </el-table>
                         </template>
@@ -153,6 +155,7 @@ export default {
     },
     data() {
         return {
+            statistic_day: moment().format('YYYY-MM-DD'),
             stat_loading: true,
             sb_loading: true,
             ss_loading: true,
@@ -165,7 +168,7 @@ export default {
             },
             req_url: '/sale_management/get_count_by_customer',
             sb_url: '/customer/get_stuff_on_sale',
-            ss_url: '/supplier/get_stuff_need_buy'
+            ss_url: '/supplier/get_stuff_need_buy',
         }
     },
     mounted() {
@@ -180,10 +183,10 @@ export default {
             let resp = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
             this.tableData = resp.statistic;
             this.tableData.forEach(item => {
-                if(item.second_unit == '吨'){
+                if (item.second_unit == '吨') {
                     item.yesterday_count = item.yesterday_count.toFixed(2)
                     item.today_count = item.today_count.toFixed(2)
-                }else{
+                } else {
                     item.yesterday_count = item.yesterday_count.toFixed(item.second_unit_decimal)
                     item.today_count = item.today_count.toFixed(item.second_unit_decimal)
                 }
@@ -371,6 +374,9 @@ export default {
                     this.charts.push(item);
                 }
             });
+        },
+        base_day_change: function () {
+            this.init_statistic();
         },
         init_notice: async function () {
             if (!this.$hasPermission('stuff')) {
