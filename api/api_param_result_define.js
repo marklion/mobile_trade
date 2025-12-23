@@ -200,6 +200,9 @@ module.exports = {
             }
         },
         drop_address: { type: String, mean: '卸货地址', example: '卸货地址' },
+        replace_p_time: { type: String, mean: '过皮时间替换文字', example: '过皮时间替换文字' },
+        replace_m_time: { type: String, mean: '过毛时间替换文字', example: '过毛时间替换文字' },
+        replace_seal_no: { type: String, mean: '封签号替换文字', example: '封签号替换文字' },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },

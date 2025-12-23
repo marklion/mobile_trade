@@ -1023,7 +1023,9 @@ module.exports = {
                         replace_sw_info: { type: String, have_to: true, mean: '二次称重替换文字', example: '二次称重替换文字' },
                         order_company: { type: String, have_to: true, mean: '下单公司替换文字', example: '二次称重替换文字' },
                         transportation_company: { type: String, have_to: true, mean: '运输公司替换文字', example: '运输公司替换文字' },
-
+                        replace_p_time:{ type: String, have_to: true, mean: '首次计量时间替换文字', example: '首次计量时间替换文字'  },
+                        replace_m_time:{ type: String, have_to: true, mean: '末次计量时间替换文字', example: '末次计量时间替换文字'  },
+                        replace_seal_no:{ type: String, have_to: true, mean: '封号替换文字', example: '封号替换文字'  },
                     }
                 }
             },
@@ -1046,6 +1048,9 @@ module.exports = {
                         replace_sw_info: body.replace_form.replace_sw_info,
                         order_company: body.replace_form.order_company,
                         transportation_company: body.replace_form.transportation_company,
+                        replace_p_time: body.replace_form.replace_p_time,
+                        replace_m_time: body.replace_form.replace_m_time,
+                        replace_seal_no: body.replace_form.replace_seal_no,
                     });
                 } else {
                     replace_content.replace_weighingSheet = body.replace_form.replace_weighingSheet;
@@ -1054,6 +1059,9 @@ module.exports = {
                     replace_content.replace_sw_info = body.replace_form.replace_sw_info;
                     replace_content.order_company = body.replace_form.order_company;
                     replace_content.transportation_company = body.replace_form.transportation_company;
+                    replace_content.replace_p_time = body.replace_form.replace_p_time;
+                    replace_content.replace_m_time = body.replace_form.replace_m_time;
+                    replace_content.replace_seal_no = body.replace_form.replace_seal_no;
                     await replace_content.save();
                 }
 
@@ -1074,7 +1082,10 @@ module.exports = {
                         replace_fw_info: { type: String, mean: '一次称重替换文字', example: '一次称重替换文字' },
                         replace_sw_info: { type: String, mean: '二次称重替换文字', example: '二次称重替换文字' },
                         order_company: { type: String, mean: '下单公司替换文字', example: '下单公司替换文字' },
-                        transportation_company: { type: String, mean: '运输公司替换文字', example: '运输公司替换文字' }
+                        transportation_company: { type: String, mean: '运输公司替换文字', example: '运输公司替换文字' },
+                        replace_p_time:{ type: String, mean: '首次计量时间替换文字', example: '首次计量时间替换文字'  },
+                        replace_m_time:{ type: String, mean: '末次计量时间替换文字', example: '末次计量时间替换文字'  },
+                        replace_seal_no:{ type: String, mean: '封号替换文字', example: '封号替换文字'  },
                     }
                 }
             },
@@ -1092,7 +1103,10 @@ module.exports = {
                         replace_fw_info: replace_content ? replace_content.replace_fw_info : '一次计量',
                         replace_sw_info: replace_content ? replace_content.replace_sw_info : '二次计量',
                         order_company: replace_content ? replace_content.order_company : '下单公司',
-                        transportation_company: replace_content ? replace_content.transportation_company : '运输公司'
+                        transportation_company: replace_content ? replace_content.transportation_company : '运输公司',
+                        replace_p_time: replace_content ? replace_content.replace_p_time : '过皮时间',
+                        replace_m_time: replace_content ? replace_content.replace_m_time : '过毛时间',
+                        replace_seal_no: replace_content ? replace_content.replace_seal_no : '封签号',
                     }
                 };
             }

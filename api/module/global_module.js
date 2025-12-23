@@ -91,6 +91,9 @@ async function get_ticket_func(body, token) {
         delegate_stamp_path: delegate_stamp_path,
         extra_infos: extra_infos,
         drop_address: drop_address,
+        replace_p_time: plan.stuff.company.global_replace_form?.replace_p_time || '过皮时间',
+        replace_m_time: plan.stuff.company.global_replace_form?.replace_m_time || '过毛时间',
+        replace_seal_no: plan.stuff.company.global_replace_form?.replace_seal_no || '封签号',
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {

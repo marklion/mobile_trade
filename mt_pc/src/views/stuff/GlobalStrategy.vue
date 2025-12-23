@@ -139,6 +139,24 @@
                             </template>
                             <el-input v-model="replace_form.transportation_company" placeholder="请输入运输公司的替换文字" style="width:200px"></el-input>
                         </el-form-item>
+                        <el-form-item label="过皮时间">
+                            <template>
+                                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+                            </template>
+                            <el-input v-model="replace_form.replace_p_time" placeholder="请输入过皮时间的替换文字" style="width:200px"></el-input>
+                        </el-form-item>
+                        <el-form-item label="过毛时间">
+                            <template>
+                                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+                            </template>
+                            <el-input v-model="replace_form.replace_m_time" placeholder="请输入过毛时间的替换文字" style="width:200px"></el-input>
+                        </el-form-item>
+                        <el-form-item label="封签号">
+                            <template>
+                                <el-tag type="success" style="margin-right:10px">替换为:</el-tag>
+                            </template>
+                            <el-input v-model="replace_form.replace_seal_no" placeholder="请输入封签号的替换文字" style="width:200px"></el-input>
+                        </el-form-item>
                         <el-button type="" @click="onReset">重置</el-button>
                         <el-button type="primary" @click="onSaveReplace">保存</el-button>
                     </el-form>
@@ -252,7 +270,10 @@ export default {
                 replace_fw_info: '',
                 replace_sw_info: '',
                 order_company: '',
-                transportation_company: ''
+                transportation_company: '',
+                replace_p_time: '',
+                replace_m_time:'',
+                replace_seal_no:'',
             }
         }
     },
@@ -460,6 +481,9 @@ export default {
                     replace_sw_info: this.replace_form.replace_sw_info || '二次计量',
                     order_company: this.replace_form.order_company || '下单公司',
                     transportation_company: this.replace_form.transportation_company || '运输公司',
+                    replace_p_time: this.replace_form.replace_p_time || '过皮时间',
+                    replace_m_time: this.replace_form.replace_m_time || '过毛时间',
+                    replace_seal_no: this.replace_form.replace_seal_no || '封签号',
                 }
             });
             if (res) {
