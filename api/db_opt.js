@@ -485,6 +485,10 @@ let db_opt = {
             close_time: { type: DataTypes.STRING },
             comment: { type: DataTypes.STRING },
         },
+        king_dee_error:{
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            error_string: { type: DataTypes.TEXT },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -661,6 +665,9 @@ let db_opt = {
         _sq.models.rbac_role.hasMany(_sq.models.audit_config);
         _sq.models.audit_record.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.audit_record);
+
+        _sq.models.company.hasMany(_sq.models.king_dee_error);
+        _sq.models.king_dee_error.belongsTo(_sq.models.company);
     },
     install: async function () {
         console.log('run install');

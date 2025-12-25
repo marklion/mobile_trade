@@ -20,6 +20,15 @@ async function req_to_king_dee_start(king_dee_start_config, api_path, method, da
     let resp = await kds.request(req);
     ret = resp.data;
     if (ret.errcode && ret.errcode != 0) {
+        let stuff = await king_dee_start_config.getStuff();
+        if (stuff) {
+            let company = await stuff.getCompany();
+            if (company) {
+                await company.createKing_dee_error({
+                    error_string: ret.description
+                });
+            }
+        }
         throw new Error('king_dee_start_api_error:' + ret.description);
     }
     ret = ret.data;

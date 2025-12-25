@@ -305,7 +305,16 @@ else {
                         where: { id: one_config.stuffId }
                     }]
                 });
-                await cash_lib.charge_by_username_and_contract('金蝶系统', contract, one_charge.amount, '金蝶预存款同步:' + one_charge.bill_no);
+                let comment = '金蝶预存款同步:' + one_charge.bill_no;
+                let privious_histories = await contract.getBalance_histories({
+                    where:{
+                        comment: comment,
+                        cash_increased: one_charge.amount,
+                    }
+                });
+                if (privious_histories.length == 0) {
+                    await cash_lib.charge_by_username_and_contract('金蝶系统', contract, one_charge.amount, comment);
+                }
             }
         }
     });
