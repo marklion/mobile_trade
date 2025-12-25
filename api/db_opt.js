@@ -472,6 +472,7 @@ let db_opt = {
         audit_config: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             url: { type: DataTypes.STRING },
+            content_template:{ type: DataTypes.TEXT },
         },
         audit_record: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

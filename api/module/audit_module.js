@@ -13,6 +13,7 @@ module.exports = {
             params: {
                 url: { type: String, have_to: true, mean: '接口URL', example: '/api/some_api' },
                 role_id: { type: Number, have_to: true, mean: '角色ID', example: 1 },
+                content_template: { type: String, have_to: false, mean: '审批内容模板', example: '请审批我的请求，详情如下：{details}' },
             },
             result: { result: { type: Boolean, mean: '操作结果', example: true } },
             func: async function (body, token) {
@@ -20,7 +21,7 @@ module.exports = {
                 let role = await sq.models.rbac_role.findByPk(body.role_id);
                 let company = await rbac_lib.get_company_by_token(token);
                 if (company && await company.hasRbac_role(role)) {
-                    await audit_lib.add_audit_config(role, body.url);
+                    await audit_lib.add_audit_config(role, body.url, body.content_template);
                 }
                 else {
                     throw {
@@ -70,6 +71,7 @@ module.exports = {
                         id: { type: Number, mean: '审批配置ID', example: 1 },
                         url: { type: String, mean: '接口URL', example: '/api/some_api' },
                         url_name: { type: String, mean: '接口名称', example: '新增订单' },
+                        content_template: { type: String, mean: '审批内容模板', example: '请审批我的请求，详情如下：{details}' },
                         rbac_role: {
                             type: Object, mean: '角色信息', explain: {
                                 id: { type: Number, mean: '角色ID', example: 1 },

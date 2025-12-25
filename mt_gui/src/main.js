@@ -14,10 +14,11 @@ Vue.prototype.$remote_url = function () {
     return process.env.REMOTE_HOST;
   }
 };
-function showInputDialog(title = '请输入', placeholder = '') {
+function showInputDialog(title = '请输入', placeholder = '', inputValue = '') {
   return new Promise((resolve, reject) => {
     uni.showModal({
       title,
+      content: inputValue,
       editable: true,
       placeholderText: placeholder,
       success: (res) => {
@@ -57,10 +58,11 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
           });
         }
         else {
+          resolve(data.result)
           if (data.audit_id != undefined && data.audit_id > 0) {
             let comment;
             try {
-              comment = await showInputDialog('该操作需要审批', '请描述审批事项');
+              comment = await showInputDialog('该操作需要审批', '请描述审批事项', data.comment || '');
             } catch (error) {
 
             }
@@ -69,7 +71,6 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
               comment: comment,
             }, true);
           }
-          resolve(data.result)
         }
       },
       fail: (res) => {

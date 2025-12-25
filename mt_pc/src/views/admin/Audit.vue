@@ -16,6 +16,7 @@
                         <el-table :data="slotProps.content" style="width: 100%" stripe :default-sort="{ prop: 'url-name', order: 'ascending' }">
                             <el-table-column prop="url_name" label="请求名称" align="center" sortable></el-table-column>
                             <el-table-column prop="rbac_role.name" label="角色名称" align="center" sortable></el-table-column>
+                            <el-table-column prop="content_template" label="内容模板" align="center" sortable></el-table-column>
                             <el-table-column>
                                 <template slot="header">
                                     <el-button size="mini" type="success" @click="add_audit_config_diag = true">新增</el-button>
@@ -61,6 +62,9 @@
             <el-form-item label="角色" prop="role_id">
                 <select-search body_key="all_role" get_url="/rbac/role_get_all" item_label="name" item_value="id" v-model="new_audit_config.role_id" :permission_array="['rbac']"></select-search>
             </el-form-item>
+            <el-form-item label="内容模板" prop="content_template">
+                <el-input v-model="new_audit_config.content_template"></el-input>
+            </el-form-item>
         </el-form>
         <span slot="footer">
             <el-button @click="add_audit_config_diag = false">取消</el-button>
@@ -99,6 +103,7 @@ export default {
             new_audit_config: {
                 url: '',
                 role_id: null,
+                content_template: '',
             },
             new_audit_config_rules: {
                 url: [{
@@ -162,6 +167,7 @@ export default {
             await this.$send_req('/audit/add_audit_config', {
                 url: this.new_audit_config.url,
                 role_id: this.new_audit_config.role_id,
+                content_template: this.new_audit_config.content_template,
             });
             this.add_audit_config_diag = false;
             this.refresh_config();

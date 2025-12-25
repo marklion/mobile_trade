@@ -69,6 +69,13 @@ export default {
                     path: 'ExamConfig',
                     sub_page_name: 'subPage1'
                 },
+                {
+                    name: '审批管理',
+                    icon: 'wait',
+                    require_module: 'audit',
+                    path: 'Audit',
+                    sub_page_name: 'subPage1'
+                }
             ]
         }
     },
