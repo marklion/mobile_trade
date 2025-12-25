@@ -2,8 +2,9 @@ const db_opt = require('../db_opt');
 const moment = require('moment');
 const g_all_api = [];
 const axios = require('axios');
+const all_plugin = require('../plugin/all_plugin');
 module.exports = {
-    add_audit_config: async function (role, url) {
+    add_audit_config: async function (role, url, content_template) {
         const sq = db_opt.get_sq();
         let company = await role.getCompany();
         if (company) {
@@ -27,6 +28,7 @@ module.exports = {
             else {
                 let new_record = await sq.models.audit_config.create({
                     url: url,
+                    content_template: content_template || '',
                 });
                 await new_record.setRbac_role(role);
             }
@@ -103,6 +105,7 @@ module.exports = {
     },
     guard_req: async function (url, company, body, user) {
         let ret = -1;
+        let comment = '';
         const sq = db_opt.get_sq();
         if (company && user) {
             let exist_record = await sq.models.audit_config.findOne({
@@ -150,6 +153,10 @@ module.exports = {
                     });
                     await new_one.setCompany(company);
                     ret = new_one.id;
+                    let plugin = all_plugin.get_plugin_by_name(exist_record.content_template);
+                    if (plugin && plugin.convert_audit_content) {
+                        comment = await plugin.convert_audit_content(body, url);
+                    }
                 }
             }
             else {
@@ -160,7 +167,7 @@ module.exports = {
             ret = 0;
         }
 
-        return ret;
+        return { id: ret, comment: comment };
     },
     audit_req: async function (id, is_approve, user) {
         const sq = db_opt.get_sq();

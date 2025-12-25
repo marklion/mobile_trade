@@ -1116,10 +1116,6 @@ export default {
                         unit_price: Number(this.new_stuff_price.price),
                         plan_id: this.new_stuff_price.isMuti ? this.plan_selected.toString() : this.focus_plan.id + '',
                         comment: this.new_stuff_price.comment
-                    }).then(res => {
-                        this.$refs.toast.show({
-                            text: '调价成功',
-                        })
                     }).catch((error) => {
                         this.$refs.toast.show({
                             text: error,

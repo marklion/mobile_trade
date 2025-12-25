@@ -12,7 +12,7 @@ Cleanup Audit Environment
 Add Audit Config
     [Arguments]  ${url}  ${role_name}=公司管理员  ${token}=${sc_admin_token}
     ${role}  Get Role By Name    ${token}    ${role_name}
-    ${req}  Create Dictionary    role_id=${role}[id]    url=${url}
+    ${req}  Create Dictionary    role_id=${role}[id]    url=${url}  content_template=empty_template
     Req to Server    /audit/add_audit_config    ${token}    ${req}
 
 Del Audit Config
