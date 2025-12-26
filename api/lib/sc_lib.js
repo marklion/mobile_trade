@@ -286,8 +286,28 @@ module.exports = {
         }
         return ret;
     },
+    refresh_sc_content_belong:async function(content, plan) {
+        let belong_type = content.sc_req.belong_type;
+        content.driverId = null;
+        content.vehicleId = null;
+        switch (belong_type) {
+            case 0:
+                content.driverId = plan.driver.id;
+                break;
+            case 1:
+                content.vehicleId = plan.main_vehicle.id;
+                break;
+            case 2:
+                content.vehicleId = plan.behind_vehicle.id;
+                break;
+            default:
+                break;
+        }
+        await content.save();
+    },
     check_sc_content: async function (_content_id, _token, _comment, _plan_id) {
         let sq = db_opt.get_sq();
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
         let content = await sq.models.sc_content.findByPk(_content_id, {
             include: [{
                 model: sq.models.sc_req,
@@ -297,6 +317,7 @@ module.exports = {
                 }]
             }, { model: sq.models.driver }]
         });
+        await this.refresh_sc_content_belong(content, plan);
         let company = await rbac_lib.get_company_by_token(_token);
         let user = await rbac_lib.get_user_by_token(_token);
         if (user && company && content && content.sc_req && content.sc_req.stuff && content.sc_req.stuff.company && content.sc_req.stuff.company.id == company.id) {
@@ -311,32 +332,28 @@ module.exports = {
             content.check_time = moment().format('YYYY-MM-DD HH:mm:ss');
             content.checker = user.name;
             await content.save();
-            if (_plan_id) {
-                let plan = await util_lib.get_single_plan_by_id(_plan_id);
-                let passed_sc = await this.plan_passed_sc(_plan_id);
-                if (passed_sc) {
-                    // 所有安检资料都已通过，发送消息给司机
-                    await this.fetch_send_sc_check_msg(
-                        msg = '审核通过',
-                        order_id = plan?.id,
-                        open_id = plan?.driver?.open_id,
-                        null,
-                        notifyTo = 'DRIVER'
-                    );
-                }
-
-                if (!content.passed) {
-                    // 反审安检资料从通过变为不通过，发送消息给司机
-                    await this.fetch_send_sc_check_msg(
-                        msg = '驳回',
-                        order_id = plan?.id,
-                        open_id = plan?.driver?.open_id,
-                        null,
-                        notifyTo = 'DRIVER'
-                    );
-                }
+            let passed_sc = await this.plan_passed_sc(_plan_id);
+            if (passed_sc) {
+                // 所有安检资料都已通过，发送消息给司机
+                await this.fetch_send_sc_check_msg(
+                    msg = '审核通过',
+                    order_id = plan?.id,
+                    open_id = plan?.driver?.open_id,
+                    null,
+                    notifyTo = 'DRIVER'
+                );
             }
 
+            if (!content.passed) {
+                // 反审安检资料从通过变为不通过，发送消息给司机
+                await this.fetch_send_sc_check_msg(
+                    msg = '驳回',
+                    order_id = plan?.id,
+                    open_id = plan?.driver?.open_id,
+                    null,
+                    notifyTo = 'DRIVER'
+                );
+            }
         }
         else {
             throw { err_msg: '无权限' };
