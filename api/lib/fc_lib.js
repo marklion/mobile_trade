@@ -220,24 +220,32 @@ module.exports = {
         return { fc_plan_tables: ret.fc_table, total: ret.total };
     },
     prepare_empty_fc: async function (plan_id) {
-        let plan = await sq.models.plan.findByPk(plan_id);
-        let stuff = await plan.getStuff();
-        let fc_tables = await stuff.getField_check_tables();
-        for (let index = 0; index < fc_tables.length; index++) {
-            const element = fc_tables[index];
-            let exist_fc_plan_tables = await element.getFc_plan_tables({ where: { planId: plan_id } });
-            if (exist_fc_plan_tables.length > 0) {
-                continue;
+        await db_opt.get_sq().transaction({ savepoint: true }, async (new_t) => {
+            let plan = await sq.models.plan.findByPk(plan_id);
+            let stuff = await plan.getStuff();
+            let fc_tables = await stuff.getField_check_tables();
+            for (let index = 0; index < fc_tables.length; index++) {
+                const element = fc_tables[index];
+                let exist_fc_plan_tables = await element.getFc_plan_tables({
+                    where: { planId: plan_id },
+                    transaction: new_t,
+                    lock: new_t.LOCK.UPDATE
+                });
+                if (exist_fc_plan_tables.length > 0) {
+                    continue;
+                }
+                let new_one = await sq.models.fc_plan_table.create({
+                }, { transaction: new_t, lock: new_t.LOCK.UPDATE });
+                await element.addFc_plan_table(new_one);
+                await new_one.setPlan(plan);
+                let fc_items = await element.getField_check_items();
+                for (let j = 0; j < fc_items.length; j++) {
+                    const item = fc_items[j];
+                    await new_one.createFc_check_result({ fieldCheckItemId: item.id });
+                }
             }
-            let new_one = await sq.models.fc_plan_table.create();
-            await element.addFc_plan_table(new_one);
-            await new_one.setPlan(plan);
-            let fc_items = await element.getField_check_items();
-            for (let j = 0; j < fc_items.length; j++) {
-                const item = fc_items[j];
-                await new_one.createFc_check_result({ fieldCheckItemId: item.id });
-            }
-        }
+        });
+
     },
     get_all_fc_plan_table: async function (plan) {
         let pageNo = 0;
