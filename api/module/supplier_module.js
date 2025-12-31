@@ -114,7 +114,7 @@ module.exports = {
                     new_plan.is_buy = true;
                     new_plan.trans_company_name = body.trans_company_name;
                     await new_plan.save();
-                    plan_lib.mark_dup_info(new_plan);
+                    plan_lib.mark_dup_info(new_plan.id);
                     wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
                     if (!stuff.need_enter_weight && stuff.no_need_register && !stuff.need_sc) {
                         await plan_lib.confirm_single_plan(new_plan.id, token, true)

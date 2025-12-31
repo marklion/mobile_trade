@@ -12,6 +12,9 @@ const fc_lib = require('./fc_lib');
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 const king_dee_start_lib = require('./king_dee_start_lib');
+const { Sequelize } = require('sequelize');
+const g_verify_pay_company_set = new Set();
+const g_vpcs_mutex = new Mutex();
 module.exports = {
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
@@ -30,6 +33,7 @@ module.exports = {
             await this.dup_plan(plan, token, t);
         }
         await hook_plan('deliver_plan', plan);
+        this.verify_pay_against_same_company(plan.company.id);
     },
     fetch_vehicle: async function (_plate, _is_behind) {
         let sq = db_opt.get_sq();
@@ -599,7 +603,7 @@ module.exports = {
                 plan.trans_company_name = _update_data.trans_company_name;
             }
             await plan.save();
-            this.mark_dup_info(plan);
+            this.mark_dup_info(plan.id);
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, change_comment);
         }
         else {
@@ -685,7 +689,34 @@ module.exports = {
             }
         }, force, t);
     },
-    plan_close: async function (plan, name, is_cancel = false, no_need_cast = false) {
+    verify_pay_against_same_company: function (company_id) {
+        setImmediate(async () => {
+            let rl = await g_vpcs_mutex.acquire();
+            try {
+                if (g_verify_pay_company_set.has(company_id)) {
+                }
+                else {
+                    g_verify_pay_company_set.add(company_id);
+                    await db_opt.get_sq().transaction({
+                        savepoint: true,
+                        isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+                    }, async (t) => {
+                        let plans = await db_opt.get_sq().models.plan.findAll({ where: { status: 1, is_buy: false, companyId: company_id } });
+                        for (let element of plans) {
+                            await this.verify_plan_pay(element, t)
+                        }
+                    });
+                    g_verify_pay_company_set.delete(company_id);
+                }
+            }
+            catch (e) {
+            }
+            finally {
+                rl();
+            }
+        });
+    },
+    plan_close: async function (plan, name, is_cancel = false, no_need_cast = false, t = undefined) {
         let need_verify_balance = false;
         if (plan.status == 2 && !plan.is_buy) {
             need_verify_balance = true;
@@ -707,12 +738,8 @@ module.exports = {
         plan.manual_close = true;
         await plan.save();
         let buy_company = plan.company;
-        if (buy_company && need_verify_balance) {
-            let plans = await buy_company.getPlans({ where: { status: 1, is_buy: false } });
-            for (let index = 0; index < plans.length; index++) {
-                const element = plans[index];
-                await this.verify_plan_pay(element)
-            }
+        if (buy_company && need_verify_balance && t) {
+            this.verify_pay_against_same_company(buy_company.id);
         }
         if (!no_need_cast) {
             wx_api_util.send_plan_status_msg(plan);
@@ -752,6 +779,7 @@ module.exports = {
     },
     plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false, existing_t = null) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan, t) => {
+            let need_verify_balance = false;
             let rollback_content = '';
             if (plan.manual_close) {
                 throw { err_msg: '已关闭,无法回退' };
@@ -764,6 +792,7 @@ module.exports = {
                 else {
                     plan.status = 2;
                     await this.plan_undo_cost(plan);
+                    need_verify_balance = true;
                 }
             } else if (plan.status == 1) {
                 if (plan.enter_time && plan.enter_time.length > 0) {
@@ -795,6 +824,7 @@ module.exports = {
                     if (plan.register_time) {
                         await field_lib.handle_cancel_check_in(plan);
                     }
+                    need_verify_balance = true;
                 }
             } else if (plan.status == 3) {
                 await this.plan_rollback(plan.id, _token, msg, true, t);
@@ -814,6 +844,9 @@ module.exports = {
             await plan.save({ transaction: t });
             wx_api_util.send_plan_status_msg(plan)
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
+            if (need_verify_balance) {
+                this.verify_pay_against_same_company(plan.company.id);
+            }
         }, false, existing_t);
     },
     plan_cost: async function (plan) {
@@ -913,12 +946,16 @@ module.exports = {
         await this.action_in_plan(_plan_id, _token, 1, async (plan, t) => {
             if (!plan.is_buy) {
                 plan.status = 2;
+                plan.arrears = 0;
+                plan.outstanding_vehicles = 0;
                 wx_api_util.send_plan_status_msg(plan);
                 await plan.save({ transaction: t });
                 await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 hook_plan('order_ready', plan);
             }
         });
+        let plan = await util_lib.get_single_plan_by_id(_plan_id);
+        this.verify_pay_against_same_company(plan.company.id);
     },
     dup_plan: async function (plan, token, t) {
         let sq = db_opt.get_sq();
@@ -1058,7 +1095,7 @@ module.exports = {
                     throw { err_msg: '未找到计划' };
                 }
             }
-            this.mark_dup_info(plan);
+            this.mark_dup_info(plan.id);
         } else {
             // 创建新事务
             await db_opt.get_sq().transaction({ savepoint: true }, async (new_t) => {
@@ -1092,20 +1129,21 @@ module.exports = {
                         throw { err_msg: '未找到计划' };
                     }
                 }
-                this.mark_dup_info(plan);
+                this.mark_dup_info(plan.id);
             });
         }
     },
-    mark_dup_info: function (plan) {
-        setTimeout(async () => {
-            let full_plan = await util_lib.get_single_plan_by_id(plan.id);
-            if (!full_plan.stuff.company.dup_not_permit) {
-                this.checkDuplicatePlans(plan).then((resp) => {
-                    plan.dup_info = resp.message;
-                    plan.save();
-                })
-            }
-        }, 500);
+    mark_dup_info: function (plan_id) {
+        setImmediate(async () => {
+            await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
+                let full_plan = await util_lib.get_single_plan_by_id(plan_id, t);
+                if (!full_plan.stuff.company.dup_not_permit) {
+                    let resp = await this.checkDuplicatePlans(full_plan);
+                    full_plan.dup_info = resp.message;
+                    await full_plan.save();
+                }
+            });
+        });
     },
     record_plan_history: async function (_plan, _operator, _action_type, _transation) {
         await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: _action_type }, _transation);
@@ -1203,7 +1241,7 @@ module.exports = {
             cur_balance = contracts[0].balance;
         }
         let one_vehicle_cost = price_to_use * plan.stuff.expect_count;
-        let paid_vehicle_count = await plan.company.countPlans({
+        let already_prepaied_plans = await plan.company.getPlans({
             where: {
                 [db_opt.Op.and]: [
                     { status: 2 },
@@ -1212,14 +1250,17 @@ module.exports = {
             },
             ...(transaction && { transaction })
         });
-        let already_verified_cash = one_vehicle_cost * paid_vehicle_count;
+        let already_verified_cash = 0;
+        for (let single_plan of already_prepaied_plans) {
+            already_verified_cash += single_plan.unit_price * plan.stuff.expect_count
+        }
         let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
         if (arrears <= 0) {
             return { arrears: 0, outstanding_vehicles: 0 };
         } else {
             return {
                 arrears: arrears,
-                outstanding_vehicles: paid_vehicle_count + 1
+                outstanding_vehicles: already_prepaied_plans.length + 1
             };
         }
     },
@@ -1247,6 +1288,15 @@ module.exports = {
                 element.unit_price = _new_price;
                 await element.save();
                 await this.rp_history_price_change(element, _operator, _new_price);
+            }
+            let company_ids = [];
+            for (let single_plan of plans) {
+                if (single_plan.companyId && company_ids.indexOf(single_plan.companyId) == -1) {
+                    company_ids.push(single_plan.companyId);
+                }
+            }
+            for (let company_id of company_ids) {
+                this.verify_pay_against_same_company(company_id);
             }
         }
     },

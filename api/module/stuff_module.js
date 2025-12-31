@@ -521,13 +521,9 @@ module.exports = {
                                 let comment = `单价由${orig_price}改为${unitPrice},${body.comment}`
                                 await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, t)
                                 plan.unit_price = unitPrice;
-                                if (plan.status == 1 && !plan.is_buy) {
-                                    let { arrears, outstanding_vehicles } = await plan_lib.calculate_plan_arrears(plan, unitPrice);
-                                    plan.arrears = arrears;
-                                    plan.outstanding_vehicles = outstanding_vehicles;
-                                }
                                 plan.checkout_delay = false;
                                 await plan.save();
+                                plan_lib.verify_pay_against_same_company(plan.companyId);
                                 if (plan.status == 3) {
                                     if (plan.is_buy) {
                                         await plan_lib.updateArchivePlan(plan);
