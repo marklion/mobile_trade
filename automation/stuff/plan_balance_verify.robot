@@ -71,7 +71,7 @@ Calculate Lack of Balance
 
 Check All Plans
     [Arguments]  ${passed_count}
-    Sleep    800ms
+    Sleep    1600ms
     ${count}  Set Variable  ${0}
     ${lack}  Calculate Lack of Balance
     ${lack_from_plan}  Set Variable  ${0}

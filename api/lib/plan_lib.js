@@ -12,6 +12,9 @@ const fc_lib = require('./fc_lib');
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 const king_dee_start_lib = require('./king_dee_start_lib');
+const { Sequelize } = require('sequelize');
+const g_verify_pay_company_set = new Set();
+const g_vpcs_mutex = new Mutex();
 module.exports = {
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
@@ -688,12 +691,29 @@ module.exports = {
     },
     verify_pay_against_same_company: function (company_id) {
         setImmediate(async () => {
-            await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
-                let plans = await db_opt.get_sq().models.plan.findAll({ where: { status: 1, is_buy: false, companyId: company_id } });
-                for (let element of plans) {
-                    await this.verify_plan_pay(element, t)
+            let rl = await g_vpcs_mutex.acquire();
+            try {
+                if (g_verify_pay_company_set.has(company_id)) {
                 }
-            });
+                else {
+                    g_verify_pay_company_set.add(company_id);
+                    await db_opt.get_sq().transaction({
+                        savepoint: true,
+                        isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
+                    }, async (t) => {
+                        let plans = await db_opt.get_sq().models.plan.findAll({ where: { status: 1, is_buy: false, companyId: company_id } });
+                        for (let element of plans) {
+                            await this.verify_plan_pay(element, t)
+                        }
+                    });
+                    g_verify_pay_company_set.delete(company_id);
+                }
+            }
+            catch (e) {
+            }
+            finally {
+                rl();
+            }
         });
     },
     plan_close: async function (plan, name, is_cancel = false, no_need_cast = false, t = undefined) {
@@ -1270,8 +1290,7 @@ module.exports = {
                 await this.rp_history_price_change(element, _operator, _new_price);
             }
             let company_ids = [];
-            for (let single_plan of plans)
-            {
+            for (let single_plan of plans) {
                 if (single_plan.companyId && company_ids.indexOf(single_plan.companyId) == -1) {
                     company_ids.push(single_plan.companyId);
                 }
