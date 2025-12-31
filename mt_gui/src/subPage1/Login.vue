@@ -8,6 +8,9 @@
             <view style="font-size:30px;">
                 掌易助理
             </view>
+            <view style="font-size: 16px; color: #999; margin-top: 2vh;">
+                此服务仅限掌易助理会员使用
+            </view>
         </view>
 
     </fui-card>
