@@ -8,9 +8,11 @@
                     <view>{{single_r.submiter}} 提交</view>
                     <view v-if="single_r.auditer">{{single_r.auditer}} 审核</view>
                 </view>
-                <view slot="right-icon" v-if="!single_r.audit_time && !single_r.close_time">
-                    <fui-button type="success" btnSize="mini" text="通过" @click="audit_req(single_r.id, true)"></fui-button>
-                    <fui-button type="danger" btnSize="mini" text="拒绝" @click="audit_req(single_r.id, false)"></fui-button>
+                <view slot="right-icon">
+                    <view v-if="!single_r.audit_time && !single_r.close_time">
+                        <fui-button type="success" btnSize="mini" text="通过" @click="audit_req(single_r.id, true)"></fui-button>
+                        <fui-button type="danger" btnSize="mini" text="拒绝" @click="audit_req(single_r.id, false)"></fui-button>
+                    </view>
                 </view>
                 <view slot="label">
                     <fui-tag theme="plain" :scaleRatio="0.8" :text="single_r.url_name" type="primary"></fui-tag>
@@ -103,6 +105,7 @@ export default {
     margin-bottom: 10px;
     border: 1px solid #25ce47;
 }
+
 .status_tags {
     margin: 10px;
     display: flex;

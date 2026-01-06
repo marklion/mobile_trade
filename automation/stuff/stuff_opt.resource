@@ -74,6 +74,19 @@ Add A Stuff To Sale
     ${resp}  Req to Server  /stuff/fetch  ${token}  ${req}
     RETURN  ${resp}
 
+Set Stuff Auto-Close Later
+    [Arguments]  ${stuff}=${test_stuff}  ${token}=${sc_admin_token}
+    ${current_time}  Get Current Date  result_format=%Y-%m-%d %H:%M:%S
+    ${one_minute_ago}  Subtract Time From Date  ${current_time}  1 minute  result_format=%H:%M
+    Set To Dictionary    ${stuff}  close_time=${one_minute_ago}
+    Set To Dictionary    ${stuff}  close_today=${True}
+    ${resp}  Req to Server  /stuff/fetch  ${token}  ${stuff}
+
+Clear Stuff Auto-Close
+    [Arguments]  ${stuff}=${test_stuff}  ${token}=${sc_admin_token}
+    Set To Dictionary    ${stuff}  close_time=${EMPTY}
+    ${resp}  Req to Server  /stuff/fetch  ${token}  ${stuff}
+
 Add A Stuff To Buy
     [Arguments]  ${stuff_name}  ${stuff_comment}  ${expect_count}=${22}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}  use_for_buy=${True}
@@ -194,16 +207,15 @@ Get Cash Of A Company
 
 Prepare Sale and Buy
     Prepare Companies And Users
-    Add A Stuff To Sale  lng  lng_comment
+    ${major_stuff}  Add A Stuff To Sale  lng  lng_comment
     Add A Stuff To Buy  LT  lt_comment
     Add A Company As Customer  ${buy_company1}[id]
     Add A Company As Supplier  ${buy_company1}[id]
     Add A Stuff To Contract  lng  bc1
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
-    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    Set Suite Variable  ${test_stuff}  ${major_stuff}
     Change Stuff Price  ${test_stuff}[id]  ${1212}
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
-    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
     Authorize User to Contract  bc1  5678
     @{stuffs_found}  Req Get to Server  /supplier/get_stuff_need_buy  ${bc1_user_token}  stuff
     Set Suite Variable  ${order_stuff}  ${stuffs_found}[0]

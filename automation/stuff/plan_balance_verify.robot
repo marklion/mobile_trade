@@ -21,7 +21,13 @@ Create 5 Plans
         ${mv}  Search Main Vehicle by Index  0
         ${bv}  Search behind Vehicle by Index  0
         ${dv}  Search Driver by Index  0
-        ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+        ${plan_time}  Get Current Date  result_format=%Y-%m-%d
+        ${plan_time}  Subtract Time From Date  ${plan_time}  1 day  result_format=%Y-%m-%d
+        IF  $i == 2 or $i == 3
+            ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  plan_time=${plan_time}
+        ELSE
+            ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+        END
         Append To List  ${all_plans}  ${plan}
     END
     Log    ${all_plans}
@@ -29,7 +35,8 @@ Create 5 Plans
 Define Infrastructure
     Change Price    ${2}
     Set Balance    ${10}
-    Add A Stuff To Sale    ${test_stuff}[name]    ${test_stuff}[comment]  ${3}
+    Set To Dictionary    ${test_stuff}  expect_count=${3}
+    Req to Server  /stuff/fetch  ${sc_admin_token}  ${test_stuff}
     Create 5 Plans
     ${tmp_date}  Get Current Date  result_format=%Y-%m-%d
     Set Suite Variable  ${today_date}  ${tmp_date}
@@ -186,3 +193,20 @@ Change Price And Check
     Check All Plans    ${3}
     Change One Plan Price    ${all_plans}[2][id]    ${1}
     Check All Plans    ${4}
+
+Check After Auto Close
+    [Setup]  Define Infrastructure
+    [Teardown]  Clean Plans
+    Set Stuff Auto-Close Later
+    @{enough_plans}  Create List  ${all_plans}[2][id]  ${all_plans}[3][id]
+    Make Balance Enough to Plans  @{enough_plans}
+    Confirm A Plan    ${all_plans}[2]
+    Confirm A Plan    ${all_plans}[3]
+    Confirm A Plan    ${all_plans}[0]
+    Sleep    1m
+    Sleep    15s
+    Confirm A Plan    ${all_plans}[1]
+    Confirm A Plan    ${all_plans}[4]
+    Check One Plan    ${all_plans}[0][id]
+    Check All Plans    ${2}
+    Clear Stuff Auto-Close

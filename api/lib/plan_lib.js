@@ -738,7 +738,7 @@ module.exports = {
         plan.manual_close = true;
         await plan.save();
         let buy_company = plan.company;
-        if (buy_company && need_verify_balance && t) {
+        if (buy_company && need_verify_balance) {
             this.verify_pay_against_same_company(buy_company.id);
         }
         if (!no_need_cast) {
