@@ -58,7 +58,7 @@ Make Balance Enough to Plans
     Set Balance    ${total_price}
 
 Calculate Lack of Balance
-    ${yst_day}  Subtract Date From Date    ${today_date}    1 day  result_format=%Y-%m-%d
+    ${yst_day}  Subtract Time From Date    ${today_date}    1 day  result_format=%Y-%m-%d
     ${req}  Create Dictionary  start_time=${yst_day}  end_time=${today_date}  status=${2}
     ${resp}  Req Get to Server   /sale_management/order_search   ${sc_admin_token}  plans  ${-1}  &{req}
     ${pre_take}  Set Variable  ${0}
