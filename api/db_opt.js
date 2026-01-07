@@ -249,7 +249,7 @@ let db_opt = {
         },
         archive_plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            content: { type: DataTypes.TEXT },
+            content: { type: DataTypes.TEXT("medium") },
         },
         price_history: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
