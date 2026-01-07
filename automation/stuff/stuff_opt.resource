@@ -74,6 +74,21 @@ Add A Stuff To Sale
     ${resp}  Req to Server  /stuff/fetch  ${token}  ${req}
     RETURN  ${resp}
 
+Set Stuff Auto-Close Later
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}
+    ${current_time}  Get Current Date  result_format=%Y-%m-%d %H:%M:%S
+    ${one_minute_ago}  Subtract Time From Date  ${current_time}  1 minute  result_format=%H:%M
+    ${stuff}  Get Stuff By Id    ${stuff_id}
+    Set To Dictionary    ${stuff}  close_time=${one_minute_ago}
+    Set To Dictionary    ${stuff}  close_today=${True}
+    ${resp}  Req to Server  /stuff/fetch  ${token}  ${stuff}
+
+Clear Stuff Auto-Close
+    [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}
+    ${stuff}  Get Stuff By Id    ${stuff_id}
+    Set To Dictionary    ${stuff}  close_time=${EMPTY}
+    ${resp}  Req to Server  /stuff/fetch  ${token}  ${stuff}
+
 Add A Stuff To Buy
     [Arguments]  ${stuff_name}  ${stuff_comment}  ${expect_count}=${22}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  name=${stuff_name}  comment=${stuff_comment}  expect_count=${expect_count}  use_for_buy=${True}

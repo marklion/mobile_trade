@@ -21,7 +21,13 @@ Create 5 Plans
         ${mv}  Search Main Vehicle by Index  0
         ${bv}  Search behind Vehicle by Index  0
         ${dv}  Search Driver by Index  0
-        ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+        ${plan_time}  Get Current Date  result_format=%Y-%m-%d
+        ${plan_time}  Subtract Time From Date  ${plan_time}  1 day  result_format=%Y-%m-%d
+        IF  $i == 2 or $i == 3
+            ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  plan_time=${plan_time}
+        ELSE
+            ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+        END
         Append To List  ${all_plans}  ${plan}
     END
     Log    ${all_plans}
@@ -29,7 +35,8 @@ Create 5 Plans
 Define Infrastructure
     Change Price    ${2}
     Set Balance    ${10}
-    Add A Stuff To Sale    ${test_stuff}[name]    ${test_stuff}[comment]  ${3}
+    Set To Dictionary    ${test_stuff}  expect_count=${3}
+    Req to Server  /stuff/fetch  ${sc_admin_token}  ${test_stuff}
     Create 5 Plans
     ${tmp_date}  Get Current Date  result_format=%Y-%m-%d
     Set Suite Variable  ${today_date}  ${tmp_date}
@@ -51,14 +58,15 @@ Make Balance Enough to Plans
     Set Balance    ${total_price}
 
 Calculate Lack of Balance
-    ${req}  Create Dictionary  start_time=${today_date}  end_time=${today_date}  status=${2}
+    ${yst_day}  Subtract Time From Date    ${today_date}    1 day  result_format=%Y-%m-%d
+    ${req}  Create Dictionary  start_time=${yst_day}  end_time=${today_date}  status=${2}
     ${resp}  Req Get to Server   /sale_management/order_search   ${sc_admin_token}  plans  ${-1}  &{req}
     ${pre_take}  Set Variable  ${0}
     FOR  ${plan}  IN  @{resp}
         ${cost}  Evaluate  ${plan}[unit_price] * 3
         ${pre_take}  Evaluate  ${pre_take} + ${cost}
     END
-    ${req}  Create Dictionary  start_time=${today_date}  end_time=${today_date}  status=${1}
+    ${req}  Create Dictionary  start_time=${yst_day}  end_time=${today_date}  status=${1}
     ${resp}  Req Get to Server   /sale_management/order_search   ${sc_admin_token}  plans  ${-1}  &{req}
     ${total_lack}  Set Variable  ${0}
     FOR  ${plan}  IN  @{resp}
@@ -186,3 +194,20 @@ Change Price And Check
     Check All Plans    ${3}
     Change One Plan Price    ${all_plans}[2][id]    ${1}
     Check All Plans    ${4}
+
+Check After Auto Close
+    [Setup]  Define Infrastructure
+    [Teardown]  Clean Plans
+    Set Stuff Auto-Close Later
+    @{enough_plans}  Create List  ${all_plans}[2][id]  ${all_plans}[3][id]
+    Make Balance Enough to Plans  @{enough_plans}
+    Confirm A Plan    ${all_plans}[2]
+    Confirm A Plan    ${all_plans}[3]
+    Confirm A Plan    ${all_plans}[0]
+    Sleep    1m
+    Sleep    15s
+    Confirm A Plan    ${all_plans}[1]
+    Confirm A Plan    ${all_plans}[4]
+    Check One Plan    ${all_plans}[0][id]
+    Check All Plans    ${2}
+    Clear Stuff Auto-Close
