@@ -17,19 +17,111 @@ const path = require('path');
 const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
 
-async function do_web_cap(url, file_name) {
-    const captureWebsite = await import('capture-website');
-    await captureWebsite.default.file(url, file_name, {
-        emulateDevice: 'iPhone X',
-        fullPage: true,
-        waitForElement: 'body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view',
-        launchOptions: {
+// 浏览器实例池
+let browserInstance = null;
+let browserUsageCount = 0;
+const MAX_BROWSER_USAGE = 50; // 每50次调用后重启浏览器以释放内存
+
+async function getBrowserInstance() {
+    const puppeteer = require('puppeteer');
+
+    if (!browserInstance || browserUsageCount >= MAX_BROWSER_USAGE) {
+        if (browserInstance) {
+            try {
+                await browserInstance.close();
+            } catch (e) {
+                console.error('关闭旧浏览器实例失败:', e);
+            }
+        }
+
+        browserInstance = await puppeteer.launch({
             headless: 'new',
             executablePath: '/root/.cache/puppeteer/chrome/linux-126.0.6478.55/chrome-linux64/chrome',
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        },
-    })
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu',
+            ],
+        });
+        browserUsageCount = 0;
+    }
 
+    browserUsageCount++;
+    return browserInstance;
+}
+
+// 并发控制的队列
+class ConcurrencyQueue {
+    constructor(concurrency) {
+        this.concurrency = concurrency;
+        this.running = 0;
+        this.queue = [];
+    }
+
+    async run(fn) {
+        while (this.running >= this.concurrency) {
+            await new Promise(resolve => this.queue.push(resolve));
+        }
+        this.running++;
+        try {
+            return await fn();
+        } finally {
+            this.running--;
+            const resolve = this.queue.shift();
+            if (resolve) resolve();
+        }
+    }
+}
+
+const webCapQueue = new ConcurrencyQueue(2); // 限制同时只能有2个截图任务
+
+async function do_web_cap(url, file_name) {
+    return await webCapQueue.run(async () => {
+        let start_time = Date.now();
+        const browser = await getBrowserInstance();
+        const page = await browser.newPage();
+        console.log(`browser new page time: ${Date.now() - start_time}ms`);
+        start_time = Date.now();
+        try {
+            // 设置 iPhone X 的视口
+            await page.setViewport({
+                width: 375,
+                height: 812,
+                deviceScaleFactor: 3,
+                isMobile: true,
+                hasTouch: true,
+            });
+            console.log(`setViewport time: ${Date.now() - start_time}ms`);
+            start_time = Date.now();
+
+            // 设置较短的超时时间
+            await page.goto(url, {
+                waitUntil: 'domcontentloaded',
+                timeout: 30000
+            });
+            console.log(`page goto time: ${Date.now() - start_time}ms`);
+            start_time = Date.now();
+
+            // 等待关键元素
+            await page.waitForSelector('body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view', {
+                timeout: 10000
+            });
+            console.log(`waitForSelector time: ${Date.now() - start_time}ms`);
+            start_time = Date.now();
+            // 截取整页
+            await page.screenshot({
+                path: file_name,
+                fullPage: true,
+            });
+            console.log(`screenshot time: ${Date.now() - start_time}ms`);
+        } finally {
+            await page.close();
+        }
+    });
 }
 
 async function get_ticket_func(body, token) {
@@ -1974,7 +2066,7 @@ module.exports = {
                 return { show_sc_in_field: company.show_sc_in_field };
             }
         },
-        get_dup_not_permit:{
+        get_dup_not_permit: {
             name: '获取重复不允许录入',
             description: '获取重复不允许录入',
             is_write: false,
