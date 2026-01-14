@@ -100,7 +100,7 @@ async function do_web_cap(url, file_name) {
 
             // 设置较短的超时时间
             await page.goto(url, {
-                waitUntil: 'domcontentloaded',
+                waitUntil: 'networkidle2',
                 timeout: 30000
             });
             console.log(`page goto time: ${Date.now() - start_time}ms`);
