@@ -54,74 +54,47 @@ async function getBrowserInstance() {
     return browserInstance;
 }
 
-// 并发控制的队列
-class ConcurrencyQueue {
-    constructor(concurrency) {
-        this.concurrency = concurrency;
-        this.running = 0;
-        this.queue = [];
-    }
-
-    async run(fn) {
-        while (this.running >= this.concurrency) {
-            await new Promise(resolve => this.queue.push(resolve));
-        }
-        this.running++;
-        try {
-            return await fn();
-        } finally {
-            this.running--;
-            const resolve = this.queue.shift();
-            if (resolve) resolve();
-        }
-    }
-}
-
-const webCapQueue = new ConcurrencyQueue(2); // 限制同时只能有2个截图任务
-
 async function do_web_cap(url, file_name) {
-    return await webCapQueue.run(async () => {
-        let start_time = Date.now();
-        const browser = await getBrowserInstance();
-        const page = await browser.newPage();
-        console.log(`browser new page time: ${Date.now() - start_time}ms`);
+    let start_time = Date.now();
+    const browser = await getBrowserInstance();
+    const page = await browser.newPage();
+    console.log(`browser new page time: ${Date.now() - start_time}ms`);
+    start_time = Date.now();
+    try {
+        // 设置 iPhone X 的视口
+        await page.setViewport({
+            width: 375,
+            height: 812,
+            deviceScaleFactor: 3,
+            isMobile: true,
+            hasTouch: true,
+        });
+        console.log(`setViewport time: ${Date.now() - start_time}ms`);
         start_time = Date.now();
-        try {
-            // 设置 iPhone X 的视口
-            await page.setViewport({
-                width: 375,
-                height: 812,
-                deviceScaleFactor: 3,
-                isMobile: true,
-                hasTouch: true,
-            });
-            console.log(`setViewport time: ${Date.now() - start_time}ms`);
-            start_time = Date.now();
 
-            // 设置较短的超时时间
-            await page.goto(url, {
-                waitUntil: 'networkidle2',
-                timeout: 30000
-            });
-            console.log(`page goto time: ${Date.now() - start_time}ms`);
-            start_time = Date.now();
+        // 设置较短的超时时间
+        await page.goto(url, {
+            waitUntil: 'networkidle2',
+            timeout: 30000
+        });
+        console.log(`page goto time: ${Date.now() - start_time}ms`);
+        start_time = Date.now();
 
-            // 等待关键元素
-            await page.waitForSelector('body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view', {
-                timeout: 10000
-            });
-            console.log(`waitForSelector time: ${Date.now() - start_time}ms`);
-            start_time = Date.now();
-            // 截取整页
-            await page.screenshot({
-                path: file_name,
-                fullPage: true,
-            });
-            console.log(`screenshot time: ${Date.now() - start_time}ms`);
-        } finally {
-            await page.close();
-        }
-    });
+        // 等待关键元素
+        await page.waitForSelector('body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view', {
+            timeout: 10000
+        });
+        console.log(`waitForSelector time: ${Date.now() - start_time}ms`);
+        start_time = Date.now();
+        // 截取整页
+        await page.screenshot({
+            path: file_name,
+            fullPage: true,
+        });
+        console.log(`screenshot time: ${Date.now() - start_time}ms`);
+    } finally {
+        await page.close();
+    }
 }
 
 async function get_ticket_func(body, token) {
