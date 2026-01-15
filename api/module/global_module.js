@@ -74,6 +74,20 @@ async function processCaptureLock() {
         processCaptureLock();
     }
 }
+async function do_web_cap_right_now(url, file_name) {
+    const captureWebsite = await import('capture-website');
+    await captureWebsite.default.file(url, file_name, {
+        emulateDevice: 'iPhone X',
+        fullPage: true,
+        waitForElement: 'body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view',
+        launchOptions: {
+            headless: 'new',
+            executablePath: '/root/.cache/puppeteer/chrome/linux-126.0.6478.55/chrome-linux64/chrome',
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
+        },
+    })
+
+}
 
 function lockDoWebCap(url, file_name) {
     return new Promise((resolve, reject) => {
@@ -105,7 +119,7 @@ async function do_web_cap(url, file_name) {
 
         // 设置较短的超时时间
         await page.goto(url, {
-            waitUntil: 'domcontentloaded',
+            waitUntil: 'networkidle2',
             timeout: 30000
         });
         console.log(`page goto time: ${Date.now() - start_time}ms`);
@@ -1342,7 +1356,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await lockDoWebCap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
