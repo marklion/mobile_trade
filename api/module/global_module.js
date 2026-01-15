@@ -53,7 +53,38 @@ async function getBrowserInstance() {
     browserUsageCount++;
     return browserInstance;
 }
+const captureQueue = [];
+let isCapturing = false;
 
+async function processCaptureLock() {
+    if (isCapturing || captureQueue.length === 0) {
+        return;
+    }
+
+    isCapturing = true;
+    const captureTask = captureQueue.shift();
+
+    try {
+        await captureTask.func();
+        captureTask.resolve();
+    } catch (error) {
+        captureTask.reject(error);
+    } finally {
+        isCapturing = false;
+        processCaptureLock();
+    }
+}
+
+function lockDoWebCap(url, file_name) {
+    return new Promise((resolve, reject) => {
+        captureQueue.push({
+            func: () => do_web_cap(url, file_name),
+            resolve,
+            reject
+        });
+        processCaptureLock();
+    });
+}
 async function do_web_cap(url, file_name) {
     let start_time = Date.now();
     const browser = await getBrowserInstance();
@@ -74,7 +105,7 @@ async function do_web_cap(url, file_name) {
 
         // 设置较短的超时时间
         await page.goto(url, {
-            waitUntil: 'networkidle2',
+            waitUntil: 'domcontentloaded',
             timeout: 30000
         });
         console.log(`page goto time: ${Date.now() - start_time}ms`);
@@ -1311,7 +1342,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
+                await lockDoWebCap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
@@ -1347,7 +1378,7 @@ module.exports = {
                             console.log(`正在生成 ${plan.id}`);
                             const fileName = generateTicketFilename(plan);
                             const filePath = path.join(tempDir, fileName);
-                            await do_web_cap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, filePath);
+                            await lockDoWebCap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, filePath);
                             console.log(`已生成 ${filePath}`);
                             filePaths.push(filePath);
                         }
