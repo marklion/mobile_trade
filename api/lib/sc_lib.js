@@ -131,8 +131,9 @@ module.exports = {
                     await sq.models.sc_content.destroy({ where: { id: extra_content.id } });
                 }
                 if (!this.sc_content_is_correct(element.belong_type, element.sc_content, plan)) {
+                    const scContentId = element.sc_content.id;
                     element.sc_content = null;
-                    await sq.models.sc_content.destroy({ where: { id: element.sc_content.id } });
+                    await sq.models.sc_content.destroy({ where: { id: scContentId } });
                 }
             }
             delete element.sc_contents;
