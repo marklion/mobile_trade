@@ -81,6 +81,23 @@ module.exports = {
 
         return ret;
     },
+    sc_content_is_correct: function (belong_type, content, plan) {
+        let ret = false;
+        switch (belong_type) {
+            case 0:
+                ret = content.driverId == plan.driver.id;
+                break;
+            case 1:
+                ret = content.vehicleId == plan.main_vehicle.id;
+                break;
+            case 2:
+                ret = content.vehicleId == plan.behind_vehicle.id;
+                break;
+            default:
+                break;
+        }
+        return ret;
+    },
     get_sc_status_by_plan: async function (plan, pageNo = -1) {
         let sq = db_opt.get_sq();
         let ret = { reqs: [], total: 0, passed: false }
@@ -112,6 +129,11 @@ module.exports = {
                 element.sc_content = element.sc_contents[0];
                 for (let extra_content of element.sc_contents.slice(1)) {
                     await sq.models.sc_content.destroy({ where: { id: extra_content.id } });
+                }
+                if (!this.sc_content_is_correct(element.belong_type, element.sc_content, plan)) {
+                    const scContentId = element.sc_content.id;
+                    element.sc_content = null;
+                    await sq.models.sc_content.destroy({ where: { id: scContentId } });
                 }
             }
             delete element.sc_contents;
@@ -286,7 +308,7 @@ module.exports = {
         }
         return ret;
     },
-    refresh_sc_content_belong:async function(content, plan) {
+    refresh_sc_content_belong: async function (content, plan) {
         let belong_type = content.sc_req.belong_type;
         content.driverId = null;
         content.vehicleId = null;
