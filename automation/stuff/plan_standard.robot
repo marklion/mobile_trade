@@ -121,7 +121,7 @@ Plan Price Change With Recalculation
     ${expected_original_arrears}  Evaluate  ${original_unit_price} * ${data_stuff}[expect_count]
     Should Be Equal As Numbers    ${original_arrears}    ${expected_original_arrears}
     Should Be Equal As Numbers    ${original_outstanding_vehicles}  ${1}
-    
+
     # 改价为更高的价格
     ${new_price}  Evaluate  ${original_unit_price} * 1.5
     ${plan_id_string}  Convert To String    ${plan}[id]
@@ -132,13 +132,13 @@ Plan Price Change With Recalculation
     ${new_arrears}  Get From Dictionary  ${data_plan_after}  arrears  false
     ${new_outstanding_vehicles}  Get From Dictionary  ${data_plan_after}  outstanding_vehicles  false
     ${new_unit_price}  Get From Dictionary  ${data_plan_after}  unit_price
-    
+
     # 验证价格已更新
     Should Be Equal As Numbers    ${new_unit_price}    ${new_price}
     ${expected_new_arrears}  Evaluate  ${new_price} * ${data_stuff}[expect_count]
     Should Be Equal As Numbers    ${new_arrears}    ${expected_new_arrears}
     Should Be Equal As Numbers    ${new_outstanding_vehicles}  ${1}
-    
+
     # 验证新欠款大于原欠款（因为涨价了）
     Should Be True    ${new_arrears} > ${original_arrears}
     Charge To A Company  ${buy_company1}[id]  ${expected_new_arrears}
@@ -558,6 +558,51 @@ Extra Info Set Test
     Should Be Equal As Strings    ${c2_plan}[extra_info_config][title]  t2
     Should Be Equal As Strings    ${c2_ticket}[content]    c2
     Should Be Equal As Strings    ${c2_ticket}[title]    t2
+
+Confirm Plan After Driver Confirm
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Need Driver Confirm  ${False}
+    Set Need Driver Confirm
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan    ${plan}
+    Plan Enter    ${plan}
+    Driver Confirm  ${plan}
+    Confirm Vehicle    ${plan}
+    ${plan}  Get Plan By Id    ${plan}[id]
+    Should Not Be Empty    ${plan}[driver_confirm_time]
+    Confirm Vehicle    ${plan}  is_confirm=${False}
+    ${plan}  Get Plan By Id    ${plan}[id]
+    Should Be Empty    ${plan}[driver_confirm_time]
+
+Confirm Plan Before Driver Confirm
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Need Driver Confirm  ${False}
+    Set Need Driver Confirm
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan    ${plan}
+    Plan Enter    ${plan}
+    Confirm Vehicle    ${plan}  expect_fail=${True}
+    Set Need Driver Confirm  ${False}
+    Confirm Vehicle    ${plan}
+
+Driver Confirm Test
+    [Teardown]  Run Keywords  Plan Reset  AND  Set Need Driver Confirm  ${False}
+    Set Need Driver Confirm
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan    ${plan}
+    Driver Confirm  ${plan}  expect_fail=${True}
+    Plan Enter    ${plan}
+    Driver Confirm  ${plan}
 
 *** Keywords ***
 Get Ticket by Plan Id

@@ -587,6 +587,49 @@ module.exports = {
                 return ret;
             },
         },
+        driver_confirm:{
+            name: '司机确认装卸货',
+            description: '司机确认装卸货',
+            need_rbac:false,
+            is_write:true,
+            is_get_api:false,
+            params:{
+                open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                is_confirm: { type: Boolean, have_to: true, mean: '是否确认', example: true },
+            },
+            result:{
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func:async function (body, token) {
+                let sq = db_opt.get_sq();
+                let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (driver && plan && await driver.hasPlan(plan)) {
+                    let can_confirm = false;
+                    if (plan.enter_time && plan.count == 0)
+                    {
+                        can_confirm = true;
+                    }
+                    if (can_confirm) {
+                        if (body.is_confirm) {
+                            plan.driver_confirm_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                        }
+                        else {
+                            plan.driver_confirm_time = '';
+                        }
+                    }
+                    else {
+                        throw { err_msg: '当前状态无法确认' };
+                    }
+                    await plan.save();
+                }
+                else {
+                    throw { err_msg: '无法确认' };
+                }
+                return { result: true };
+            }
+        },
         driver_select_company: {
             name: '司机选择公司',
             description: '司机选择公司',
@@ -2166,6 +2209,20 @@ module.exports = {
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 return { change_finished_order_price_switch: company.change_finished_order_price_switch };
+            }
+        },
+        get_need_driver_confirm: {
+            name: '获取出厂是否需要司机确认',
+            description: '获取出厂是否需要司机确认',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                need_driver_confirm: { type: Boolean, mean: '是否需要司机确认', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { need_driver_confirm: company.need_driver_confirm };
             }
         },
         get_barriergate_control_permission: {
