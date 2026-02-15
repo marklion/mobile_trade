@@ -286,7 +286,8 @@ module.exports = {
                                 id: { type: Number, mean: 'ID', example: 1 },
                                 title: { type: String, mean: '标题', example: '标题' },
                             }
-                        }
+                        },
+                        need_driver_confirm:{type: Boolean, mean: '是否需要司机确认装卸货', example: false},
                     }
                 },
                 need_sc: { type: Boolean, mean: '是否需要安检', example: true },

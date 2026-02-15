@@ -337,11 +337,11 @@ Check In A Plan
     Req to Server  /global/driver_checkin  none  ${req}  ${expect_fail}
 
 Driver Confirm
-    [Arguments]  ${plan}  ${expect_fail}=${False}  ${index}=0
+    [Arguments]  ${plan}  ${is_confirm}=${True}  ${expect_fail}=${False}  ${index}=0
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
     ${req}  Create Dictionary  open_id=${driver}[open_id]
     ${resp}  Req Get to Server  /global/driver_get_order  none  plans  -1  &{req}
-    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  is_confirm=${True}
+    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  is_confirm=${is_confirm}
     Req to Server  /global/driver_confirm  none  ${req}  ${expect_fail}
 
 Set Expect Weight

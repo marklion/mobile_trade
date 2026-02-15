@@ -603,6 +603,10 @@ Driver Confirm Test
     Driver Confirm  ${plan}  expect_fail=${True}
     Plan Enter    ${plan}
     Driver Confirm  ${plan}
+    Confirm Vehicle    ${plan}
+    Driver Confirm  ${plan}  ${False}  ${True}
+    Confirm Vehicle    ${plan}  is_confirm=${False}
+    Driver Confirm  ${plan}  ${False}
 
 *** Keywords ***
 Get Ticket by Plan Id

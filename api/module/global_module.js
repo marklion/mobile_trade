@@ -611,6 +611,11 @@ module.exports = {
                     {
                         can_confirm = true;
                     }
+                    if (!body.is_confirm && plan.confirmed)
+                    {
+                        can_confirm = false;
+                    }
+
                     if (can_confirm) {
                         if (body.is_confirm) {
                             plan.driver_confirm_time = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -618,9 +623,10 @@ module.exports = {
                         else {
                             plan.driver_confirm_time = '';
                         }
+                        await plan_lib.rp_history_driver_confirm(plan, body.is_confirm);
                     }
                     else {
-                        throw { err_msg: '当前状态无法确认' };
+                        throw { err_msg: '当前状态无法操作' };
                     }
                     await plan.save();
                 }

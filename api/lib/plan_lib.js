@@ -1154,6 +1154,10 @@ module.exports = {
     rp_history_call: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, "叫号");
     },
+    rp_history_driver_confirm:async function(_plan, is_confirm) {
+        let action = is_confirm ? "司机确认出厂" : "司机取消确认出厂";
+        await this.record_plan_history(_plan, _plan.driver.name, action);
+    },
     rp_history_confirm_deliver: async function (_plan, _operator) {
         let content = "取消确认装卸货";
         if (_plan.confirmed) {

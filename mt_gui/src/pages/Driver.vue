@@ -275,6 +275,12 @@ export default {
                         value: item.expect_weight,
                     });
                 };
+                if (item.driver_confirm_time) {
+                    ret.list.push({
+                        label: '司机确认时间',
+                        value: item.driver_confirm_time,
+                    });
+                }
                 let enter_permit = false;
                 if (item.stuff.no_need_register) {
                     enter_permit = true;
@@ -333,6 +339,22 @@ export default {
                         item: item,
                     });
                 }
+                if (item.stuff.company.need_driver_confirm) {
+                    if (item.driver_confirm_time) {
+                        ret.buttons.push({
+                            text: '取消确认出厂',
+                            color: 'red',
+                            item: item,
+                        });
+                    } else {
+                        ret.buttons.push({
+                            text: '确认要出厂',
+                            color: 'red',
+                            item: item,
+                        });
+                    }
+
+                }
                 if (item.is_proxy) {
                     ret.buttons.push({
                         text: '选择货源',
@@ -350,7 +372,7 @@ export default {
                 if (item.stuff.need_driver_sign) {
                     ret.buttons.push({
                         text: '签名',
-                        color:'black',
+                        color: 'black',
                         item: item,
                     });
                 }
@@ -586,6 +608,20 @@ export default {
                 uni.navigateTo({
                     url: '/subPage1/DriverSign?open_id=' + this.driver_self.open_id,
                 });
+            } else if (e.text == '确认要出厂') {
+                await vue_this.$send_req('/global/driver_confirm', {
+                    plan_id: e.item.id,
+                    open_id: vue_this.driver_self.open_id,
+                    is_confirm: true,
+                });
+                uni.startPullDownRefresh();
+            } else if (e.text == '取消确认出厂') {
+                await vue_this.$send_req('/global/driver_confirm', {
+                    plan_id: e.item.id,
+                    open_id: vue_this.driver_self.open_id,
+                    is_confirm: false,
+                });
+                uni.startPullDownRefresh();
             }
         },
         set_expect_weight: async function (e) {
