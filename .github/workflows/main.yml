@@ -30,7 +30,7 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       - name: Shutdown Ubuntu MySQL (SUDO)
         run: sudo service mysql stop # Shutdown the Default MySQL, "sudo" is necessary, please not remove it
-      - name: MySQL Action Setup
+      - name: setup-mysql
         uses: shogo82148/actions-setup-mysql@v1
         with:
           my-cnf: |
