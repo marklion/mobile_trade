@@ -336,6 +336,14 @@ Check In A Plan
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  lat=${123}  lon=${333}
     Req to Server  /global/driver_checkin  none  ${req}  ${expect_fail}
 
+Driver Confirm
+    [Arguments]  ${plan}  ${is_confirm}=${True}  ${expect_fail}=${False}  ${index}=0
+    ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
+    ${req}  Create Dictionary  open_id=${driver}[open_id]
+    ${resp}  Req Get to Server  /global/driver_get_order  none  plans  -1  &{req}
+    ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  is_confirm=${is_confirm}
+    Req to Server  /global/driver_confirm  none  ${req}  ${expect_fail}
+
 Set Expect Weight
     [Arguments]  ${plan}  ${expect_weight}=22  ${expect_fail}=${False}
     ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
@@ -632,3 +640,8 @@ Set Dup Not Permit
     [Arguments]   ${is_open}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  dup_not_permit=${is_open}
     Req to Server    /stuff/set_dup_not_permit  ${token}    ${req}
+
+Set Need Driver Confirm
+    [Arguments]  ${need_driver_confirm}=${True}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  need_driver_confirm=${need_driver_confirm}
+    Req to Server    /stuff/set_need_driver_confirm  ${token}  ${req}

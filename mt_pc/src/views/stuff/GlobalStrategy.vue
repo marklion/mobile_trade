@@ -63,6 +63,10 @@
                     <el-switch v-model="dup_not_permit" active-text="是否限制订单重复" @change="set_dup_not_permit">
                     </el-switch>
                 </vue-cell>
+                <vue-cell width="3of12">
+                    <el-switch v-model="need_driver_confirm" active-text="是否需要司机确认装卸货" @change="set_need_driver_confirm">
+                    </el-switch>
+                </vue-cell>
             </vue-grid>
             <h3>代理配置</h3>
             <page-content ref="all_delegates" body_key="delegates" enable req_url="/stuff/get_delegates">
@@ -235,6 +239,7 @@ export default {
             is_the_order_display_price: false,
             change_finished_order_price_switch: false,
             dup_not_permit: false,
+            need_driver_confirm:false,
             support_location_detail: false,
             is_allowed_order_return: false,
             contract_id_selected: 0,
@@ -293,6 +298,7 @@ export default {
         this.get_the_order_display_price();
         this.get_change_finished_order_price_switch();
         this.get_dup_not_permit();
+        this.get_need_driver_confirm();
     },
     methods: {
         add_extra_info_config: async function () {
@@ -569,9 +575,13 @@ export default {
                 dup_not_permit: this.dup_not_permit
             });
         },
-        set_the_order_display_price: async function () {
-            await this.$send_req('/stuff/set_the_order_display_price', {
-                is_the_order_display_price: this.is_the_order_display_price
+        get_need_driver_confirm: async function () {
+            let ret = await this.$send_req('/global/get_need_driver_confirm', {});
+            this.need_driver_confirm = ret.need_driver_confirm;
+        },
+        set_need_driver_confirm: async function () {
+            await this.$send_req('/stuff/set_need_driver_confirm', {
+                need_driver_confirm: this.need_driver_confirm
             });
         },
         get_is_allowed_order_return: async function () {

@@ -175,12 +175,27 @@ module.exports = {
             },
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
-                    plan.seal_no = body.seal_no;
-                    plan.drop_take_zone_name = body.drop_take_zone_name;
-                    await field_lib.handle_confirm_vehicle(plan, body.is_confirm);
-                    await plan.save();
-                    let user = await rbac_lib.get_user_by_token(token);
-                    await plan_lib.rp_history_confirm_deliver(plan, user.name);
+                    let confirm_failure_msg = '';
+                    if (body.is_confirm) {
+                        let need_driver_confirm = plan.stuff.company.need_driver_confirm;
+                        if (need_driver_confirm && !plan.driver_confirm_time) {
+                            confirm_failure_msg = '需要司机确认后才能确认装卸货';
+                        }
+                    }
+                    if (confirm_failure_msg == "") {
+                        plan.seal_no = body.seal_no;
+                        plan.drop_take_zone_name = body.drop_take_zone_name;
+                        await field_lib.handle_confirm_vehicle(plan, body.is_confirm);
+                        if (!body.is_confirm) {
+                            plan.driver_confirm_time = '';
+                        }
+                        await plan.save();
+                        let user = await rbac_lib.get_user_by_token(token);
+                        await plan_lib.rp_history_confirm_deliver(plan, user.name);
+                    }
+                    else {
+                        throw { err_msg: confirm_failure_msg };
+                    }
                 });
                 return { result: true };
             }
@@ -201,7 +216,7 @@ module.exports = {
                 let company = await rbac_lib.get_company_by_token(token);
                 if (!company) {
                     throw { err_msg: '公司信息不存在' };
-                }else{
+                } else {
                     let switchAcc = company.access_control_permission;
                     let switchGate = company.barriergate_control_permission;
                     let resp = await field_lib.dev_opt.get_device_status(company)

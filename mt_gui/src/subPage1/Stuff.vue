@@ -267,6 +267,9 @@
         <u-cell title="是否限制重复订单">
             <u-switch slot="value" v-model="dup_not_permit" @change="set_dup_not_permit"></u-switch>
         </u-cell>
+        <u-cell title="是否需要司机确认装卸货">
+            <u-switch slot="value" v-model="need_driver_confirm" @change="set_need_driver_confirm"></u-switch>
+        </u-cell>
     </view>
     <view v-else-if="cur_seg == 2">
         <BlackList ref="blacklist_ref" />
@@ -427,6 +430,7 @@ export default {
             is_allowed_order_return: false,
             is_the_order_display_price: false,
             change_finished_order_price_switch: false,
+            need_driver_confirm:false,
             dup_not_permit: false,
             // 全局配置管理
             globalConfigs: {
@@ -479,6 +483,11 @@ export default {
                     getUrl: '/global/get_change_finished_order_price_switch',
                     setUrl: '/stuff/set_change_finished_order_price_switch',
                     key: 'change_finished_order_price_switch'
+                },
+                need_driver_confirm: {
+                    getUrl: '/global/get_need_driver_confirm',
+                    setUrl: '/stuff/set_need_driver_confirm',
+                    key: 'need_driver_confirm'
                 },
                 dup_not_permit:{
                     getUrl: '/global/get_dup_not_permit',
@@ -978,6 +987,12 @@ export default {
         },
         set_change_finished_order_price_switch: function () {
             return this.setGlobalConfig('change_finished_order_price_switch');
+        },
+        get_need_driver_confirm: function () {
+            return this.getGlobalConfig('need_driver_confirm');
+        },
+        set_need_driver_confirm: function () {
+            return this.setGlobalConfig('need_driver_confirm');
         },
         get_dup_not_permit: function () {
             return this.getGlobalConfig('dup_not_permit');

@@ -135,6 +135,7 @@ let db_opt = {
             is_allowed_order_return: { type: DataTypes.BOOLEAN, defaultValue: false },
             change_finished_order_price_switch: { type: DataTypes.BOOLEAN, defaultValue: false },
             dup_not_permit: { type: DataTypes.BOOLEAN, defaultValue: false },
+            need_driver_confirm: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -178,6 +179,7 @@ let db_opt = {
             outstanding_vehicles: { type: DataTypes.INTEGER, defaultValue: 0, },
             subsidy_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('subsidy_price') },
             king_dee_comment: { type: DataTypes.STRING },
+            driver_confirm_time:{ type: DataTypes.STRING },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

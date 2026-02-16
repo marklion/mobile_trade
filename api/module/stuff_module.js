@@ -1429,6 +1429,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_need_driver_confirm:{
+            name: '设置出厂是否需要司机确认',
+            description: '设置出厂是否需要司机确认',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                need_driver_confirm: { type: Boolean, have_to: true, mean: '是否需要司机确认', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.need_driver_confirm = body.need_driver_confirm;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_the_order_display_price: {
             name: '设置订单列表是否显示价格',
             description: '设置订单列表是否显示价格',
