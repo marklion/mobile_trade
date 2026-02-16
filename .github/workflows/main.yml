@@ -31,6 +31,7 @@ jobs:
       - name: Shutdown Ubuntu MySQL (SUDO)
         run: sudo service mysql stop # Shutdown the Default MySQL, "sudo" is necessary, please not remove it
       - name: setup-mysql
+        id: setup-mysql
         uses: shogo82148/actions-setup-mysql@v1
         with:
           my-cnf: |
