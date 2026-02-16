@@ -36,11 +36,14 @@ jobs:
           my-cnf: |
             [mysqld]
             bind-address=0.0.0.0
-            [mysql]
-            database=automation_test
           mysql-version: '8.0' # Optional, default value is "latest". The version of the MySQL
           user: 'sysadmin' # Required if "mysql root password" is empty, default is empty. The superuser for the specified database. Can use secrets, too
           password: ${{ secrets.DB_PASSWORD}} # Required if "mysql user" exists. The password for the "mysql user"
+      - name: connect via unix domain socket
+        run: mysql -uroot \
+          --protocol=SOCKET \
+          --socket=${{ steps.setup-mysql.outputs.base-dir }}/tmp/mysql.sock
+          -e 'CREATE DATABASE automation_test;'
       - name: Run build-wrapper
         run: |
           docker pull marklion/mt_deploy:v1.0
