@@ -294,7 +294,7 @@ module.exports = {
         },
         export_plans: common.export_plans(async function (body, token) {
             let plans = await plan_lib.filter_plan4manager(body, token, true);
-            return await plan_lib.make_file_by_plans(plans);
+            return await plan_lib.make_file_by_plans(plans, body.columns);
         }),
     }
 }

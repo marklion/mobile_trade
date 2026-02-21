@@ -1677,7 +1677,7 @@ module.exports = {
             return input
         }
     },
-    make_file_by_plans: async function (plans) {
+    make_file_by_plans: async function (plans, columns_defined) {
         let json = [];
         let unifiedDecimalPlaces = 2;
         let totalOrders = 0;
@@ -1823,7 +1823,17 @@ module.exports = {
         }];
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
-        worksheet.columns = columns;
+        if (columns_defined) {
+            worksheet.columns = columns_defined.map((item) => {
+                return {
+                    header: item.label,
+                    key: item.name,
+                }
+            })
+        }
+        else {
+            worksheet.columns = columns;
+        }
         worksheet.addRows(json);
         worksheet.addRow({
             create_company: `合计:共${totalOrders}单`,
@@ -1832,14 +1842,30 @@ module.exports = {
         })
         const lastRow = worksheet.lastRow;
         lastRow.font = { bold: true, color: { argb: 'FFFF0000' }, };
-        lastRow.getCell('count').numFmt = '0.00';
-        lastRow.getCell('total_price').numFmt = '0.00';
-        worksheet.getColumn('p_weight').numFmt = '0.00';
-        worksheet.getColumn('m_weight').numFmt = '0.00';
-        worksheet.getColumn('count').numFmt = '0.00';
-        worksheet.getColumn('unit_price').numFmt = '0.00';
-        worksheet.getColumn('total_price').numFmt = '0.00';
-        worksheet.getColumn('second_value').numFmt = `0.${'0'.repeat(unifiedDecimalPlaces)}`;
+        if (worksheet.columns.some((column) => column && column.key === 'count')) {
+            lastRow.getCell('count').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'total_price')) {
+            lastRow.getCell('total_price').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'p_weight')) {
+            worksheet.getColumn('p_weight').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'm_weight')) {
+            worksheet.getColumn('m_weight').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'count')) {
+            worksheet.getColumn('count').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'unit_price')) {
+            worksheet.getColumn('unit_price').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'total_price')) {
+            worksheet.getColumn('total_price').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'second_value')) {
+            worksheet.getColumn('second_value').numFmt = `0.${'0'.repeat(unifiedDecimalPlaces)}`;
+        }
 
         let file_name = '/uploads/plans' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
