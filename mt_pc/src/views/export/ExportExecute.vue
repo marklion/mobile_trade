@@ -1,6 +1,9 @@
 <template>
 <div class="export_execute_show">
-    <h2>订单明细导出</h2>
+    <div class="export_execute_header">
+        <h2>订单明细导出</h2>
+        <array-selector-button v-model="columns_defined" @change="save_cd_local"></array-selector-button>
+    </div>
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
             <export-date :is_need_pm_time="true" :is_buy="single_module.is_buy" :need_stuff="single_module.has_more_filter" :need_company="single_module.has_more_filter" :export_name="single_module.module_name" @do_export="export_order($event, single_module.module)" concern_finished></export-date>
@@ -42,15 +45,102 @@ import {
     VueGrid,
     VueCell
 } from 'vue-grd';
+import ArraySelectorButton from '../../components/ArraySelectorButton.vue';
 export default {
     name: 'ExportExecute',
     components: {
+        "array-selector-button": ArraySelectorButton,
         "export-date": ExportDate,
         VueGrid,
         VueCell,
     },
     data: function () {
         return {
+            columns_defined: [{
+                label: '下单公司',
+                name: 'create_company',
+            }, {
+                label: '接单公司',
+                name: 'accept_company',
+            }, {
+                label: '计划时间',
+                name: 'plan_time',
+            }, {
+                label: '过皮时间',
+                name: 'p_time',
+            }, {
+                label: '过毛时间',
+                name: 'm_time',
+            }, {
+                label: '主车号',
+                name: 'mv',
+            }, {
+                label: '挂车号',
+                name: 'bv',
+            }, {
+                label: '司机姓名',
+                name: 'driver_name',
+            }, {
+                label: '司机电话',
+                name: 'driver_phone',
+            }, {
+                label: '皮重',
+                name: 'p_weight',
+            }, {
+                label: '毛重',
+                name: 'm_weight',
+            }, {
+                label: '装车量',
+                name: 'count',
+            }, {
+                label: '单价',
+                name: 'unit_price',
+            }, {
+                label: '总价',
+                name: 'total_price',
+            }, {
+                label: '铅封号',
+                name: 'seal_no',
+            }, {
+                label: '磅单号',
+                name: 'ticket_no',
+            }, {
+                label: '物料名',
+                name: 'stuff_name',
+            }, {
+                label: '卸货地址',
+                name: 'drop_address',
+            }, {
+                label: '发票已开?',
+                name: 'fapiao_delivered',
+            }, {
+                label: '备注',
+                name: 'comment',
+            }, {
+                label: '装卸区域',
+                name: 'drop_take_zone_name'
+            }, {
+                label: '代理公司',
+                name: 'delegate'
+            }, {
+                label: '打折后单价',
+                name: 'subsidy_price'
+            }, {
+                label: '打折后总价',
+                name: 'subsidy_total_price'
+            }, {
+                label: '打折数',
+                name: 'subsidy_discount'
+            }, {
+                label: '第二单位',
+                name: 'second_unit'
+            }, {
+                label: '第二单位装卸量',
+                name: 'second_value'
+            }, {
+                label: '金蝶星辰同步信息',
+                name: 'king_dee_comment'
+            }],
             orig_all_module: [{
                     module: 'sale_management',
                     module_name: '销售接单',
@@ -108,6 +198,7 @@ export default {
                     m_start_time: filter.m_start_time,
                     m_end_time: filter.m_end_time,
                     only_finished: filter.only_finished,
+                    columns:this.columns_defined,
                 });
                 this.show_export_success();
             } catch (error) {
@@ -153,6 +244,9 @@ export default {
                 this.show_export_fail(error);
             }
         },
+        save_cd_local: function () {
+            localStorage.setItem('export_columns_defined', JSON.stringify(this.columns_defined));
+        },
         export_sc: async function (filter, module) {
             try {
 
@@ -178,13 +272,28 @@ export default {
             }
         },
     },
-    mounted: async function () {},
+    mounted: async function () {
+        const cd_local = localStorage.getItem('export_columns_defined');
+        if (cd_local) {
+            try {
+                this.columns_defined = JSON.parse(cd_local);
+            } catch (error) {
+                console.error('Failed to parse columns_defined from localStorage:', error);
+            }
+        }
+    },
 }
 </script>
 
 <style scoped>
 .export_execute_show {
     padding: 20px;
+}
+
+.export_execute_header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .cell_show {
