@@ -289,6 +289,31 @@ export const asyncRoutes = [
     ],
   },
   {
+    path: '/group_mgmt',
+    component: Layout,
+    redirect: '/group_mgmt/members',
+    name: 'GroupMgmt',
+    meta: {
+      title: '集团管理',
+      icon: 'el-icon-office-building',
+      roles: ['group', 'global'],
+    },
+    children: [
+      {
+        path: 'members',
+        name: 'group_members',
+        component: () => import('@/views/group/GroupMembers'),
+        meta: { title: '成员公司', roles: ['group', 'global'] },
+      },
+      {
+        path: 'data_permission',
+        name: 'group_data_permission',
+        component: () => import('@/views/group/GroupDataPermission'),
+        meta: { title: '数据权限', roles: ['group', 'global'] },
+      },
+    ],
+  },
+  {
     path: '/system_config',
     name: 'SystemConfig',
     component: Layout,

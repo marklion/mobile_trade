@@ -75,6 +75,20 @@ export default {
                     require_module: 'audit',
                     path: 'Audit',
                     sub_page_name: 'subPage1'
+                },
+                {
+                    name: '集团成员',
+                    icon: 'menu',
+                    rm_array: ['group', 'global'],
+                    path: 'GroupMembers',
+                    sub_page_name: 'subPage1'
+                },
+                {
+                    name: '集团权限',
+                    icon: 'list',
+                    rm_array: ['group', 'global'],
+                    path: 'GroupDataPermission',
+                    sub_page_name: 'subPage1'
                 }
             ]
         }
@@ -83,7 +97,18 @@ export default {
         init_pages: function () {
             this.show_apps = [];
             this.all_apps.forEach(item => {
-                if (!item.require_module || this.$has_module(item.require_module)) {
+                let ok = false;
+                if (item.rm_array && item.rm_array.length) {
+                    for (let i = 0; i < item.rm_array.length; i++) {
+                        if (this.$has_module(item.rm_array[i])) {
+                            ok = true;
+                            break;
+                        }
+                    }
+                } else if (!item.require_module || this.$has_module(item.require_module)) {
+                    ok = true;
+                }
+                if (ok) {
                     this.show_apps.push(item);
                 }
             });

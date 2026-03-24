@@ -136,6 +136,21 @@ let db_opt = {
             change_finished_order_price_switch: { type: DataTypes.BOOLEAN, defaultValue: false },
             dup_not_permit: { type: DataTypes.BOOLEAN, defaultValue: false },
             need_driver_confirm: { type: DataTypes.BOOLEAN, defaultValue: false },
+            is_group: { type: DataTypes.BOOLEAN, defaultValue: false },
+            group_admin_user_id: { type: DataTypes.INTEGER, allowNull: true },
+        },
+        company_group_member: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            groupCompanyId: { type: DataTypes.INTEGER, allowNull: false },
+            memberCompanyId: { type: DataTypes.INTEGER, allowNull: false },
+        },
+        group_member_data_grant: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            groupCompanyId: { type: DataTypes.INTEGER, allowNull: false },
+            memberCompanyId: { type: DataTypes.INTEGER, allowNull: false },
+            rbacUserId: { type: DataTypes.INTEGER, allowNull: false },
+            can_view: { type: DataTypes.BOOLEAN, defaultValue: false },
+            can_operate: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -498,7 +513,7 @@ let db_opt = {
         _sq.models.rbac_role.belongsToMany(_sq.models.rbac_user, { through: 'rbac_user_role' });
         _sq.models.rbac_role.belongsToMany(_sq.models.rbac_module, { through: 'rbac_role_module' });
         _sq.models.rbac_module.belongsToMany(_sq.models.rbac_role, { through: 'rbac_role_module' });
-        _sq.models.rbac_user.belongsTo(_sq.models.company);
+        _sq.models.rbac_user.belongsTo(_sq.models.company, { constraints: false });
         _sq.models.company.hasMany(_sq.models.rbac_user);
         _sq.models.rbac_role.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.rbac_role);
@@ -671,6 +686,17 @@ let db_opt = {
 
         _sq.models.company.hasMany(_sq.models.king_dee_error);
         _sq.models.king_dee_error.belongsTo(_sq.models.company);
+
+        _sq.models.company.belongsTo(_sq.models.rbac_user, {
+            as: 'group_admin_user',
+            foreignKey: 'group_admin_user_id',
+            constraints: false,
+        });
+        _sq.models.company_group_member.belongsTo(_sq.models.company, { as: 'group_company', foreignKey: 'groupCompanyId' });
+        _sq.models.company_group_member.belongsTo(_sq.models.company, { as: 'member_company', foreignKey: 'memberCompanyId' });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_group_company', foreignKey: 'groupCompanyId' });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_member_company', foreignKey: 'memberCompanyId' });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.rbac_user, { foreignKey: 'rbacUserId' });
     },
     install: async function () {
         console.log('run install');
