@@ -139,9 +139,6 @@ let db_opt = {
             is_group: { type: DataTypes.BOOLEAN, defaultValue: false },
             group_admin_user_id: { type: DataTypes.INTEGER, allowNull: true },
         },
-        company_group_member: {
-            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-        },
         group_member_data_grant: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             can_view: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -685,17 +682,38 @@ let db_opt = {
         _sq.models.company.hasOne(_sq.models.rbac_user);
         _sq.models.rbac_user.belongsTo(_sq.models.company, { as: 'group_admin_user' });
         
-        _sq.models.company_group_member.belongsTo(_sq.models.company, { as: 'group_company', foreignKey: { name: 'groupCompanyId', allowNull: false }});
-        _sq.models.company.hasMany(_sq.models.company_group_member, { as: 'group_members', foreignKey: { name: 'groupCompanyId', allowNull: false }});
-        _sq.models.company_group_member.belongsTo(_sq.models.company, { as: 'member_company', foreignKey: { name: 'memberCompanyId', allowNull: false }});
-        _sq.models.company.hasMany(_sq.models.company_group_member, { as: 'member_group_bindings', foreignKey: { name: 'memberCompanyId', allowNull: false }});
+        _sq.models.company.belongsToMany(_sq.models.company, {
+            as: 'member_companies',
+            through: 'company_group_member',
+            foreignKey: { name: 'groupCompanyId', allowNull: false },
+            otherKey: { name: 'memberCompanyId', allowNull: false },
+            constraints: false,
+        });
+        _sq.models.company.belongsToMany(_sq.models.company, {
+            as: 'joined_groups',
+            through: 'company_group_member',
+            foreignKey: { name: 'memberCompanyId', allowNull: false },
+            otherKey: { name: 'groupCompanyId', allowNull: false },
+            constraints: false,
+        });
 
         _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_group_company', foreignKey: { name: 'groupCompanyId', allowNull: false }});
-        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'group_data_grants', foreignKey: { name: 'groupCompanyId', allowNull: false }});
         _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_member_company', foreignKey: { name: 'memberCompanyId', allowNull: false }});
-        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'member_data_grants', foreignKey: { name: 'memberCompanyId', allowNull: false }});
         _sq.models.group_member_data_grant.belongsTo(_sq.models.rbac_user, { foreignKey: { name: 'rbacUserId', allowNull: false }});
-        _sq.models.rbac_user.hasMany(_sq.models.group_member_data_grant, { foreignKey: { name: 'rbacUserId', allowNull: false }});
+        _sq.models.company.belongsToMany(_sq.models.rbac_user, {
+            as: 'granted_users',
+            through: _sq.models.group_member_data_grant,
+            foreignKey: { name: 'groupCompanyId', allowNull: false },
+            otherKey: { name: 'rbacUserId', allowNull: false },
+            constraints: false,
+        });
+        _sq.models.rbac_user.belongsToMany(_sq.models.company, {
+            as: 'authorized_groups',
+            through: _sq.models.group_member_data_grant,
+            foreignKey: { name: 'rbacUserId', allowNull: false },
+            otherKey: { name: 'groupCompanyId', allowNull: false },
+            constraints: false,
+        });
     },
     install: async function () {
         console.log('run install');
