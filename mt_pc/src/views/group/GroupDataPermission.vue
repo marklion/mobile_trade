@@ -48,10 +48,9 @@
           </el-select>
         </el-form-item>
         <el-form-item label="集团内用户" required>
-          <el-select v-model="form.user_id" placeholder="选择用户（须为集团母公司账号）" filterable style="width: 100%"
-            :disabled="!!editingId">
-            <el-option v-for="u in homeUsers" :key="u.id" :label="`${u.name}（${u.phone}）`" :value="u.id" />
-          </el-select>
+          <el-input v-if="!!editingId" :value="selectedUserLabel" disabled />
+          <select-search v-else v-model="form.user_id" body_key="all_user" get_url="/group/group_company_user_list"
+            item_label="name" item_value="id" :permission_array="['group', 'global']" filterable />
         </el-form-item>
         <el-form-item label="可查看">
           <el-switch v-model="form.can_view" />
@@ -69,8 +68,12 @@
 </template>
 
 <script>
+import SelectSearch from '@/components/SelectSearch.vue'
 export default {
   name: 'GroupDataPermission',
+  components: {
+    'select-search': SelectSearch,
+  },
   data() {
     return {
       selfLoaded: false,
@@ -84,15 +87,22 @@ export default {
       form: {
         member_company_id: '',
         user_id: '',
+        user_name: '',
+        user_phone: '',
         can_view: true,
         can_operate: false,
       },
-      homeUsers: [],
     }
   },
   computed: {
     canManage() {
       return this.company_is_group && this.is_group_admin
+    },
+    selectedUserLabel() {
+      if (!this.form.user_name && !this.form.user_phone) {
+        return ''
+      }
+      return `${this.form.user_name || ''}${this.form.user_phone ? `（${this.form.user_phone}）` : ''}`
     },
   },
   mounted() {
@@ -118,10 +128,6 @@ export default {
       const ret = await this.$send_req('/group/group_member_list', {})
       this.memberOptions = ret.members || []
     },
-    async loadHomeUsers() {
-      const ret = await this.$send_req('/group/group_home_user_list', {})
-      this.homeUsers = ret.users || []
-    },
     async loadGrants() {
       const ret = await this.$send_req('/group/group_grant_list', {})
       this.grants = ret.grants || []
@@ -132,11 +138,10 @@ export default {
       }
       this.loading = true
       try {
-        await Promise.all([this.loadMembers(), this.loadGrants(), this.loadHomeUsers()])
+        await Promise.all([this.loadMembers(), this.loadGrants()])
       } catch (e) {
         this.memberOptions = []
         this.grants = []
-        this.homeUsers = []
       } finally {
         this.loading = false
       }
@@ -146,6 +151,8 @@ export default {
       this.form = {
         member_company_id: '',
         user_id: '',
+        user_name: '',
+        user_phone: '',
         can_view: true,
         can_operate: false,
       }
@@ -160,11 +167,12 @@ export default {
         return
       }
       this.resetForm()
-      await this.loadHomeUsers()
       if (row) {
         this.editingId = row.id
         this.form.member_company_id = row.member_company_id
         this.form.user_id = row.user_id
+        this.form.user_name = row.user_name
+        this.form.user_phone = row.user_phone
         this.form.can_view = !!row.can_view
         this.form.can_operate = !!row.can_operate
       }

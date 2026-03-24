@@ -29,29 +29,6 @@ module.exports = {
                 return { all_user: rows, total: count };
             },
         },
-        group_home_user_list: {
-            name: '集团母公司用户列表（全量）',
-            description: '用于数据权限表单中选择母公司下用户，一次返回全部',
-            is_write: false,
-            is_get_api: false,
-            params: {},
-            result: {
-                users: {
-                    type: Array,
-                    mean: '用户列表',
-                    explain: {
-                        id: { type: Number, mean: '用户id', example: 1 },
-                        name: { type: String, mean: '姓名', example: '张三' },
-                        phone: { type: String, mean: '手机号', example: '13800138000' },
-                    },
-                },
-            },
-            func: async (body, token) => {
-                const { company } = await group_lib.assert_group_manager_token(token);
-                const users = await group_lib.list_home_users_plain(company.id);
-                return { users };
-            },
-        },
         group_member_candidate_list: {
             name: '可添加为成员的公司（分页）',
             description: '排除已是集团、本主体、已绑定为某集团成员的公司；每页 20 条',

@@ -28,10 +28,8 @@
       <p class="dialog-hint">
         仅列出可选的普通公司：排除本集团主体、已是集团的公司、已在本集团的成员。
       </p>
-      <el-select v-model="pickCompanyId" filterable placeholder="选择要加入的公司（下拉列表滚到底自动加载下一页）" style="width: 100%;"
-        popper-class="group-member-candidate-dropdown" @visible-change="onCandidateDropdownVisible">
-        <el-option v-for="c in candidateCompanies" :key="c.id" :label="c.name" :value="c.id" />
-      </el-select>
+      <select-search v-model="pickCompanyId" body_key="candidates" get_url="/group/group_member_candidate_list"
+        item_label="name" item_value="id" :permission_array="['group', 'global']" filterable />
       <span slot="footer">
         <el-button @click="addVisible = false">取消</el-button>
         <el-button type="primary" :disabled="!pickCompanyId" @click="confirmAdd">确定</el-button>
@@ -41,8 +39,12 @@
 </template>
 
 <script>
+import SelectSearch from '@/components/SelectSearch.vue'
 export default {
   name: 'GroupMembers',
+  components: {
+    'select-search': SelectSearch,
+  },
   data() {
     return {
       apiBase: process.env.VUE_APP_BASE_API || '/api/v1',
@@ -52,10 +54,6 @@ export default {
       loading: false,
       members: [],
       addVisible: false,
-      candidateCompanies: [],
-      candidatePage: 0,
-      candidateTotal: 0,
-      candidateLoading: false,
       pickCompanyId: null,
     }
   },
@@ -66,16 +64,6 @@ export default {
   },
   mounted() {
     this.bootstrap()
-  },
-  beforeDestroy() {
-    this.unbindCandidateScroll()
-  },
-  watch: {
-    addVisible(val) {
-      if (!val) {
-        this.unbindCandidateScroll()
-      }
-    },
   },
   methods: {
     async bootstrap() {
@@ -107,108 +95,6 @@ export default {
         this.loading = false
       }
     },
-    async loadCompanyCandidates() {
-      this.pickCompanyId = null
-      this.candidateCompanies = []
-      this.candidatePage = 0
-      this.candidateTotal = 0
-      await this.loadMoreCandidates()
-      await this.$nextTick()
-      await this.prefillCandidateUntilScrollable()
-    },
-    onCandidateDropdownVisible(visible) {
-      if (!visible) {
-        this.unbindCandidateScroll()
-        return
-      }
-      this.$nextTick(() => {
-        this.bindCandidateScroll()
-        this.prefillCandidateUntilScrollable()
-      })
-    },
-    getCandidateScrollWrap() {
-      const dd = document.querySelector('.group-member-candidate-dropdown .el-scrollbar__wrap')
-      return dd || null
-    },
-    bindCandidateScroll() {
-      this.unbindCandidateScroll()
-      const el = this.getCandidateScrollWrap()
-      if (!el) {
-        return
-      }
-      this._candidateScrollEl = el
-      this._candidateScrollHandler = () => this.onCandidateScrollNearBottom()
-      el.addEventListener('scroll', this._candidateScrollHandler, { passive: true })
-    },
-    unbindCandidateScroll() {
-      if (this._candidateScrollEl && this._candidateScrollHandler) {
-        this._candidateScrollEl.removeEventListener('scroll', this._candidateScrollHandler)
-      }
-      this._candidateScrollEl = null
-      this._candidateScrollHandler = null
-    },
-    onCandidateScrollNearBottom() {
-      const el = this._candidateScrollEl
-      if (!el || this.candidateLoading) {
-        return
-      }
-      if (this.candidateCompanies.length >= this.candidateTotal) {
-        return
-      }
-      const { scrollTop, clientHeight, scrollHeight } = el
-      if (scrollTop + clientHeight >= scrollHeight - 48) {
-        this.loadMoreCandidates()
-      }
-    },
-    /** 首屏条数少、不出现滚动条时无法触发滚动加载，自动多请求几页直到能滚或已无数据 */
-    async prefillCandidateUntilScrollable() {
-      if (!this.addVisible || !this.canManage) {
-        return
-      }
-      let guard = 0
-      while (guard++ < 20) {
-        if (this.candidateCompanies.length >= this.candidateTotal) {
-          break
-        }
-        await this.$nextTick()
-        const el = this.getCandidateScrollWrap()
-        if (!el) {
-          break
-        }
-        if (el.scrollHeight > el.clientHeight + 2) {
-          break
-        }
-        await this.loadMoreCandidates()
-      }
-    },
-    async loadMoreCandidates() {
-      if (!this.canManage) {
-        return
-      }
-      if (this.candidateCompanies.length >= this.candidateTotal && this.candidateTotal > 0) {
-        return
-      }
-      this.candidateLoading = true
-      try {
-        const r = await this.$send_req(
-          '/group/group_member_candidate_list',
-          { pageNo: this.candidatePage },
-          true
-        )
-        const list = r.candidates || []
-        this.candidateTotal = r.total != null ? r.total : 0
-        this.candidateCompanies = this.candidateCompanies.concat(list)
-        this.candidatePage += 1
-        await this.$nextTick()
-        if (this._candidateScrollEl) {
-          this.onCandidateScrollNearBottom()
-        }
-      } catch (e) {
-        this.candidateTotal = 0
-      } finally {
-        this.candidateLoading = false
-      }
-    },
     openAdd() {
       if (!this.canManage) {
         if (!this.company_is_group) {
@@ -220,10 +106,8 @@ export default {
         }
         return
       }
+      this.pickCompanyId = null
       this.addVisible = true
-      this.$nextTick(() => {
-        this.loadCompanyCandidates()
-      })
     },
     async confirmAdd() {
       if (!this.pickCompanyId) return

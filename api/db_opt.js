@@ -513,7 +513,7 @@ let db_opt = {
         _sq.models.rbac_role.belongsToMany(_sq.models.rbac_user, { through: 'rbac_user_role' });
         _sq.models.rbac_role.belongsToMany(_sq.models.rbac_module, { through: 'rbac_role_module' });
         _sq.models.rbac_module.belongsToMany(_sq.models.rbac_role, { through: 'rbac_role_module' });
-        _sq.models.rbac_user.belongsTo(_sq.models.company, { constraints: false });
+        _sq.models.rbac_user.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.rbac_user);
         _sq.models.rbac_role.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.rbac_role);
@@ -687,11 +687,8 @@ let db_opt = {
         _sq.models.company.hasMany(_sq.models.king_dee_error);
         _sq.models.king_dee_error.belongsTo(_sq.models.company);
 
-        _sq.models.company.belongsTo(_sq.models.rbac_user, {
-            as: 'group_admin_user',
-            foreignKey: 'group_admin_user_id',
-            constraints: false,
-        });
+        _sq.models.company.hasOne(_sq.models.rbac_user);
+        _sq.models.rbac_user.belongsTo(_sq.models.company, { as: 'group_admin_user' });
         _sq.models.company_group_member.belongsTo(_sq.models.company, { as: 'group_company', foreignKey: 'groupCompanyId' });
         _sq.models.company_group_member.belongsTo(_sq.models.company, { as: 'member_company', foreignKey: 'memberCompanyId' });
         _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_group_company', foreignKey: 'groupCompanyId' });

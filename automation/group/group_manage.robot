@@ -51,9 +51,9 @@ Group Grant Upsert List And Delete
     Convert To Group By Super Admin  ${parent}[id]  ${self}[id]
     ${add_m}  Create Dictionary  member_company_id=${member}[id]
     Req to Server  /group/group_member_add  ${token}  ${add_m}
+    @{users}  Req Get to Server  /group/group_company_user_list  ${token}  all_user
+    Should Not Be Empty  @{users}
     ${empty}  Create Dictionary
-    ${users}  Req to Server  /group/group_home_user_list  ${token}  ${empty}
-    Should Not Be Empty  ${users}[users]
     ${grant_req}  Create Dictionary
     ...  member_company_id=${member}[id]
     ...  user_id=${self}[id]
