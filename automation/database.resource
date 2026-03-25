@@ -48,7 +48,7 @@ RBAC reset
 Group Tables Reset
     DB Connect
     Execute Sql String  delete from group_member_data_grant;
-    Execute Sql String  delete from company_group_member;
+    Execute Sql String  update company set parentGroupCompanyId = null;
     Disconnect From All Databases
 
 Company Reset
