@@ -686,12 +686,12 @@ let db_opt = {
         _sq.models.company.belongsTo(_sq.models.company, { as: 'parent_group_company' });
         _sq.models.company.hasMany(_sq.models.company, { as: 'group_member_companies', foreignKey: 'parentGroupCompanyId' });
 
-        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_group_company', foreignKey: 'groupCompanyId' });
-        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'group_data_grants_as_group', foreignKey: 'groupCompanyId' });
-        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_member_company', foreignKey: 'memberCompanyId' });
-        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'group_data_grants_as_member', foreignKey: 'memberCompanyId' });
-        _sq.models.group_member_data_grant.belongsTo(_sq.models.rbac_user, { as: 'rbac_user' });
-        _sq.models.rbac_user.hasMany(_sq.models.group_member_data_grant, { as: 'group_member_data_grants', foreignKey: 'rbacUserId' });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_group_company', foreignKey: 'groupCompanyId', constraints: false });
+        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'group_data_grants_as_group', foreignKey: 'groupCompanyId', constraints: false });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_member_company', foreignKey: 'memberCompanyId', constraints: false });
+        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'group_data_grants_as_member', foreignKey: 'memberCompanyId', constraints: false });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.rbac_user, { as: 'rbac_user', constraints: false });
+        _sq.models.rbac_user.hasMany(_sq.models.group_member_data_grant, { as: 'group_member_data_grants', foreignKey: 'rbacUserId', constraints: false });
         _sq.models.company.belongsToMany(_sq.models.rbac_user, {
             as: 'granted_users',
             through: _sq.models.group_member_data_grant,
