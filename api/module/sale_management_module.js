@@ -455,6 +455,7 @@ module.exports = {
                 }
                 let plans = await db_opt.get_sq().models.plan.findAll({
                     where: condition,
+                    attributes: ['companyId'],
                     group: 'companyId'
                 });
                 for (let index = 0; index < plans.length; index++) {
