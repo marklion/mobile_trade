@@ -47,6 +47,10 @@
             <u-cell title="超级管理员" isLink url="/pages/Admin"></u-cell>
             <u-cell title="系统通知" isLink url="/subPage1/SysNotice"></u-cell>
         </module-filter>
+        <module-filter :rm_array="['group', 'global']">
+            <u-cell title="集团成员" isLink url="/subPage1/GroupMembers"></u-cell>
+            <u-cell title="集团数据权限" isLink url="/subPage1/GroupDataPermission"></u-cell>
+        </module-filter>
         <module-filter require_module="sale_management">
             <fui-list-cell arrow @click="show_checkin_config = true">
                 司机排号设置

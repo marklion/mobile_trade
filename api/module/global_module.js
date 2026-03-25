@@ -810,6 +810,9 @@ module.exports = {
                 prefer_order_begin_offset: { type: Number, mean: '订单开始时间偏移', example: 0 },
                 prefer_order_end_offset: { type: Number, mean: '订单结束时间偏移', example: 0 },
                 company_logo: { type: String, mean: '公司logo', example: 'https://www.baidu.com' },
+                company_id: { type: Number, mean: '当前公司id', example: 1 },
+                company_is_group: { type: Boolean, mean: '当前公司是否集团', example: false },
+                is_group_admin: { type: Boolean, mean: '是否当前集团的指定管理员', example: false },
             },
             func: async function (body, token) {
                 let ret = {};
@@ -819,6 +822,9 @@ module.exports = {
                     if (company) {
                         user.company = company.name;
                         user.company_logo = company.logo;
+                        user.company_id = company.id;
+                        user.company_is_group = !!company.is_group;
+                        user.is_group_admin = !!company.is_group && company.group_admin_user_id === user.id;
                     }
                     user.modules = [];
                     let roles = await user.getRbac_roles();
@@ -893,6 +899,27 @@ module.exports = {
                 return ret;
             }
         },
+        company_convert_to_group: {
+            name: '公司将普通主体转为集团',
+            description: '指定集团管理员用户（须为该公司下已存在用户）。供运维/接口调用，无单独 Web 入口',
+            need_rbac: true,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                company_id: { type: Number, have_to: true, mean: '公司id', example: 123 },
+                admin_user_id: { type: Number, have_to: true, mean: '集团管理员用户id', example: 456 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
+                id: { type: Number, mean: '公司id', example: 123 },
+                is_group: { type: Boolean, mean: '是否集团', example: true },
+            },
+            func: async function (body, token) {
+                const group_lib = require('../lib/group_lib');
+                const c = await group_lib.convert_company_to_group(body.company_id, body.admin_user_id);
+                return { result: true, id: c.id, is_group: !!c.is_group };
+            },
+        },
         company_get_all: {
             name: '获取所有公司',
             description: '获取所有公司',
@@ -907,6 +934,7 @@ module.exports = {
                     explain: {
                         id: { type: Number, mean: '公司id', example: 123 },
                         name: { type: String, mean: '公司名', example: 'company_example' },
+                        is_group: { type: Boolean, mean: '是否集团', example: false },
                         logo: { type: String, mean: '公司logo', example: 'logo_example' },
                         pressure_config: { type: Boolean, mean: '泄压配置', example: false },
                         bound_modules: {

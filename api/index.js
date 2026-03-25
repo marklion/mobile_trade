@@ -56,12 +56,14 @@ else {
     async function module_install(admin_role_id, app, module) {
         let mo = module;
         await rbac_lib.connect_role2module(admin_role_id, (await rbac_lib.add_module(mo.name, mo.description)).id);
-        let need_rbac = true;
         Object.keys(mo.methods).forEach(itr => {
             let method_name = itr;
             let method = mo.methods[itr];
+            let need_rbac = true;
             if (mo.name === 'global') {
                 need_rbac = method.need_rbac;
+            } else if (mo.name === 'group') {
+                need_rbac = method.need_rbac !== undefined ? method.need_rbac : false;
             }
             mkapi('/' + mo.name + '/' + method_name,
                 mo.name, method.is_write, need_rbac,
@@ -101,6 +103,7 @@ else {
         await module_install(role.id, app, require('./module/exam_module'));
         await module_install(role.id, app, require('./module/u8c_module'));
         await module_install(role.id, app, require('./module/audit_module'));
+        await module_install(role.id, app, require('./module/group_module'));
         let all_modules = await sq.models.rbac_module.findAll();
         for (let index = 0; index < all_modules.length; index++) {
             const element = all_modules[index];

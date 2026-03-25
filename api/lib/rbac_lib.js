@@ -375,7 +375,7 @@ module.exports = {
             });
             rows.push(user);
         }
-        return { count, rows: users }
+        return { count, rows: rows };
     },
     user_login: async function (_phone) {
         let ret = '';

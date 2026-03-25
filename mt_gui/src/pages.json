@@ -152,6 +152,20 @@
 					"style": {
 						"enablePullDownRefresh": true
 					}
+				},
+				{
+					"path": "GroupMembers",
+					"style": {
+						"enablePullDownRefresh": true,
+						"navigationBarTitleText": "集团成员"
+					}
+				},
+				{
+					"path": "GroupDataPermission",
+					"style": {
+						"enablePullDownRefresh": true,
+						"navigationBarTitleText": "集团数据权限"
+					}
 				}
 
 			]
