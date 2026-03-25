@@ -45,6 +45,7 @@ module.exports = {
         const group_module = await rbac_lib.add_module('group', '集团管理');
         company.is_group = true;
         company.group_admin_user_id = admin_user_id;
+        company.parentGroupCompanyId = null;
         await company.save();
         let role = await sq.models.rbac_role.findOne({
             where: { name: GROUP_ROLE_NAME, companyId: company.id },
@@ -81,19 +82,10 @@ module.exports = {
         const where = {
             [Op.or]: [{ is_group: false }, { is_group: null }],
             id: { [Op.ne]: group_company_id },
-            '$joined_groups.id$': null,
+            parentGroupCompanyId: null,
         };
         const { count, rows } = await sq.models.company.findAndCountAll({
             where,
-            include: [{
-                model: sq.models.company,
-                as: 'joined_groups',
-                attributes: [],
-                through: { attributes: [] },
-                required: false,
-            }],
-            distinct: true,
-            subQuery: false,
             limit,
             offset,
             order: [['id', 'ASC']],
@@ -107,14 +99,9 @@ module.exports = {
 
     async list_members(group_company_id) {
         const sq = db_opt.get_sq();
-        const group_company = await sq.models.company.findByPk(group_company_id);
-        if (!group_company) {
-            return [];
-        }
-        const assoc = sq.models.company.associations.member_companies;
-        const rows = await group_company[assoc.accessors.get]({
+        const rows = await sq.models.company.findAll({
+            where: { parentGroupCompanyId: group_company_id },
             attributes: ['id', 'name'],
-            joinTableAttributes: [],
             order: [['id', 'ASC']],
         });
         return rows.map((r) => ({
@@ -140,37 +127,24 @@ module.exports = {
         if (member_c.is_group) {
             throw { err_msg: '不能将集团主体作为成员公司' };
         }
-        const joinAssoc = sq.models.company.associations.joined_groups;
-        const joined_groups = await member_c[joinAssoc.accessors.get]({
-            attributes: ['id'],
-            joinTableAttributes: [],
-        });
-        if (joined_groups.length > 0) {
-            if (joined_groups.some((g) => g.id === group_company_id)) {
+        if (member_c.parentGroupCompanyId != null) {
+            if (member_c.parentGroupCompanyId === group_company_id) {
                 throw { err_msg: '已是本集团成员' };
             }
             throw { err_msg: '该公司已加入其他集团' };
         }
-        const memberAssoc = sq.models.company.associations.member_companies;
-        await group_c[memberAssoc.accessors.add](member_c);
+        member_c.parentGroupCompanyId = group_company_id;
+        await member_c.save();
     },
 
     async remove_member(group_company_id, member_company_id) {
         const sq = db_opt.get_sq();
-        const group_company = await sq.models.company.findByPk(group_company_id);
-        if (!group_company) {
+        const member_c = await sq.models.company.findByPk(member_company_id);
+        if (!member_c || member_c.parentGroupCompanyId !== group_company_id) {
             throw { err_msg: '成员不存在' };
         }
-        const memberAssoc = sq.models.company.associations.member_companies;
-        const rows = await group_company[memberAssoc.accessors.get]({
-            where: { id: member_company_id },
-            attributes: ['id'],
-            joinTableAttributes: [],
-        });
-        if (!rows || rows.length === 0) {
-            throw { err_msg: '成员不存在' };
-        }
-        await group_company[memberAssoc.accessors.remove](member_company_id);
+        member_c.parentGroupCompanyId = null;
+        await member_c.save();
         await sq.models.group_member_data_grant.destroy({
             where: { groupCompanyId: group_company_id, memberCompanyId: member_company_id },
         });
@@ -182,7 +156,7 @@ module.exports = {
             where: { groupCompanyId: group_company_id },
             include: [
                 { model: sq.models.company, as: 'grant_member_company', attributes: ['id', 'name'] },
-                { model: sq.models.rbac_user, attributes: ['id', 'name', 'phone'] },
+                { model: sq.models.rbac_user, as: 'rbac_user', attributes: ['id', 'name', 'phone'] },
             ],
             order: [['id', 'ASC']],
         });
@@ -200,14 +174,8 @@ module.exports = {
 
     async upsert_grant(group_company_id, member_company_id, rbac_user_id, can_view, can_operate) {
         const sq = db_opt.get_sq();
-        const group_company = await sq.models.company.findByPk(group_company_id);
-        const memberAssoc = sq.models.company.associations.member_companies;
-        const member_rows = group_company ? await group_company[memberAssoc.accessors.get]({
-            where: { id: member_company_id },
-            attributes: ['id'],
-            joinTableAttributes: [],
-        }) : [];
-        if (!member_rows || member_rows.length === 0) {
+        const member_c = await sq.models.company.findByPk(member_company_id);
+        if (!member_c || member_c.parentGroupCompanyId !== group_company_id) {
             throw { err_msg: '该公司不是本集团成员' };
         }
         const grant_user = await sq.models.rbac_user.findByPk(rbac_user_id);
@@ -253,13 +221,8 @@ module.exports = {
         if (!home || !home.is_group) {
             return false;
         }
-        const memberAssoc = sq.models.company.associations.member_companies;
-        const member_rows = await home[memberAssoc.accessors.get]({
-            where: { id: member_company_id },
-            attributes: ['id'],
-            joinTableAttributes: [],
-        });
-        if (!member_rows || member_rows.length === 0) {
+        const member_c = await sq.models.company.findByPk(member_company_id);
+        if (!member_c || member_c.parentGroupCompanyId !== home.id) {
             return false;
         }
         const grant = await sq.models.group_member_data_grant.findOne({

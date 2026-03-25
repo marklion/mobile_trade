@@ -138,6 +138,7 @@ let db_opt = {
             need_driver_confirm: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_group: { type: DataTypes.BOOLEAN, defaultValue: false },
             group_admin_user_id: { type: DataTypes.INTEGER, allowNull: true },
+            parentGroupCompanyId: { type: DataTypes.INTEGER, allowNull: true },
         },
         group_member_data_grant: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -681,25 +682,16 @@ let db_opt = {
 
         _sq.models.company.hasOne(_sq.models.rbac_user);
         _sq.models.rbac_user.belongsTo(_sq.models.company, { as: 'group_admin_user' });
-        
-        _sq.models.company.belongsToMany(_sq.models.company, {
-            as: 'member_companies',
-            through: 'company_group_member',
-            foreignKey: { name: 'groupCompanyId', allowNull: false },
-            otherKey: { name: 'memberCompanyId', allowNull: false },
-            constraints: false,
-        });
-        _sq.models.company.belongsToMany(_sq.models.company, {
-            as: 'joined_groups',
-            through: 'company_group_member',
-            foreignKey: { name: 'memberCompanyId', allowNull: false },
-            otherKey: { name: 'groupCompanyId', allowNull: false },
-            constraints: false,
-        });
 
-        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_group_company', foreignKey: { name: 'groupCompanyId', allowNull: false }});
-        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_member_company', foreignKey: { name: 'memberCompanyId', allowNull: false }});
-        _sq.models.group_member_data_grant.belongsTo(_sq.models.rbac_user, { foreignKey: { name: 'rbacUserId', allowNull: false }});
+        _sq.models.company.belongsTo(_sq.models.company, { as: 'parent_group_company' });
+        _sq.models.company.hasMany(_sq.models.company, { as: 'group_member_companies', foreignKey: 'parentGroupCompanyId' });
+
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_group_company', foreignKey: 'groupCompanyId' });
+        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'group_data_grants_as_group', foreignKey: 'groupCompanyId' });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.company, { as: 'grant_member_company', foreignKey: 'memberCompanyId' });
+        _sq.models.company.hasMany(_sq.models.group_member_data_grant, { as: 'group_data_grants_as_member', foreignKey: 'memberCompanyId' });
+        _sq.models.group_member_data_grant.belongsTo(_sq.models.rbac_user, { as: 'rbac_user' });
+        _sq.models.rbac_user.hasMany(_sq.models.group_member_data_grant, { as: 'group_member_data_grants', foreignKey: 'rbacUserId' });
         _sq.models.company.belongsToMany(_sq.models.rbac_user, {
             as: 'granted_users',
             through: _sq.models.group_member_data_grant,
@@ -723,6 +715,13 @@ let db_opt = {
         });
         this.make_associate(sq);
         await sq.sync({ alter: { drop: false } });
+        try {
+            await sq.query(
+                'UPDATE company c INNER JOIN company_group_member m ON c.id = m.memberCompanyId SET c.parentGroupCompanyId = m.groupCompanyId WHERE c.parentGroupCompanyId IS NULL'
+            );
+        } catch (e) {
+            console.warn('skip company_group_member -> parentGroupCompanyId migrate:', e.message);
+        }
         g_sq = sq;
     },
     get_sq: function () {
