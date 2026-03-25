@@ -99,3 +99,25 @@ Group Member Candidate List Returns Page
     Convert To Group By Super Admin  ${parent}[id]  ${self}[id]
     @{cands}  Req Get to Server  /group/group_member_candidate_list  ${token}  candidates  ${0}
     Should Not Be Empty  ${cands}
+
+Home Stat And Stat Context Respect Can View Only
+    [Documentation]  仅 can_view 出现在首页统计范围；stat_context 接口同样只认 can_view
+    [Teardown]  Group Suite Reset
+    ${phone}  Set Variable  99887766609
+    ${g}  Build Converted Group With One Member  rf_grp_parent_stat  rf_grp_member_stat  ${phone}  rf_grp_stat
+    Add Module To Company  ${g}[parent][id]  sale_management
+    Add Module To User  ${g}[token]  ${phone}  sale_management
+    Group Grant Upsert Self On Member  ${g}[token]  ${g}[member][id]  ${g}[self][id]  ${False}  ${True}
+    ${scopes}  Home Stat Scope List  ${g}[token]
+    Length Should Be  ${scopes}[scopes]  1
+    Should Be Equal As Integers  ${scopes}[scopes][0][id]  ${g}[parent][id]
+    ${today}  Get Current Date  result_format=%Y-%m-%d
+    ${cnt_req}  Create Dictionary  day_offset=${0}  base_day=${today}  stat_context_company_id=${g}[member][id]
+    ${err}  Req to Server  /sale_management/get_count_by_customer  ${g}[token]  ${cnt_req}  ${True}
+    Should Contain  ${err}  无权限查看该公司统计
+    Group Grant Upsert Self On Member  ${g}[token]  ${g}[member][id]  ${g}[self][id]  ${True}  ${True}
+    ${scopes2}  Home Stat Scope List  ${g}[token]
+    Length Should Be  ${scopes2}[scopes]  2
+    Should Be Equal As Integers  ${scopes2}[scopes][1][id]  ${g}[member][id]
+    ${ok}  Req to Server  /sale_management/get_count_by_customer  ${g}[token]  ${cnt_req}
+    Dictionary Should Contain Key  ${ok}  statistic

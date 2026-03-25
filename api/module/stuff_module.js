@@ -1,5 +1,6 @@
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
+const group_lib = require('../lib/group_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const cash_lib = require('../lib/cash_lib');
@@ -138,6 +139,7 @@ module.exports = {
             is_write: false,
             is_get_api: false,
             params: {
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 statistic: {
@@ -151,7 +153,7 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
                 let results = await plan_lib.getStatistic(company);
                 return { statistic: results };
             }

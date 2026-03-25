@@ -2,7 +2,8 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
-const common = require('./common')
+const common = require('./common');
+const group_lib = require('../lib/group_lib');
 module.exports = {
     name: 'buy_management',
     description: '采购管理',
@@ -136,7 +137,7 @@ module.exports = {
                 },
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
                 let search_ret = await plan_lib.search_sold_plans(company, body.pageNo, body, true);
                 return { plans: search_ret.rows, total: search_ret.count };
             },

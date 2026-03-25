@@ -10,6 +10,7 @@ const exam_lib = require('../lib/exam_lib');
 const util_lib = require('../lib/util_lib');
 const clean_driver = require('../lib/clean_driver');
 const common = require('./common');
+const group_lib = require('../lib/group_lib');
 const fs = require('fs');
 const archiver = require('archiver');
 const uuid = require('uuid');
@@ -845,6 +846,27 @@ module.exports = {
                 }
                 return ret;
             }
+        },
+        home_stat_scope_list: {
+            name: '首页统计可切换的公司范围',
+            description: '集团员工：母公司 + 已授权成员公司；非集团仅当前公司',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                scopes: {
+                    type: Array,
+                    mean: '统计主体列表',
+                    explain: {
+                        id: { type: Number, mean: '公司id', example: 1 },
+                        name: { type: String, mean: '公司名', example: 'A公司' },
+                    },
+                },
+            },
+            func: async function (body, token) {
+                return await group_lib.list_home_stat_scopes(token);
+            },
         },
         company_add: {
             name: '添加公司',

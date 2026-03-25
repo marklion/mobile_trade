@@ -4,11 +4,11 @@ const rbac_lib = require('./rbac_lib');
 const GROUP_ROLE_NAME = '集团管理员';
 
 module.exports = {
-    is_super_admin_user(user) {
+    is_super_admin_user: function (user) {
         return user && user.phone === '18911992582';
     },
 
-    async assert_group_manager_token(token) {
+    assert_group_manager_token: async function (token) {
         const user = await rbac_lib.get_user_by_token(token);
         const company = await rbac_lib.get_company_by_token(token);
         if (!user || !company) {
@@ -17,7 +17,7 @@ module.exports = {
         if (!company.is_group) {
             throw { err_msg: '当前公司不是集团' };
         }
-        if (this.is_super_admin_user(user)) {
+        if (module.exports.is_super_admin_user(user)) {
             return { user, company };
         }
         if (company.group_admin_user_id == null || company.group_admin_user_id !== user.id) {
@@ -26,7 +26,7 @@ module.exports = {
         return { user, company };
     },
 
-    async convert_company_to_group(company_id, admin_user_id) {
+    convert_company_to_group: async function (company_id, admin_user_id) {
         const sq = db_opt.get_sq();
         const company = await sq.models.company.findByPk(company_id);
         if (!company) {
@@ -59,7 +59,7 @@ module.exports = {
         return company;
     },
 
-    async list_home_users_plain(group_company_id) {
+    list_home_users_plain: async function (group_company_id) {
         const sq = db_opt.get_sq();
         const rows = await sq.models.rbac_user.findAll({
             where: { companyId: group_company_id },
@@ -73,7 +73,7 @@ module.exports = {
         }));
     },
 
-    async list_member_candidates_paged(group_company_id, pageNo) {
+    list_member_candidates_paged: async function (group_company_id, pageNo) {
         const sq = db_opt.get_sq();
         const Op = db_opt.Op;
         const limit = 20;
@@ -97,7 +97,7 @@ module.exports = {
         };
     },
 
-    async list_members(group_company_id) {
+    list_members: async function (group_company_id) {
         const sq = db_opt.get_sq();
         const rows = await sq.models.company.findAll({
             where: { parentGroupCompanyId: group_company_id },
@@ -111,7 +111,7 @@ module.exports = {
         }));
     },
 
-    async add_member(group_company_id, member_company_id) {
+    add_member: async function (group_company_id, member_company_id) {
         const sq = db_opt.get_sq();
         if (group_company_id === member_company_id) {
             throw { err_msg: '不能将集团自身加为成员' };
@@ -137,7 +137,7 @@ module.exports = {
         await member_c.save();
     },
 
-    async remove_member(group_company_id, member_company_id) {
+    remove_member: async function (group_company_id, member_company_id) {
         const sq = db_opt.get_sq();
         const member_c = await sq.models.company.findByPk(member_company_id);
         if (!member_c || member_c.parentGroupCompanyId !== group_company_id) {
@@ -150,7 +150,7 @@ module.exports = {
         });
     },
 
-    async list_grants(group_company_id) {
+    list_grants: async function (group_company_id) {
         const sq = db_opt.get_sq();
         const rows = await sq.models.group_member_data_grant.findAll({
             where: { groupCompanyId: group_company_id },
@@ -172,7 +172,7 @@ module.exports = {
         }));
     },
 
-    async upsert_grant(group_company_id, member_company_id, rbac_user_id, can_view, can_operate) {
+    upsert_grant: async function (group_company_id, member_company_id, rbac_user_id, can_view, can_operate) {
         const sq = db_opt.get_sq();
         const member_c = await sq.models.company.findByPk(member_company_id);
         if (!member_c || member_c.parentGroupCompanyId !== group_company_id) {
@@ -201,7 +201,7 @@ module.exports = {
         return row;
     },
 
-    async delete_grant(group_company_id, member_company_id, rbac_user_id) {
+    delete_grant: async function (group_company_id, member_company_id, rbac_user_id) {
         const sq = db_opt.get_sq();
         const row = await sq.models.group_member_data_grant.findOne({
             where: { groupCompanyId: group_company_id, memberCompanyId: member_company_id, rbacUserId: rbac_user_id },
@@ -211,7 +211,7 @@ module.exports = {
         }
     },
 
-    async user_has_member_data_access(user_id, member_company_id, need_write) {
+    user_has_member_data_access: async function (user_id, member_company_id, need_write) {
         const sq = db_opt.get_sq();
         const user = await sq.models.rbac_user.findByPk(user_id);
         if (!user || !user.companyId) {
@@ -235,5 +235,75 @@ module.exports = {
             return grant.can_operate === true;
         }
         return grant.can_view === true || grant.can_operate === true;
+    },
+
+    resolve_stat_company: async function (token, stat_context_company_id) {
+        const home = await rbac_lib.get_company_by_token(token);
+        if (!home) {
+            return null;
+        }
+        if (stat_context_company_id === undefined || stat_context_company_id === null || stat_context_company_id === '') {
+            return home;
+        }
+        const id = Number(stat_context_company_id);
+        if (!Number.isFinite(id) || id === home.id) {
+            return home;
+        }
+        const user = await rbac_lib.get_user_by_token(token);
+        if (!user) {
+            return null;
+        }
+        if (!home.is_group) {
+            throw { err_msg: '无权限切换统计主体' };
+        }
+        const sq = db_opt.get_sq();
+        const member_c = await sq.models.company.findByPk(id);
+        if (!member_c || member_c.parentGroupCompanyId !== home.id) {
+            throw { err_msg: '无权限查看该公司统计' };
+        }
+        const grant = await sq.models.group_member_data_grant.findOne({
+            where: {
+                groupCompanyId: home.id,
+                memberCompanyId: id,
+                rbacUserId: user.id,
+                can_view: true,
+            },
+        });
+        if (!grant) {
+            throw { err_msg: '无权限查看该公司统计' };
+        }
+        return member_c;
+    },
+
+    list_home_stat_scopes: async function (token) {
+        const user = await rbac_lib.get_user_by_token(token);
+        const home = await rbac_lib.get_company_by_token(token);
+        if (!user || !home) {
+            return { scopes: [] };
+        }
+        const scopes = [{ id: home.id, name: home.name || `公司${home.id}` }];
+        if (!home.is_group) {
+            return { scopes };
+        }
+        const sq = db_opt.get_sq();
+        const rows = await sq.models.group_member_data_grant.findAll({
+            where: {
+                groupCompanyId: home.id,
+                rbacUserId: user.id,
+                can_view: true,
+            },
+            include: [{ model: sq.models.company, as: 'grant_member_company', attributes: ['id', 'name'] }],
+            order: [['memberCompanyId', 'ASC']],
+        });
+        const seen = new Set([home.id]);
+        for (const r of rows) {
+            if (seen.has(r.memberCompanyId)) {
+                continue;
+            }
+            seen.add(r.memberCompanyId);
+            const nm = r.grant_member_company && r.grant_member_company.name;
+            scopes.push({ id: r.memberCompanyId, name: nm || `公司${r.memberCompanyId}` });
+        }
+        return { scopes };
     },
 };
