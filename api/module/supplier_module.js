@@ -5,6 +5,7 @@ const db_opt = require('../db_opt');
 const common = require('./common');
 const wx_api_util = require('../lib/wx_api_util');
 const util_lib = require('../lib/util_lib');
+const group_lib = require('../lib/group_lib');
 module.exports = {
     name: 'supplier',
     description: '供应商',
@@ -138,7 +139,14 @@ module.exports = {
             },
             func: async function (body, token) {
                 let user = await rbac_lib.get_user_by_token(token);
-                let search_ret = await plan_lib.search_bought_plans(user, body.pageNo, body, true);
+                let home = await rbac_lib.get_company_by_token(token);
+                let ctx = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                let search_ret;
+                if (ctx.id !== home.id) {
+                    search_ret = await plan_lib.search_bought_plans_as_buyer_company(ctx, body.pageNo, body, true);
+                } else {
+                    search_ret = await plan_lib.search_bought_plans(user, body.pageNo, body, true);
+                }
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
@@ -170,7 +178,9 @@ module.exports = {
             description: '获取待购买货物',
             is_write: false,
             is_get_api: true,
-            params: {},
+            params: {
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
+            },
             result: {
                 stuff: {
                     type: Array, mean: '货物', explain: {
@@ -188,7 +198,7 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
                 let ret = {
                     stuff: [],
                     total: 0

@@ -5,6 +5,7 @@ const db_opt = require('../db_opt');
 const common = require('./common');
 const moment = require('moment');
 const util_lib = require('../lib/util_lib');
+const group_lib = require('../lib/group_lib');
 module.exports = {
     name: 'sale_management',
     description: '销售管理',
@@ -86,7 +87,7 @@ module.exports = {
                 },
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
                 let search_ret = await plan_lib.search_sold_plans(company, body.pageNo, body);
                 return { plans: search_ret.rows, total: search_ret.count };
             },
@@ -413,6 +414,7 @@ module.exports = {
             params: {
                 day_offset: { type: Number, have_to: false, mean: '偏移天数', example: 1 },
                 base_day: { type: String, have_to: false, mean: '基准日期，格式yyyy-MM-dd', example: '2020-01-01' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 statistic: {
@@ -431,7 +433,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let ret = [];
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
                 let day_offset = 0;
                 if (body.day_offset) {
                     day_offset = body.day_offset;
@@ -453,6 +455,7 @@ module.exports = {
                 }
                 let plans = await db_opt.get_sq().models.plan.findAll({
                     where: condition,
+                    attributes: ['companyId'],
                     group: 'companyId'
                 });
                 for (let index = 0; index < plans.length; index++) {

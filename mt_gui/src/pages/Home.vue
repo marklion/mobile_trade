@@ -1,87 +1,118 @@
 <template>
-<view class="main-warp">
-    <notice-bar ref="noticeBar" />
-    <fui-row style="background-color: white;padding: 20rpx 0rpx;" isFlex justify="start">
-        <fui-col :span="6" v-if="self_info.company_logo">
-            <fui-avatar size="large" shape="square" :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
-        </fui-col>
-        <fui-col>
-            <fui-section :title="self_info.company" isLine size="50" fontWeight="500"></fui-section>
-        </fui-col>
-    </fui-row>
-    <fui-divider style="background-color: white;"></fui-divider>
-    <fui-card title="数据一览" full color="black" size="35">
-        <view style="display: flex;flex-wrap: wrap;">
-            <view :class="charts.length>1?'charts-box':'charts-box-full'" v-for="(single_cts, index) in charts" :key="index">
-                <qiun-data-charts v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0)>0" type="column" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
-                <view v-else style="height: 300px; display: flex; justify-content: center;align-items: center; font-size: 13px;font-weight: 500;color:#DDD;">无数据</view>
-                <view style="display: flex; justify-content: center;font-size: 13px;font-weight: 500;">{{single_cts.opts.title}}</view>
+    <view class="main-warp">
+        <notice-bar ref="noticeBar" />
+        <fui-row style="background-color: white;padding: 20rpx 0rpx;" isFlex justify="start">
+            <fui-col :span="6" v-if="self_info.company_logo">
+                <fui-avatar size="large" shape="square" :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
+            </fui-col>
+            <fui-col>
+                <fui-section :title="self_info.company" isLine size="50" fontWeight="500"></fui-section>
+            </fui-col>
+        </fui-row>
+        <fui-divider style="background-color: white;"></fui-divider>
+        <fui-card v-if="stat_scopes.length > 1" title="统计范围" full color="black" size="35">
+            <view class="scope-picker-trigger" @click="open_scope_picker">
+                <view class="scope-picker-label">{{ current_scope_name || '请选择公司' }}</view>
+                <fui-icon name="arrowright" size="32" color="#999"></fui-icon>
             </view>
-        </view>
-        <fui-divider text="物料统计"></fui-divider>
-        <module-filter require_module="sale_management">
-            <fui-input label="统计日期" disabled borderTop placeholder="请输入时间" v-model="base_day" @click="show_pick_date = true"></fui-input>
-            <u-row style="margin: 20rpx 20rpx;">
-                <u-col span="10">
-                    <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
-                        <u-radio label="前日" :name="-1"></u-radio>
-                        <u-radio label="当天" :name="0"></u-radio>
-                        <u-radio label="翌天" :name="1"></u-radio>
-                    </u-radio-group>
-                </u-col>
-                <u-col v-if="tableData.length > 7" span="2">
-                    <fui-text type="primary" :text="expand_text" decoration="underline" @click="handle_expand"></fui-text>
-                </u-col>
-            </u-row>
-            <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
+        </fui-card>
+        <fui-white-space v-if="stat_scopes.length > 1" size="default"></fui-white-space>
+        <fui-bottom-popup :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
+            <fui-list>
+                <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
+                    <view class="scope-row">
+                        <view class="scope-name">{{ s.name }}</view>
+                        <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30"
+                            color="#1E9FFF"></fui-icon>
+                    </view>
+                </fui-list-cell>
+            </fui-list>
+        </fui-bottom-popup>
+        <fui-card title="数据一览" full color="black" size="35">
+            <view style="display: flex;flex-wrap: wrap;">
+                <view :class="charts.length > 1 ? 'charts-box' : 'charts-box-full'" v-for="(single_cts, index) in charts"
+                    :key="index">
+                    <qiun-data-charts v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0) > 0"
+                        type="column" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
+                    <view v-else
+                        style="height: 300px; display: flex; justify-content: center;align-items: center; font-size: 13px;font-weight: 500;color:#DDD;">
+                        无数据</view>
+                    <view style="display: flex; justify-content: center;font-size: 13px;font-weight: 500;">
+                        {{ single_cts.opts.title }}</view>
+                </view>
+            </view>
+            <fui-divider text="物料统计"></fui-divider>
+            <module-filter require_module="sale_management">
+                <fui-input label="统计日期" disabled borderTop placeholder="请输入时间" v-model="base_day"
+                    @click="show_pick_date = true"></fui-input>
+                <u-row style="margin: 20rpx 20rpx;">
+                    <u-col span="10">
+                        <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
+                            <u-radio label="前日" :name="-1"></u-radio>
+                            <u-radio label="当天" :name="0"></u-radio>
+                            <u-radio label="翌天" :name="1"></u-radio>
+                        </u-radio-group>
+                    </u-col>
+                    <u-col v-if="tableData.length > 7" span="2">
+                        <fui-text type="primary" :text="expand_text" decoration="underline"
+                            @click="handle_expand"></fui-text>
+                    </u-col>
+                </u-row>
+                <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
+            </module-filter>
+        </fui-card>
+        <fui-date-picker zIndex="1004" :show="show_pick_date" type="3" :value="base_day" @change="choose_expired_date"
+            @cancel="show_pick_date = false"></fui-date-picker>
+        <fui-white-space size="default"></fui-white-space>
+        <module-filter require_module="customer">
+            <fui-card title="采购提单" full color="black" size="35">
+                <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
+                    <view v-for="item in stuff2buy" :key="item.id">
+                        <u-cell :title="item.name + '-' + item.company.name" :label="item.comment"
+                            :value="item.price == -1 ? '未关注' : item.price">
+                            <view slot="right-icon">
+                                <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
+                            </view>
+                        </u-cell>
+                    </view>
+                </list-show>
+            </fui-card>
         </module-filter>
-    </fui-card>
-    <fui-date-picker zIndex="1004" :show="show_pick_date" type="3" :value="base_day" @change="choose_expired_date" @cancel="show_pick_date = false"></fui-date-picker>
-    <fui-white-space size="default"></fui-white-space>
-    <module-filter require_module="customer">
-        <fui-card title="采购提单" full color="black" size="35">
-            <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
-                <view v-for="item in stuff2buy" :key="item.id">
-                    <u-cell :title="item.name + '-' + item.company.name" :label="item.comment" :value="item.price == -1 ? '未关注' : item.price">
-                        <view slot="right-icon">
-                            <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
-                        </view>
-                    </u-cell>
-                </view>
-            </list-show>
-        </fui-card>
-    </module-filter>
-    <fui-white-space size="default"></fui-white-space>
-    <module-filter require_module="supplier">
-        <fui-card title="销售提单" full color="black" size="35">
-            <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
-                <view>
-                    <u-cell v-for="(item, index) in stuff2sale" :key="index" :title="item.name + '-' + item.company.name" :label="item.comment">
-                        <view slot="right-icon">
-                            <fui-button v-if="item.price != -1" btnSize="mini" text="下单" @click="start_plan_creation(item, true)"></fui-button>
-                        </view>
-                    </u-cell>
-                </view>
-            </list-show>
-        </fui-card>
-    </module-filter>
-    <fui-white-space size="default"></fui-white-space>
-    <module-filter require_module="stuff">
-        <fui-card title="物料统计" full color="black" size="35">
-            <fui-table fixed stripe :itemList="totalCountData" :header="stuff_count_header"></fui-table>
-        </fui-card>
-    </module-filter>
-    <fui-white-space size="default"></fui-white-space>
-    <module-filter require_module="stuff">
-        <fui-card title="通知管理" full color="black" size="35">
-            <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容" v-model="notice.notice"></fui-textarea>
-            <fui-textarea flexStart isCounter label="司机通知" maxlength="2000" placeholder="请输入内容" v-model="notice.driver_notice"></fui-textarea>
-            <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
-        </fui-card>
+        <fui-white-space size="default"></fui-white-space>
+        <module-filter require_module="supplier">
+            <fui-card title="销售提单" full color="black" size="35">
+                <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
+                    <view>
+                        <u-cell v-for="(item, index) in stuff2sale" :key="index"
+                            :title="item.name + '-' + item.company.name" :label="item.comment">
+                            <view slot="right-icon">
+                                <fui-button v-if="item.price != -1" btnSize="mini" text="下单"
+                                    @click="start_plan_creation(item, true)"></fui-button>
+                            </view>
+                        </u-cell>
+                    </view>
+                </list-show>
+            </fui-card>
+        </module-filter>
+        <fui-white-space size="default"></fui-white-space>
+        <module-filter require_module="stuff">
+            <fui-card title="物料统计" full color="black" size="35">
+                <fui-table fixed stripe :itemList="totalCountData" :header="stuff_count_header"></fui-table>
+            </fui-card>
+        </module-filter>
+        <fui-white-space size="default"></fui-white-space>
+        <module-filter require_module="stuff">
+            <fui-card title="通知管理" full color="black" size="35">
+                <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容"
+                    v-model="notice.notice"></fui-textarea>
+                <fui-textarea flexStart isCounter label="司机通知" maxlength="2000" placeholder="请输入内容"
+                    v-model="notice.driver_notice"></fui-textarea>
+                <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
+            </fui-card>
 
-    </module-filter>
+        </module-filter>
 
-</view>
+    </view>
 </template>
 
 <script>
@@ -148,7 +179,16 @@ export default {
             tmp_tableData: [],
             dataCount: 7,
             show_pick_date: false,
+            stat_scopes: [],
+            stat_context_company_id: null,
+            show_scope_picker: false,
         }
+    },
+    computed: {
+        current_scope_name: function () {
+            const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
+            return current ? current.name : '';
+        },
     },
     methods: {
         choose_expired_date: function (e) {
@@ -171,7 +211,8 @@ export default {
             }
             let resp = await this.$send_req('/sale_management/get_count_by_customer', {
                 day_offset: this.day_offset,
-                base_day: this.base_day
+                base_day: this.base_day,
+                stat_context_company_id: this.stat_context_company_id,
             });
             this.tableData = [];
             this.tableData.push({
@@ -263,10 +304,39 @@ export default {
                 url: '/subPage1/OrderCreate?stuff_id=' + item.id + '&stuff_name=' + item.name + '&company_name=' + item.company.name + '&is_buy=' + is_buy + "&company_id=" + item.company.id,
             });
         },
+        load_stat_scopes: async function () {
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    this.stat_context_company_id = this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        on_stat_scope_change: function () {
+            this.init_brief_info();
+            this.init_statistic();
+            this.get_stuff_total();
+        },
+        open_scope_picker: function () {
+            this.show_scope_picker = true;
+        },
+        choose_stat_scope: function (company_id) {
+            if (this.stat_context_company_id === company_id) {
+                this.show_scope_picker = false;
+                return;
+            }
+            this.stat_context_company_id = company_id;
+            this.show_scope_picker = false;
+            this.on_stat_scope_change();
+        },
         get_stuff2buy: async function (pageNo) {
             if (this.$has_module('customer')) {
                 let res = await this.$send_req('/customer/get_stuff_on_sale', {
                     pageNo: pageNo,
+                    stat_context_company_id: this.stat_context_company_id,
                 });
                 let ret = []
                 res.stuff.forEach(item => {
@@ -281,7 +351,9 @@ export default {
         },
         get_stuff_total: async function () {
             if (this.$has_module('stuff')) {
-                let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
+                let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {
+                    stat_context_company_id: this.stat_context_company_id,
+                });
                 this.totalCountData = res.statistic
                 this.totalCountData.forEach(item => {
                     if (item.second_unit == '吨') {
@@ -298,6 +370,7 @@ export default {
             if (this.$has_module('supplier')) {
                 let res = await this.$send_req('/supplier/get_stuff_need_buy', {
                     pageNo: pageNo,
+                    stat_context_company_id: this.stat_context_company_id,
                 });
                 return res.stuff;
             } else {
@@ -307,7 +380,7 @@ export default {
 
         init_data_brief: async function () {
             // 生成查询条件的函数
-            let cond = function (day_offset, status) {
+            let cond = (day_offset, status) => {
                 let date = new Date();
                 date.setDate(date.getDate() + day_offset);
                 return {
@@ -316,6 +389,7 @@ export default {
                     status: status,
                     hide_manual_close: true,
                     only_count: true,
+                    stat_context_company_id: this.stat_context_company_id,
                 };
             };
 
@@ -358,18 +432,18 @@ export default {
                         chartData: {
                             categories: ['昨日', '今日', '明日'],
                             series: [{
-                                    name: '订单总数',
-                                    data: [
-                                        db.yst_unfinish_count + db.yst_finished_count,
-                                        db.today_unfinish_count + db.today_finished_count,
-                                        db.tmr_unfinish_count + db.tmr_finished_count
-                                    ]
-                                },
-                                {
-                                    name: '已完成',
-                                    color: '#1890ff',
-                                    data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
-                                }
+                                name: '订单总数',
+                                data: [
+                                    db.yst_unfinish_count + db.yst_finished_count,
+                                    db.today_unfinish_count + db.today_finished_count,
+                                    db.tmr_unfinish_count + db.tmr_finished_count
+                                ]
+                            },
+                            {
+                                name: '已完成',
+                                color: '#1890ff',
+                                data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
+                            }
                             ]
                         }
                     };
@@ -428,10 +502,10 @@ export default {
         this.get_stuff_total()
     },
     onLoad: async function () {
-        //只需要调用，无需等待结果
-        this.init_brief_info()
-        this.init_statistic()
-        this.get_stuff_total()
+        await this.load_stat_scopes();
+        this.init_brief_info();
+        this.init_statistic();
+        this.get_stuff_total();
     },
 }
 </script>
@@ -451,5 +525,38 @@ export default {
 
 .main-warp {
     background-color: #F1F4FA;
+}
+
+.scope-picker-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12rpx 0;
+}
+
+.scope-picker-label {
+    flex: 1;
+    color: #333;
+    font-size: 30rpx;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 20rpx;
+}
+
+.scope-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.scope-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 20rpx;
 }
 </style>

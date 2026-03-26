@@ -516,6 +516,19 @@ module.exports = {
 
         return await this.searchPlansByModel(user, where_condition, search_condition, this.replace_plan2archive.bind(this), true);
     },
+    search_bought_plans_as_buyer_company: async function (company, _pageNo, _condition, is_buy = false) {
+        let sq = db_opt.get_sq();
+        let where_condition = this.make_plan_where_condition(_condition, is_buy);
+        where_condition[db_opt.Op.and].push({ companyId: company.id });
+        let search_condition = {
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            offset: _pageNo * 20,
+            limit: 20,
+            where: where_condition,
+            include: util_lib.plan_detail_include(),
+        };
+        return await this.searchPlansByModel(company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+    },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);

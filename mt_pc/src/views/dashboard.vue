@@ -1,5 +1,13 @@
 <template>
 <div class="dashboard-container">
+    <el-row v-if="stat_scopes.length > 1" :gutter="10" class="stat-scope-row">
+        <el-col :span="24">
+            <span class="stat-scope-label">统计范围</span>
+            <el-radio-group v-model="stat_context_company_id" size="small" @change="on_stat_scope_change">
+                <el-radio-button v-for="s in stat_scopes" :key="s.id" :label="s.id">{{ s.name }}</el-radio-button>
+            </el-radio-group>
+        </el-col>
+    </el-row>
     <el-row :gutter="10">
         <el-col :span="12">
             <el-card class="box-card" :body-style="{padding : 10}">
@@ -25,7 +33,7 @@
                     </el-radio-group>
                 </div>
                 <div class="grid-content bg-purple-dark">
-                    <page-content ref="statistic" body_key="statistic" :req_body="{day_offset: +day_offset, base_day:statistic_day}" :req_url="req_url" :enable="true" @data_loaded="stat_loading = false">
+                    <page-content ref="statistic" body_key="statistic" :req_body="statistic_table_body" :req_url="req_url" :enable="true" @data_loaded="stat_loading = false">
                         <template v-slot:default="slotProps">
                             <el-table ref="stat_table" v-loading="stat_loading" :data="slotProps.content" stripe style="width: 100%" max-height="300" show-summary>
                                 <el-table-column prop="company.name" label="客户">
@@ -60,7 +68,7 @@
                 </div>
 
                 <div class="grid-content bg-purple-dark">
-                    <page-content ref="sb_page" body_key="stuff" :req_body="{}" :req_url="sb_url" :enable="true" @data_loaded="sb_loading = false">
+                    <page-content ref="sb_page" body_key="stuff" :req_body="stuff_list_req_body" :req_url="sb_url" :enable="true" @data_loaded="sb_loading = false">
                         <template v-slot:default="slotProps">
                             <el-table ref="sb_table" v-loading="sb_loading" :data="slotProps.content.filter(item => item.price != -1)" stripe style="width: 100%" max-height="400">
                                 <el-table-column prop="name" label="名称" min-width="40"></el-table-column>
@@ -88,7 +96,7 @@
                 </div>
 
                 <div class="grid-content bg-purple-dark">
-                    <page-content ref="ss_page" body_key="stuff" :req_body="{}" :req_url="ss_url" :enable="true" @data_loaded="ss_loading = false">
+                    <page-content ref="ss_page" body_key="stuff" :req_body="stuff_list_req_body" :req_url="ss_url" :enable="true" @data_loaded="ss_loading = false">
                         <template v-slot:default="slotProps">
                             <el-table ref="sb_table" v-loading="ss_loading" :data="slotProps.content" stripe style="width: 100%" max-height="400">
                                 <el-table-column prop="name" label="名称" min-width="40"></el-table-column>
@@ -151,7 +159,19 @@ export default {
         ...mapGetters([
             'name',
             'roles'
-        ])
+        ]),
+        statistic_table_body() {
+            return {
+                day_offset: +this.day_offset,
+                base_day: this.statistic_day,
+                stat_context_company_id: this.stat_context_company_id,
+            };
+        },
+        stuff_list_req_body() {
+            return {
+                stat_context_company_id: this.stat_context_company_id,
+            };
+        },
     },
     data() {
         return {
@@ -169,18 +189,48 @@ export default {
             req_url: '/sale_management/get_count_by_customer',
             sb_url: '/customer/get_stuff_on_sale',
             ss_url: '/supplier/get_stuff_need_buy',
+            stat_scopes: [],
+            stat_context_company_id: null,
         }
     },
-    mounted() {
-        this.init_brief_info()
-        this.init_statistic()
+    async mounted() {
+        await this.load_stat_scopes();
+        this.init_brief_info();
+        this.init_statistic();
         this.show_today_yesterday();
     },
 
     methods: {
+        load_stat_scopes: async function () {
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    this.stat_context_company_id = this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        on_stat_scope_change: function () {
+            this.init_brief_info();
+            this.init_statistic();
+            this.show_today_yesterday();
+            if (this.$refs.statistic) {
+                this.$refs.statistic.refresh(1);
+            }
+            if (this.$refs.sb_page) {
+                this.$refs.sb_page.refresh(1);
+            }
+            if (this.$refs.ss_page) {
+                this.$refs.ss_page.refresh(1);
+            }
+        },
         show_today_yesterday: async function () {
             this.stat_loading = true;
-            let resp = await this.$send_req('/stuff/get_count_by_today_yesterday', {});
+            let resp = await this.$send_req('/stuff/get_count_by_today_yesterday', {
+                stat_context_company_id: this.stat_context_company_id,
+            });
             this.tableData = resp.statistic;
             this.tableData.forEach(item => {
                 if (item.second_unit == '吨') {
@@ -293,7 +343,7 @@ export default {
 
         init_data_brief: async function () {
             // 生成查询条件的函数
-            let cond = function (day_offset, status) {
+            let cond = (day_offset, status) => {
                 let date = moment();
                 date.add(day_offset, 'days');
                 return {
@@ -302,6 +352,7 @@ export default {
                     status: status,
                     hide_manual_close: true,
                     only_count: true,
+                    stat_context_company_id: this.stat_context_company_id,
                 };
             };
 
@@ -414,5 +465,15 @@ export default {
 
 .box-card {
     margin-bottom: 10px
+}
+
+.stat-scope-row {
+    margin-bottom: 10px;
+}
+.stat-scope-label {
+    margin-right: 12px;
+    color: #606266;
+    font-size: 14px;
+    vertical-align: middle;
 }
 </style>
