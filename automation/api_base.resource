@@ -46,8 +46,6 @@ Req to Server
             IF  $check_audit
                 ${audit_id}  Set Variable  ${resp.json()}[audit_id]
                 Should Not Be Equal As Numbers    ${audit_id}    ${0}
-                ${comment_req}  Create Dictionary  id=${audit_id}  comment=自动添加审核意见
-                Req to Server    /audit/append_comment    ${token}    ${comment_req}
             ELSE
                 Should Be Empty  ${resp.json()}[err_msg]
                 RETURN  ${resp.json()}[result]

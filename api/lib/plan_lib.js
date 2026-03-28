@@ -918,27 +918,32 @@ module.exports = {
         }
     },
     verify_plan_pay: async function (_plan, _t) {
+        let plan4next = undefined;
         let opt_func = async () => {
-            if (_plan.status == 1) {
-                let plan = await util_lib.get_single_plan_by_id(_plan.id);
-                let { arrears, outstanding_vehicles } = await this.calculate_plan_arrears(plan, plan.unit_price);
-                if (arrears <= 0) {
-                    plan.status = 2;
-                    plan.arrears = 0;
-                    plan.outstanding_vehicles = 0;
-                    await plan.save();
-                    await this.rp_history_pay(plan, '自动');
-                    plan4next = plan;
-                } else {
-                    plan.arrears = arrears;
-                    plan.outstanding_vehicles = outstanding_vehicles;
-                    await plan.save();
-                }
+            let plan = await util_lib.get_single_plan_by_id(_plan.id);
+            if (plan?.status != 1) {
+                return;
             }
-        }
+            let { arrears, outstanding_vehicles } = await this.calculate_plan_arrears(plan, plan.unit_price);
+            let latest = await util_lib.get_single_plan_by_id(_plan.id);
+            if (latest?.status != 1) {
+                return;
+            }
+            if (arrears <= 0) {
+                latest.status = 2;
+                latest.arrears = 0;
+                latest.outstanding_vehicles = 0;
+                await latest.save();
+                await this.rp_history_pay(latest, '自动');
+                plan4next = latest;
+            } else {
+                latest.arrears = arrears;
+                latest.outstanding_vehicles = outstanding_vehicles;
+                await latest.save();
+            }
+        };
         let rl = await mutex.acquire();
         try {
-            let plan4next = undefined;
             if (_t) {
                 await opt_func();
             }
@@ -1080,6 +1085,9 @@ module.exports = {
             // 使用现有事务，避免嵌套事务
             let plan = await util_lib.get_single_plan_by_id(_plan_id, t);
             if (force) {
+                if (!plan) {
+                    throw { err_msg: '未找到计划' };
+                }
                 await _action(plan, t);
             }
             else {
@@ -1108,12 +1116,17 @@ module.exports = {
                     throw { err_msg: '未找到计划' };
                 }
             }
-            this.mark_dup_info(plan.id);
+            if (plan) {
+                this.mark_dup_info(plan.id);
+            }
         } else {
             // 创建新事务
             await db_opt.get_sq().transaction({ savepoint: true }, async (new_t) => {
                 let plan = await util_lib.get_single_plan_by_id(_plan_id, new_t);
                 if (force) {
+                    if (!plan) {
+                        throw { err_msg: '未找到计划' };
+                    }
                     await _action(plan, new_t);
                 }
                 else {
@@ -1142,7 +1155,9 @@ module.exports = {
                         throw { err_msg: '未找到计划' };
                     }
                 }
-                this.mark_dup_info(plan.id);
+                if (plan) {
+                    this.mark_dup_info(plan.id);
+                }
             });
         }
     },

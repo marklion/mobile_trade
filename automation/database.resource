@@ -58,8 +58,8 @@ Company Reset
 Stuff Reset
     Clear Table  stuff
 
-Audit Reset
-    Clear Table  audit_config
+Approval Reset
+    Clear Table  approval_config
     Clear Table  audit_record
 
 Contract Reset

@@ -164,6 +164,16 @@
     <el-drawer destroy-on-close title="检查" :visible.sync="show_fc_execute" :append-to-body="true" @close="show_fc_execute = false" direction="rtl" size="60%">
         <fc-execute @refresh="show_fc_execute = false" :plan="plan"></fc-execute>
     </el-drawer>
+    <el-dialog append-to-body title="选择审批人" :visible.sync="approver_pick.visible" width="400px" @close="on_approver_dialog_closed">
+        <p class="approver-pick-hint">当前审批项需在提交时指定审批人。</p>
+        <el-select v-model="approver_pick.auditer" filterable clearable placeholder="请选择审批人" style="width:100%">
+            <el-option v-for="u in approver_pick_options" :key="u.id" :label="u.name" :value="u.name"></el-option>
+        </el-select>
+        <span slot="footer">
+            <el-button @click="close_approver_pick_dialog">取 消</el-button>
+            <el-button type="primary" @click="confirmApproverPick">确 定</el-button>
+        </span>
+    </el-dialog>
 </div>
 </template>
 
@@ -281,13 +291,82 @@ export default {
             },
             show_update: false,
             delegate_id: 0,
+            approval_projects: [],
+            approver_pick: {
+                visible: false,
+                auditer: '',
+            },
+            approver_pick_options: [],
+            approver_pick_resolve: null,
         }
     },
     props: {
         plan: Object,
         motived: Boolean,
     },
+    watch: {
+        'plan.id': function () {
+            this.refresh_approval_projects();
+        },
+    },
     methods: {
+        refresh_approval_projects: async function () {
+            try {
+                const ret = await this.$send_req('/approval/get_approval_projects', {});
+                this.approval_projects = ret.projects || [];
+            } catch (e) {
+                console.log(e);
+                this.approval_projects = [];
+            }
+        },
+        approval_item: function (key) {
+            return (this.approval_projects || []).find((p) => p.key === key);
+        },
+        open_approver_pick_dialog: async function () {
+            const ret = await this.$send_req('/approval/get_auditer_pick_list', {
+                pageNo: 0
+            });
+            this.approver_pick_options = ret.all_user || [];
+            this.approver_pick = {
+                visible: true,
+                auditer: ''
+            };
+            return new Promise((resolve) => {
+                this.approver_pick_resolve = resolve;
+            });
+        },
+        confirmApproverPick: function () {
+            if (!this.approver_pick.auditer) {
+                this.$message.warning('请选择审批人');
+                return;
+            }
+            const r = this.approver_pick_resolve;
+            this.approver_pick_resolve = null;
+            const name = this.approver_pick.auditer;
+            this.approver_pick.visible = false;
+            if (r) r(name);
+        },
+        close_approver_pick_dialog: function () {
+            this.approver_pick.visible = false;
+        },
+        on_approver_dialog_closed: function () {
+            if (this.approver_pick_resolve) {
+                const r = this.approver_pick_resolve;
+                this.approver_pick_resolve = null;
+                r(null);
+            }
+        },
+        resolve_submit_specify_auditer: async function (projectKey) {
+            const p = this.approval_item(projectKey);
+            if (!p || !p.enabled || p.approver_mode !== 'submit_specify') {
+                return null;
+            }
+            const name = await this.open_approver_pick_dialog();
+            if (!name) {
+                throw new Error('cancel_approver_pick');
+            }
+            return name;
+        },
         set_extra_info: async function (id) {
             try {
                 let content = await this.$prompt('请输入内容', '设置', {
@@ -420,24 +499,37 @@ export default {
                 }
             });
         },
-        opt_plan: async function (opt_url, reason) {
+        opt_plan: async function (opt_url, reason, extra_fields) {
             let req = {
                 plan_id: this.plan.id
             }
             if (reason) {
                 req.msg = reason;
             }
+            if (extra_fields) {
+                Object.assign(req, extra_fields);
+            }
             await this.$send_req(opt_url, req);
             this.$emit('refresh');
         },
         pay_plan: async function () {
             await this.ask_confirm('验款');
+            let extra = null;
+            try {
+                extra = await this.resolve_submit_specify_auditer('manual_verify_pay');
+            } catch (e) {
+                if (e.message === 'cancel_approver_pick') {
+                    return;
+                }
+                throw e;
+            }
             let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
             let url_prefix = '/sale_management';
             if (verify_pay_by_cash) {
                 url_prefix = '/cash'
             }
-            await this.opt_plan(url_prefix + '/order_sale_pay')
+            const ex = extra ? { approval_auditer: extra } : null;
+            await this.opt_plan(url_prefix + '/order_sale_pay', null, ex);
         },
         rollback_plan: async function () {
             let reason = await this.ask_reason('回退');
@@ -503,11 +595,24 @@ export default {
                 inputErrorMessage: '原因格式不正确',
                 inputPlaceholder: '调价原因'
             })).value;
-            await this.$send_req("/stuff/change_price_by_plan", {
+            let specify_auditer = null;
+            try {
+                specify_auditer = await this.resolve_submit_specify_auditer('closed_order_price');
+            } catch (e) {
+                if (e.message === 'cancel_approver_pick') {
+                    return;
+                }
+                throw e;
+            }
+            const req_body = {
                 unit_price: parseFloat(input_price),
                 plan_id: this.plan.id + '',
                 comment: comment
-            })
+            };
+            if (specify_auditer) {
+                req_body.approval_auditer = specify_auditer;
+            }
+            await this.$send_req("/stuff/change_price_by_plan", req_body);
             this.$emit('refresh');
         },
         get_order_refunds_config: async function () {
@@ -560,11 +665,18 @@ export default {
     mounted: function () {
         this.init_contract();
         this.get_order_refunds_config();
+        this.refresh_approval_projects();
     },
 }
 </script>
 
 <style scoped>
+.approver-pick-hint {
+    margin: 0 0 12px;
+    color: #606266;
+    font-size: 14px;
+}
+
 .scroll-container {
     display: flex;
     overflow-x: auto;

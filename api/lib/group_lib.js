@@ -32,9 +32,6 @@ module.exports = {
         if (!company) {
             throw { err_msg: '公司不存在' };
         }
-        if (company.is_group) {
-            throw { err_msg: '已是集团' };
-        }
         const admin_user = await sq.models.rbac_user.findByPk(admin_user_id);
         if (!admin_user) {
             throw { err_msg: '集团管理员用户不存在' };
