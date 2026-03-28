@@ -42,9 +42,17 @@ export default {
     },
     data: function () {
         const hasValue = this.value !== undefined && this.value !== null && this.value !== '';
+        let initialFilterId;
+        if (hasValue) {
+            initialFilterId = this.value;
+        } else if (this.first_item) {
+            initialFilterId = 0;
+        } else {
+            initialFilterId = '';
+        }
         return {
             search_input: '',
-            filter_id: hasValue ? this.value : (this.first_item ? 0 : ''),
+            filter_id: initialFilterId,
             is_waiting: false,
 
         };

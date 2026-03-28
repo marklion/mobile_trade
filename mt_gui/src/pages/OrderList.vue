@@ -779,28 +779,27 @@ export default {
         approval_item: function (key) {
             return (this.approval_projects || []).find((p) => p.key === key);
         },
-        pick_submit_specify_auditer: function () {
-            return new Promise(async (resolve) => {
-                try {
-                    const ret = await this.$send_req('/approval/get_auditer_pick_list', {
-                        pageNo: 0
+        pick_submit_specify_auditer: async function () {
+            try {
+                const ret = await this.$send_req('/approval/get_auditer_pick_list', {
+                    pageNo: 0
+                });
+                const rows = ret.all_user || [];
+                if (!rows.length) {
+                    this.$refs.toast.show({
+                        text: '无可选用户'
                     });
-                    const rows = ret.all_user || [];
-                    if (!rows.length) {
-                        this.$refs.toast.show({
-                            text: '无可选用户'
-                        });
-                        resolve('');
-                        return;
-                    }
-                    this.approver_pick_names = rows.map((u) => u.name);
+                    return '';
+                }
+                this.approver_pick_names = rows.map((u) => u.name);
+                return new Promise((resolve) => {
                     this.approver_pick_resolve = resolve;
                     this.show_approver_pick = true;
-                } catch (err) {
-                    console.log(err);
-                    resolve('');
-                }
-            });
+                });
+            } catch (err) {
+                console.log(err);
+                return '';
+            }
         },
         confirm_approver_pick: function (name) {
             this.show_approver_pick = false;

@@ -191,8 +191,8 @@ module.exports = {
     audit_req: async function (id, is_approve, user) {
         const sq = db_opt.get_sq();
         let exist_audit_record = await sq.models.audit_record.findByPk(id);
-        if (exist_audit_record && exist_audit_record.status == 'pending') {
-            if (exist_audit_record.auditer && exist_audit_record.auditer.length > 0 && exist_audit_record.auditer != user.name) {
+        if (exist_audit_record?.status == 'pending') {
+            if ((exist_audit_record.auditer?.length ?? 0) > 0 && exist_audit_record.auditer != user.name) {
                 throw { err_msg: '该审批已指定审批人，您无权限审批' };
             }
             exist_audit_record.auditer = user.name;

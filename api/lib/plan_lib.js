@@ -921,12 +921,12 @@ module.exports = {
         let plan4next = undefined;
         let opt_func = async () => {
             let plan = await util_lib.get_single_plan_by_id(_plan.id);
-            if (!plan || plan.status != 1) {
+            if (plan?.status != 1) {
                 return;
             }
             let { arrears, outstanding_vehicles } = await this.calculate_plan_arrears(plan, plan.unit_price);
             let latest = await util_lib.get_single_plan_by_id(_plan.id);
-            if (!latest || latest.status != 1) {
+            if (latest?.status != 1) {
                 return;
             }
             if (arrears <= 0) {
