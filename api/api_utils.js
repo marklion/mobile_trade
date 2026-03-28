@@ -1,6 +1,6 @@
 const result_maker = require('./result');
 const rbac_lib = require('./lib/rbac_lib');
-const audit_lib = require('./lib/audit_lib');
+const approval_lib = require('./lib/approval_lib');
 //params = {
 //         version:{have_to:true, type:String, mean:'版本号', example:'V1.1'},
 //         detail:{have_to:false,  type:Object, mean:'详细信息',
@@ -212,7 +212,7 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                             id: 0, comment: ''
                         }
                         if (token) {
-                            guard_ret = await audit_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
+                            guard_ret = await approval_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
                         }
                         if (0 == guard_ret.id) {
                             let rbac_verify_ret = '';

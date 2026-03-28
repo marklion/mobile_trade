@@ -314,6 +314,25 @@ export const asyncRoutes = [
     ],
   },
   {
+    path: '/approval',
+    component: Layout,
+    redirect: '/approval/index',
+    name: 'ApprovalMgmt',
+    meta: {
+      title: '审批管理',
+      icon: 'el-icon-s-check',
+      roles: ['approval'],
+    },
+    children: [
+      {
+        path: 'index',
+        name: 'approval',
+        component: () => import('@/views/admin/Audit'),
+        meta: { title: '审批管理', roles: ['approval'] },
+      },
+    ],
+  },
+  {
     path: '/system_config',
     name: 'SystemConfig',
     component: Layout,
@@ -333,12 +352,6 @@ export const asyncRoutes = [
         name: 'u8c',
         component: () => import('@/views/admin/u8c'),
         meta: { title: 'u8c同步', roles: ['u8c'] }
-      },
-      {
-        path: 'audit',
-        name: 'audit',
-        component: () => import('@/views/admin/Audit'),
-        meta: { title: '审批管理', roles: ['audit'] }
       },
       {
         path: 'wx_msg',

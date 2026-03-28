@@ -14,24 +14,6 @@ Vue.prototype.$remote_url = function () {
     return process.env.REMOTE_HOST;
   }
 };
-function showInputDialog(title = '请输入', placeholder = '', inputValue = '') {
-  return new Promise((resolve, reject) => {
-    uni.showModal({
-      title,
-      content: inputValue,
-      editable: true,
-      placeholderText: placeholder,
-      success: (res) => {
-        if (res.confirm) {
-          resolve(res.content)
-        } else {
-          reject(new Error('用户取消输入'))
-        }
-      },
-      fail: reject
-    })
-  })
-}
 Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
   return new Promise((resolve, reject) => {
     if (!noneed_loading) {
@@ -59,18 +41,6 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
         }
         else {
           resolve(data.result)
-          if (data.audit_id != undefined && data.audit_id > 0) {
-            let comment;
-            try {
-              comment = await showInputDialog('该操作需要审批', '请描述审批事项', data.comment || '');
-            } catch (error) {
-
-            }
-            await Vue.prototype.$send_req('/audit/append_comment', {
-              id: data.audit_id,
-              comment: comment,
-            }, true);
-          }
         }
       },
       fail: (res) => {
@@ -95,14 +65,18 @@ Vue.prototype.$init_self = async function () {
   }
 };
 Vue.prototype.$has_module = function (mod_name) {
-  let ret = false;
-  let mods = uni.getStorageSync('self_info').modules.map(ele => {
-    return ele.name
-  })
+  let mods = (uni.getStorageSync('self_info').modules || []).map(ele => ele.name)
   if (mods.indexOf(mod_name) != -1) {
-    ret = true;
+    return true
   }
-  return ret;
+  // 旧库 rbac_module.name 为 audit，新代码统一为 approval
+  if (mod_name === 'approval' && mods.indexOf('audit') != -1) {
+    return true
+  }
+  if (mod_name === 'audit' && mods.indexOf('approval') != -1) {
+    return true
+  }
+  return false
 };
 Vue.prototype.$convert_attach_url = function (url) {
   let prefix = Vue.prototype.$remote_url();

@@ -10,35 +10,41 @@
         <el-tab-pane label="已驳回" name="closed">
         </el-tab-pane>
         <el-tab-pane label="审批配置" name="config">
-            <page-content ref="audit_config" body_key="configs" req_url="/audit/get_audit_configs" enable>
-                <template v-slot:default="slotProps">
-                    <div>
-                        <el-table :data="slotProps.content" style="width: 100%" stripe :default-sort="{ prop: 'url-name', order: 'ascending' }">
-                            <el-table-column prop="url_name" label="请求名称" align="center" sortable></el-table-column>
-                            <el-table-column prop="rbac_role.name" label="角色名称" align="center" sortable></el-table-column>
-                            <el-table-column prop="content_template" label="内容模板" align="center" sortable></el-table-column>
-                            <el-table-column>
-                                <template slot="header">
-                                    <el-button size="mini" type="success" @click="add_audit_config_diag = true">新增</el-button>
-                                </template>
-                                <template v-slot="scope">
-                                    <el-button type="danger" size="mini" @click="del_audit_config(scope.row.id)">删除</el-button>
-                                </template>
-                            </el-table-column>
-                        </el-table>
-                    </div>
-                </template>
-            </page-content>
+            <el-form label-width="120px" class="approval-config-form">
+                <el-table :data="approval_config.projects" style="width: 100%" stripe>
+                    <el-table-column prop="name" label="审批项目"></el-table-column>
+                    <el-table-column label="是否审批">
+                        <template v-slot="scope">
+                            <el-checkbox v-model="scope.row.enabled">启用</el-checkbox>
+                        </template>
+                    </el-table-column>
+                    <el-table-column label="审批人" min-width="260">
+                        <template v-slot="scope">
+                            <el-radio-group v-model="scope.row.approver_mode" @change="on_approver_mode_change(scope.row)">
+                                <el-radio label="default">默认审批人</el-radio>
+                                <el-radio label="submit_specify">提交时指定</el-radio>
+                            </el-radio-group>
+                            <div v-if="scope.row.approver_mode === 'default'" style="margin-top: 8px;">
+                                <select-search body_key="all_user" get_url="/rbac/module_get_company_all_user" item_label="name" item_value="name" v-model="scope.row.auditer" :permission_array="['rbac']" clearable></select-search>
+                            </div>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-form-item style="margin-top: 16px;">
+                    <el-button type="primary" @click="save_approval_config">保存审批配置</el-button>
+                </el-form-item>
+            </el-form>
         </el-tab-pane>
     </el-tabs>
     <div v-if="activeName != 'config'">
-        <page-content ref="audit_record" body_key="records" req_url="/audit/get_audit4req" enable :req_body="ar_get_req">
+        <page-content ref="audit_record" body_key="records" req_url="/approval/get_audit4req" enable :req_body="ar_get_req">
             <template v-slot:default="slotProps">
                 <div>
                     <el-table :data="slotProps.content" style="width: 100%" :row-class-name="tableRowClassName">
                         <el-table-column prop="url_name" label="请求名称" sortable></el-table-column>
                         <el-table-column prop="comment" label="审批事项" sortable></el-table-column>
                         <el-table-column prop="submiter" label="请求人"></el-table-column>
+                        <el-table-column prop="progress" label="审批进度" sortable min-width="100"></el-table-column>
                         <el-table-column prop="submit_time" label="请求时间"></el-table-column>
                         <el-table-column prop="auditer" label="审批人"></el-table-column>
                         <el-table-column prop="audit_time" label="审批时间"></el-table-column>
@@ -54,23 +60,6 @@
             </template>
         </page-content>
     </div>
-    <el-dialog title="新增审批项" :visible.sync="add_audit_config_diag" width="50%">
-        <el-form :model="new_audit_config" ref="new_audit_config" :rules="new_audit_config_rules">
-            <el-form-item label="接口" prop="url">
-                <select-search filterable body_key="apis" get_url="/audit/get_all_api" item_label="name" item_value="url" v-model="new_audit_config.url" :permission_array="['audit']"></select-search>
-            </el-form-item>
-            <el-form-item label="角色" prop="role_id">
-                <select-search body_key="all_role" get_url="/rbac/role_get_all" item_label="name" item_value="id" v-model="new_audit_config.role_id" :permission_array="['rbac']"></select-search>
-            </el-form-item>
-            <el-form-item label="内容模板" prop="content_template">
-                <el-input v-model="new_audit_config.content_template"></el-input>
-            </el-form-item>
-        </el-form>
-        <span slot="footer">
-            <el-button @click="add_audit_config_diag = false">取消</el-button>
-            <el-button type="primary" @click="add_audit_config">确定</el-button>
-        </span>
-    </el-dialog>
 </div>
 </template>
 
@@ -99,23 +88,11 @@ export default {
     data: function () {
         return {
             activeName: 'all',
-            add_audit_config_diag: false,
-            new_audit_config: {
-                url: '',
-                role_id: null,
-                content_template: '',
-            },
-            new_audit_config_rules: {
-                url: [{
-                    required: true,
-                    message: '请选择接口',
-                    trigger: 'change'
-                }, ],
-                role_id: [{
-                    required: true,
-                    message: '请选择角色',
-                    trigger: 'change'
-                }, ],
+            approval_config: {
+                projects: [
+                    { key: 'closed_order_price', name: '已关闭订单的调价', enabled: false, approver_mode: 'default', auditer: '' },
+                    { key: 'manual_verify_pay', name: '手动验款', enabled: false, approver_mode: 'default', auditer: '' },
+                ]
             },
         };
     },
@@ -123,6 +100,7 @@ export default {
         handle_tab_click: function () {
             this.$nextTick(async () => {
                 if (this.activeName == 'config') {
+                    await this.refresh_config();
                     return;
                 }
                 this.refresh_record();
@@ -139,7 +117,7 @@ export default {
                     type: 'warning'
                 });
             }
-            await this.$send_req('/audit/audit_req', {
+            await this.$send_req('/approval/audit_req', {
                 id: id,
                 is_approve: is_approve,
             });
@@ -156,34 +134,37 @@ export default {
             }
             return '';
         },
-        refresh_config: function () {
-            this.$refs.audit_config.refresh(this.$refs.audit_config.cur_page);
-        },
-        add_audit_config: async function () {
-            let is_valid = await this.$refs.new_audit_config.validate();
-            if (!is_valid) {
-                return;
+        refresh_config: async function () {
+            const ret = await this.$send_req('/approval/get_approval_projects', {});
+            const list = ret.projects || [];
+            for (const row of list) {
+                if (row.approver_mode !== 'submit_specify') {
+                    row.approver_mode = 'default';
+                }
             }
-            await this.$send_req('/audit/add_audit_config', {
-                url: this.new_audit_config.url,
-                role_id: this.new_audit_config.role_id,
-                content_template: this.new_audit_config.content_template,
-            });
-            this.add_audit_config_diag = false;
-            this.refresh_config();
+            this.approval_config.projects = list;
         },
-        del_audit_config: async function (id) {
-            await this.$confirm('确定删除该审批配置吗？', '提示', {
-                confirmButtonText: '确定',
-                cancelButtonText: '取消',
-                type: 'warning'
+        on_approver_mode_change: function (row) {
+            if (row.approver_mode === 'submit_specify') {
+                row.auditer = '';
+            }
+        },
+        save_approval_config: async function () {
+            for (const row of this.approval_config.projects) {
+                if (row.enabled && row.approver_mode === 'default' && !row.auditer) {
+                    this.$message.error(`「${row.name}」为默认审批人时请选择具体审批人`);
+                    return;
+                }
+            }
+            await this.$send_req('/approval/set_approval_projects', {
+                projects: this.approval_config.projects,
             });
-            await this.$send_req('/audit/del_audit_config', {
-                id: id
-            });
-            this.refresh_config();
+            this.$message.success('审批配置已保存');
         },
     },
+    mounted: async function () {
+        await this.refresh_config();
+    }
 }
 </script>
 

@@ -72,7 +72,7 @@ export default {
                 {
                     name: '审批管理',
                     icon: 'wait',
-                    require_module: 'audit',
+                    require_module: 'approval',
                     path: 'Audit',
                     sub_page_name: 'subPage1'
                 },

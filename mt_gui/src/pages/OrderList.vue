@@ -396,6 +396,12 @@
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
     <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
     <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
+    <fui-bottom-popup :show="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
+        <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
+        <fui-list>
+            <fui-list-cell v-for="(n, idx) in approver_pick_names" :key="idx" arrow @click="confirm_approver_pick(n)">{{n}}</fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
 </view>
 </template>
 
@@ -535,6 +541,11 @@ export default {
             xxx_url: '',
             confirm_info: '',
             show_xxx_confirm: false,
+            pay_pending_approval_auditer: '',
+            approval_projects: [],
+            show_approver_pick: false,
+            approver_pick_names: [],
+            approver_pick_resolve: null,
             show_rollback_confirm: false,
             show_sc: false,
             sc_current_index: 0,
@@ -756,6 +767,53 @@ export default {
             this.refresh_plans();
             this.show_plan_detail = false;
         },
+        refresh_approval_projects: async function () {
+            try {
+                const ret = await this.$send_req('/approval/get_approval_projects', {});
+                this.approval_projects = ret.projects || [];
+            } catch (err) {
+                console.log(err);
+                this.approval_projects = [];
+            }
+        },
+        approval_item: function (key) {
+            return (this.approval_projects || []).find((p) => p.key === key);
+        },
+        pick_submit_specify_auditer: function () {
+            return new Promise(async (resolve) => {
+                try {
+                    const ret = await this.$send_req('/approval/get_auditer_pick_list', {
+                        pageNo: 0
+                    });
+                    const rows = ret.all_user || [];
+                    if (!rows.length) {
+                        this.$refs.toast.show({
+                            text: '无可选用户'
+                        });
+                        resolve('');
+                        return;
+                    }
+                    this.approver_pick_names = rows.map((u) => u.name);
+                    this.approver_pick_resolve = resolve;
+                    this.show_approver_pick = true;
+                } catch (err) {
+                    console.log(err);
+                    resolve('');
+                }
+            });
+        },
+        confirm_approver_pick: function (name) {
+            this.show_approver_pick = false;
+            const r = this.approver_pick_resolve;
+            this.approver_pick_resolve = null;
+            if (r) r(name);
+        },
+        close_approver_pick_cancel: function () {
+            this.show_approver_pick = false;
+            const r = this.approver_pick_resolve;
+            this.approver_pick_resolve = null;
+            if (r) r('');
+        },
         do_action: async function (e) {
             let muti_success = true;
             if (!this.new_stuff_price.isMuti) {
@@ -768,14 +826,28 @@ export default {
             }
             try {
                 let url = e.url;
+                let batch_approval_auditer = '';
                 if (e.text == '批量验款') {
                     url = await this.get_pay_url();
+                    await this.refresh_approval_projects();
+                    const p = this.approval_item('manual_verify_pay');
+                    if (p && p.enabled && p.approver_mode === 'submit_specify') {
+                        batch_approval_auditer = await this.pick_submit_specify_auditer();
+                        if (!batch_approval_auditer) {
+                            this.action_show = false;
+                            return;
+                        }
+                    }
                 }
                 for (let index = 0; index < this.plan_selected.length; index++) {
                     const element = this.plan_selected[index];
-                    this.$send_req(url, {
+                    const pay_body = {
                         plan_id: element,
-                    }).catch((error) => {
+                    };
+                    if (batch_approval_auditer) {
+                        pay_body.approval_auditer = batch_approval_auditer;
+                    }
+                    this.$send_req(url, pay_body).catch((error) => {
                         console.log(error)
                         muti_success = false
                     })
@@ -1092,12 +1164,17 @@ export default {
         },
         do_xxx: async function (e) {
             if (e.index == 1) {
-                await this.$send_req(this.xxx_url, {
+                let body = {
                     plan_id: this.focus_plan.id
-                });
+                };
+                if (this.pay_pending_approval_auditer && this.xxx_url && this.xxx_url.indexOf('order_sale_pay') >= 0) {
+                    body.approval_auditer = this.pay_pending_approval_auditer;
+                }
+                await this.$send_req(this.xxx_url, body);
                 this.show_plan_detail = false;
                 uni.startPullDownRefresh();
             }
+            this.pay_pending_approval_auditer = '';
             this.show_xxx_confirm = false;
         },
         // 订单新单价调价
@@ -1112,11 +1189,24 @@ export default {
                     unit_price: this.new_stuff_price.price
                 }, rules);
                 if (val_ret.isPassed) {
-                    this.$send_req("/stuff/change_price_by_plan", {
+                    await this.refresh_approval_projects();
+                    const p = this.approval_item('closed_order_price');
+                    let specify = '';
+                    if (p && p.enabled && p.approver_mode === 'submit_specify') {
+                        specify = await this.pick_submit_specify_auditer();
+                        if (!specify) {
+                            return;
+                        }
+                    }
+                    const price_req = {
                         unit_price: Number(this.new_stuff_price.price),
                         plan_id: this.new_stuff_price.isMuti ? this.plan_selected.toString() : this.focus_plan.id + '',
                         comment: this.new_stuff_price.comment
-                    }).catch((error) => {
+                    };
+                    if (specify) {
+                        price_req.approval_auditer = specify;
+                    }
+                    this.$send_req("/stuff/change_price_by_plan", price_req).catch((error) => {
                         this.$refs.toast.show({
                             text: error,
                         })
@@ -1183,6 +1273,16 @@ export default {
             this.show_rollback_confirm = false;
         },
         prepare_pay_confirm: async function (info) {
+            this.pay_pending_approval_auditer = '';
+            await this.refresh_approval_projects();
+            const p = this.approval_item('manual_verify_pay');
+            if (p && p.enabled && p.approver_mode === 'submit_specify') {
+                const name = await this.pick_submit_specify_auditer();
+                if (!name) {
+                    return;
+                }
+                this.pay_pending_approval_auditer = name;
+            }
             this.prepare_xxx_confirm(await this.get_pay_url(), info);
         },
         prepare_xxx_confirm: function (url, info) {
