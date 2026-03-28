@@ -918,6 +918,7 @@ module.exports = {
         }
     },
     verify_plan_pay: async function (_plan, _t) {
+        let plan4next = undefined;
         let opt_func = async () => {
             let plan = await util_lib.get_single_plan_by_id(_plan.id);
             if (!plan || plan.status != 1) {
@@ -940,10 +941,9 @@ module.exports = {
                 latest.outstanding_vehicles = outstanding_vehicles;
                 await latest.save();
             }
-        }
+        };
         let rl = await mutex.acquire();
         try {
-            let plan4next = undefined;
             if (_t) {
                 await opt_func();
             }

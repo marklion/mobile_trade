@@ -1177,48 +1177,62 @@ export default {
             this.pay_pending_approval_auditer = '';
             this.show_xxx_confirm = false;
         },
+        validate_new_stuff_price_form: async function () {
+            const rules = [{
+                name: 'unit_price',
+                rule: ['required', 'isNumber'],
+                msg: ['请输入新单价', '请输入正确的金额']
+            }];
+            const val_ret = await this.$refs.new_stuff_price_form.validator({
+                unit_price: this.new_stuff_price.price
+            }, rules);
+            return val_ret.isPassed;
+        },
+        resolve_closed_order_price_submit_auditer: async function () {
+            await this.refresh_approval_projects();
+            const p = this.approval_item('closed_order_price');
+            if (!p || !p.enabled || p.approver_mode !== 'submit_specify') {
+                return { ok: true, auditer: '' };
+            }
+            const specify = await this.pick_submit_specify_auditer();
+            if (!specify) {
+                return { ok: false, auditer: '' };
+            }
+            return { ok: true, auditer: specify };
+        },
         // 订单新单价调价
         do_new_stuff_pirce: async function (e) {
-            if (e.index == 1) {
-                let rules = [{
-                    name: 'unit_price',
-                    rule: ['required', 'isNumber'],
-                    msg: ['请输入新单价', '请输入正确的金额']
-                }];
-                let val_ret = await this.$refs.new_stuff_price_form.validator({
-                    unit_price: this.new_stuff_price.price
-                }, rules);
-                if (val_ret.isPassed) {
-                    await this.refresh_approval_projects();
-                    const p = this.approval_item('closed_order_price');
-                    let specify = '';
-                    if (p && p.enabled && p.approver_mode === 'submit_specify') {
-                        specify = await this.pick_submit_specify_auditer();
-                        if (!specify) {
-                            return;
-                        }
-                    }
-                    const price_req = {
-                        unit_price: Number(this.new_stuff_price.price),
-                        plan_id: this.new_stuff_price.isMuti ? this.plan_selected.toString() : this.focus_plan.id + '',
-                        comment: this.new_stuff_price.comment
-                    };
-                    if (specify) {
-                        price_req.approval_auditer = specify;
-                    }
-                    this.$send_req("/stuff/change_price_by_plan", price_req).catch((error) => {
-                        this.$refs.toast.show({
-                            text: error,
-                        })
-                    }).finally(() => {
-                        this.cancel_new_stuff_price();
-                        this.show_plan_detail = false;
-                        uni.startPullDownRefresh();
-                    });
-                }
-            } else {
-                this.cancel_new_stuff_price()
+            if (e.index !== 1) {
+                this.cancel_new_stuff_price();
+                return;
             }
+            await this.submit_new_stuff_price_by_plan();
+        },
+        submit_new_stuff_price_by_plan: async function () {
+            if (!(await this.validate_new_stuff_price_form())) {
+                return;
+            }
+            const auditerRes = await this.resolve_closed_order_price_submit_auditer();
+            if (!auditerRes.ok) {
+                return;
+            }
+            const price_req = {
+                unit_price: Number(this.new_stuff_price.price),
+                plan_id: this.new_stuff_price.isMuti ? this.plan_selected.toString() : this.focus_plan.id + '',
+                comment: this.new_stuff_price.comment
+            };
+            if (auditerRes.auditer) {
+                price_req.approval_auditer = auditerRes.auditer;
+            }
+            this.$send_req("/stuff/change_price_by_plan", price_req).catch((error) => {
+                this.$refs.toast.show({
+                    text: error,
+                });
+            }).finally(() => {
+                this.cancel_new_stuff_price();
+                this.show_plan_detail = false;
+                uni.startPullDownRefresh();
+            });
         },
         cancel_new_stuff_price: function (e) {
             this.new_stuff_price.price = 0;

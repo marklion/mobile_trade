@@ -22,165 +22,171 @@ const APPROVAL_PROJECTS = {
     },
 };
 
-function normalize_approver_mode(m) {
-    return m === 'submit_specify' ? 'submit_specify' : 'default';
-}
-
-function get_project_by_url(url) {
-    let ret = null;
-    for (const key of Object.keys(APPROVAL_PROJECTS)) {
-        const one_project = APPROVAL_PROJECTS[key];
-        if (one_project.urls.includes(url)) {
-            ret = one_project;
-            break;
-        }
-    }
-    return ret;
-}
-
-async function get_or_create_approval_config(company) {
-    const sq = db_opt.get_sq();
-    let config = await sq.models.approval_config.findOne({
-        where: { companyId: company.id },
-    });
-    if (!config) {
-        config = await sq.models.approval_config.create({
-            companyId: company.id,
-        });
-    }
-    return config;
-}
-
-function audit_status_progress(status) {
-    if (status === 'pending') {
-        return '待审批';
-    }
-    if (status === 'approved') {
-        return '已通过';
-    }
-    if (status === 'rejected') {
-        return '已驳回';
-    }
-    return status ? String(status) : '';
-}
-
 module.exports = {
-    audit_status_progress,
+    normalize_approver_mode: function (m) {
+        return m === 'submit_specify' ? 'submit_specify' : 'default';
+    },
+    get_project_by_url: function (url) {
+        let ret = null;
+        for (const key of Object.keys(APPROVAL_PROJECTS)) {
+            const one_project = APPROVAL_PROJECTS[key];
+            if (one_project.urls.includes(url)) {
+                ret = one_project;
+                break;
+            }
+        }
+        return ret;
+    },
+    get_or_create_approval_config: async function (company) {
+        const sq = db_opt.get_sq();
+        let config = await sq.models.approval_config.findOne({
+            where: { companyId: company.id },
+        });
+        if (!config) {
+            config = await sq.models.approval_config.create({
+                companyId: company.id,
+            });
+        }
+        return config;
+    },
+    apply_project_to_config: function (config, one_project, projectDef, defaultModeAuditerRequiredErr) {
+        if (one_project.key != projectDef.key) {
+            return;
+        }
+        const mode = this.normalize_approver_mode(one_project.approver_mode);
+        config[projectDef.company_switch] = !!one_project.enabled;
+        config[projectDef.company_mode] = mode;
+        const storedAuditer = mode === 'submit_specify' ? '' : (one_project.auditer || '').trim();
+        config[projectDef.company_auditer] = storedAuditer;
+        if (one_project.enabled && mode === 'default' && !storedAuditer) {
+            throw { err_msg: defaultModeAuditerRequiredErr };
+        }
+    },
+    build_pure_body_for_audit: function (body) {
+        const pure_body = Object.assign({}, body);
+        delete pure_body.audit_id;
+        delete pure_body.approval_auditer;
+        return pure_body;
+    },
+    find_audit_record_by_pure_body: async function (sq, url, pure_body) {
+        return sq.models.audit_record.findOne({
+            where: {
+                url: url,
+                body: JSON.stringify(pure_body),
+                status: {
+                    [db_opt.Op.in]: ['pending', 'approved'],
+                },
+            },
+        });
+    },
+    guard_ret_for_existing_audit: function (exist_audit_record, audit_id) {
+        if (exist_audit_record.status == 'approved' && exist_audit_record.id == audit_id) {
+            return 0;
+        }
+        throw { err_msg: '该请求已提交审批，正在审批中或已被驳回' };
+    },
+    require_auditer_for_guard: function (config, project, body) {
+        const mode = this.normalize_approver_mode(config[project.company_mode]);
+        const auditer =
+            mode === 'default'
+                ? (config[project.company_auditer] || '').trim()
+                : (body.approval_auditer || '').trim();
+        if (auditer) {
+            return auditer;
+        }
+        if (mode === 'default') {
+            throw { err_msg: '该项目为默认审批人模式但尚未配置审批人，请联系管理员' };
+        }
+        throw { err_msg: '请在提交时指定审批人' };
+    },
+    create_pending_audit_record: async function (sq, url, pure_body, project, company, user, auditer) {
+        let new_one = await sq.models.audit_record.create({
+            url: url,
+            body: JSON.stringify(pure_body),
+            submiter: user.name,
+            auditer: auditer,
+            submit_time: moment().format('YYYY-MM-DD HH:mm:ss'),
+            submit_token: user.online_token,
+            project_key: project.key,
+            project_name: project.name,
+            status: 'pending',
+        });
+        await new_one.setCompany(company);
+        return new_one.id;
+    },
+    guard_req_when_project_enabled: async function (sq, url, company, body, user, config, project) {
+        const audit_id = body.audit_id || null;
+        const pure_body = this.build_pure_body_for_audit(body);
+        const exist_audit_record = await this.find_audit_record_by_pure_body(sq, url, pure_body);
+        if (exist_audit_record) {
+            return this.guard_ret_for_existing_audit(exist_audit_record, audit_id);
+        }
+        const auditer = this.require_auditer_for_guard(config, project, body);
+        return this.create_pending_audit_record(sq, url, pure_body, project, company, user, auditer);
+    },
+    audit_status_progress: function (status) {
+        if (status === 'pending') {
+            return '待审批';
+        }
+        if (status === 'approved') {
+            return '已通过';
+        }
+        if (status === 'rejected') {
+            return '已驳回';
+        }
+        return status ? String(status) : '';
+    },
     get_approval_projects: async function (company) {
-        let config = await get_or_create_approval_config(company);
+        let config = await this.get_or_create_approval_config(company);
         return {
             projects: [
                 {
                     key: APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.key,
                     name: APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.name,
                     enabled: !!config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_switch],
-                    approver_mode: normalize_approver_mode(config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_mode]),
+                    approver_mode: this.normalize_approver_mode(config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_mode]),
                     auditer: config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_auditer] || '',
                 },
                 {
                     key: APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.key,
                     name: APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.name,
                     enabled: !!config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_switch],
-                    approver_mode: normalize_approver_mode(config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_mode]),
+                    approver_mode: this.normalize_approver_mode(config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_mode]),
                     auditer: config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_auditer] || '',
                 },
             ],
         };
     },
     set_approval_projects: async function (company, projects) {
-        let config = await get_or_create_approval_config(company);
+        let config = await this.get_or_create_approval_config(company);
         for (const one_project of (projects || [])) {
-            if (one_project.key == APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.key) {
-                const mode = normalize_approver_mode(one_project.approver_mode);
-                config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_switch] = !!one_project.enabled;
-                config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_mode] = mode;
-                if (mode === 'submit_specify') {
-                    config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_auditer] = '';
-                } else {
-                    config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_auditer] = (one_project.auditer || '').trim();
-                }
-                if (one_project.enabled && mode === 'default' && !config[APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.company_auditer]) {
-                    throw { err_msg: '「已关闭订单的调价」启用且为默认审批人时，必须指定审批人' };
-                }
-            }
-            if (one_project.key == APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.key) {
-                const mode = normalize_approver_mode(one_project.approver_mode);
-                config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_switch] = !!one_project.enabled;
-                config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_mode] = mode;
-                if (mode === 'submit_specify') {
-                    config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_auditer] = '';
-                } else {
-                    config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_auditer] = (one_project.auditer || '').trim();
-                }
-                if (one_project.enabled && mode === 'default' && !config[APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.company_auditer]) {
-                    throw { err_msg: '「手动验款」启用且为默认审批人时，必须指定审批人' };
-                }
-            }
+            this.apply_project_to_config(
+                config,
+                one_project,
+                APPROVAL_PROJECTS.CLOSED_ORDER_PRICE,
+                '「已关闭订单的调价」启用且为默认审批人时，必须指定审批人'
+            );
+            this.apply_project_to_config(
+                config,
+                one_project,
+                APPROVAL_PROJECTS.MANUAL_VERIFY_PAY,
+                '「手动验款」启用且为默认审批人时，必须指定审批人'
+            );
         }
         await config.save();
     },
     guard_req: async function (url, company, body, user) {
-        let ret = -1;
-        const sq = db_opt.get_sq();
-        if (company && user) {
-            let config = await get_or_create_approval_config(company);
-            const project = get_project_by_url(url);
-            const is_project_enabled = project && config[project.company_switch];
-            if (is_project_enabled) {
-                let audit_id = body.audit_id || null;
-                let pure_body = Object.assign({}, body);
-                delete pure_body.audit_id;
-                delete pure_body.approval_auditer;
-                let exist_audit_record = await sq.models.audit_record.findOne({
-                    where: {
-                        url: url,
-                        body: JSON.stringify(pure_body),
-                        status: {
-                            [db_opt.Op.in]: ['pending', 'approved'],
-                        },
-                    }
-                });
-                if (exist_audit_record) {
-                    if (exist_audit_record.status == 'approved' && exist_audit_record.id == audit_id) {
-                        ret = 0;
-                    } else {
-                        throw { err_msg: '该请求已提交审批，正在审批中或已被驳回' };
-                    }
-                } else {
-                    const mode = normalize_approver_mode(config[project.company_mode]);
-                    let auditer = '';
-                    if (mode === 'default') {
-                        auditer = (config[project.company_auditer] || '').trim();
-                    } else {
-                        auditer = (body.approval_auditer || '').trim();
-                    }
-                    if (!auditer) {
-                        if (mode === 'default') {
-                            throw { err_msg: '该项目为默认审批人模式但尚未配置审批人，请联系管理员' };
-                        }
-                        throw { err_msg: '请在提交时指定审批人' };
-                    }
-                    let new_one = await sq.models.audit_record.create({
-                        url: url,
-                        body: JSON.stringify(pure_body),
-                        submiter: user.name,
-                        auditer: auditer,
-                        submit_time: moment().format('YYYY-MM-DD HH:mm:ss'),
-                        submit_token: user.online_token,
-                        project_key: project.key,
-                        project_name: project.name,
-                        status: 'pending',
-                    });
-                    await new_one.setCompany(company);
-                    ret = new_one.id;
-                }
-            } else {
-                ret = 0;
-            }
-        } else {
-            ret = 0;
+        if (!company || !user) {
+            return { id: 0, comment: '' };
         }
-        return { id: ret, comment: '' };
+        const config = await this.get_or_create_approval_config(company);
+        const project = this.get_project_by_url(url);
+        if (!project || !config[project.company_switch]) {
+            return { id: 0, comment: '' };
+        }
+        const sq = db_opt.get_sq();
+        const id = await this.guard_req_when_project_enabled(sq, url, company, body, user, config, project);
+        return { id, comment: '' };
     },
     audit_req: async function (id, is_approve, user) {
         const sq = db_opt.get_sq();
