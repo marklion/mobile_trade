@@ -25,7 +25,14 @@ module.exports = {
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 let { count, rows } = await rbac_lib.get_all_users(company, body.pageNo || 0);
-                return { all_user: rows, total: count };
+                const all_user = Array.isArray(rows)
+                    ? rows.map((user) => ({
+                        id: user.id,
+                        name: user.name,
+                        phone: user.phone,
+                    }))
+                    : [];
+                return { all_user, total: count };
             },
         },
         get_approval_projects: {

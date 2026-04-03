@@ -28,7 +28,7 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
       },
       success: async (res) => {
         let data = res.data;
-        if (data.err_msg.length > 0) {
+        if ((data.err_msg || '').length > 0) {
           uni.showToast({
             title: data.err_msg,
             icon: 'none',
@@ -40,7 +40,25 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
           });
         }
         else {
-          resolve(data.result)
+          const auditId = data.audit_id
+          if (auditId !== undefined && auditId > 0) {
+            const title = data.comment
+              ? `已提交审批（${data.comment}），通过后生效`
+              : '已提交审批，待审批通过后生效'
+            uni.showToast({
+              title,
+              icon: 'none',
+              duration: 2500
+            })
+            const payload = data.result
+            if (payload !== null && typeof payload === 'object' && !Array.isArray(payload)) {
+              resolve({ ...payload, pendingApproval: true, audit_id: auditId })
+            } else {
+              resolve({ audit_id: auditId, result: payload, pendingApproval: true })
+            }
+          } else {
+            resolve(data.result)
+          }
         }
       },
       fail: (res) => {

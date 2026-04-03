@@ -63,6 +63,8 @@ else {
                 need_rbac = method.need_rbac;
             } else if (mo.name === 'group') {
                 need_rbac = method.need_rbac !== undefined ? method.need_rbac : false;
+            } else if (method.need_rbac !== undefined) {
+                need_rbac = method.need_rbac;
             }
             mkapi('/' + mo.name + '/' + method_name,
                 mo.name, method.is_write, need_rbac,
@@ -348,7 +350,8 @@ else {
         console.error('An uncaught error occurred!');
         console.error(err.stack);
     });
-    let server = app.listen(8080, () => console.log('Server running on port 8080'));
+    const listenPort = process.env.PORT != null && process.env.PORT !== '' ? Number(process.env.PORT) : 8080;
+    let server = app.listen(listenPort, () => console.log('Server running on port ' + listenPort));
     process.on('SIGINT', () => {
         console.log('SIGINT signal received. Closing server...');
         server.close();

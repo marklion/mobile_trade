@@ -31,7 +31,7 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   async response => {
     const res = response.data
-    if (res.err_msg.length > 0) {
+    if ((res.err_msg || '').length > 0) {
       Message({
         message: res.err_msg || 'Error',
         type: 'error',
@@ -39,6 +39,22 @@ service.interceptors.response.use(
       })
       return Promise.reject(new Error(res.err_msg || 'Error'))
     } else {
+      const auditId = res.audit_id
+      if (auditId !== undefined && auditId > 0) {
+        const hint = res.comment
+          ? `已提交审批（${res.comment}），审批通过后将自动执行。`
+          : '已提交审批，审批通过后将自动执行该操作。'
+        Message({
+          message: hint,
+          type: 'warning',
+          duration: 8 * 1000
+        })
+        const payload = res.result
+        if (payload !== null && typeof payload === 'object' && !Array.isArray(payload)) {
+          return { ...payload, __auditPending: true, __auditId: auditId }
+        }
+        return payload
+      }
       return res.result
     }
   },

@@ -3,6 +3,17 @@ const moment = require('moment');
 const axios = require('axios');
 const rbac_lib = require('./rbac_lib');
 
+/** 审批通过后 HTTP 回放基址：优先 INTERNAL_API_BASE_URL，否则与 index.js 的 PORT / INTERNAL_API_HOST 一致 */
+function internal_api_v1_base() {
+    const base = process.env.INTERNAL_API_BASE_URL;
+    if (base && String(base).trim()) {
+        return String(base).replace(/\/$/, '') + '/api/v1';
+    }
+    const port = process.env.PORT != null && process.env.PORT !== '' ? Number(process.env.PORT) : 8080;
+    const host = process.env.INTERNAL_API_HOST || '127.0.0.1';
+    return `http://${host}:${port}/api/v1`;
+}
+
 const APPROVAL_PROJECTS = {
     CLOSED_ORDER_PRICE: {
         key: 'closed_order_price',
@@ -68,6 +79,33 @@ module.exports = {
         delete pure_body.approval_auditer;
         return pure_body;
     },
+    /** 从请求体提取审批列表「审批事项」列可用的简短说明（VARCHAR 255） */
+    build_audit_comment_from_pure_body: function (pure_body) {
+        if (!pure_body || typeof pure_body !== 'object') {
+            return '';
+        }
+        const parts = [];
+        const planId = pure_body.plan_id;
+        if (planId !== undefined && planId !== null && String(planId).trim() !== '') {
+            parts.push(`计划ID: ${planId}`);
+        }
+        if (pure_body.unit_price !== undefined && pure_body.unit_price !== null && pure_body.unit_price !== '') {
+            parts.push(`新单价: ${pure_body.unit_price}`);
+        }
+        const c = typeof pure_body.comment === 'string' ? pure_body.comment.trim() : '';
+        if (c) {
+            parts.push(c);
+        }
+        const msg = typeof pure_body.msg === 'string' ? pure_body.msg.trim() : '';
+        if (msg) {
+            parts.push(msg);
+        }
+        let s = parts.join('；');
+        if (s.length > 255) {
+            s = s.slice(0, 252) + '...';
+        }
+        return s;
+    },
     find_audit_record_by_pure_body: async function (sq, url, pure_body) {
         return sq.models.audit_record.findOne({
             where: {
@@ -83,7 +121,7 @@ module.exports = {
         if (exist_audit_record.status == 'approved' && exist_audit_record.id == audit_id) {
             return 0;
         }
-        throw { err_msg: '该请求已提交审批，正在审批中或已被驳回' };
+        throw { err_msg: '该请求已提交审批，正在审批中或已审批' };
     },
     require_auditer_for_guard: function (config, project, body) {
         const mode = this.normalize_approver_mode(config[project.company_mode]);
@@ -100,6 +138,7 @@ module.exports = {
         throw { err_msg: '请在提交时指定审批人' };
     },
     create_pending_audit_record: async function (sq, url, pure_body, project, company, user, auditer) {
+        const summary_comment = this.build_audit_comment_from_pure_body(pure_body);
         let new_one = await sq.models.audit_record.create({
             url: url,
             body: JSON.stringify(pure_body),
@@ -110,19 +149,21 @@ module.exports = {
             project_key: project.key,
             project_name: project.name,
             status: 'pending',
+            comment: summary_comment || null,
         });
         await new_one.setCompany(company);
-        return new_one.id;
+        return { id: new_one.id, comment: summary_comment };
     },
     guard_req_when_project_enabled: async function (sq, url, company, body, user, config, project) {
         const audit_id = body.audit_id || null;
         const pure_body = this.build_pure_body_for_audit(body);
         const exist_audit_record = await this.find_audit_record_by_pure_body(sq, url, pure_body);
         if (exist_audit_record) {
-            return this.guard_ret_for_existing_audit(exist_audit_record, audit_id);
+            const id = this.guard_ret_for_existing_audit(exist_audit_record, audit_id);
+            return { id, comment: '' };
         }
         const auditer = this.require_auditer_for_guard(config, project, body);
-        return this.create_pending_audit_record(sq, url, pure_body, project, company, user, auditer);
+        return await this.create_pending_audit_record(sq, url, pure_body, project, company, user, auditer);
     },
     audit_status_progress: function (status) {
         if (status === 'pending') {
@@ -185,8 +226,8 @@ module.exports = {
             return { id: 0, comment: '' };
         }
         const sq = db_opt.get_sq();
-        const id = await this.guard_req_when_project_enabled(sq, url, company, body, user, config, project);
-        return { id, comment: '' };
+        const { id, comment } = await this.guard_req_when_project_enabled(sq, url, company, body, user, config, project);
+        return { id, comment };
     },
     audit_req: async function (id, is_approve, user) {
         const sq = db_opt.get_sq();
@@ -203,7 +244,7 @@ module.exports = {
                 let new_req_body = JSON.parse(exist_audit_record.body);
                 delete new_req_body.approval_auditer;
                 new_req_body.audit_id = exist_audit_record.id;
-                await axios.post(`http://localhost:8080/api/v1${exist_audit_record.url}`, new_req_body, {
+                await axios.post(`${internal_api_v1_base()}${exist_audit_record.url}`, new_req_body, {
                     headers: { token: exist_audit_record.submit_token },
                 });
             } else {

@@ -25,7 +25,7 @@
                                 <el-radio label="submit_specify">提交时指定</el-radio>
                             </el-radio-group>
                             <div v-if="scope.row.approver_mode === 'default'" style="margin-top: 8px;">
-                                <select-search body_key="all_user" get_url="/rbac/module_get_company_all_user" item_label="name" item_value="name" v-model="scope.row.auditer" :permission_array="['rbac']" clearable></select-search>
+                                <select-search body_key="all_user" get_url="/approval/get_auditer_pick_list" item_label="name" item_value="name" v-model="scope.row.auditer" :permission_array="['approval']" clearable></select-search>
                             </div>
                         </template>
                     </el-table-column>
