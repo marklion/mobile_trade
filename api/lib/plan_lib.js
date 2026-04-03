@@ -1300,16 +1300,27 @@ module.exports = {
                     biddingItemId: null,
                 }
             });
+            let company_ids = [];
+            const sq = db_opt.get_sq();
             for (let index = 0; index < plans.length; index++) {
                 const element = plans[index];
-                element.unit_price = _new_price;
-                await element.save();
-                await this.rp_history_price_change(element, _operator, _new_price);
-            }
-            let company_ids = [];
-            for (let single_plan of plans) {
-                if (single_plan.companyId && company_ids.indexOf(single_plan.companyId) == -1) {
-                    company_ids.push(single_plan.companyId);
+                const [affected_rows] = await sq.models.plan.update(
+                    { unit_price: _new_price },
+                    {
+                        where: {
+                            id: element.id,
+                            status: { [db_opt.Op.ne]: 3 },
+                            biddingItemId: { [db_opt.Op.is]: null },
+                        }
+                    }
+                );
+                if (affected_rows === 0) {
+                    continue;
+                }
+                const updated_plan = await util_lib.get_single_plan_by_id(element.id);
+                await this.rp_history_price_change(updated_plan, _operator, _new_price);
+                if (updated_plan.companyId && company_ids.indexOf(updated_plan.companyId) == -1) {
+                    company_ids.push(updated_plan.companyId);
                 }
             }
             for (let company_id of company_ids) {

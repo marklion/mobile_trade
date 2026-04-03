@@ -89,3 +89,48 @@ def send_parallel_requests(url, headers, body):
     thread19.join()
     thread20.join()
     return results
+
+
+def parallel_change_price_and_checkout(base_url, admin_token, buyer_token, stuff_id, plan_id, new_price):
+    base = base_url.rstrip("/")
+    headers_admin = {"token": admin_token}
+    headers_buyer = {"token": buyer_token}
+    body_change = {
+        "stuff_id": int(stuff_id),
+        "price": float(new_price),
+        "to_plan": True,
+        "comment": "race_stuff_price_vs_checkout",
+    }
+    body_checkout = {"plan_id": int(plan_id)}
+    errors = []
+
+    def post_change():
+        try:
+            requests.post(
+                f"{base}/stuff/change_price",
+                headers=headers_admin,
+                json=body_change,
+                timeout=120,
+            )
+        except Exception as e:
+            errors.append(str(e))
+
+    def post_checkout():
+        try:
+            requests.post(
+                f"{base}/customer/checkout_plan",
+                headers=headers_buyer,
+                json=body_checkout,
+                timeout=120,
+            )
+        except Exception as e:
+            errors.append(str(e))
+
+    t1 = threading.Thread(target=post_change)
+    t2 = threading.Thread(target=post_checkout)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+    if errors:
+        raise RuntimeError("; ".join(errors))
