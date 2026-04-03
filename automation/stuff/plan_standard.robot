@@ -151,7 +151,7 @@ Plan Price Change With Recalculation
     Charge To A Company  ${buy_company1}[id]  ${negative_amount}
 
 Plan Concurrent Stuff Price Vs Checkout Keeps Settled Unit Price
-    [Teardown]  Run Keywords  Set Stuff Checkout Delay  ${test_stuff}[id]  ${sc_admin_token}  ${False}  AND  Plan Reset  AND  Change Stuff Price  ${test_stuff}[id]  ${1212}  ${False}  teardown_restore_stuff_price
+    [Teardown]  Run Keywords  Set Stuff Checkout Delay  ${test_stuff}[id]  ${sc_admin_token}  ${False}  AND  Plan Reset  AND  Reset Buyer Contract Cash To Zero  AND  Change Stuff Price  ${test_stuff}[id]  ${1212}  ${False}  teardown_restore_stuff_price
     Set Stuff Checkout Delay  ${test_stuff}[id]  ${sc_admin_token}  ${True}
     ${race_price}  Evaluate  887766.55
     ${mv}  Search Main Vehicle by Index  0

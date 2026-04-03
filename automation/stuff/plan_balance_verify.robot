@@ -147,6 +147,7 @@ Delete Plan And Check
     Confirm A Plan    ${all_plans}[0]
     Confirm A Plan    ${all_plans}[1]
     Close A Plan    ${all_plans}[2]
+    Sleep    3s
     Check All Plans    ${2}
 
 Rollback And Check
