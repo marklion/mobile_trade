@@ -923,7 +923,7 @@ module.exports = {
         },
         company_convert_to_group: {
             name: '公司将普通主体转为集团',
-            description: '指定集团管理员用户（须为该公司下已存在用户）。供运维/接口调用，无单独 Web 入口',
+            description: '指定集团管理员用户（须为该公司下已存在用户）。可重复调用用于修复集团模块/角色/用户绑定。',
             need_rbac: true,
             is_write: true,
             is_get_api: false,

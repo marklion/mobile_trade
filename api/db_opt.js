@@ -479,11 +479,6 @@ let db_opt = {
             need_checkout: { type: DataTypes.BOOLEAN, defaultValue: false },
             need_audit: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
-        audit_config: {
-            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-            url: { type: DataTypes.STRING },
-            content_template:{ type: DataTypes.TEXT },
-        },
         audit_record: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             url: { type: DataTypes.STRING },
@@ -495,6 +490,19 @@ let db_opt = {
             audit_time: { type: DataTypes.STRING },
             close_time: { type: DataTypes.STRING },
             comment: { type: DataTypes.STRING },
+            project_key: { type: DataTypes.STRING },
+            project_name: { type: DataTypes.STRING },
+            status: { type: DataTypes.STRING, defaultValue: 'pending' },
+        },
+        approval_config: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            approval_item_closed_order_price: { type: DataTypes.BOOLEAN, defaultValue: false },
+            approval_item_manual_verify_pay: { type: DataTypes.BOOLEAN, defaultValue: false },
+            approval_default_auditer: { type: DataTypes.STRING },
+            approval_closed_order_price_mode: { type: DataTypes.STRING, defaultValue: 'default' },
+            approval_manual_verify_pay_mode: { type: DataTypes.STRING, defaultValue: 'default' },
+            approval_closed_order_price_auditer: { type: DataTypes.STRING },
+            approval_manual_verify_pay_auditer: { type: DataTypes.STRING },
         },
         king_dee_error:{
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -672,10 +680,10 @@ let db_opt = {
         _sq.models.king_dee_start_config.belongsTo(_sq.models.stuff);
         _sq.models.stuff.hasOne(_sq.models.king_dee_start_config);
 
-        _sq.models.audit_config.belongsTo(_sq.models.rbac_role);
-        _sq.models.rbac_role.hasMany(_sq.models.audit_config);
         _sq.models.audit_record.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.audit_record);
+        _sq.models.approval_config.belongsTo(_sq.models.company);
+        _sq.models.company.hasOne(_sq.models.approval_config);
 
         _sq.models.company.hasMany(_sq.models.king_dee_error);
         _sq.models.king_dee_error.belongsTo(_sq.models.company);

@@ -41,9 +41,18 @@ export default {
         }
     },
     data: function () {
+        const hasValue = this.value !== undefined && this.value !== null && this.value !== '';
+        let initialFilterId;
+        if (hasValue) {
+            initialFilterId = this.value;
+        } else if (this.first_item) {
+            initialFilterId = 0;
+        } else {
+            initialFilterId = '';
+        }
         return {
             search_input: '',
-            filter_id: this.first_item ? 0 : '',
+            filter_id: initialFilterId,
             is_waiting: false,
 
         };
@@ -51,6 +60,11 @@ export default {
     watch: {
         filter_id: function () {
             this.$emit('input', this.filter_id);
+        },
+        value: function (newValue) {
+            if (newValue !== this.filter_id) {
+                this.filter_id = (newValue === undefined || newValue === null) ? '' : newValue;
+            }
         }
     },
     methods: {

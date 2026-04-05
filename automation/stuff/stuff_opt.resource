@@ -31,7 +31,7 @@ Prepare Companies And Users
     Add Module To Company  ${sale_company}[id]  sale_management
     Add Module To Company  ${sale_company}[id]  buy_management
     Add Module To Company  ${sale_company}[id]  exam
-    Add Module To Company  ${sale_company}[id]  audit
+    Add Module To Company  ${sale_company}[id]  approval
     Add Module To User  ${sc_admin_token}  1234  stuff
     Add Module To User  ${sc_admin_token}  1234  cash
     Add Module To User  ${sc_admin_token}  1234  scale
@@ -39,7 +39,7 @@ Prepare Companies And Users
     Add Module To User  ${sc_admin_token}  1234  sale_management
     Add Module To User  ${sc_admin_token}  1234  buy_management
     Add Module To User  ${sc_admin_token}  1234  exam
-    Add Module To User  ${sc_admin_token}  1234  audit
+    Add Module To User  ${sc_admin_token}  1234  approval
     ${no_need_sale_company}  Create One Company  sc_no_need
     Company Set Script  ${no_need_sale_company}[id]  normal
     ${sc_admin_no_need_token}  Login As Admin Of Company  ${no_need_sale_company}[id]  12341  sc_admin_no_need
@@ -153,6 +153,8 @@ Add A Stuff To Contract
             Exit For Loop
         END
     END
+    Should Not Be Empty  ${target_contract}  未找到客户【${customer_name}】对应的合同，请先确认合同创建成功
+    Should Not Be Empty  ${target_stuff}  未找到货物【${stuff_name}】，请先确认货物已创建
     ${req}  Create Dictionary  stuff_id=${target_stuff}[id]  contract_id=${target_contract}[id]
     Req to Server  /sale_management/contract_add_stuff  ${token}  ${req}
 
@@ -176,6 +178,8 @@ Del A Stuff From Contract
             Exit For Loop
         END
     END
+    Should Not Be Empty  ${target_contract}  未找到客户【${customer_name}】对应的合同，请先确认合同创建成功
+    Should Not Be Empty  ${target_stuff}  未找到要删除的货物，请先确认合同中已绑定该货物
     ${req}  Create Dictionary  stuff_id=${target_stuff}[id]  contract_id=${target_contract}[id]
     Req to Server  /sale_management/contract_del_stuff  ${sc_admin_token}  ${req}
 

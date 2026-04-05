@@ -7,7 +7,6 @@ const jimp = require('jimp').default;
 const king_dee_start_lib = require('./lib/king_dee_start_lib');
 const cash_lib = require('./lib/cash_lib');
 const app = express();
-const audit_lib = require('./lib/audit_lib');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
@@ -64,6 +63,8 @@ else {
                 need_rbac = method.need_rbac;
             } else if (mo.name === 'group') {
                 need_rbac = method.need_rbac !== undefined ? method.need_rbac : false;
+            } else if (method.need_rbac !== undefined) {
+                need_rbac = method.need_rbac;
             }
             mkapi('/' + mo.name + '/' + method_name,
                 mo.name, method.is_write, need_rbac,
@@ -102,7 +103,7 @@ else {
         await module_install(role.id, app, require('./module/supplier_module'));
         await module_install(role.id, app, require('./module/exam_module'));
         await module_install(role.id, app, require('./module/u8c_module'));
-        await module_install(role.id, app, require('./module/audit_module'));
+        await module_install(role.id, app, require('./module/approval_module'));
         await module_install(role.id, app, require('./module/group_module'));
         let all_modules = await sq.models.rbac_module.findAll();
         for (let index = 0; index < all_modules.length; index++) {
@@ -118,7 +119,6 @@ else {
                 return { result: true };
             }).install(app);
         }
-        audit_lib.init_all_api(app.help_info);
     }
     init_super_user();
     const multer = require('multer');
@@ -350,7 +350,8 @@ else {
         console.error('An uncaught error occurred!');
         console.error(err.stack);
     });
-    let server = app.listen(8080, () => console.log('Server running on port 8080'));
+    const listenPort = process.env.PORT != null && process.env.PORT !== '' ? Number(process.env.PORT) : 8080;
+    let server = app.listen(listenPort, () => console.log('Server running on port ' + listenPort));
     process.on('SIGINT', () => {
         console.log('SIGINT signal received. Closing server...');
         server.close();

@@ -19,6 +19,7 @@
                 </view>
             </u-cell>
             <view class="status_tags">
+                <u-tag v-if="single_r.progress" :text="'进度：' + single_r.progress" plain size="mini" type="info"></u-tag>
                 <u-tag v-if="single_r.submit_time" :text="single_r.submit_time + '请求'" plain size="mini" type="warning"></u-tag>
                 <u-tag v-if="single_r.audit_time" :text="single_r.audit_time+ '审批'" type="success" plain size="mini"></u-tag>
                 <u-tag v-if="single_r.close_time" :text="single_r.close_time+ '驳回'" type="error" plain size="mini"></u-tag>
@@ -63,7 +64,7 @@ export default {
             })
         },
         get_ar: async function (pageNo, [focus_audit_status]) {
-            let resp = await this.$send_req('/audit/get_audit4req', {
+            let resp = await this.$send_req('/approval/get_audit4req', {
                 pageNo: pageNo,
                 status: focus_audit_status == -1 ? null : focus_audit_status,
             });
@@ -85,7 +86,7 @@ export default {
                     });
                 });
             }
-            await this.$send_req('/audit/audit_req', {
+            await this.$send_req('/approval/audit_req', {
                 id: id,
                 is_approve: is_approve,
             });
