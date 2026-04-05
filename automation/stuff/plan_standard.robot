@@ -150,6 +150,35 @@ Plan Price Change With Recalculation
     ${negative_amount}  Evaluate  -${expected_new_arrears}
     Charge To A Company  ${buy_company1}[id]  ${negative_amount}
 
+Plan Concurrent Stuff Price Vs Checkout Keeps Settled Unit Price
+    [Teardown]  Run Keywords  Set Stuff Checkout Delay  ${test_stuff}[id]  ${sc_admin_token}  ${False}  AND  Plan Reset  AND  Reset Buyer Contract Cash To Zero  AND  Change Stuff Price  ${test_stuff}[id]  ${1212}  ${False}  teardown_restore_stuff_price
+    Set Stuff Checkout Delay  ${test_stuff}[id]  ${sc_admin_token}  ${True}
+    ${race_price}  Evaluate  887766.55
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    FOR  ${_}  IN RANGE  10
+        Plan Reset
+        Change Stuff Price  ${test_stuff}[id]  ${1212}  ${False}  race_iter_reset_stuff
+        ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+        Confirm A Plan  ${plan}
+        Manual Pay A Plan  ${plan}
+        Deliver A Plan  ${plan}  ${20}
+        ${plan}  Get Plan By Id  ${plan}[id]
+        ${expected_price}  Set Variable  ${plan}[unit_price]
+        Should Be Equal As Numbers  ${plan}[status]  ${2}
+        IF  $server_base != ''
+            ${api_base}  Set Variable  ${server_base}
+        ELSE
+            ${api_base}  Set Variable  http://localhost:8080/api/v1
+        END
+        Parallel Change Price And Checkout  ${api_base}  ${sc_admin_token}  ${bc1_user_token}  ${test_stuff}[id]  ${plan}[id]  ${race_price}
+        Sleep  200ms
+        ${plan}  Get Plan By Id  ${plan}[id]
+        Should Be Equal As Numbers  ${plan}[status]  ${3}
+        Should Be Equal As Numbers  ${plan}[unit_price]  ${expected_price}
+    END
+
 Plan Confirm with No User Authorized
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0

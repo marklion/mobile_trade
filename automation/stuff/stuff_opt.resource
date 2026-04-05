@@ -198,6 +198,11 @@ Charge To A Company
     Req to Server  /cash/charge  ${sc_admin_token}  ${req}  check_audit=${check_audit}
     RETURN  ${contract_id}
 
+Reset Buyer Contract Cash To Zero
+    ${bal}  Get Cash Of A Company  ${buy_company1}[name]
+    ${delta}  Evaluate  0 - ${bal}
+    Charge To A Company  ${buy_company1}[id]  ${delta}
+
 Get Cash Of A Company
     [Arguments]  ${company_name}
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
