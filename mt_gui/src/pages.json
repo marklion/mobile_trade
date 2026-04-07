@@ -7,6 +7,9 @@
 			}
 		},
 		{
+			"path": "pages/Driver"
+		},
+		{
 			"path": "pages/Export",
 			"style": {
 				"enablePullDownRefresh": true
@@ -25,26 +28,7 @@
 			}
 		},
 		{
-			"path": "pages/Driver",
-			"style": {
-				"navigationStyle": "custom",
-				"app-plus": {
-					"popGesture": "none",
-					"titleNView": {
-						"titleSize": "18px",
-						"autoBackButton": false
-					}
-				},
-				"disableSwipeBack": true,
-				"enablePullDownRefresh": true
-			}
-		},
-
-		{
 			"path": "pages/DevPage"
-		},
-		{
-			"path": "pages/Ticket"
 		},
 		{
 			"path": "pages/Admin",
@@ -57,6 +41,24 @@
 		{
 			"root": "subPage1",
 			"pages": [
+				{
+					"path": "Ticket"
+				},
+				{
+					"path": "Driver",
+					"style": {
+						"navigationStyle": "custom",
+						"app-plus": {
+							"popGesture": "none",
+							"titleNView": {
+								"titleSize": "18px",
+								"autoBackButton": false
+							}
+						},
+						"disableSwipeBack": true,
+						"enablePullDownRefresh": true
+					}
+				},
 				{
 					"path": "BiddingJoin",
 					"style": {

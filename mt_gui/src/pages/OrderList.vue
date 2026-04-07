@@ -235,7 +235,7 @@
                     <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time">
                     </u-cell>
                     <module-filter require_module="scale">
-                        <u-cell title="代替司机操作" isLink :url="'/pages/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
+                        <u-cell title="代替司机操作" isLink :url="'/subPage1/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
                     </module-filter>
                 </u-cell-group>
             </view>
@@ -1024,7 +1024,7 @@ export default {
         },
         go_to_ticket: function (is_internal) {
             uni.navigateTo({
-                url: '/pages/Ticket?id=' + this.focus_plan.id + '&is_internal=' + is_internal
+                url: '/subPage1/Ticket?id=' + this.focus_plan.id + '&is_internal=' + is_internal
             });
         },
         batch_confirm: async function () {
