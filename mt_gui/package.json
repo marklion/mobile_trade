@@ -16,7 +16,7 @@
     "build:mp-lark": "cross-env NODE_ENV=production UNI_PLATFORM=mp-lark vue-cli-service uni-build",
     "build:mp-qq": "cross-env NODE_ENV=production UNI_PLATFORM=mp-qq vue-cli-service uni-build",
     "build:mp-toutiao": "cross-env NODE_ENV=production UNI_PLATFORM=mp-toutiao vue-cli-service uni-build",
-    "build:mp-weixin": "cross-env REMOTE_HOST=${ENV_REMOTE_HOST} REMOTE_MOBILE_HOST=${ENV_REMOTE_MOBILE_HOST} NODE_ENV=production UNI_PLATFORM=mp-weixin vue-cli-service uni-build",
+    "build:mp-weixin": "cross-env REMOTE_HOST=${ENV_REMOTE_HOST} REMOTE_MOBILE_HOST=${ENV_REMOTE_MOBILE_HOST} NODE_ENV=production UNI_PLATFORM=mp-weixin vue-cli-service uni-build --minimize",
     "build:mp-xhs": "cross-env NODE_ENV=production UNI_PLATFORM=mp-xhs vue-cli-service uni-build",
     "build:quickapp-native": "cross-env NODE_ENV=production UNI_PLATFORM=quickapp-native vue-cli-service uni-build",
     "build:quickapp-webview": "cross-env NODE_ENV=production UNI_PLATFORM=quickapp-webview vue-cli-service uni-build",
@@ -74,7 +74,6 @@
     "flyio": "^0.6.2",
     "moment": "^2.30.1",
     "pinyin-match": "^1.2.6",
-    "uview-ui": "^2.0.38",
     "vue": "^2.6.11",
     "vuex": "^3.2.0"
   },
