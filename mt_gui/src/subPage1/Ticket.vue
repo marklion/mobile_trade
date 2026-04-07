@@ -25,7 +25,7 @@ export default {
             id: 0,
             main_vehicle_plate: '',
             qr_path: function () {
-                let ret = process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + this.id
+                let ret = process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + this.id
                 return ret;
             },
         }
@@ -195,7 +195,7 @@ export default {
     onShareAppMessage: function () {
         return {
             title: this.main_vehicle_plate + '的磅单',
-            path: '/pages/Ticket?id=' + this.id,
+            path: '/subPage1/Ticket?id=' + this.id,
         }
     },
 }

@@ -26,7 +26,7 @@
         <fui-date-picker range :show="show_plan_date" type="3" :value="begin_date" :valueEnd="end_date" @change="choose_date" @cancel="show_plan_date = false"></fui-date-picker>
         <list-show ref="ticket" v-model="all_ticket" :fetch_function="get_all_ticket" height="60vh" :fetch_params="[driver_self.open_id, begin_date, end_date]">
             <view v-for="item in all_ticket" :key="item.id">
-                <u-cell :title="item.order_company_name" :label="item.p_time + '-->' + item.stuff_name" :value="item.count" isLink :url="'/pages/Ticket?id='+item.id"></u-cell>
+                <u-cell :title="item.order_company_name" :label="item.p_time + '-->' + item.stuff_name" :value="item.count" isLink :url="'/subPage1/Ticket?id='+item.id"></u-cell>
             </view>
         </list-show>
     </view>

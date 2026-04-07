@@ -107,7 +107,7 @@ async function print(ip, content) {
 				{ text: (trans_company_name ? '运输公司' : ''), align: "LEFT", width: width },
 				{ text: (trans_company_name ? trans_company_name : ''), align: "LEFT", width: sec_width },
 			])
-			.qrimage('http://mt.d8sis.cn/#/pages/Ticket?id=' + content.id, function (err) {
+			.qrimage('http://mt.d8sis.cn/#/subPage1/Ticket?id=' + content.id, function (err) {
 				this.cut();
 				this.close();
 			});
