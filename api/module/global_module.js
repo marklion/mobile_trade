@@ -218,7 +218,9 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
     if (ret == '' && plan.stuff.need_enter_weight && (!plan.enter_attachment || plan.enter_count == 0)) {
         ret = '未上传进厂前信息';
     }
-    if (ret == '' && (plan.companyId == null || plan.companyId === '')) {
+    // Some legacy plans may not carry companyId, but stuff.companyId is still valid.
+    const effectiveCompanyId = plan.companyId ?? plan?.stuff?.companyId;
+    if (ret == '' && (effectiveCompanyId == null || effectiveCompanyId === '')) {
         ret = '未指定公司';
     }
     if (ret == '' && !(await plan_lib.check_if_never_checkin(driver))) {
@@ -1462,7 +1464,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
