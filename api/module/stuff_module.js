@@ -64,7 +64,9 @@ module.exports = {
             description: '获取所有物料',
             is_write: false,
             is_get_api: true,
-            params: {},
+            params: {
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
+            },
             result: {
                 stuff: {
                     type: Array, mean: '物料列表', explain: {
@@ -114,7 +116,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
                 return {
                     stuff: await company.getStuff(
                         {

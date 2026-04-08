@@ -3,6 +3,9 @@
     <el-header height="50" style="padding-top: 20px;">
         <template>
             <el-button icon="el-icon-circle-plus" type="success" @click="show_stuff_fetch = true; is_update = false;clean_form()">新增物料</el-button>
+            <el-select v-if="stat_scopes.length > 1" v-model="stat_context_company_id" size="small" style="width: 220px; margin-left: 10px;" @change="on_stat_scope_change" placeholder="统计范围">
+                <el-option v-for="s in stat_scopes" :key="s.id" :label="s.name" :value="s.id"></el-option>
+            </el-select>
             <el-input placeholder="输入物料名称搜索" v-model="filter_string" clearable @clear="cancel_search" style="width: 300px;margin-left: 10px;">
                 <template #append>
                     <el-button type="primary" size="small" icon="el-icon-search" @click="do_search" @keyup.enter="do_search">搜索</el-button>
@@ -12,7 +15,7 @@
     </el-header>
     <el-main>
         <template>
-            <page-content ref="stuff" body_key="stuff" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
+            <page-content ref="stuff" body_key="stuff" :req_body="stuff_req_body" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
                 <template v-slot:default="slotProps">
                     <div>
                         <el-table :data="slotProps.content" style="width: 100%" stripe :default-sort="{ prop: 'name', order: 'ascending' }">
@@ -282,6 +285,13 @@ export default {
     components: {
         'page-content': PageContent,
     },
+    computed: {
+        stuff_req_body: function () {
+            return {
+                stat_context_company_id: this.stat_context_company_id
+            };
+        },
+    },
     data: function () {
         return {
             history_filter_string: '',
@@ -390,12 +400,31 @@ export default {
                     trigger: 'change'
                 }],
             }
+            ,
+            stat_scopes: [],
+            stat_context_company_id: null,
         }
     },
     mounted: async function () {
+        await this.load_stat_scopes();
         await this.update_price_profile();
     },
     methods: {
+        load_stat_scopes: async function () {
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    this.stat_context_company_id = this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+                this.stat_context_company_id = null;
+            }
+        },
+        on_stat_scope_change: function () {
+            this.refresh_stuff();
+        },
         batch_checkout: async function (stuff_id) {
             try {
                 await this.$confirm('确定要一键结算吗？', '提示', {

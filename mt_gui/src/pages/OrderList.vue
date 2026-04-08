@@ -142,14 +142,14 @@
                         <view slot="label">
                             <view style="display:flex;align-items: center">
                                 <view style="font-size: 25rpx;">{{ focus_plan.stuff.name + '-单价-' + focus_plan.unit_price }}</view>
-                                <view v-if="!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)">
-                                    <fui-button btnSize="mini" @click="new_stuff_price.show=true">调价</fui-button>
+                                <view v-if="!focus_plan.is_buy && canOperateFocusSale">
+                                    <fui-button btnSize="mini" @click="new_stuff_price.show=true">{{change_price_action_text}}</fui-button>
                                 </view>
                             </view>
                         </view>
                     </u-cell>
                     <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
-                    <view v-if="$has_module('sale_management') || $has_module('buy_management') || (!focus_plan.is_buy && hasGroupOperateOnFocusSale)">
+                    <view v-if="$has_module('buy_management') || (!focus_plan.is_buy && canOperateFocusSale) || (!focus_plan.is_buy && canViewFocusSaleContract)">
                         <u-cell title="合同有效期">
                             <view slot="value">
                                 <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="26" :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
@@ -157,7 +157,7 @@
                         </u-cell>
                     </view>
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
-                    <view v-if="!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)">
+                    <view v-if="!focus_plan.is_buy && canOperateFocusSale">
                         <u-cell title="余额" :label="user_authorize">
                             <view slot="value">
                                 <module-filter require_module="cash">
@@ -179,11 +179,11 @@
                         <view slot="value" style="display:flex;">
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
                             <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
-                            <view v-if="(!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)) || (focus_plan.is_buy && $has_module('buy_management'))" style="display:flex;">
-                                <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
+                            <view v-if="(!focus_plan.is_buy && canOperateFocusSale) || (focus_plan.is_buy && $has_module('buy_management'))" style="display:flex;">
+                                <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_confirm_plan"></fui-button>
                                 <fui-button v-if="focus_plan.status != 0 && is_allowed_order_return" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
                                 <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
-                                <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
+                                <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" :text="manual_verify_pay_action_text" @click="prepare_pay_confirm(manual_verify_pay_action_text)"></fui-button>
                             </view>
                             <module-filter require_module="scale">
                                 <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
@@ -201,7 +201,7 @@
             <view class="group_sep" v-if="focus_plan.stuff.concern_fapiao">
                 <u-cell title="发票信息" :value="(focus_plan.fapiao_delivered?'已开':'未开')">
                     <view slot="right-icon">
-                        <view v-if="!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)">
+                        <view v-if="!focus_plan.is_buy && canOperateFocusSale">
                             <fui-button v-if="focus_plan.status != -1" btnSize="mini" type="primary" :text="'标记' + (focus_plan.fapiao_delivered?'未开':'已开')" @click="mark_fapiao_deliver"></fui-button>
                         </view>
                     </view>
@@ -400,7 +400,7 @@
             <fui-input label="备注" v-model="update_req.comment"></fui-input>
         </fui-form>
     </fui-modal>
-    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
+    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" :title="change_price_action_text" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
         <fui-form ref="new_stuff_price_form" top="100">
             <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
             <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
@@ -678,6 +678,45 @@ export default {
                 return false;
             }
             return (this.groupOperateMemberIds || []).indexOf(this.focus_plan.stuff.company.id) >= 0;
+        },
+        canOperateFocusSale: function () {
+            if (!this.focus_plan || this.focus_plan.is_buy || !this.focus_plan.stuff || !this.focus_plan.stuff.company) {
+                return false;
+            }
+            const self = uni.getStorageSync('self_info') || {};
+            if (this.$has_module('sale_management')) {
+                if (!self.company_is_group) {
+                    return true;
+                }
+                if (self.company_id && self.company_id === this.focus_plan.stuff.company.id) {
+                    return true;
+                }
+            }
+            return this.hasGroupOperateOnFocusSale;
+        },
+        canViewFocusSaleContract: function () {
+            if (!this.focus_plan || this.focus_plan.is_buy || !this.focus_plan.stuff || !this.focus_plan.stuff.company) {
+                return false;
+            }
+            if (this.canOperateFocusSale) {
+                return true;
+            }
+            const self = uni.getStorageSync('self_info') || {};
+            return !!(self.company_is_group && this.stat_context_company_id === this.focus_plan.stuff.company.id);
+        },
+        manual_verify_pay_requires_approval: function () {
+            const p = this.approval_item('manual_verify_pay');
+            return !!(p && p.enabled);
+        },
+        manual_verify_pay_action_text: function () {
+            return this.manual_verify_pay_requires_approval ? '发起手动验款审批' : '验款';
+        },
+        closed_order_price_requires_approval: function () {
+            const p = this.approval_item('closed_order_price');
+            return !!(p && p.enabled && this.focus_plan && this.focus_plan.status == 3 && !this.focus_plan.is_buy);
+        },
+        change_price_action_text: function () {
+            return this.closed_order_price_requires_approval ? '发起已关闭订单的调价审批' : '调价';
         },
         get_both_attach: function () {
             let ret = [];
@@ -1411,6 +1450,15 @@ export default {
             }
             this.prepare_xxx_confirm(await this.get_pay_url(pid), info);
         },
+        prepare_confirm_plan: function () {
+            if (this.focus_plan && !this.focus_plan.is_buy && !this.canOperateFocusSale) {
+                this.$refs.toast.show({
+                    text: '无可操作权限，无法确认订单'
+                });
+                return;
+            }
+            this.prepare_xxx_confirm(this.cur_confirm_url, '确认');
+        },
         prepare_xxx_confirm: function (url, info) {
             this.show_xxx_confirm = true;
             this.confirm_info = info;
@@ -1448,6 +1496,7 @@ export default {
                 }
             }
             this.focus_plan = item;
+            await this.refresh_approval_projects(item.id);
             this.show_plan_detail = true;
         },
         init_tabs: function () {

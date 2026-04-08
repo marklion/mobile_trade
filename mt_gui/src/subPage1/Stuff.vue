@@ -348,6 +348,7 @@ import ListShow from '../components/ListShow.vue'
 import utils from '@/components/firstui/fui-utils';
 import BlackList from './BlackList.vue';
 import FuiDatePicker from '../components/firstui/fui-date-picker/fui-date-picker.vue';
+import { readStatContext } from '@/utils/app_scope.js';
 export default {
     name: 'Stuff',
     components: {
@@ -495,6 +496,8 @@ export default {
                     key: 'dup_not_permit'
                 },
             }
+            ,
+            stat_context_company_id: null,
         }
     },
     methods: {
@@ -879,7 +882,8 @@ export default {
         },
         get_all_stuff: async function (_pageNo) {
             let ret = await this.$send_req('/stuff/get_all', {
-                pageNo: _pageNo
+                pageNo: _pageNo,
+                stat_context_company_id: this.stat_context_company_id
             });
             return ret.stuff
         },
@@ -1017,10 +1021,14 @@ export default {
         uni.stopPullDownRefresh();
     },
     onLoad: function () {
+        this.stat_context_company_id = readStatContext();
         this.init_price_profile();
         this.get_company_qualification();
         this.get_verify_pay_config();
         this.initAllGlobalConfigs();
+    },
+    onShow: function () {
+        this.stat_context_company_id = readStatContext();
     }
 }
 </script>

@@ -10,7 +10,7 @@
                     <el-descriptions-item label="单价">
                         {{plan.unit_price}}
                         <span v-if="plan.subsidy_price">(折后价{{plan.subsidy_price}})</span>
-                        <el-button type="text" v-if="has_plan_reciever_permission" @click="change_price">调价</el-button>
+                        <el-button type="text" v-if="has_plan_reciever_permission" @click="change_price">{{change_price_action_text}}</el-button>
                     </el-descriptions-item>
                     <el-descriptions-item :label="plan_buyer_and_saler.saler.label">{{plan_buyer_and_saler.saler.company}}</el-descriptions-item>
                     <el-descriptions-item label="提单人手机号">{{plan.rbac_user.phone}}</el-descriptions-item>
@@ -208,14 +208,28 @@ export default {
             return ret;
         },
         has_plan_reciever_permission: function () {
-            if (this.$hasPermission('sale_management') || this.$hasPermission('buy_management')) {
-                return true;
-            }
-            const ids = this.$store.state.user.groupOperateMemberIds || [];
-            if (!this.plan || !this.plan.stuff || !this.plan.stuff.company || this.plan.is_buy) {
+            if (!this.plan) {
                 return false;
             }
-            return ids.indexOf(this.plan.stuff.company.id) >= 0;
+            if (this.plan.is_buy) {
+                return this.$hasPermission('buy_management');
+            }
+            if (!this.plan.stuff || !this.plan.stuff.company) {
+                return false;
+            }
+            const sale_company_id = this.plan.stuff.company.id;
+            const is_group = !!this.$store.state.user.company_is_group;
+            const self_company_id = this.$store.state.user.company_id;
+            if (this.$hasPermission('sale_management')) {
+                if (!is_group) {
+                    return true;
+                }
+                if (self_company_id && self_company_id === sale_company_id) {
+                    return true;
+                }
+            }
+            const ids = this.$store.state.user.groupOperateMemberIds || [];
+            return ids.indexOf(sale_company_id) >= 0;
         },
         plan_creator: function () {
             let cur_user_id = this.$store.state.user.id;
@@ -250,6 +264,13 @@ export default {
             ret.buyer.label = '买方';
             ret.saler.label = '卖方';
             return ret;
+        },
+        closed_order_price_requires_approval: function () {
+            const p = this.approval_item('closed_order_price');
+            return !!(p && p.enabled && this.plan && this.plan.status == 3 && !this.plan.is_buy);
+        },
+        change_price_action_text: function () {
+            return this.closed_order_price_requires_approval ? '发起已关闭订单的调价审批' : '调价';
         },
     },
     data: function () {
@@ -554,6 +575,10 @@ export default {
             }
         },
         confirm_plan: async function () {
+            if (!this.has_plan_reciever_permission) {
+                this.$message.warning('无可操作权限，无法确认订单');
+                return;
+            }
             await this.ask_confirm('确认');
             if (this.plan.is_buy) {
                 await this.opt_plan('/buy_management/order_buy_confirm/');
@@ -587,14 +612,15 @@ export default {
             return reason;
         },
         change_price: async function () {
-            let input_price = (await this.$prompt('请输入新价格', '调价', {
+            const action_name = this.change_price_action_text;
+            let input_price = (await this.$prompt('请输入新价格', action_name, {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 inputPattern: /^-?\d+(\.\d{1,2})?$/,
                 inputErrorMessage: '价格格式不正确',
                 inputPlaceholder: this.plan.unit_price
             })).value;
-            let comment = (await this.$prompt('请输入调价原因', '调价', {
+            let comment = (await this.$prompt('请输入调价原因', action_name, {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 inputPattern: /^.{1,100}$/,

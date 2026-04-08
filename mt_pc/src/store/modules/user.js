@@ -10,6 +10,8 @@ const getDefaultState = () => {
     avatar: '',
     roles: [],
     company_name: '',
+    company_id: 0,
+    company_is_group: false,
     id:0,
     groupOperateMemberIds: [],
   }
@@ -35,6 +37,12 @@ const mutations = {
   },
   SET_COMPANY_NAME: (state, company_name) => {
     state.company_name = company_name
+  },
+  SET_COMPANY_ID: (state, company_id) => {
+    state.company_id = company_id || 0
+  },
+  SET_COMPANY_IS_GROUP: (state, company_is_group) => {
+    state.company_is_group = !!company_is_group
   },
   SET_ID: (state, id) => {
     state.id = id
@@ -76,6 +84,8 @@ const actions = {
         commit('SET_ROLES', roles)
         commit('SET_NAME', data.name)
         commit('SET_COMPANY_NAME', data.company)
+        commit('SET_COMPANY_ID', data.company_id)
+        commit('SET_COMPANY_IS_GROUP', data.company_is_group)
         commit('SET_AVATAR', 'https://picsum.photos/200.jpg')
         commit('SET_ID', data.id)
         commit('SET_GROUP_OPERATE_MEMBER_IDS', [])
