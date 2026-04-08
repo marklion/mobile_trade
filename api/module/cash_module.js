@@ -3,6 +3,7 @@ const common = require('./common');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const util_lib = require('../lib/util_lib');
 module.exports = {
     name: 'cash',
     description: '余额管理',
@@ -93,9 +94,13 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                if (!company.verify_pay_by_cash) {
-                    throw { err_msg: '无权限，需要销售管理权限才能验款' }
+                const plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan || !plan.stuff || !plan.stuff.company) {
+                    throw { err_msg: '未找到计划' };
+                }
+                const sale_co = plan.stuff.company;
+                if (!sale_co.verify_pay_by_cash) {
+                    throw { err_msg: '无权限，需要销售管理权限才能验款' };
                 }
                 await plan_lib.manual_pay_plan(body.plan_id, token);
                 return { result: true };

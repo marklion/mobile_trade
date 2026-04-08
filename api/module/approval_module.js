@@ -1,6 +1,26 @@
 const db_opt = require('../db_opt');
 const approval_lib = require('../lib/approval_lib');
 const rbac_lib = require('../lib/rbac_lib');
+const util_lib = require('../lib/util_lib');
+const group_lib = require('../lib/group_lib');
+
+async function company_for_approval_context(body, token) {
+    const token_company = await rbac_lib.get_company_by_token(token);
+    if (body.plan_id === undefined || body.plan_id === null || body.plan_id === '') {
+        return token_company;
+    }
+    const plan = await util_lib.get_single_plan_by_id(body.plan_id);
+    if (!plan || !plan.stuff) {
+        throw { err_msg: '未找到计划' };
+    }
+    const sale_id = plan.stuff.companyId;
+    if (!(await group_lib.can_operate_member_sale_company(token, sale_id))) {
+        throw { err_msg: '无权限' };
+    }
+    const co = await db_opt.get_sq().models.company.findByPk(sale_id);
+    return co || token_company;
+}
+
 module.exports = {
     name: 'approval',
     description: '新审批管理',
@@ -11,7 +31,9 @@ module.exports = {
             is_write: false,
             is_get_api: true,
             need_rbac: false,
-            params: {},
+            params: {
+                plan_id: { type: Number, have_to: false, mean: '销售订单：传计划 id 时拉取物料所属（接单）公司的审批人候选', example: 1 },
+            },
             result: {
                 all_user: {
                     type: Array, mean: '用户', explain: {
@@ -23,7 +45,7 @@ module.exports = {
                 total: { type: Number, mean: '总数', example: 10 },
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await company_for_approval_context(body, token);
                 let { count, rows } = await rbac_lib.get_all_users(company, body.pageNo || 0);
                 const all_user = Array.isArray(rows)
                     ? rows.map((user) => ({
@@ -40,7 +62,10 @@ module.exports = {
             description: '获取审批项目开关与审批人',
             is_write: false,
             is_get_api: true,
-            params: {},
+            need_rbac: false,
+            params: {
+                plan_id: { type: Number, have_to: false, mean: '销售订单：传计划 id 时读取物料所属（接单）公司的审批开关', example: 1 },
+            },
             result: {
                 projects: {
                     type: Array, mean: '审批项目', explain: {
@@ -53,7 +78,7 @@ module.exports = {
                 },
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await company_for_approval_context(body, token);
                 return await approval_lib.get_approval_projects(company);
             },
         },

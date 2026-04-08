@@ -440,19 +440,16 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
-                if (stuff.length == 1) {
-                    stuff = stuff[0];
-                    stuff.next_price = body.next_price;
-                    stuff.change_last_minutes = body.change_last_minutes;
-                    stuff.next_comment = body.next_comment;
-                    stuff.next_operator = (await rbac_lib.get_user_by_token(token)).name;
-                    await stuff.save();
-                }
-                else {
+                let sq = db_opt.get_sq();
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (!stuff || !(await group_lib.can_operate_member_sale_company(token, stuff.companyId))) {
                     throw { err_msg: '货物不存在' };
                 }
+                stuff.next_price = body.next_price;
+                stuff.change_last_minutes = body.change_last_minutes;
+                stuff.next_comment = body.next_comment;
+                stuff.next_operator = (await rbac_lib.get_user_by_token(token)).name;
+                await stuff.save();
                 return { result: true };
             },
         },
@@ -468,18 +465,15 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
-                if (stuff.length == 1) {
-                    stuff = stuff[0];
-                    stuff.next_price = 0;
-                    stuff.change_last_minutes = 0;
-                    stuff.next_comment = '';
-                    await stuff.save();
-                }
-                else {
+                let sq = db_opt.get_sq();
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (!stuff || !(await group_lib.can_operate_member_sale_company(token, stuff.companyId))) {
                     throw { err_msg: '货物不存在' };
                 }
+                stuff.next_price = 0;
+                stuff.change_last_minutes = 0;
+                stuff.next_comment = '';
+                await stuff.save();
                 return { result: true };
             }
         },
@@ -497,13 +491,16 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
                 try {
                     let planIds = JSON.parse(`[${body.plan_id}]`);
                     await Promise.all(planIds.map(async (item) => {
                         await plan_lib.action_in_plan(item, token, 0, async (plan, t) => {
-                            if (!plan || !company || !(await company.hasStuff(plan.stuff))) {
-                                return { result: false };
+                            if (!plan || !plan.stuff) {
+                                throw new Error('计划不存在');
+                            }
+                            const sale_co = plan.stuff.company;
+                            if (!sale_co || !(await group_lib.can_operate_member_sale_company(token, plan.stuff.companyId))) {
+                                throw new Error('无权限');
                             }
                             if (plan.bidding_item) {
                                 throw new Error('竞价计划不允许调价');
@@ -515,7 +512,7 @@ module.exports = {
                             let orig_price = plan.unit_price;
                             if (orig_price != unitPrice) {
                                 if (plan.status == 3 && !plan.is_buy) {
-                                    if (!company.change_finished_order_price_switch) {
+                                    if (!sale_co.change_finished_order_price_switch) {
                                         throw new Error('已完成订单不允许调价');
                                     }
                                     await plan_lib.plan_rollback(plan.id, token, '调价回滚', false, t);
@@ -1114,7 +1111,9 @@ module.exports = {
             description: '获取验款配置',
             is_write: false,
             is_get_api: false,
+            need_rbac: false,
             params: {
+                plan_id: { type: Number, have_to: false, mean: '销售订单：传计划 id 时返回物料所属（接单）公司的验款通道配置', example: 1 },
             },
             result: {
                 verify_pay_by_cash: {
@@ -1123,6 +1122,17 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                if (body.plan_id !== undefined && body.plan_id !== null && body.plan_id !== '') {
+                    const plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                    if (!plan || !plan.stuff) {
+                        throw { err_msg: '未找到计划' };
+                    }
+                    const sale_id = plan.stuff.companyId;
+                    if (!(await group_lib.can_operate_member_sale_company(token, sale_id))) {
+                        throw { err_msg: '无权限' };
+                    }
+                    company = plan.stuff.company || (await db_opt.get_sq().models.company.findByPk(sale_id));
+                }
                 let ret = {
                     verify_pay_by_cash: false
                 }

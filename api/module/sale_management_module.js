@@ -39,6 +39,7 @@ module.exports = {
                 status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
                 stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
                 company_id: { type: Number, have_to: false, mean: '公司ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团销售：与 order_search 一致，按统计主体（成员公司）批量确认时传入', example: 1 },
             },
             result: {
 
@@ -67,9 +68,13 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                if (company.verify_pay_by_cash) {
-                    throw { err_msg: '无权限，需要余额管理权限才能验款' }
+                const plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan || !plan.stuff || !plan.stuff.company) {
+                    throw { err_msg: '未找到计划' };
+                }
+                const sale_co = plan.stuff.company;
+                if (sale_co.verify_pay_by_cash) {
+                    throw { err_msg: '无权限，需要余额管理权限才能验款' };
                 }
                 await plan_lib.manual_pay_plan(body.plan_id, token);
                 return { result: true };

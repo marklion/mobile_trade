@@ -120,6 +120,7 @@ import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilter from '../components/ModuleFilter.vue';
 import NoticeBar from '../components/NoticeBar.vue';
+import { persistStatContext, readStatContext, persistOperateMemberIds } from '@/utils/app_scope.js';
 export default {
     name: 'Home',
     components: {
@@ -308,8 +309,18 @@ export default {
             try {
                 const ret = await this.$send_req('/global/home_stat_scope_list', {});
                 this.stat_scopes = ret.scopes || [];
-                if (this.stat_scopes.length && this.stat_context_company_id == null) {
-                    this.stat_context_company_id = this.stat_scopes[0].id;
+                persistOperateMemberIds(ret.operate_member_company_ids || []);
+                const preferred = readStatContext();
+                if (this.stat_scopes.length) {
+                    if (preferred != null && this.stat_scopes.some((s) => s.id === preferred)) {
+                        this.stat_context_company_id = preferred;
+                    } else {
+                        this.stat_context_company_id = this.stat_scopes[0].id;
+                        persistStatContext(this.stat_context_company_id);
+                    }
+                } else {
+                    this.stat_context_company_id = null;
+                    persistStatContext(null);
                 }
             } catch (e) {
                 this.stat_scopes = [];
@@ -329,6 +340,7 @@ export default {
                 return;
             }
             this.stat_context_company_id = company_id;
+            persistStatContext(company_id);
             this.show_scope_picker = false;
             this.on_stat_scope_change();
         },
@@ -494,7 +506,7 @@ export default {
         },
     },
     onPullDownRefresh: async function () {
-        //只需要调用，无需等待结果
+        await this.load_stat_scopes();
         this.init_brief_info();
         this.init_statistic();
         uni.stopPullDownRefresh();

@@ -237,7 +237,8 @@ export default {
     },
     methods: {
         get_pay_url: async function () {
-            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+            const plan_id = this.order_selected && this.order_selected.length ? this.order_selected[0].id : undefined;
+            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', plan_id ? { plan_id } : {})).verify_pay_by_cash;
             let url_prefix = '/sale_management';
             if (verify_pay_by_cash) {
                 url_prefix = '/cash'

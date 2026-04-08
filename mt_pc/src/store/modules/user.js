@@ -1,6 +1,7 @@
 import { login, getInfo } from '@/api/user'
 import { getToken, setToken, removeToken } from '@/utils/auth'
 import { resetRouter } from '@/router'
+import request from '@/utils/request'
 
 const getDefaultState = () => {
   return {
@@ -10,6 +11,7 @@ const getDefaultState = () => {
     roles: [],
     company_name: '',
     id:0,
+    groupOperateMemberIds: [],
   }
 }
 
@@ -37,6 +39,9 @@ const mutations = {
   SET_ID: (state, id) => {
     state.id = id
   },
+  SET_GROUP_OPERATE_MEMBER_IDS: (state, ids) => {
+    state.groupOperateMemberIds = Array.isArray(ids) ? ids : []
+  },
 }
 
 const actions = {
@@ -57,20 +62,33 @@ const actions = {
   // get user info
   getInfo({ commit, state }) {
     return new Promise((resolve, reject) => {
-      getInfo().then(data => {
+      getInfo().then(async (data) => {
         if (!data) {
           reject('Verification failed, please Login again.')
+          return
         }
         const roles = data.modules.map((item) => { return item.name })
         // roles must be a non-empty array
         if (!roles || roles.length <= 0) {
           reject('getInfo: roles must be a non-null array!')
+          return
         }
         commit('SET_ROLES', roles)
         commit('SET_NAME', data.name)
         commit('SET_COMPANY_NAME', data.company)
         commit('SET_AVATAR', 'https://picsum.photos/200.jpg')
         commit('SET_ID', data.id)
+        commit('SET_GROUP_OPERATE_MEMBER_IDS', [])
+        try {
+          const scopeRet = await request({
+            url: '/global/home_stat_scope_list',
+            method: 'post',
+            data: {}
+          })
+          commit('SET_GROUP_OPERATE_MEMBER_IDS', scopeRet.operate_member_company_ids || [])
+        } catch (e) {
+          console.warn(e)
+        }
         resolve(roles)
       }).catch(error => {
         reject(error)

@@ -208,11 +208,14 @@ export default {
             return ret;
         },
         has_plan_reciever_permission: function () {
-            let ret = false;
             if (this.$hasPermission('sale_management') || this.$hasPermission('buy_management')) {
-                ret = true;
+                return true;
             }
-            return ret;
+            const ids = this.$store.state.user.groupOperateMemberIds || [];
+            if (!this.plan || !this.plan.stuff || !this.plan.stuff.company || this.plan.is_buy) {
+                return false;
+            }
+            return ids.indexOf(this.plan.stuff.company.id) >= 0;
         },
         plan_creator: function () {
             let cur_user_id = this.$store.state.user.id;
@@ -312,7 +315,9 @@ export default {
     methods: {
         refresh_approval_projects: async function () {
             try {
-                const ret = await this.$send_req('/approval/get_approval_projects', {});
+                const ret = await this.$send_req('/approval/get_approval_projects', {
+                    plan_id: this.plan && this.plan.id ? this.plan.id : undefined,
+                });
                 this.approval_projects = ret.projects || [];
             } catch (e) {
                 console.log(e);
@@ -324,7 +329,8 @@ export default {
         },
         open_approver_pick_dialog: async function () {
             const ret = await this.$send_req('/approval/get_auditer_pick_list', {
-                pageNo: 0
+                pageNo: 0,
+                plan_id: this.plan && this.plan.id ? this.plan.id : undefined,
             });
             this.approver_pick_options = ret.all_user || [];
             this.approver_pick = {
@@ -523,7 +529,7 @@ export default {
                 }
                 throw e;
             }
-            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', { plan_id: this.plan.id })).verify_pay_by_cash;
             let url_prefix = '/sale_management';
             if (verify_pay_by_cash) {
                 url_prefix = '/cash'
@@ -634,7 +640,10 @@ export default {
             this.show_pics = true;
         },
         init_contract: async function () {
-            if ((this.$hasPermission('sale_management') || this.$hasPermission('buy_management')) && this.plan.company.id) {
+            const sm = this.$hasPermission('sale_management') || this.$hasPermission('buy_management');
+            const ids = this.$store.state.user.groupOperateMemberIds || [];
+            const go = !this.plan.is_buy && this.plan.stuff && this.plan.stuff.company && ids.indexOf(this.plan.stuff.company.id) >= 0;
+            if ((sm || go) && this.plan.company.id) {
                 try {
                     let url = this.plan.is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
                     let resp = await this.$send_req(url, {

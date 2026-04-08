@@ -863,6 +863,13 @@ module.exports = {
                         name: { type: String, mean: '公司名', example: 'A公司' },
                     },
                 },
+                operate_member_company_ids: {
+                    type: Array,
+                    mean: '当前用户对成员公司有「可操作」授权的公司 id 列表（集团场景；非集团为空）',
+                    explain: {
+                        member_company_id: { type: Number, mean: '成员公司id', example: 2 },
+                    },
+                },
             },
             func: async function (body, token) {
                 return await group_lib.list_home_stat_scopes(token);

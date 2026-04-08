@@ -2,6 +2,8 @@ const db_opt = require('../db_opt');
 const moment = require('moment');
 const axios = require('axios');
 const rbac_lib = require('./rbac_lib');
+const util_lib = require('./util_lib');
+const group_lib = require('./group_lib');
 
 /** 审批通过后 HTTP 回放基址：优先 INTERNAL_API_BASE_URL，否则与 index.js 的 PORT / INTERNAL_API_HOST 一致 */
 function internal_api_v1_base() {
@@ -154,6 +156,99 @@ module.exports = {
         await new_one.setCompany(company);
         return { id: new_one.id, comment: summary_comment };
     },
+    assert_token_may_act_for_sale_company: async function (user, token_company, sale_company_id) {
+        if (!sale_company_id) {
+            return;
+        }
+        if (token_company.id === sale_company_id) {
+            return;
+        }
+        if (token_company.is_group && (await group_lib.user_has_member_data_access(user.id, sale_company_id, true))) {
+            return;
+        }
+        throw { err_msg: '无权限' };
+    },
+    /** 审批开关、审批记录归属公司：默认操作人所属公司；若请求针对成员公司订单/物料则归销售主体公司 */
+    resolve_guard_company: async function (url, token, body, user, token_company) {
+        const sq = db_opt.get_sq();
+        if (url === '/cash/order_sale_pay' || url === '/sale_management/order_sale_pay') {
+            const plan_id = body.plan_id;
+            if (plan_id === undefined || plan_id === null) {
+                return token_company;
+            }
+            const plan = await util_lib.get_single_plan_by_id(plan_id);
+            if (!plan || !plan.stuff) {
+                throw { err_msg: '未找到计划' };
+            }
+            const sale_id = plan.stuff.companyId;
+            await this.assert_token_may_act_for_sale_company(user, token_company, sale_id);
+            const co = await sq.models.company.findByPk(sale_id);
+            return co || token_company;
+        }
+        if (url === '/stuff/change_price') {
+            const stuff_id = body.stuff_id;
+            if (stuff_id === undefined || stuff_id === null) {
+                return token_company;
+            }
+            const stuff = await sq.models.stuff.findByPk(stuff_id);
+            if (!stuff) {
+                throw { err_msg: '货物不存在' };
+            }
+            await this.assert_token_may_act_for_sale_company(user, token_company, stuff.companyId);
+            const co = await sq.models.company.findByPk(stuff.companyId);
+            return co || token_company;
+        }
+        if (url === '/stuff/change_price_by_plan') {
+            let plan_ids;
+            try {
+                plan_ids = JSON.parse(`[${body.plan_id}]`);
+            } catch (e) {
+                return token_company;
+            }
+            if (!Array.isArray(plan_ids) || plan_ids.length === 0) {
+                return token_company;
+            }
+            let sale_id = null;
+            for (const pid of plan_ids) {
+                const plan = await util_lib.get_single_plan_by_id(pid);
+                if (!plan || !plan.stuff) {
+                    throw { err_msg: '计划不存在' };
+                }
+                const sid = plan.stuff.companyId;
+                if (sale_id === null) {
+                    sale_id = sid;
+                } else if (sale_id !== sid) {
+                    throw { err_msg: '批量调价仅支持同一销售主体的订单' };
+                }
+            }
+            await this.assert_token_may_act_for_sale_company(user, token_company, sale_id);
+            const co = await sq.models.company.findByPk(sale_id);
+            return co || token_company;
+        }
+        return token_company;
+    },
+    /**
+     * 与 stuff/change_price_by_plan 一致：仅「已完成销售订单」(status===3 且非采购) 属于「已关闭订单调价」审批范围。
+     * 批次中若无一笔此类订单，即使开启审批开关也不拦截（未关闭订单直接调价）。
+     */
+    change_price_by_plan_batch_includes_closed_sale_order: async function (body) {
+        let plan_ids;
+        try {
+            plan_ids = JSON.parse(`[${body.plan_id}]`);
+        } catch (e) {
+            return false;
+        }
+        if (!Array.isArray(plan_ids) || plan_ids.length === 0) {
+            return false;
+        }
+        for (const pid of plan_ids) {
+            const plan = await util_lib.get_single_plan_by_id(pid);
+            if (plan && plan.status === 3 && !plan.is_buy) {
+                return true;
+            }
+        }
+        return false;
+    },
     guard_req_when_project_enabled: async function (sq, url, company, body, user, config, project) {
         const audit_id = body.audit_id || null;
         const pure_body = this.build_pure_body_for_audit(body);
@@ -216,17 +311,30 @@ module.exports = {
         }
         await config.save();
     },
-    guard_req: async function (url, company, body, user) {
-        if (!company || !user) {
+    guard_req: async function (url, token, body) {
+        const user = await rbac_lib.get_user_by_token(token);
+        const token_company = await rbac_lib.get_company_by_token(token);
+        if (!token_company || !user) {
             return { id: 0, comment: '' };
         }
-        const config = await this.get_or_create_approval_config(company);
         const project = this.get_project_by_url(url);
-        if (!project || !config[project.company_switch]) {
+        if (!project) {
+            return { id: 0, comment: '' };
+        }
+        if (
+            project.key === APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.key &&
+            url === '/stuff/change_price_by_plan' &&
+            !(await this.change_price_by_plan_batch_includes_closed_sale_order(body))
+        ) {
+            return { id: 0, comment: '' };
+        }
+        const guard_company = await this.resolve_guard_company(url, token, body, user, token_company);
+        const config = await this.get_or_create_approval_config(guard_company);
+        if (!config[project.company_switch]) {
             return { id: 0, comment: '' };
         }
         const sq = db_opt.get_sq();
-        const { id, comment } = await this.guard_req_when_project_enabled(sq, url, company, body, user, config, project);
+        const { id, comment } = await this.guard_req_when_project_enabled(sq, url, guard_company, body, user, config, project);
         return { id, comment };
     },
     audit_req: async function (id, is_approve, user) {

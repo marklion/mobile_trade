@@ -272,15 +272,45 @@ module.exports = {
         return member_c;
     },
 
+    /** 当前用户对哪些成员公司有「可操作」授权（仅成员公司 id，不含集团母公司） */
+    list_operate_member_company_ids_for_user: async function (token) {
+        const user = await rbac_lib.get_user_by_token(token);
+        const home = await rbac_lib.get_company_by_token(token);
+        if (!user || !home || !home.is_group) {
+            return [];
+        }
+        const sq = db_opt.get_sq();
+        const rows = await sq.models.group_member_data_grant.findAll({
+            where: {
+                groupCompanyId: home.id,
+                rbacUserId: user.id,
+                can_operate: true,
+            },
+            attributes: ['memberCompanyId'],
+            order: [['memberCompanyId', 'ASC']],
+        });
+        const out = [];
+        const seen = new Set();
+        for (const r of rows) {
+            const id = r.memberCompanyId;
+            if (seen.has(id)) {
+                continue;
+            }
+            seen.add(id);
+            out.push(id);
+        }
+        return out;
+    },
+
     list_home_stat_scopes: async function (token) {
         const user = await rbac_lib.get_user_by_token(token);
         const home = await rbac_lib.get_company_by_token(token);
         if (!user || !home) {
-            return { scopes: [] };
+            return { scopes: [], operate_member_company_ids: [] };
         }
         const scopes = [{ id: home.id, name: home.name || `公司${home.id}` }];
         if (!home.is_group) {
-            return { scopes };
+            return { scopes, operate_member_company_ids: [] };
         }
         const sq = db_opt.get_sq();
         const rows = await sq.models.group_member_data_grant.findAll({
@@ -301,6 +331,49 @@ module.exports = {
             const nm = r.grant_member_company && r.grant_member_company.name;
             scopes.push({ id: r.memberCompanyId, name: nm || `公司${r.memberCompanyId}` });
         }
-        return { scopes };
+        const operate_member_company_ids = await module.exports.list_operate_member_company_ids_for_user(token);
+        return { scopes, operate_member_company_ids };
+    },
+
+    /**
+     * 是否可对销售主体（物料所属公司）做销售侧写操作：本公司员工，或集团母公司且对该成员公司有「可操作」授权。
+     */
+    can_operate_member_sale_company: async function (token, sale_company_id) {
+        if (!sale_company_id) {
+            return false;
+        }
+        const user = await rbac_lib.get_user_by_token(token);
+        const opt = await rbac_lib.get_company_by_token(token);
+        if (!user || !opt) {
+            return false;
+        }
+        if (opt.id === sale_company_id) {
+            return true;
+        }
+        if (opt.is_group && (await this.user_has_member_data_access(user.id, sale_company_id, true))) {
+            return true;
+        }
+        return false;
+    },
+
+    /**
+     * 是否可查看销售主体业务数据：本公司，或集团母公司且对该成员公司有查看/操作授权。
+     */
+    can_view_member_sale_company: async function (token, sale_company_id) {
+        if (!sale_company_id) {
+            return false;
+        }
+        const user = await rbac_lib.get_user_by_token(token);
+        const opt = await rbac_lib.get_company_by_token(token);
+        if (!user || !opt) {
+            return false;
+        }
+        if (opt.id === sale_company_id) {
+            return true;
+        }
+        if (opt.is_group && (await this.user_has_member_data_access(user.id, sale_company_id, false))) {
+            return true;
+        }
+        return false;
     },
 };

@@ -212,7 +212,7 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                             id: 0, comment: ''
                         }
                         if (token) {
-                            guard_ret = await approval_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
+                            guard_ret = await approval_lib.guard_req(this.path, token, body);
                         }
                         if (0 == guard_ret.id) {
                             let rbac_verify_ret = '';

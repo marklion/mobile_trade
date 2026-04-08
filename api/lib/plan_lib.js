@@ -12,6 +12,7 @@ const fc_lib = require('./fc_lib');
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 const king_dee_start_lib = require('./king_dee_start_lib');
+const group_lib = require('./group_lib');
 const { Sequelize } = require('sequelize');
 const g_verify_pay_company_set = new Set();
 const g_vpcs_mutex = new Mutex();
@@ -451,9 +452,11 @@ module.exports = {
                 } else {
                     duplicateInfo = `此计划中的司机手机号 ${current_plan.driver.phone} 与 ${duplicatePlan.plan_time} 的其他计划重复`;
                 }
+                const orderCompanyName = duplicatePlan.company?.name ?? '未知';
+                const receiveCompanyName = duplicatePlan.stuff?.company?.name ?? '未知';
                 return {
                     isDuplicate: true,
-                    message: `${duplicateInfo},下单方是${duplicatePlan.company.name},接单方是${duplicatePlan.stuff.company.name}。请核对信息!`
+                    message: `${duplicateInfo},下单方是${orderCompanyName},接单方是${receiveCompanyName}。请核对信息!`
                 };
             }
 
@@ -569,7 +572,15 @@ module.exports = {
             throw { err_msg: '更新计划失败，司机或车辆已被列入黑名单' };
         }
         let opt_company = await rbac_lib.get_company_by_token(_token);
-        if ((company && opt_company && company.id == opt_company.id) || (owner_company && opt_company && owner_company.id == opt_company.id)) {
+        let user = await rbac_lib.get_user_by_token(_token);
+        let seller_ok =
+            owner_company &&
+            opt_company &&
+            (owner_company.id == opt_company.id ||
+                (opt_company.is_group &&
+                    user &&
+                    (await group_lib.user_has_member_data_access(user.id, owner_company.id, true))));
+        if ((company && opt_company && company.id == opt_company.id) || seller_ok) {
             let change_comment = '';
             if (_update_data.plan_time != undefined) {
                 change_comment += '计划时间由' + plan.plan_time + '改为' + _update_data.plan_time + ';\n';
@@ -1091,25 +1102,20 @@ module.exports = {
                 await _action(plan, t);
             }
             else {
-                let opt_company = await rbac_lib.get_company_by_token(_token);
                 if (plan) {
                     let stuff = plan.stuff;
-                    if (stuff) {
-                        let company = stuff.company;
-                        if (company && opt_company && opt_company.id == company.id) {
-                            if (-1 == _expect_status || plan.status == _expect_status) {
-                                await _action(plan, t);
-                            }
-                            else {
-                                throw { err_msg: '计划状态错误' };
-                            }
-                        }
-                        else {
-                            throw { err_msg: '无权限' };
-                        }
+                    if (!stuff) {
+                        throw { err_msg: '未找到货物' };
+                    }
+                    let allowed = await group_lib.can_operate_member_sale_company(_token, stuff.companyId);
+                    if (!allowed) {
+                        throw { err_msg: '无权限' };
+                    }
+                    if (-1 == _expect_status || plan.status == _expect_status) {
+                        await _action(plan, t);
                     }
                     else {
-                        throw { err_msg: '未找到货物' };
+                        throw { err_msg: '计划状态错误' };
                     }
                 }
                 else {
@@ -1130,25 +1136,20 @@ module.exports = {
                     await _action(plan, new_t);
                 }
                 else {
-                    let opt_company = await rbac_lib.get_company_by_token(_token);
                     if (plan) {
                         let stuff = plan.stuff;
-                        if (stuff) {
-                            let company = stuff.company;
-                            if (company && opt_company && opt_company.id == company.id) {
-                                if (-1 == _expect_status || plan.status == _expect_status) {
-                                    await _action(plan, new_t);
-                                }
-                                else {
-                                    throw { err_msg: '计划状态错误' };
-                                }
-                            }
-                            else {
-                                throw { err_msg: '无权限' };
-                            }
+                        if (!stuff) {
+                            throw { err_msg: '未找到货物' };
+                        }
+                        let allowed = await group_lib.can_operate_member_sale_company(_token, stuff.companyId);
+                        if (!allowed) {
+                            throw { err_msg: '无权限' };
+                        }
+                        if (-1 == _expect_status || plan.status == _expect_status) {
+                            await _action(plan, new_t);
                         }
                         else {
-                            throw { err_msg: '未找到货物' };
+                            throw { err_msg: '计划状态错误' };
                         }
                     }
                     else {
@@ -1346,9 +1347,8 @@ module.exports = {
 
     change_stuff_price: async function (_stuff_id, _token, _new_price, _to_plan, _comment) {
         let sq = db_opt.get_sq();
-        let company = await rbac_lib.get_company_by_token(_token);
         let stuff = await sq.models.stuff.findByPk(_stuff_id);
-        if (company && stuff && await company.hasStuff(stuff)) {
+        if (stuff && (await group_lib.can_operate_member_sale_company(_token, stuff.companyId))) {
             await this.pri_change_stuff_price(stuff, _new_price, _comment, (await rbac_lib.get_user_by_token(_token)).name, _to_plan);
         }
         else {
@@ -1359,13 +1359,12 @@ module.exports = {
     get_price_history: async function (_stuff_id, _token, _pageNo) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(_stuff_id);
-        let company = await rbac_lib.get_company_by_token(_token);
         let conditions = {
             order: [['id', 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
         };
-        if (!stuff || !company || !await company.hasStuff(stuff)) {
+        if (!stuff || !(await group_lib.can_view_member_sale_company(_token, stuff.companyId))) {
             throw { err_msg: '未找到货物' };
         }
 
@@ -1517,7 +1516,12 @@ module.exports = {
     batch_confirm: async function (body, token, is_buy = false) {
         let err_msg = '';
         await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
-            let company = await rbac_lib.get_company_by_token(token);
+            let company;
+            if (is_buy) {
+                company = await rbac_lib.get_company_by_token(token);
+            } else {
+                company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+            }
             let all_plans = [];
             let pageNo = 0;
             while (true) {

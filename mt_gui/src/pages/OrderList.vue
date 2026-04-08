@@ -2,6 +2,22 @@
 <view>
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
     <fui-tabs scroll alignLeft :current="tab_current" :tabs="tabs" @change="change_tab"></fui-tabs>
+    <fui-card v-if="stat_scopes.length > 1" title="订单统计范围" full color="black" size="32">
+        <view class="scope-picker-trigger" @click="show_scope_picker = true">
+            <view class="scope-picker-label">{{ current_scope_name || '请选择公司' }}</view>
+            <fui-icon name="arrowright" size="32" color="#999"></fui-icon>
+        </view>
+    </fui-card>
+    <fui-bottom-popup :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
+        <fui-list>
+            <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope_orders(s.id)">
+                <view class="scope-row">
+                    <view class="scope-name">{{ s.name }}</view>
+                    <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#1E9FFF"></fui-icon>
+                </view>
+            </fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
     <view style="padding: 10rpx;">
         <fui-row :gutter="20">
             <fui-col :span="16" v-if="!select_active">
@@ -126,22 +142,22 @@
                         <view slot="label">
                             <view style="display:flex;align-items: center">
                                 <view style="font-size: 25rpx;">{{ focus_plan.stuff.name + '-单价-' + focus_plan.unit_price }}</view>
-                                <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
+                                <view v-if="!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)">
                                     <fui-button btnSize="mini" @click="new_stuff_price.show=true">调价</fui-button>
-                                </module-filter>
+                                </view>
                             </view>
                         </view>
                     </u-cell>
                     <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
-                    <module-filter :rm_array="['sale_management', 'buy_management']">
+                    <view v-if="$has_module('sale_management') || $has_module('buy_management') || (!focus_plan.is_buy && hasGroupOperateOnFocusSale)">
                         <u-cell title="合同有效期">
                             <view slot="value">
                                 <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="26" :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
                             </view>
                         </u-cell>
-                    </module-filter>
+                    </view>
                     <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
-                    <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
+                    <view v-if="!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)">
                         <u-cell title="余额" :label="user_authorize">
                             <view slot="value">
                                 <module-filter require_module="cash">
@@ -153,7 +169,7 @@
                                 <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
                             </view>
                         </u-cell>
-                    </module-filter>
+                    </view>
                     <u-cell title="计划时间" :value="focus_plan.plan_time">
                         <view slot="label">
                             <fui-text v-if="focus_plan.bidding_item" type="primary" :text="focus_plan.bidding_item.time + '出价' + focus_plan.bidding_item.price.toFixed(2) + '中标'" size="24"></fui-text>
@@ -163,12 +179,12 @@
                         <view slot="value" style="display:flex;">
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
                             <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
-                            <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
+                            <view v-if="(!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)) || (focus_plan.is_buy && $has_module('buy_management'))" style="display:flex;">
                                 <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
                                 <fui-button v-if="focus_plan.status != 0 && is_allowed_order_return" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
                                 <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
-                            </module-filter>
+                            </view>
                             <module-filter require_module="scale">
                                 <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
                             </module-filter>
@@ -185,9 +201,9 @@
             <view class="group_sep" v-if="focus_plan.stuff.concern_fapiao">
                 <u-cell title="发票信息" :value="(focus_plan.fapiao_delivered?'已开':'未开')">
                     <view slot="right-icon">
-                        <module-filter :require_module="'sale_management'">
+                        <view v-if="!focus_plan.is_buy && ($has_module('sale_management') || hasGroupOperateOnFocusSale)">
                             <fui-button v-if="focus_plan.status != -1" btnSize="mini" type="primary" :text="'标记' + (focus_plan.fapiao_delivered?'未开':'已开')" @click="mark_fapiao_deliver"></fui-button>
-                        </module-filter>
+                        </view>
                     </view>
                 </u-cell>
             </view>
@@ -414,6 +430,7 @@ import pickRegions from '@/components/pick-regions/pick-regions.vue'
 import moment from 'moment';
 import Measurement from '../components/Measurement.vue';
 import ScExecute from '../components/ScExecute.vue';
+import { persistStatContext, readStatContext, persistOperateMemberIds, readOperateMemberIds } from '@/utils/app_scope.js';
 export default {
     name: 'OrderList',
     components: {
@@ -645,9 +662,23 @@ export default {
             gallery_index: 0,
             is_the_order_display_price: false,
             is_allowed_order_return: false,
+            stat_scopes: [],
+            stat_context_company_id: null,
+            show_scope_picker: false,
+            groupOperateMemberIds: [],
         }
     },
     computed: {
+        current_scope_name: function () {
+            const current = this.stat_scopes.find((item) => item.id === this.stat_context_company_id);
+            return current ? current.name : '';
+        },
+        hasGroupOperateOnFocusSale: function () {
+            if (!this.focus_plan || !this.focus_plan.stuff || !this.focus_plan.stuff.company || this.focus_plan.is_buy) {
+                return false;
+            }
+            return (this.groupOperateMemberIds || []).indexOf(this.focus_plan.stuff.company.id) >= 0;
+        },
         get_both_attach: function () {
             let ret = [];
             let func = (path) => {
@@ -714,6 +745,7 @@ export default {
                 status: this.focus_status,
                 stuff_id: this.stuff_filter.id,
                 company_id: this.company_filter.id,
+                stat_context_company_id: this.stat_context_company_id,
                 ...this.tabs[this.tab_current].filter,
             }
         },
@@ -729,8 +761,58 @@ export default {
 
     },
     methods: {
-        get_pay_url: async function () {
-            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
+        syncAppScopesFromServer: async function () {
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                const op = ret.operate_member_company_ids || [];
+                persistOperateMemberIds(op);
+                this.groupOperateMemberIds = op;
+                const preferred = readStatContext();
+                if (this.stat_scopes.length) {
+                    if (preferred != null && this.stat_scopes.some((s) => s.id === preferred)) {
+                        this.stat_context_company_id = preferred;
+                    } else {
+                        this.stat_context_company_id = this.stat_scopes[0].id;
+                        persistStatContext(this.stat_context_company_id);
+                    }
+                } else {
+                    this.stat_context_company_id = null;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+                this.groupOperateMemberIds = readOperateMemberIds();
+            }
+        },
+        refreshStatContextFromStorage: function () {
+            this.groupOperateMemberIds = readOperateMemberIds();
+            if (!this.stat_scopes.length) {
+                return;
+            }
+            const preferred = readStatContext();
+            if (preferred != null && this.stat_scopes.some((s) => s.id === preferred)) {
+                if (this.stat_context_company_id !== preferred) {
+                    this.stat_context_company_id = preferred;
+                    this.refresh_plans();
+                }
+            }
+        },
+        choose_stat_scope_orders: function (company_id) {
+            if (this.stat_context_company_id === company_id) {
+                this.show_scope_picker = false;
+                return;
+            }
+            this.stat_context_company_id = company_id;
+            persistStatContext(company_id);
+            this.show_scope_picker = false;
+            this.refresh_plans();
+        },
+        get_pay_url: async function (planId) {
+            const body = {};
+            if (planId) {
+                body.plan_id = planId;
+            }
+            let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', body)).verify_pay_by_cash;
             let url_prefix = '/sale_management';
             if (verify_pay_by_cash) {
                 url_prefix = '/cash'
@@ -767,9 +849,14 @@ export default {
             this.refresh_plans();
             this.show_plan_detail = false;
         },
-        refresh_approval_projects: async function () {
+        refresh_approval_projects: async function (planId) {
             try {
-                const ret = await this.$send_req('/approval/get_approval_projects', {});
+                const req = {};
+                const pid = planId != null && planId !== '' ? planId : (this.focus_plan && this.focus_plan.id);
+                if (pid) {
+                    req.plan_id = pid;
+                }
+                const ret = await this.$send_req('/approval/get_approval_projects', req);
                 this.approval_projects = ret.projects || [];
             } catch (err) {
                 console.log(err);
@@ -779,11 +866,16 @@ export default {
         approval_item: function (key) {
             return (this.approval_projects || []).find((p) => p.key === key);
         },
-        pick_submit_specify_auditer: async function () {
+        pick_submit_specify_auditer: async function (planId) {
             try {
-                const ret = await this.$send_req('/approval/get_auditer_pick_list', {
+                const req = {
                     pageNo: 0
-                });
+                };
+                const pid = planId != null && planId !== '' ? planId : (this.focus_plan && this.focus_plan.id);
+                if (pid) {
+                    req.plan_id = pid;
+                }
+                const ret = await this.$send_req('/approval/get_auditer_pick_list', req);
                 const rows = ret.all_user || [];
                 if (!rows.length) {
                     this.$refs.toast.show({
@@ -827,11 +919,12 @@ export default {
                 let url = e.url;
                 let batch_approval_auditer = '';
                 if (e.text == '批量验款') {
-                    url = await this.get_pay_url();
-                    await this.refresh_approval_projects();
+                    const refPlanId = this.plan_selected.length ? this.plan_selected[0] : undefined;
+                    url = await this.get_pay_url(refPlanId);
+                    await this.refresh_approval_projects(refPlanId);
                     const p = this.approval_item('manual_verify_pay');
                     if (p && p.enabled && p.approver_mode === 'submit_specify') {
-                        batch_approval_auditer = await this.pick_submit_specify_auditer();
+                        batch_approval_auditer = await this.pick_submit_specify_auditer(refPlanId);
                         if (!batch_approval_auditer) {
                             this.action_show = false;
                             return;
@@ -1187,13 +1280,14 @@ export default {
             }, rules);
             return val_ret.isPassed;
         },
-        resolve_closed_order_price_submit_auditer: async function () {
-            await this.refresh_approval_projects();
+        resolve_closed_order_price_submit_auditer: async function (planId) {
+            const pid = planId != null && planId !== '' ? planId : (this.focus_plan && this.focus_plan.id);
+            await this.refresh_approval_projects(pid);
             const p = this.approval_item('closed_order_price');
             if (!p || !p.enabled || p.approver_mode !== 'submit_specify') {
                 return { ok: true, auditer: '' };
             }
-            const specify = await this.pick_submit_specify_auditer();
+            const specify = await this.pick_submit_specify_auditer(pid);
             if (!specify) {
                 return { ok: false, auditer: '' };
             }
@@ -1211,7 +1305,8 @@ export default {
             if (!(await this.validate_new_stuff_price_form())) {
                 return;
             }
-            const auditerRes = await this.resolve_closed_order_price_submit_auditer();
+            const ctxPlanId = this.new_stuff_price.isMuti ? this.plan_selected[0] : this.focus_plan.id;
+            const auditerRes = await this.resolve_closed_order_price_submit_auditer(ctxPlanId);
             if (!auditerRes.ok) {
                 return;
             }
@@ -1287,16 +1382,17 @@ export default {
         },
         prepare_pay_confirm: async function (info) {
             this.pay_pending_approval_auditer = '';
-            await this.refresh_approval_projects();
+            const pid = this.focus_plan && this.focus_plan.id;
+            await this.refresh_approval_projects(pid);
             const p = this.approval_item('manual_verify_pay');
             if (p && p.enabled && p.approver_mode === 'submit_specify') {
-                const name = await this.pick_submit_specify_auditer();
+                const name = await this.pick_submit_specify_auditer(pid);
                 if (!name) {
                     return;
                 }
                 this.pay_pending_approval_auditer = name;
             }
-            this.prepare_xxx_confirm(await this.get_pay_url(), info);
+            this.prepare_xxx_confirm(await this.get_pay_url(pid), info);
         },
         prepare_xxx_confirm: function (url, info) {
             this.show_xxx_confirm = true;
@@ -1313,7 +1409,9 @@ export default {
         },
         prepare_plan_detail: async function (item) {
             // 获取销售或采购合同信息
-            if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && item.company.id) {
+            const sm = this.$has_module('sale_management') || this.$has_module('buy_management');
+            const go = !item.is_buy && item.stuff && item.stuff.company && (this.groupOperateMemberIds || []).indexOf(item.stuff.company.id) >= 0;
+            if ((sm || go) && item.company.id) {
                 try {
                     let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
                     let resp = await this.$send_req(url, {
@@ -1652,11 +1750,17 @@ export default {
         }
     },
     onPullDownRefresh() {
-        this.refresh_plans();
-        uni.stopPullDownRefresh();
+        this.syncAppScopesFromServer().finally(() => {
+            this.refresh_plans();
+            uni.stopPullDownRefresh();
+        });
     },
-    onLoad() {
+    onShow() {
+        this.refreshStatContextFromStorage();
+    },
+    async onLoad() {
         this.reset_order_date(false);
+        await this.syncAppScopesFromServer();
         this.init_top_seg();
         let tom = new Date();
         tom.setDate(tom.getDate() + 1);
@@ -1754,5 +1858,38 @@ export default {
     background-color: rgba(0, 0, 0, 0.5);
     padding: 10rpx 20rpx;
     border-radius: 20rpx;
+}
+
+.scope-picker-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12rpx 0;
+}
+
+.scope-picker-label {
+    flex: 1;
+    color: #333;
+    font-size: 30rpx;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 20rpx;
+}
+
+.scope-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.scope-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 20rpx;
 }
 </style>

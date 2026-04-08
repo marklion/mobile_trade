@@ -205,6 +205,7 @@ export default {
             try {
                 const ret = await this.$send_req('/global/home_stat_scope_list', {});
                 this.stat_scopes = ret.scopes || [];
+                this.$store.commit('user/SET_GROUP_OPERATE_MEMBER_IDS', ret.operate_member_company_ids || []);
                 if (this.stat_scopes.length && this.stat_context_company_id == null) {
                     this.stat_context_company_id = this.stat_scopes[0].id;
                 }
