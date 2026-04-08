@@ -263,10 +263,7 @@ module.exports = {
                 groupCompanyId: home.id,
                 memberCompanyId: id,
                 rbacUserId: user.id,
-                [db_opt.Op.or]: [
-                    { can_view: true },
-                    { can_operate: true },
-                ],
+                can_view: true,
             },
         });
         if (!grant) {
@@ -320,10 +317,7 @@ module.exports = {
             where: {
                 groupCompanyId: home.id,
                 rbacUserId: user.id,
-                [db_opt.Op.or]: [
-                    { can_view: true },
-                    { can_operate: true },
-                ],
+                can_view: true,
             },
             include: [{ model: sq.models.company, as: 'grant_member_company', attributes: ['id', 'name'] }],
             order: [['memberCompanyId', 'ASC']],

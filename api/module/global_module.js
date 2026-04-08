@@ -218,9 +218,8 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
     if (ret == '' && plan.stuff.need_enter_weight && (!plan.enter_attachment || plan.enter_count == 0)) {
         ret = '未上传进厂前信息';
     }
-    // Some legacy plans may not carry companyId, but stuff.companyId is still valid.
-    const effectiveCompanyId = plan.companyId ?? plan?.stuff?.companyId;
-    if (ret == '' && (effectiveCompanyId == null || effectiveCompanyId === '')) {
+    // Keep compatibility with legacy association shape: either order company or stuff company is acceptable.
+    if (ret == '' && !plan?.company && !plan?.stuff?.company) {
         ret = '未指定公司';
     }
     if (ret == '' && !(await plan_lib.check_if_never_checkin(driver))) {
