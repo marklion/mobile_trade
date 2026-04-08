@@ -905,32 +905,49 @@ export default {
             this.approver_pick_resolve = null;
             if (r) r('');
         },
-        do_action: async function (e) {
-            let muti_success = true;
-            if (!this.new_stuff_price.isMuti) {
-                if (e.text == "批量调价") {
-                    this.new_stuff_price.show = true;
-                    this.new_stuff_price.isMuti = true;
-                    this.new_stuff_price.comment = "批量调价"
-                    return
-                }
+        /** 批量调价：首次进入时只打开弹窗，不发起请求 */
+        open_batch_price_if_needed: function (e) {
+            if (this.new_stuff_price.isMuti || e.text !== '批量调价') {
+                return false;
             }
+            this.new_stuff_price.show = true;
+            this.new_stuff_price.isMuti = true;
+            this.new_stuff_price.comment = '批量调价';
+            return true;
+        },
+        /** 批量验款：解析实际支付 URL 与按需指定的审批人；取消选人时返回 null */
+        resolve_batch_pay_action: async function (e, url) {
+            if (e.text !== '批量验款') {
+                return { url, batch_approval_auditer: '' };
+            }
+            const refPlanId = this.plan_selected.length ? this.plan_selected[0] : undefined;
+            const payUrl = await this.get_pay_url(refPlanId);
+            await this.refresh_approval_projects(refPlanId);
+            const p = this.approval_item('manual_verify_pay');
+            const needSpecify = p && p.enabled && p.approver_mode === 'submit_specify';
+            if (!needSpecify) {
+                return { url: payUrl, batch_approval_auditer: '' };
+            }
+            const batch_approval_auditer = await this.pick_submit_specify_auditer(refPlanId);
+            if (!batch_approval_auditer) {
+                return null;
+            }
+            return { url: payUrl, batch_approval_auditer };
+        },
+        do_action: async function (e) {
+            if (this.open_batch_price_if_needed(e)) {
+                return;
+            }
+            let muti_success = true;
             try {
                 let url = e.url;
-                let batch_approval_auditer = '';
-                if (e.text == '批量验款') {
-                    const refPlanId = this.plan_selected.length ? this.plan_selected[0] : undefined;
-                    url = await this.get_pay_url(refPlanId);
-                    await this.refresh_approval_projects(refPlanId);
-                    const p = this.approval_item('manual_verify_pay');
-                    if (p && p.enabled && p.approver_mode === 'submit_specify') {
-                        batch_approval_auditer = await this.pick_submit_specify_auditer(refPlanId);
-                        if (!batch_approval_auditer) {
-                            this.action_show = false;
-                            return;
-                        }
-                    }
+                const payResolved = await this.resolve_batch_pay_action(e, url);
+                if (payResolved === null) {
+                    this.action_show = false;
+                    return;
                 }
+                url = payResolved.url;
+                const batch_approval_auditer = payResolved.batch_approval_auditer;
                 for (let index = 0; index < this.plan_selected.length; index++) {
                     const element = this.plan_selected[index];
                     const pay_body = {

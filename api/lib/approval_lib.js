@@ -16,6 +16,68 @@ function internal_api_v1_base() {
     return `http://${host}:${port}/api/v1`;
 }
 
+const ORDER_SALE_PAY_URLS = ['/cash/order_sale_pay', '/sale_management/order_sale_pay'];
+
+async function resolve_guard_company_order_sale_pay(sq, body, user, token_company, assertMayActForSale) {
+    const plan_id = body.plan_id;
+    if (plan_id === undefined || plan_id === null) {
+        return token_company;
+    }
+    const plan = await util_lib.get_single_plan_by_id(plan_id);
+    if (!plan || !plan.stuff) {
+        throw { err_msg: '未找到计划' };
+    }
+    const sale_id = plan.stuff.companyId;
+    await assertMayActForSale(user, token_company, sale_id);
+    const co = await sq.models.company.findByPk(sale_id);
+    return co || token_company;
+}
+
+async function resolve_guard_company_change_price(sq, body, user, token_company, assertMayActForSale) {
+    const stuff_id = body.stuff_id;
+    if (stuff_id === undefined || stuff_id === null) {
+        return token_company;
+    }
+    const stuff = await sq.models.stuff.findByPk(stuff_id);
+    if (!stuff) {
+        throw { err_msg: '货物不存在' };
+    }
+    await assertMayActForSale(user, token_company, stuff.companyId);
+    const co = await sq.models.company.findByPk(stuff.companyId);
+    return co || token_company;
+}
+
+function parse_plan_ids_bracketed(body) {
+    try {
+        return JSON.parse(`[${body.plan_id}]`);
+    } catch (e) {
+        return null;
+    }
+}
+
+async function resolve_guard_company_change_price_by_plan(sq, body, user, token_company, assertMayActForSale) {
+    const plan_ids = parse_plan_ids_bracketed(body);
+    if (!Array.isArray(plan_ids) || plan_ids.length === 0) {
+        return token_company;
+    }
+    let sale_id = null;
+    for (const pid of plan_ids) {
+        const plan = await util_lib.get_single_plan_by_id(pid);
+        if (!plan || !plan.stuff) {
+            throw { err_msg: '计划不存在' };
+        }
+        const sid = plan.stuff.companyId;
+        if (sale_id === null) {
+            sale_id = sid;
+        } else if (sale_id !== sid) {
+            throw { err_msg: '批量调价仅支持同一销售主体的订单' };
+        }
+    }
+    await assertMayActForSale(user, token_company, sale_id);
+    const co = await sq.models.company.findByPk(sale_id);
+    return co || token_company;
+}
+
 const APPROVAL_PROJECTS = {
     CLOSED_ORDER_PRICE: {
         key: 'closed_order_price',
@@ -171,59 +233,15 @@ module.exports = {
     /** 审批开关、审批记录归属公司：默认操作人所属公司；若请求针对成员公司订单/物料则归销售主体公司 */
     resolve_guard_company: async function (url, token, body, user, token_company) {
         const sq = db_opt.get_sq();
-        if (url === '/cash/order_sale_pay' || url === '/sale_management/order_sale_pay') {
-            const plan_id = body.plan_id;
-            if (plan_id === undefined || plan_id === null) {
-                return token_company;
-            }
-            const plan = await util_lib.get_single_plan_by_id(plan_id);
-            if (!plan || !plan.stuff) {
-                throw { err_msg: '未找到计划' };
-            }
-            const sale_id = plan.stuff.companyId;
-            await this.assert_token_may_act_for_sale_company(user, token_company, sale_id);
-            const co = await sq.models.company.findByPk(sale_id);
-            return co || token_company;
+        const assertMayAct = (u, tc, sid) => this.assert_token_may_act_for_sale_company(u, tc, sid);
+        if (ORDER_SALE_PAY_URLS.includes(url)) {
+            return resolve_guard_company_order_sale_pay(sq, body, user, token_company, assertMayAct);
         }
         if (url === '/stuff/change_price') {
-            const stuff_id = body.stuff_id;
-            if (stuff_id === undefined || stuff_id === null) {
-                return token_company;
-            }
-            const stuff = await sq.models.stuff.findByPk(stuff_id);
-            if (!stuff) {
-                throw { err_msg: '货物不存在' };
-            }
-            await this.assert_token_may_act_for_sale_company(user, token_company, stuff.companyId);
-            const co = await sq.models.company.findByPk(stuff.companyId);
-            return co || token_company;
+            return resolve_guard_company_change_price(sq, body, user, token_company, assertMayAct);
         }
         if (url === '/stuff/change_price_by_plan') {
-            let plan_ids;
-            try {
-                plan_ids = JSON.parse(`[${body.plan_id}]`);
-            } catch (e) {
-                return token_company;
-            }
-            if (!Array.isArray(plan_ids) || plan_ids.length === 0) {
-                return token_company;
-            }
-            let sale_id = null;
-            for (const pid of plan_ids) {
-                const plan = await util_lib.get_single_plan_by_id(pid);
-                if (!plan || !plan.stuff) {
-                    throw { err_msg: '计划不存在' };
-                }
-                const sid = plan.stuff.companyId;
-                if (sale_id === null) {
-                    sale_id = sid;
-                } else if (sale_id !== sid) {
-                    throw { err_msg: '批量调价仅支持同一销售主体的订单' };
-                }
-            }
-            await this.assert_token_may_act_for_sale_company(user, token_company, sale_id);
-            const co = await sq.models.company.findByPk(sale_id);
-            return co || token_company;
+            return resolve_guard_company_change_price_by_plan(sq, body, user, token_company, assertMayAct);
         }
         return token_company;
     },
@@ -232,12 +250,7 @@ module.exports = {
      * 批次中若无一笔此类订单，即使开启审批开关也不拦截（未关闭订单直接调价）。
      */
     change_price_by_plan_batch_includes_closed_sale_order: async function (body) {
-        let plan_ids;
-        try {
-            plan_ids = JSON.parse(`[${body.plan_id}]`);
-        } catch (e) {
-            return false;
-        }
+        const plan_ids = parse_plan_ids_bracketed(body);
         if (!Array.isArray(plan_ids) || plan_ids.length === 0) {
             return false;
         }
