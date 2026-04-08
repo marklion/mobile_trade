@@ -251,7 +251,7 @@
                     <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time">
                     </u-cell>
                     <module-filter require_module="scale">
-                        <u-cell title="代替司机操作" isLink :url="'/pages/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
+                        <u-cell title="代替司机操作" isLink :url="'/subPage1/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
                     </module-filter>
                 </u-cell-group>
             </view>
@@ -412,7 +412,7 @@
     <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
     <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
     <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
-    <fui-bottom-popup :show="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
+    <fui-bottom-popup :show="show_approver_pick" v-if="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
         <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
         <fui-list>
             <fui-list-cell v-for="(n, idx) in approver_pick_names" :key="idx" arrow @click="confirm_approver_pick(n)">{{n}}</fui-list-cell>
@@ -1134,7 +1134,7 @@ export default {
         },
         go_to_ticket: function (is_internal) {
             uni.navigateTo({
-                url: '/pages/Ticket?id=' + this.focus_plan.id + '&is_internal=' + is_internal
+                url: '/subPage1/Ticket?id=' + this.focus_plan.id + '&is_internal=' + is_internal
             });
         },
         batch_confirm: async function () {

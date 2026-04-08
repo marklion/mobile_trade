@@ -1462,7 +1462,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
@@ -1498,7 +1498,7 @@ module.exports = {
                             console.log(`正在生成 ${plan.id}`);
                             const fileName = generateTicketFilename(plan);
                             const filePath = path.join(tempDir, fileName);
-                            await lockDoWebCap(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + plan.id, filePath);
+                            await lockDoWebCap(process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + plan.id, filePath);
                             console.log(`已生成 ${filePath}`);
                             filePaths.push(filePath);
                         }
