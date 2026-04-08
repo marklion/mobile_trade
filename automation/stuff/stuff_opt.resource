@@ -106,7 +106,10 @@ Del A Stuff From Sale
 Add A Company As Customer
     [Arguments]  ${company_id}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  customer_id=${company_id}
-    Req to Server  /sale_management/contract_make  ${token}  ${req}
+    ${status}  ${resp_or_err}  Run Keyword And Ignore Error  Req to Server  /sale_management/contract_make  ${token}  ${req}
+    IF  '${status}' == 'FAIL'
+        Should Contain  ${resp_or_err}  合同已存在
+    END
 
 Add A Company As Supplier
     [Arguments]  ${company_id}  ${token}=${sc_admin_token}
