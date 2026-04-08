@@ -109,7 +109,10 @@ Group Parent Trigger Closed Order Price Approval For Member Plan
     ${ctx}  Build Member Stuff Plan Context  ${103}
     Set Member Finished Price Change Switch  ${ctx}[member_token]  ${True}
     Confirm A Plan  ${ctx}[plan]  ${sc_admin_token}
-    Manual Pay A Plan  ${ctx}[plan]  ${sc_admin_token}  ${True}  ${False}
+    ${after_confirm}  Get Plan By Id For Token  ${ctx}[plan][id]  ${ctx}[member_token]
+    IF  ${after_confirm}[status] == ${1}
+        Manual Pay A Plan  ${ctx}[plan]  ${sc_admin_token}  ${True}  ${False}
+    END
     Deliver A Plan  ${ctx}[plan]  ${20}
     ${before}  Get Plan By Id For Token  ${ctx}[plan][id]  ${ctx}[member_token]
     Should Be Equal As Integers  ${before}[status]  ${3}
