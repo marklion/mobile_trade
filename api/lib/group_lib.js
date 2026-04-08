@@ -234,7 +234,7 @@ module.exports = {
         return grant.can_view === true || grant.can_operate === true;
     },
 
-    resolve_stat_company: async function (token, stat_context_company_id) {
+    resolve_stat_company: async function (token, stat_context_company_id, need_write = false, view_only = false) {
         const home = await rbac_lib.get_company_by_token(token);
         if (!home) {
             return null;
@@ -258,12 +258,24 @@ module.exports = {
         if (!member_c || member_c.parentGroupCompanyId !== home.id) {
             throw { err_msg: '无权限查看该公司统计' };
         }
+        const grant_where = {
+            groupCompanyId: home.id,
+            memberCompanyId: id,
+            rbacUserId: user.id,
+        };
+        if (need_write) {
+            grant_where.can_operate = true;
+        } else if (view_only) {
+            grant_where.can_view = true;
+        } else {
+            grant_where[db_opt.Op.or] = [
+                { can_view: true },
+                { can_operate: true },
+            ];
+        }
         const grant = await sq.models.group_member_data_grant.findOne({
             where: {
-                groupCompanyId: home.id,
-                memberCompanyId: id,
-                rbacUserId: user.id,
-                can_view: true,
+                ...grant_where,
             },
         });
         if (!grant) {
@@ -317,7 +329,10 @@ module.exports = {
             where: {
                 groupCompanyId: home.id,
                 rbacUserId: user.id,
-                can_view: true,
+                [db_opt.Op.or]: [
+                    { can_view: true },
+                    { can_operate: true },
+                ],
             },
             include: [{ model: sq.models.company, as: 'grant_member_company', attributes: ['id', 'name'] }],
             order: [['memberCompanyId', 'ASC']],

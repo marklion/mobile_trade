@@ -438,7 +438,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let ret = [];
-                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id, false, true);
                 let day_offset = 0;
                 if (body.day_offset) {
                     day_offset = body.day_offset;

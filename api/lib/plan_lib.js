@@ -1520,7 +1520,7 @@ module.exports = {
             if (is_buy) {
                 company = await rbac_lib.get_company_by_token(token);
             } else {
-                company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                company = await group_lib.resolve_stat_company(token, body.stat_context_company_id, true);
             }
             let all_plans = [];
             let pageNo = 0;
