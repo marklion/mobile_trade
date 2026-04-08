@@ -198,7 +198,13 @@ module.exports = {
                 let buy_company = await rbac_lib.get_company_by_token(token);
 
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (!stuff) {
+                    throw { err_msg: '货物不存在' };
+                }
                 let sale_company = await stuff.getCompany();
+                if (!sale_company) {
+                    throw { err_msg: '销售公司不存在' };
+                }
                 // 判断是否在黑名单中
                 if (await plan_lib.is_in_blacklist(sale_company.id, body.driver_id, body.main_vehicle_id, body.behind_vehicle_id)) {
                     throw { err_msg: '创建计划失败，司机或车辆已被列入黑名单' };

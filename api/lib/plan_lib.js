@@ -9,6 +9,7 @@ const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
 const fc_lib = require('./fc_lib');
+const group_lib = require('./group_lib');
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 const king_dee_start_lib = require('./king_dee_start_lib');
@@ -700,7 +701,7 @@ module.exports = {
             if (plan.stuff.manual_weight) {
                 await this.prepare_sct_value(plan);
             }
-        }, force, t);
+        }, force, t, true);
     },
     verify_pay_against_same_company: function (company_id) {
         setImmediate(async () => {
@@ -971,7 +972,7 @@ module.exports = {
                 await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 hook_plan('order_ready', plan);
             }
-        });
+        }, false, null, true);
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
         this.verify_pay_against_same_company(plan.company.id);
     },
@@ -1079,7 +1080,7 @@ module.exports = {
             }
         }, true);
     },
-    action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false, t = null) {
+    action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false, t = null, allow_group_member_operate = false) {
         // 如果传入了事务参数t，直接使用该事务；否则创建新事务
         if (t) {
             // 使用现有事务，避免嵌套事务
@@ -1092,11 +1093,16 @@ module.exports = {
             }
             else {
                 let opt_company = await rbac_lib.get_company_by_token(_token);
+                let opt_user = await rbac_lib.get_user_by_token(_token);
                 if (plan) {
                     let stuff = plan.stuff;
                     if (stuff) {
                         let company = stuff.company;
-                        if (company && opt_company && opt_company.id == company.id) {
+                        let has_permission = company && opt_company && opt_company.id == company.id;
+                        if (!has_permission && allow_group_member_operate && company && opt_company && opt_company.is_group === true && opt_user && company.parentGroupCompanyId === opt_company.id) {
+                            has_permission = await group_lib.user_has_member_data_access(opt_user.id, company.id, true);
+                        }
+                        if (has_permission) {
                             if (-1 == _expect_status || plan.status == _expect_status) {
                                 await _action(plan, t);
                             }
@@ -1131,11 +1137,16 @@ module.exports = {
                 }
                 else {
                     let opt_company = await rbac_lib.get_company_by_token(_token);
+                    let opt_user = await rbac_lib.get_user_by_token(_token);
                     if (plan) {
                         let stuff = plan.stuff;
                         if (stuff) {
                             let company = stuff.company;
-                            if (company && opt_company && opt_company.id == company.id) {
+                            let has_permission = company && opt_company && opt_company.id == company.id;
+                            if (!has_permission && allow_group_member_operate && company && opt_company && opt_company.is_group === true && opt_user && company.parentGroupCompanyId === opt_company.id) {
+                                has_permission = await group_lib.user_has_member_data_access(opt_user.id, company.id, true);
+                            }
+                            if (has_permission) {
                                 if (-1 == _expect_status || plan.status == _expect_status) {
                                     await _action(plan, new_t);
                                 }
@@ -1348,7 +1359,15 @@ module.exports = {
         let sq = db_opt.get_sq();
         let company = await rbac_lib.get_company_by_token(_token);
         let stuff = await sq.models.stuff.findByPk(_stuff_id);
-        if (company && stuff && await company.hasStuff(stuff)) {
+        let has_operate_permission = company && stuff && await company.hasStuff(stuff);
+        if (!has_operate_permission && company && stuff && company.is_group === true) {
+            const user = await rbac_lib.get_user_by_token(_token);
+            const operate_company = await stuff.getCompany();
+            if (user && operate_company && operate_company.parentGroupCompanyId === company.id) {
+                has_operate_permission = await group_lib.user_has_member_data_access(user.id, operate_company.id, true);
+            }
+        }
+        if (has_operate_permission) {
             await this.pri_change_stuff_price(stuff, _new_price, _comment, (await rbac_lib.get_user_by_token(_token)).name, _to_plan);
         }
         else {
