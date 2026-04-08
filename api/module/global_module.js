@@ -218,7 +218,7 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
     if (ret == '' && plan.stuff.need_enter_weight && (!plan.enter_attachment || plan.enter_count == 0)) {
         ret = '未上传进厂前信息';
     }
-    if (ret == '' && !plan.company) {
+    if (ret == '' && (plan.companyId == null || plan.companyId === '')) {
         ret = '未指定公司';
     }
     if (ret == '' && !(await plan_lib.check_if_never_checkin(driver))) {

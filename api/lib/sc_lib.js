@@ -186,9 +186,13 @@ module.exports = {
     plan_passed_sc: async function (_plan_id) {
         let ret = false;
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
-        if (plan && plan.status != 3 && plan.stuff) {
-            if (plan.stuff.need_sc) {
-                let sc_reqs = await plan.stuff.getSc_reqs();
+        let stuff = plan && plan.stuff;
+        if (plan && !stuff && plan.stuffId != null) {
+            stuff = await plan.getStuff({ paranoid: false });
+        }
+        if (plan && plan.status != 3 && stuff) {
+            if (stuff.need_sc) {
+                let sc_reqs = await stuff.getSc_reqs();
                 let passed = true;
                 for (let i = 0; i < sc_reqs.length; i++) {
                     let sc_req = sc_reqs[i];

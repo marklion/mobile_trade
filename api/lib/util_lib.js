@@ -60,7 +60,8 @@ module.exports = {
         let ret = {};
         let sq = db_opt.get_sq();
         let options = {
-            include: this.plan_detail_include()
+            include: this.plan_detail_include(),
+            subQuery: false,
         }
         if (_t != undefined) {
             options.lock = _t.LOCK.UPDATE;
