@@ -530,7 +530,7 @@ module.exports = {
                                     if (!operate_company.change_finished_order_price_switch) {
                                         throw new Error('已完成订单不允许调价');
                                     }
-                                    await plan_lib.plan_rollback(plan.id, token, '调价回滚', false, t);
+                                    await plan_lib.plan_rollback(plan.id, token, '调价回滚', false, t, true);
                                 }
                                 let comment = `单价由${orig_price}改为${unitPrice},${body.comment}`
                                 await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, t)

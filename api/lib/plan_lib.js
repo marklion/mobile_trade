@@ -791,7 +791,7 @@ module.exports = {
             }
         }, false, existing_t);
     },
-    plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false, existing_t = null) {
+    plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false, existing_t = null, allow_group_member_operate = false) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan, t) => {
             let need_verify_balance = false;
             let rollback_content = '';
@@ -841,7 +841,7 @@ module.exports = {
                     need_verify_balance = true;
                 }
             } else if (plan.status == 3) {
-                await this.plan_rollback(plan.id, _token, msg, true, t);
+                await this.plan_rollback(plan.id, _token, msg, true, t, allow_group_member_operate);
                 if (plan.checkout_delay) {
                     return;
                 }
@@ -861,7 +861,7 @@ module.exports = {
             if (need_verify_balance) {
                 this.verify_pay_against_same_company(plan.company.id);
             }
-        }, false, existing_t);
+        }, false, existing_t, allow_group_member_operate);
     },
     plan_cost: async function (plan) {
         let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
@@ -1062,7 +1062,7 @@ module.exports = {
             if (!plan.checkout_delay) {
                 await this.close_a_plan(plan, _token, t);
             }
-        }, false, existing_t);
+        }, false, existing_t, true);
     },
     manual_deliver_plan: async function (_plan, _token) {
         await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name, "");
