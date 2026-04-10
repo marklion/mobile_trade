@@ -9,6 +9,7 @@ const uuid = require('uuid');
 const util_lib = require('./util_lib');
 const sc_lib = require('./sc_lib');
 const fc_lib = require('./fc_lib');
+const group_lib = require('./group_lib');
 const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 const king_dee_start_lib = require('./king_dee_start_lib');
@@ -700,7 +701,7 @@ module.exports = {
             if (plan.stuff.manual_weight) {
                 await this.prepare_sct_value(plan);
             }
-        }, force, t);
+        }, force, t, true);
     },
     verify_pay_against_same_company: function (company_id) {
         setImmediate(async () => {
@@ -790,7 +791,7 @@ module.exports = {
             }
         }, false, existing_t);
     },
-    plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false, existing_t = null) {
+    plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false, existing_t = null, allow_group_member_operate = false) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan, t) => {
             let need_verify_balance = false;
             let rollback_content = '';
@@ -840,7 +841,7 @@ module.exports = {
                     need_verify_balance = true;
                 }
             } else if (plan.status == 3) {
-                await this.plan_rollback(plan.id, _token, msg, true, t);
+                await this.plan_rollback(plan.id, _token, msg, true, t, allow_group_member_operate);
                 if (plan.checkout_delay) {
                     return;
                 }
@@ -860,7 +861,7 @@ module.exports = {
             if (need_verify_balance) {
                 this.verify_pay_against_same_company(plan.company.id);
             }
-        }, false, existing_t);
+        }, false, existing_t, allow_group_member_operate);
     },
     plan_cost: async function (plan) {
         let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
@@ -971,7 +972,7 @@ module.exports = {
                 await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
                 hook_plan('order_ready', plan);
             }
-        });
+        }, false, null, true);
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
         this.verify_pay_against_same_company(plan.company.id);
     },
@@ -1061,7 +1062,7 @@ module.exports = {
             if (!plan.checkout_delay) {
                 await this.close_a_plan(plan, _token, t);
             }
-        }, false, existing_t);
+        }, false, existing_t, true);
     },
     manual_deliver_plan: async function (_plan, _token) {
         await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name, "");
@@ -1079,87 +1080,60 @@ module.exports = {
             }
         }, true);
     },
-    action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false, t = null) {
-        // 如果传入了事务参数t，直接使用该事务；否则创建新事务
-        if (t) {
-            // 使用现有事务，避免嵌套事务
-            let plan = await util_lib.get_single_plan_by_id(_plan_id, t);
-            if (force) {
-                if (!plan) {
-                    throw { err_msg: '未找到计划' };
-                }
-                await _action(plan, t);
+    validate_plan_action_permission: async function (plan, _token, _expect_status, allow_group_member_operate) {
+        if (!plan) {
+            throw { err_msg: '未找到计划' };
+        }
+        if (!plan.stuff) {
+            throw { err_msg: '未找到货物' };
+        }
+
+        let opt_company = await rbac_lib.get_company_by_token(_token);
+        let opt_user = await rbac_lib.get_user_by_token(_token);
+        let company = plan.stuff.company;
+        let has_permission = company && opt_company && opt_company.id == company.id;
+
+        if (!has_permission && allow_group_member_operate && company && opt_company && opt_company.is_group === true && opt_user && company.parentGroupCompanyId === opt_company.id) {
+            has_permission = await group_lib.user_has_member_data_access(opt_user.id, company.id, true);
+        }
+
+        if (!has_permission) {
+            throw { err_msg: '无权限' };
+        }
+        if (_expect_status !== -1 && plan.status != _expect_status) {
+            throw { err_msg: '计划状态错误' };
+        }
+    },
+    run_action_in_plan: async function (_plan_id, _token, _expect_status, _action, force, t, allow_group_member_operate) {
+        let plan = await util_lib.get_single_plan_by_id(_plan_id, t);
+        if (force) {
+            if (!plan) {
+                throw { err_msg: '未找到计划' };
             }
-            else {
-                let opt_company = await rbac_lib.get_company_by_token(_token);
-                if (plan) {
-                    let stuff = plan.stuff;
-                    if (stuff) {
-                        let company = stuff.company;
-                        if (company && opt_company && opt_company.id == company.id) {
-                            if (-1 == _expect_status || plan.status == _expect_status) {
-                                await _action(plan, t);
-                            }
-                            else {
-                                throw { err_msg: '计划状态错误' };
-                            }
-                        }
-                        else {
-                            throw { err_msg: '无权限' };
-                        }
-                    }
-                    else {
-                        throw { err_msg: '未找到货物' };
-                    }
-                }
-                else {
-                    throw { err_msg: '未找到计划' };
-                }
-            }
+            await _action(plan, t);
+            return plan;
+        }
+
+        await this.validate_plan_action_permission(plan, _token, _expect_status, allow_group_member_operate);
+        await _action(plan, t);
+        return plan;
+    },
+    action_in_plan: async function (_plan_id, _token, _expect_status, _action, force = false, t = null, allow_group_member_operate = false) {
+        const execute = async (tx) => {
+            let plan = await this.run_action_in_plan(_plan_id, _token, _expect_status, _action, force, tx, allow_group_member_operate);
             if (plan) {
                 this.mark_dup_info(plan.id);
             }
-        } else {
-            // 创建新事务
-            await db_opt.get_sq().transaction({ savepoint: true }, async (new_t) => {
-                let plan = await util_lib.get_single_plan_by_id(_plan_id, new_t);
-                if (force) {
-                    if (!plan) {
-                        throw { err_msg: '未找到计划' };
-                    }
-                    await _action(plan, new_t);
-                }
-                else {
-                    let opt_company = await rbac_lib.get_company_by_token(_token);
-                    if (plan) {
-                        let stuff = plan.stuff;
-                        if (stuff) {
-                            let company = stuff.company;
-                            if (company && opt_company && opt_company.id == company.id) {
-                                if (-1 == _expect_status || plan.status == _expect_status) {
-                                    await _action(plan, new_t);
-                                }
-                                else {
-                                    throw { err_msg: '计划状态错误' };
-                                }
-                            }
-                            else {
-                                throw { err_msg: '无权限' };
-                            }
-                        }
-                        else {
-                            throw { err_msg: '未找到货物' };
-                        }
-                    }
-                    else {
-                        throw { err_msg: '未找到计划' };
-                    }
-                }
-                if (plan) {
-                    this.mark_dup_info(plan.id);
-                }
-            });
+        };
+
+        if (t) {
+            await execute(t);
+            return;
         }
+
+        await db_opt.get_sq().transaction({ savepoint: true }, async (new_t) => {
+            await execute(new_t);
+        });
     },
     mark_dup_info: function (plan_id) {
         setImmediate(async () => {
@@ -1348,7 +1322,15 @@ module.exports = {
         let sq = db_opt.get_sq();
         let company = await rbac_lib.get_company_by_token(_token);
         let stuff = await sq.models.stuff.findByPk(_stuff_id);
-        if (company && stuff && await company.hasStuff(stuff)) {
+        let has_operate_permission = company && stuff && await company.hasStuff(stuff);
+        if (!has_operate_permission && company && stuff && company.is_group === true) {
+            const user = await rbac_lib.get_user_by_token(_token);
+            const operate_company = await stuff.getCompany();
+            if (user && operate_company && operate_company.parentGroupCompanyId === company.id) {
+                has_operate_permission = await group_lib.user_has_member_data_access(user.id, operate_company.id, true);
+            }
+        }
+        if (has_operate_permission) {
             await this.pri_change_stuff_price(stuff, _new_price, _comment, (await rbac_lib.get_user_by_token(_token)).name, _to_plan);
         }
         else {

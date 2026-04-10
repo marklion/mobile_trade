@@ -498,12 +498,24 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                let user = await rbac_lib.get_user_by_token(token);
                 try {
                     let planIds = JSON.parse(`[${body.plan_id}]`);
                     await Promise.all(planIds.map(async (item) => {
                         await plan_lib.action_in_plan(item, token, 0, async (plan, t) => {
-                            if (!plan || !company || !(await company.hasStuff(plan.stuff))) {
-                                return { result: false };
+                            if (!plan || !company || !plan.stuff || !plan.stuff.company) {
+                                throw new Error('无权限');
+                            }
+                            let has_operate_permission = await company.hasStuff(plan.stuff);
+                            const operate_company = plan.stuff.company;
+                            if (!has_operate_permission
+                                && company.is_group === true
+                                && user
+                                && operate_company.parentGroupCompanyId === company.id) {
+                                has_operate_permission = await group_lib.user_has_member_data_access(user.id, operate_company.id, true);
+                            }
+                            if (!has_operate_permission) {
+                                throw new Error('无权限');
                             }
                             if (plan.bidding_item) {
                                 throw new Error('竞价计划不允许调价');
@@ -515,10 +527,10 @@ module.exports = {
                             let orig_price = plan.unit_price;
                             if (orig_price != unitPrice) {
                                 if (plan.status == 3 && !plan.is_buy) {
-                                    if (!company.change_finished_order_price_switch) {
+                                    if (!operate_company.change_finished_order_price_switch) {
                                         throw new Error('已完成订单不允许调价');
                                     }
-                                    await plan_lib.plan_rollback(plan.id, token, '调价回滚', false, t);
+                                    await plan_lib.plan_rollback(plan.id, token, '调价回滚', false, t, true);
                                 }
                                 let comment = `单价由${orig_price}改为${unitPrice},${body.comment}`
                                 await plan_lib.record_plan_history(plan, (await rbac_lib.get_user_by_token(token)).name, comment, t)
@@ -535,7 +547,7 @@ module.exports = {
                                     }
                                 }
                             }
-                        }, true);
+                        }, true, null, true);
                     }));
                     return { result: true };
                 } catch (error) {
