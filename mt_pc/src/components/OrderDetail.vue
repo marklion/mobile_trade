@@ -311,6 +311,10 @@ export default {
     },
     methods: {
         refresh_approval_projects: async function () {
+            if (!this.$hasPermission('approval')) {
+                this.approval_projects = [];
+                return;
+            }
             try {
                 const ret = await this.$send_req('/approval/get_approval_projects', {});
                 this.approval_projects = ret.projects || [];
@@ -616,8 +620,13 @@ export default {
             this.$emit('refresh');
         },
         get_order_refunds_config: async function () {
-            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
-            this.order_refunds_allowed = ret.is_allowed_order_return;
+            try {
+                let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
+                this.order_refunds_allowed = ret.is_allowed_order_return;
+            } catch (error) {
+                // 对未开通业务的客户静默降级，避免出现无意义的权限报错提示
+                this.order_refunds_allowed = false;
+            }
         },
         preview_company_attach: function () {
             this.pics = [];
