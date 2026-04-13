@@ -624,8 +624,11 @@ export default {
                 let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
                 this.order_refunds_allowed = ret.is_allowed_order_return;
             } catch (error) {
-                // 对未开通业务的客户静默降级，避免出现无意义的权限报错提示
                 this.order_refunds_allowed = false;
+                const errMsg = (error && (error.err_msg || error.message)) || '';
+                if (!errMsg.includes('无权限')) {
+                    console.warn('[OrderDetail] 获取订单回退配置失败，已按关闭处理', error);
+                }
             }
         },
         preview_company_attach: function () {
