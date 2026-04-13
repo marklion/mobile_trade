@@ -311,6 +311,10 @@ export default {
     },
     methods: {
         refresh_approval_projects: async function () {
+            if (!this.$hasPermission('approval')) {
+                this.approval_projects = [];
+                return;
+            }
             try {
                 const ret = await this.$send_req('/approval/get_approval_projects', {});
                 this.approval_projects = ret.projects || [];
@@ -616,8 +620,16 @@ export default {
             this.$emit('refresh');
         },
         get_order_refunds_config: async function () {
-            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
-            this.order_refunds_allowed = ret.is_allowed_order_return;
+            try {
+                let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
+                this.order_refunds_allowed = ret.is_allowed_order_return;
+            } catch (error) {
+                this.order_refunds_allowed = false;
+                const errMsg = (error && (error.err_msg || error.message)) || '';
+                if (!errMsg.includes('无权限')) {
+                    console.warn('[OrderDetail] 获取订单回退配置失败，已按关闭处理', error);
+                }
+            }
         },
         preview_company_attach: function () {
             this.pics = [];
