@@ -11,11 +11,12 @@ Search A Company By Name
     [Arguments]  ${name}
     @{cur_companys}  Get All Company
     ${found_content}  Create Dictionary
+    ${found_id}  Set Variable  ${-1}
     FOR  ${itr}  IN  @{cur_companys}
         ${itr_name}  Get From Dictionary  ${itr}  name
-        IF  $itr_name == $name
-        ${found_content}  Set Variable  ${itr}
-            Exit For Loop
+        IF  $itr_name == $name and ${itr}[id] > ${found_id}
+            ${found_content}  Set Variable  ${itr}
+            ${found_id}  Set Variable  ${itr}[id]
         END
     END
     RETURN  ${found_content}

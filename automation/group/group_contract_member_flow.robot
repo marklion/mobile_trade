@@ -24,13 +24,22 @@ Group Contract Suite Reset
     Company Reset
 
 Setup Group Contract Scenario
-    ${parent}  Create One Company  gc_parent
-    ${member}  Create One Company  gc_member
-    ${buyer}  Create One Company  gc_buyer
+    ${suffix}  Evaluate  random.randint(100000, 999999)  modules=random
+    ${parent_name}  Set Variable  gc_parent_${suffix}
+    ${member_name}  Set Variable  gc_member_${suffix}
+    ${buyer_name}  Set Variable  gc_buyer_${suffix}
+    ${phone_tail}  Evaluate  random.randint(100, 999)  modules=random
+    ${parent_phone}  Set Variable  16610000${phone_tail}
+    ${member_phone}  Set Variable  16620000${phone_tail}
+    ${buyer_phone}  Set Variable  16630000${phone_tail}
 
-    ${parent_token}  Login As Admin Of Company  ${parent}[id]  ${PARENT_PHONE}  gc_parent_admin
-    ${member_token}  Login As Admin Of Company  ${member}[id]  ${MEMBER_PHONE}  gc_member_admin
-    ${buyer_token}  Login As Admin Of Company  ${buyer}[id]  ${BUYER_PHONE}  gc_buyer_admin
+    ${parent}  Create One Company  ${parent_name}
+    ${member}  Create One Company  ${member_name}
+    ${buyer}  Create One Company  ${buyer_name}
+
+    ${parent_token}  Login As Admin Of Company  ${parent}[id]  ${parent_phone}  gc_parent_admin_${suffix}
+    ${member_token}  Login As Admin Of Company  ${member}[id]  ${member_phone}  gc_member_admin_${suffix}
+    ${buyer_token}  Login As Admin Of Company  ${buyer}[id]  ${buyer_phone}  gc_buyer_admin_${suffix}
 
     ${parent_self}  Get Self Info  ${parent_token}
     Convert To Group By Super Admin  ${parent}[id]  ${parent_self}[id]
@@ -41,15 +50,15 @@ Setup Group Contract Scenario
     Add Module To Company  ${parent}[id]  sale_management
     Add Module To Company  ${parent}[id]  cash
     Add Module To Company  ${parent}[id]  scale
-    Add Module To User  ${parent_token}  ${PARENT_PHONE}  sale_management
-    Add Module To User  ${parent_token}  ${PARENT_PHONE}  cash
-    Add Module To User  ${parent_token}  ${PARENT_PHONE}  scale
+    Add Module To User  ${parent_token}  ${parent_phone}  sale_management
+    Add Module To User  ${parent_token}  ${parent_phone}  cash
+    Add Module To User  ${parent_token}  ${parent_phone}  scale
 
     Add Module To Company  ${member}[id]  stuff
-    Add Module To User  ${member_token}  ${MEMBER_PHONE}  stuff
+    Add Module To User  ${member_token}  ${member_phone}  stuff
 
     Add Module To Company  ${buyer}[id]  customer
-    Add Module To User  ${buyer_token}  ${BUYER_PHONE}  customer
+    Add Module To User  ${buyer_token}  ${buyer_phone}  customer
 
     ${new_stuff_req}  Create Dictionary  name=gc_member_stuff  comment=member_source  expect_count=${2}
     ${member_stuff}  Req to Server  /stuff/fetch  ${member_token}  ${new_stuff_req}
@@ -58,7 +67,7 @@ Setup Group Contract Scenario
 
     ${new_contract_req}  Create Dictionary  customer_id=${buyer}[id]
     Req to Server  /sale_management/contract_make  ${parent_token}  ${new_contract_req}
-    ${auth_req}  Create Dictionary  contract_id=${0}  phone=${BUYER_PHONE}
+    ${auth_req}  Create Dictionary  contract_id=${0}  phone=${buyer_phone}
     ${contract}  Req to Server  /sale_management/get_contract_by_customer  ${parent_token}  ${new_contract_req}
     Set To Dictionary  ${auth_req}  contract_id=${contract}[id]
     Req to Server  /sale_management/authorize_user  ${parent_token}  ${auth_req}

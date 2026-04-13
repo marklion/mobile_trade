@@ -65,7 +65,8 @@ Stuff For Buy
 
 Stuff via Contract Maintain
     [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset
-    [Setup]  Run Keywords  Add A Company As Customer  ${buy_company1}[id]
+    [Setup]  Run Keywords  Set Buy Config Hard  ${True}
+    ...    AND  Add A Company As Customer  ${buy_company1}[id]
     ...    AND  Add A Company As Customer  ${buy_company2}[id]
     ...    AND  Add A Stuff to Sale  st1  abcdddd
     Add A Stuff To Contract  st1  bc1
