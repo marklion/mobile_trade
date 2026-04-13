@@ -71,7 +71,7 @@
     <el-image-viewer v-if="show_pics" :on-close="close_preview" :url-list="pics">
     </el-image-viewer>
     <el-dialog title="新增物料" :visible.sync="show_add_stuff" width="30%">
-        <select-search body_key="stuff" :get_url="stuff_select_url" item_label="name" item_value="id" :permission_array="['stuff']" v-model="selected_stuff_id"></select-search>
+        <select-search body_key="stuff" :get_url="stuff_select_url" item_label="name" item_value="id" :permission_array="stuff_select_url === '/sale_management/get_stuff_for_contract' ? ['sale_management'] : ['stuff']" v-model="selected_stuff_id"></select-search>
         <span slot="footer">
             <el-button @click="show_add_stuff = false">取 消</el-button>
             <el-button type="primary" @click="do_add_stuff">确 定</el-button>

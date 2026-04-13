@@ -220,17 +220,7 @@ module.exports = {
         if (!company || !contract) {
             return false;
         }
-        if (await company.hasSale_contract(contract)) {
-            return true;
-        }
-        if (!company.parentGroupCompanyId) {
-            return false;
-        }
-        const parent_group = await db_opt.get_sq().models.company.findByPk(company.parentGroupCompanyId);
-        if (!parent_group) {
-            return false;
-        }
-        return await parent_group.hasSale_contract(contract);
+        return await company.hasSale_contract(contract);
     },
     contractOutOfDate: function (endDate) {
         let ret = false;

@@ -235,6 +235,12 @@ module.exports = {
             result: common.contract_res_detail_define,
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '无权限' };
+                }
+                if (!company.is_group) {
+                    throw { err_msg: '无权限' };
+                }
                 let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(body.customer_id, company.id, true);
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
@@ -247,7 +253,9 @@ module.exports = {
             description: '获取合同可选货物',
             is_write: false,
             is_get_api: true,
-            params: {},
+            params: {
+                pageNo: { type: Number, have_to: false, mean: '页码（从0开始）', example: 0 },
+            },
             result: {
                 stuff: {
                     type: Array, mean: '货物', explain: {
@@ -255,7 +263,8 @@ module.exports = {
                         name: { type: String, mean: '货物名', example: 'A公司-煤炭' },
                         companyId: { type: Number, mean: '归属公司ID', example: 1 },
                     }
-                }
+                },
+                total: { type: Number, mean: '总条数', example: 1 },
             },
             func: async function (body, token) {
                 const sq = db_opt.get_sq();
