@@ -6,6 +6,7 @@ const officegen = require('officegen');
 const uuid = require('uuid');
 const fs = require('fs');
 const mcache = require('memory-cache');
+const plan_lib = require('./plan_lib');
 module.exports = {
     create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token, price_hide) {
         let sq = db_opt.get_sq();
@@ -161,7 +162,7 @@ module.exports = {
                         { model: sq.models.stuff, include: [sq.models.company] }]
                 });
                 if (buy_company && bc && bc.stuff && bc.stuff.company) {
-                    let contracts = await bc.stuff.company.getSale_contracts({ where: { buyCompanyId: buy_company.id } });
+                    let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company.id, bc.stuff.company.id);
                     if (contracts.length == 1) {
                         let cur_balance = contracts[0].balance;
                         if (cur_balance >= bc.pay_first) {

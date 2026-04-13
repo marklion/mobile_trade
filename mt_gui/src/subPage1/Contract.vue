@@ -439,7 +439,11 @@ export default {
             if (this.$has_module('stuff') == false) {
                 return [];
             }
-            let resp = await this.$send_req('/stuff/get_all', {
+            let stuff_url = '/stuff/get_all';
+            if (this.cur_urls && this.cur_urls.motive && !buy_setting) {
+                stuff_url = '/sale_management/get_stuff_for_contract';
+            }
+            let resp = await this.$send_req(stuff_url, {
                 pageNo: pageNo
             });
             let ret = []
