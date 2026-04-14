@@ -162,7 +162,7 @@ Add A Stuff To Contract
     Req to Server  /sale_management/contract_add_stuff  ${token}  ${req}
 
 Del A Stuff From Contract
-    [Arguments]  ${stuff_name}  ${customer_name}
+    [Arguments]  ${target_stuff_name}  ${customer_name}
     ${target_contract}  Set Variable
     ${target_stuff}  Set Variable
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
@@ -175,8 +175,8 @@ Del A Stuff From Contract
         END
     END
     FOR  ${itr}  IN  @{stuffs_found}
-        ${stuff_name}  Get From Dictionary  ${itr}  name
-        IF  $stuff_name == $stuff_name
+        ${got_stuff_name}  Get From Dictionary  ${itr}  name
+        IF  $got_stuff_name == $target_stuff_name
             ${target_stuff}  Set Variable  ${itr}
             Exit For Loop
         END
@@ -538,6 +538,11 @@ Set Pay Verify Role
     [Arguments]  ${is_cash}
     ${req}  Create Dictionary  verify_pay_by_cash=${is_cash}
     Req to Server  /stuff/set_verify_pay_config  ${sc_admin_token}  ${req}
+
+Set Buy Config Hard
+    [Arguments]  ${is_hard}=${True}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  buy_config_hard=${is_hard}
+    Req to Server  /stuff/set_buy_config_hard  ${token}  ${req}
 
 Add Sct Scale Item
     [Arguments]  ${stuff_id}  ${item_name}  ${token}=${sc_admin_token}

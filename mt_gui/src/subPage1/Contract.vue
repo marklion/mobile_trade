@@ -436,10 +436,19 @@ export default {
             this.show_add_stuff = false;
         },
         get_stuff: async function (pageNo, [buy_setting]) {
-            if (this.$has_module('stuff') == false) {
+            const use_sale_management_stuff =
+                this.cur_urls && this.cur_urls.motive && !buy_setting;
+            const has_required_module = use_sale_management_stuff
+                ? this.$has_module('sale_management')
+                : this.$has_module('stuff');
+            if (has_required_module == false) {
                 return [];
             }
-            let resp = await this.$send_req('/stuff/get_all', {
+            let stuff_url = '/stuff/get_all';
+            if (use_sale_management_stuff) {
+                stuff_url = '/sale_management/get_stuff_for_contract';
+            }
+            let resp = await this.$send_req(stuff_url, {
                 pageNo: pageNo
             });
             let ret = []

@@ -230,11 +230,7 @@ module.exports = {
                     }))[0];
                 }
                 else {
-                    contract = (await u8c_oi.company.getSale_contracts({
-                        where: {
-                            buyCompanyId: company.id,
-                        },
-                    }))[0];
+                    contract = (await plan_lib.get_sale_contracts_for_buyer_and_supply_company(company.id, u8c_oi.company.id))[0];
                 }
             }
 

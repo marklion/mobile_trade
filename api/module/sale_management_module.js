@@ -105,7 +105,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await plan_lib.plan_rollback(body.plan_id, token, body.msg);
+                await plan_lib.plan_rollback(body.plan_id, token, body.msg, false, null, true);
                 return { result: true };
             }
         },
@@ -217,7 +217,7 @@ module.exports = {
                 let ret = { result: false };
                 let sale_company = await rbac_lib.get_company_by_token(token);
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
-                if (contract && sale_company && await sale_company.hasSale_contract(contract)) {
+                if (contract && sale_company && await plan_lib.has_sale_contract_operate_permission(sale_company, contract)) {
                     await plan_lib.destroy_contract(contract.id);
                     ret.result = true;
                 }
@@ -235,17 +235,69 @@ module.exports = {
             result: common.contract_res_detail_define,
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                let contracts = await company.getSale_contracts({
-                    where: {
-                        buyCompanyId: body.customer_id
-                    },
-                    include: db_opt.get_sq().models.rbac_user
-                })
+                if (!company) {
+                    throw { err_msg: '无权限' };
+                }
+                if (!company.is_group) {
+                    throw { err_msg: '无权限' };
+                }
+                let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(body.customer_id, company.id, true);
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
                 return contracts[0]
             },
+        },
+        get_stuff_for_contract: {
+            name: '获取合同可选货物',
+            description: '获取合同可选货物',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                pageNo: { type: Number, have_to: false, mean: '页码（从0开始）', example: 0 },
+            },
+            result: {
+                stuff: {
+                    type: Array, mean: '货物', explain: {
+                        id: { type: Number, mean: '货物ID', example: 1 },
+                        name: { type: String, mean: '货物名', example: 'A公司-煤炭' },
+                        companyId: { type: Number, mean: '归属公司ID', example: 1 },
+                    }
+                },
+                total: { type: Number, mean: '总条数', example: 1 },
+            },
+            func: async function (body, token) {
+                const sq = db_opt.get_sq();
+                const company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    return { stuff: [], total: 0 };
+                }
+                let company_ids = [company.id];
+                if (company.is_group) {
+                    const members = await company.getGroup_member_companies({ attributes: ['id'] });
+                    members.forEach((m) => {
+                        company_ids.push(m.id);
+                    });
+                }
+                const ret = await sq.models.stuff.findAndCountAll({
+                    where: {
+                        use_for_buy: false,
+                        companyId: {
+                            [db_opt.Op.in]: company_ids
+                        }
+                    },
+                    include: [{ model: sq.models.company }],
+                    order: [['companyId', 'ASC'], ['id', 'ASC']],
+                    offset: body.pageNo * 20,
+                    limit: 20,
+                });
+                ret.rows.forEach((item) => {
+                    if (item.companyId !== company.id) {
+                        item.name = `${item.company.name}-${item.name}`;
+                    }
+                });
+                return { stuff: ret.rows, total: ret.count };
+            }
         },
         contract_get: {
             name: '获取合同',
@@ -316,7 +368,12 @@ module.exports = {
                 let company = await rbac_lib.get_company_by_token(token);
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
                 let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
-                if (contract && stuff && company && await company.hasSale_contract(contract)) {
+                let stuff_company = stuff ? await stuff.getCompany() : null;
+                let can_use_stuff = !!(company && stuff_company && (
+                    stuff_company.id === company.id ||
+                    (company.is_group && stuff_company.parentGroupCompanyId === company.id)
+                ));
+                if (contract && stuff && company && can_use_stuff && await plan_lib.has_sale_contract_operate_permission(company, contract)) {
                     await plan_lib.add_stuff_to_contract(stuff, contract);
                     ret.result = true;
                 }
@@ -341,7 +398,12 @@ module.exports = {
                 let company = await rbac_lib.get_company_by_token(token);
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
                 let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
-                if (contract && stuff && company && await company.hasSale_contract(contract)) {
+                let stuff_company = stuff ? await stuff.getCompany() : null;
+                let can_use_stuff = !!(company && stuff_company && (
+                    stuff_company.id === company.id ||
+                    (company.is_group && stuff_company.parentGroupCompanyId === company.id)
+                ));
+                if (contract && stuff && company && can_use_stuff && await plan_lib.has_sale_contract_operate_permission(company, contract)) {
                     await plan_lib.del_stuff_from_contract(stuff, contract);
                     ret.result = true;
                 }

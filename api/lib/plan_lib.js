@@ -116,7 +116,21 @@ module.exports = {
         return await sq.models.stuff.findAndCountAll({
             where: {
                 use_for_buy: false,
-                // '$contract.buyCompanyId$': _buy_company.id
+                [db_opt.Op.and]: [
+                    sq.literal(`EXISTS (
+                        SELECT 1 FROM contract c
+                        WHERE c.deletedAt IS NULL
+                          AND c.buyCompanyId = ${_buy_company.id}
+                          AND c.saleCompanyId = IFNULL((SELECT parentGroupCompanyId FROM company WHERE id = stuff.companyId), stuff.companyId)
+                          AND (
+                            (SELECT buy_config_hard FROM company WHERE id = stuff.companyId) = 0
+                            OR EXISTS (
+                                SELECT 1 FROM contract_stuff cs
+                                WHERE cs.stuffId = stuff.id AND cs.contractId = c.id
+                            )
+                          )
+                    )`)
+                ]
             },
             offset: pageNo * 20,
             limit: 20,
@@ -126,11 +140,6 @@ module.exports = {
             ],
             include: [
                 { model: sq.models.company, },
-                {
-                    model: sq.models.contract, where: {
-                        buyCompanyId: _buy_company.id
-                    }, required: true
-                }
             ]
         });
     },
@@ -178,6 +187,40 @@ module.exports = {
         if (exist_stuffs.length == 1) {
             await _contract.removeStuff(_stuff);
         }
+    },
+    get_sale_contract_owner_company_id: async function (sale_company_id, transaction = null) {
+        const sq = db_opt.get_sq();
+        const sale_company = await sq.models.company.findByPk(sale_company_id, {
+            ...(transaction && { transaction })
+        });
+        if (!sale_company) {
+            return null;
+        }
+        return sale_company.parentGroupCompanyId || sale_company.id;
+    },
+    get_sale_contracts_for_buyer_and_supply_company: async function (buy_company_id, supply_company_id, include_users = false, transaction = null) {
+        const sq = db_opt.get_sq();
+        const owner_company_id = await this.get_sale_contract_owner_company_id(supply_company_id, transaction);
+        if (!owner_company_id) {
+            return [];
+        }
+        const query_opt = {
+            where: {
+                saleCompanyId: owner_company_id,
+                buyCompanyId: buy_company_id
+            },
+            ...(transaction && { transaction })
+        };
+        if (include_users) {
+            query_opt.include = [sq.models.rbac_user];
+        }
+        return await sq.models.contract.findAll(query_opt);
+    },
+    has_sale_contract_operate_permission: async function (company, contract) {
+        if (!company || !contract) {
+            return false;
+        }
+        return await company.hasSale_contract(contract);
     },
     contractOutOfDate: function (endDate) {
         let ret = false;
@@ -629,7 +672,7 @@ module.exports = {
         let user = await rbac_lib.add_user(_phone);
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await sq.models.contract.findByPk(_contract_id);
-        if (contract && user && company && await company.hasSale_contract(contract)) {
+        if (contract && user && company && await this.has_sale_contract_operate_permission(company, contract)) {
             if (! await contract.hasRbac_user(user)) {
                 await contract.addRbac_user(user);
             }
@@ -643,7 +686,7 @@ module.exports = {
         let user = await rbac_lib.add_user(_phone);
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await sq.models.contract.findByPk(_contract_id);
-        if (contract && user && company && await company.hasSale_contract(contract)) {
+        if (contract && user && company && await this.has_sale_contract_operate_permission(company, contract)) {
             if (await contract.hasRbac_user(user)) {
                 await contract.removeRbac_user(user);
             }
@@ -673,7 +716,7 @@ module.exports = {
                 }
             }
 
-            let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: company_id } });
+            let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(company_id, plan.stuff.company.id);
             let creator = await plan.getRbac_user();
             if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
                 plan.status = 1;
@@ -864,7 +907,7 @@ module.exports = {
         }, false, existing_t, allow_group_member_operate);
     },
     plan_cost: async function (plan) {
-        let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+        let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(plan.company.id, plan.stuff.company.id);
         if (contracts.length == 1) {
             let contract = contracts[0];
             let decrease_cash = plan.unit_price * plan.count;
@@ -891,7 +934,7 @@ module.exports = {
         }
     },
     plan_undo_cost: async function (plan) {
-        let contracts = await plan.stuff.company.getSale_contracts({ where: { buyCompanyId: plan.company.id } });
+        let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(plan.company.id, plan.stuff.company.id);
         if (contracts.length == 1) {
             let contract = contracts[0];
             let decrease_cash = plan.unit_price * plan.count;
@@ -1238,10 +1281,12 @@ module.exports = {
             return { arrears: 0, outstanding_vehicles: 0 };
         }
         const price_to_use = unit_price !== null ? unit_price : plan.unit_price;
-        let contracts = await plan.stuff.company.getSale_contracts({
-            where: { buyCompanyId: plan.company.id },
-            ...(transaction && { transaction })
-        });
+        let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(
+            plan.company.id,
+            plan.stuff.company.id,
+            false,
+            transaction
+        );
         let cur_balance = 0;
         if (contracts.length == 1) {
             cur_balance = contracts[0].balance;
