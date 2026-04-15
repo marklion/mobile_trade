@@ -229,6 +229,10 @@ module.exports = {
                     await new_plan.setRbac_user(user);
                     await plan_lib.rp_history_create(new_plan, user.name);
                     new_plan.unit_price = stuff.price;
+                    let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company.id, sale_company.id);
+                    if (contracts.length === 1) {
+                        new_plan.unit_price = await plan_lib.get_contract_effective_unit_price(contracts[0], stuff, new_plan.unit_price);
+                    }
                     new_plan.status = 0;
                     new_plan.trans_company_name = body.trans_company_name;
                     if (bi) {
