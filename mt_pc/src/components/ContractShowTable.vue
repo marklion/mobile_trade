@@ -274,6 +274,10 @@ export default {
             selected_scheme_id: null,
             show_stuff_price_dialog: false,
             stuff_price_rows: [],
+            self_info: {
+                company_is_group: false,
+                company_id: null,
+            },
         }
     },
     components: {
@@ -289,10 +293,19 @@ export default {
     },
     computed: {
         can_manage_discount() {
-            return this.req_path === '/sale_management/contract_get' && this.is_motive && !this.is_buy;
+            return this.show_stat_scope_selector && this.is_motive && !this.is_buy;
+        },
+        has_group_member_scope() {
+            if (!this.self_info || this.self_info.company_id == null) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
         },
         show_stat_scope_selector() {
-            return this.req_path === '/sale_management/contract_get';
+            return this.req_path === '/sale_management/contract_get'
+                && this.self_info
+                && this.self_info.company_is_group === true
+                && this.has_group_member_scope;
         },
         contract_req_body() {
             return this.make_context_req();
@@ -308,9 +321,19 @@ export default {
         }
     },
     mounted() {
-        this.load_stat_scopes();
+        this.load_self_info().then(() => {
+            this.load_stat_scopes();
+        });
     },
     methods: {
+        load_self_info: async function () {
+            try {
+                const ret = await this.$send_req('/global/self_info', {});
+                this.self_info = ret || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+        },
         make_context_req: function (body = {}) {
             let ret = { ...body };
             if (this.show_stat_scope_selector && this.stat_context_company_id != null) {

@@ -268,6 +268,10 @@ export default {
             show_stuff_price_popup: false,
             show_stuff_price_modal: false,
             stuff_price_input: '',
+            self_info: {
+                company_is_group: false,
+                company_id: null,
+            },
         };
     },
     components: {
@@ -275,8 +279,18 @@ export default {
         "module-filter": ModuleFilter
     },
     computed: {
+        has_group_member_scope: function () {
+            if (!this.self_info || this.self_info.company_id == null) {
+                return false;
+            }
+            return (this.stat_scopes || []).some(item => item.id !== this.self_info.company_id);
+        },
         show_scope_switch: function () {
-            return this.cur_urls && this.cur_urls.get_url === '/sale_management/contract_get';
+            return this.cur_urls
+                && this.cur_urls.get_url === '/sale_management/contract_get'
+                && this.self_info
+                && this.self_info.company_is_group === true
+                && this.has_group_member_scope;
         },
         current_scope_name: function () {
             const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
@@ -284,10 +298,18 @@ export default {
         },
     },
     methods: {
+        load_self_info: async function () {
+            try {
+                const info = await this.$send_req('/global/self_info', {});
+                this.self_info = info || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+        },
         make_context_req: function (body = {}, url = '') {
             const ret = { ...body };
-            const use_sale_context = this.cur_urls && this.cur_urls.get_url === '/sale_management/contract_get';
-            const hit_sale_api = url.startsWith('/sale_management/');
+            const use_sale_context = this.show_scope_switch;
+            const hit_sale_api = url.startsWith('/sale_management/') && this.self_info && this.self_info.company_is_group === true;
             if ((use_sale_context || hit_sale_api) && this.stat_context_company_id != null) {
                 ret.stat_context_company_id = this.stat_context_company_id;
             }
@@ -780,11 +802,15 @@ export default {
     created: function () {
         // 在组件创建时立即初始化，防止模板渲染时访问未定义属性
         this.init_top_seg();
-        this.load_stat_scopes();
+        this.load_self_info().then(() => {
+            this.load_stat_scopes();
+        });
     },
     onShow: function () {
         this.init_top_seg();
-        this.load_stat_scopes();
+        this.load_self_info().then(() => {
+            this.load_stat_scopes();
+        });
         this.new_contract.begin_time = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
         let end_date = new Date();
         end_date.setMonth(end_date.getMonth() + 12);
