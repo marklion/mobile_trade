@@ -205,7 +205,14 @@ module.exports = {
             func: async function (body, token) {
                 let company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
-                if (!contract || !(await plan_lib.has_sale_contract_operate_permission(company, contract))) {
+                const can_update = !!(
+                    contract
+                    && (
+                        await plan_lib.has_sale_contract_operate_permission(company, contract)
+                        || await company.hasBuy_contract(contract)
+                    )
+                );
+                if (!can_update) {
                     throw { err_msg: '无权限' };
                 }
                 await plan_lib.update_contract(body.contract_id, body.begin_time, body.end_time, body.number, body.customer_code);
