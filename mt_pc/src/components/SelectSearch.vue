@@ -1,6 +1,6 @@
 <template>
 <el-select :filterable="filterable" ref="select" :filter-method="search_item" v-permission="permission_array" v-model="filter_id" placeholder="请选择" @change="refresh">
-    <page-content :search_input="search_input" :search_key="[item_label]" ref="filter" :body_key="body_key" :enable="should_enable" :req_url="get_url"  >
+    <page-content :search_input="search_input" :search_key="[item_label]" ref="filter" :body_key="body_key" :enable="should_enable" :req_url="get_url" :req_body="req_body" >
         <template v-slot:default="slotProps">
             <el-option v-if="first_item" :label="first_item" :value="0"></el-option>
             <el-option v-for="item in slotProps.content" :key="item.id" :label="$getNestedProperty(item, item_label)" :value="$getNestedProperty(item, item_value)">
@@ -26,6 +26,12 @@ export default {
         item_label: String,
         item_value: String,
         value: [String, Number],
+        req_body: {
+            type: Object,
+            default: function () {
+                return {};
+            }
+        }
     },
     computed: {
         should_enable: function () {

@@ -145,6 +145,15 @@ let db_opt = {
             can_view: { type: DataTypes.BOOLEAN, defaultValue: false },
             can_operate: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
+        contract_discount_scheme: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            delta_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('delta_price') },
+        },
+        contract_stuff_price: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            unit_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('unit_price') },
+        },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             plan_time: { type: DataTypes.STRING },
@@ -532,6 +541,14 @@ let db_opt = {
         _sq.models.company.hasMany(_sq.models.contract, { as: 'sale_contracts', foreignKey: 'saleCompanyId' });
         _sq.models.stuff.belongsToMany(_sq.models.contract, { through: 'contract_stuff' });
         _sq.models.contract.belongsToMany(_sq.models.stuff, { through: 'contract_stuff' });
+        _sq.models.contract_discount_scheme.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.contract_discount_scheme);
+        _sq.models.contract.belongsTo(_sq.models.contract_discount_scheme, { as: 'discount_scheme', foreignKey: 'discountSchemeId', constraints: false });
+        _sq.models.contract_discount_scheme.hasMany(_sq.models.contract, { foreignKey: 'discountSchemeId', constraints: false });
+        _sq.models.contract_stuff_price.belongsTo(_sq.models.contract);
+        _sq.models.contract.hasMany(_sq.models.contract_stuff_price);
+        _sq.models.contract_stuff_price.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.contract_stuff_price);
         _sq.models.balance_history.belongsTo(_sq.models.contract);
         _sq.models.contract.hasMany(_sq.models.balance_history);
         _sq.models.price_history.belongsTo(_sq.models.stuff);

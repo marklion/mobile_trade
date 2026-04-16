@@ -6,6 +6,18 @@ const common = require('./common');
 const moment = require('moment');
 const util_lib = require('../lib/util_lib');
 const group_lib = require('../lib/group_lib');
+
+function normalize_price(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) {
+        throw { err_msg: '价格格式错误' };
+    }
+    return Number(n.toFixed(2));
+}
+
+async function resolve_contract_context_company(token, stat_context_company_id, need_write = false) {
+    return await plan_lib.resolve_sale_contract_context_company(token, stat_context_company_id, need_write);
+}
 module.exports = {
     name: 'sale_management',
     description: '销售管理',
@@ -174,7 +186,39 @@ module.exports = {
                 return { result: true };
             },
         },
-        contract_update: common.contract_update,
+        contract_update: {
+            name: '更新合同',
+            description: '更新合同',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                begin_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                number: { type: String, have_to: false, mean: '合同号', example: 1 },
+                customer_code: { type: String, have_to: false, mean: '客户合同号', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
+                const can_update = !!(
+                    contract
+                    && (
+                        await plan_lib.has_sale_contract_operate_permission(company, contract)
+                        || await company.hasBuy_contract(contract)
+                    )
+                );
+                if (!can_update) {
+                    throw { err_msg: '无权限' };
+                }
+                await plan_lib.update_contract(body.contract_id, body.begin_time, body.end_time, body.number, body.customer_code);
+                return { result: true };
+            },
+        },
         contract_make: {
             name: '生成合同',
             description: '生成合同',
@@ -186,13 +230,14 @@ module.exports = {
                 end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01 12:00:00' },
                 number: { type: String, have_to: false, mean: '合同号', example: 1 },
                 customer_code: { type: String, have_to: false, mean: '客户合同号', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 contract_id: { type: Number, mean: '合同ID', example: 1 }
             },
             func: async function (body, token) {
                 let ret = { contract_id: 0 }
-                let sale_company = await rbac_lib.get_company_by_token(token);
+                let sale_company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
                 let buy_company = await db_opt.get_sq().models.company.findByPk(body.customer_id);
                 if (buy_company && sale_company) {
                     ret = await plan_lib.make_contract(buy_company, sale_company, body.begin_time, body.end_time, body.number, body.customer_code);
@@ -209,13 +254,14 @@ module.exports = {
             is_get_api: false,
             params: {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let ret = { result: false };
-                let sale_company = await rbac_lib.get_company_by_token(token);
+                let sale_company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
                 if (contract && sale_company && await plan_lib.has_sale_contract_operate_permission(sale_company, contract)) {
                     await plan_lib.destroy_contract(contract.id);
@@ -230,15 +276,13 @@ module.exports = {
             is_write: false,
             is_get_api: false,
             params: {
-                customer_id: { type: Number, have_to: true, mean: '客户ID', example: 1 }
+                customer_id: { type: Number, have_to: true, mean: '客户ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: common.contract_res_detail_define,
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
                 if (!company) {
-                    throw { err_msg: '无权限' };
-                }
-                if (!company.is_group) {
                     throw { err_msg: '无权限' };
                 }
                 let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(body.customer_id, company.id, true);
@@ -255,6 +299,7 @@ module.exports = {
             is_get_api: true,
             params: {
                 pageNo: { type: Number, have_to: false, mean: '页码（从0开始）', example: 0 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 stuff: {
@@ -268,7 +313,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 const sq = db_opt.get_sq();
-                const company = await rbac_lib.get_company_by_token(token);
+                const company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
                 if (!company) {
                     return { stuff: [], total: 0 };
                 }
@@ -306,6 +351,7 @@ module.exports = {
             is_get_api: true,
             params: {
                 stuff_id: { type: Number, have_to: false, mean: '货物ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 contracts: {
@@ -343,7 +389,7 @@ module.exports = {
             },
 
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
                 let found_ret = await plan_lib.get_all_sale_contracts(company, body.pageNo, body.stuff_id);
                 return {
                     contracts: found_ret.rows,
@@ -359,13 +405,14 @@ module.exports = {
             params: {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let ret = { result: false };
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
                 let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
                 let stuff_company = stuff ? await stuff.getCompany() : null;
@@ -389,13 +436,14 @@ module.exports = {
             params: {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let ret = { result: false };
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
                 let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
                 let stuff_company = stuff ? await stuff.getCompany() : null;
@@ -419,11 +467,13 @@ module.exports = {
             params: {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 phone: { type: String, have_to: true, mean: '用户电话', example: '用户电话' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
+                await resolve_contract_context_company(token, body.stat_context_company_id, true);
                 await plan_lib.authorize_user2contract(body.phone, body.contract_id, token);
                 return { result: true };
             }
@@ -437,14 +487,183 @@ module.exports = {
             params: {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 phone: { type: String, have_to: true, mean: '用户电话', example: '用户电话' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
+                await resolve_contract_context_company(token, body.stat_context_company_id, true);
                 await plan_lib.unauthorize_user2contract(body.phone, body.contract_id, token);
                 return { result: true };
             }
+        },
+        discount_scheme_list: {
+            name: '优惠方案列表',
+            description: '按当前销售主体获取优惠方案',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                schemes: {
+                    type: Array, mean: '优惠方案', explain: {
+                        id: { type: Number, mean: '方案ID', example: 1 },
+                        name: { type: String, mean: '方案名', example: '单价-1元' },
+                        delta_price: { type: Number, mean: '单价调整值', example: -1 },
+                    }
+                }
+            },
+            func: async function (body, token) {
+                const sq = db_opt.get_sq();
+                const company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
+                const owner_company_id = company.parentGroupCompanyId || company.id;
+                const schemes = await sq.models.contract_discount_scheme.findAll({
+                    where: { companyId: owner_company_id },
+                    order: [['id', 'DESC']],
+                });
+                return { schemes };
+            },
+        },
+        discount_scheme_upsert: {
+            name: '保存优惠方案',
+            description: '新增或编辑优惠方案',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: false, mean: '方案ID', example: 1 },
+                name: { type: String, have_to: true, mean: '方案名称', example: '单价-1元' },
+                delta_price: { type: Number, have_to: true, mean: '单价调整值', example: -1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                const sq = db_opt.get_sq();
+                const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+                const owner_company_id = company.parentGroupCompanyId || company.id;
+                const payload = {
+                    name: body.name,
+                    delta_price: normalize_price(body.delta_price),
+                    companyId: owner_company_id,
+                };
+                if (body.id) {
+                    const item = await sq.models.contract_discount_scheme.findByPk(body.id);
+                    if (!item || item.companyId !== owner_company_id) {
+                        throw { err_msg: '无权限' };
+                    }
+                    item.name = payload.name;
+                    item.delta_price = payload.delta_price;
+                    await item.save();
+                } else {
+                    await sq.models.contract_discount_scheme.create(payload);
+                }
+                return { result: true };
+            },
+        },
+        discount_scheme_delete: {
+            name: '删除优惠方案',
+            description: '删除优惠方案',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '方案ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                const sq = db_opt.get_sq();
+                const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+                const owner_company_id = company.parentGroupCompanyId || company.id;
+                const item = await sq.models.contract_discount_scheme.findByPk(body.id);
+                if (!item || item.companyId !== owner_company_id) {
+                    throw { err_msg: '无权限' };
+                }
+                await sq.models.contract.update({ discountSchemeId: null }, { where: { discountSchemeId: item.id } });
+                await item.destroy();
+                return { result: true };
+            },
+        },
+        contract_set_discount_scheme: {
+            name: '设置合同优惠方案',
+            description: '指定合同应用的优惠方案',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                scheme_id: { type: Number, have_to: false, mean: '优惠方案ID，空表示取消', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                const sq = db_opt.get_sq();
+                const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+                const owner_company_id = company.parentGroupCompanyId || company.id;
+                const contract = await sq.models.contract.findByPk(body.contract_id);
+                if (!contract || !(await plan_lib.has_sale_contract_operate_permission(company, contract))) {
+                    throw { err_msg: '无权限' };
+                }
+                if (body.scheme_id) {
+                    const scheme = await sq.models.contract_discount_scheme.findByPk(body.scheme_id);
+                    if (!scheme || scheme.companyId !== owner_company_id) {
+                        throw { err_msg: '优惠方案不存在' };
+                    }
+                    contract.discountSchemeId = scheme.id;
+                } else {
+                    contract.discountSchemeId = null;
+                }
+                await contract.save();
+                return { result: true };
+            },
+        },
+        contract_set_stuff_price: {
+            name: '设置合同物料单价',
+            description: '直接设置合同某物料的单价',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                unit_price: { type: Number, have_to: false, mean: '物料单价，空表示取消', example: 102.5 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                const sq = db_opt.get_sq();
+                const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+                const contract = await sq.models.contract.findByPk(body.contract_id);
+                const stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (!contract || !stuff || !(await plan_lib.has_sale_contract_operate_permission(company, contract))) {
+                    throw { err_msg: '无权限' };
+                }
+                if (!(await contract.hasStuff(stuff))) {
+                    throw { err_msg: '该合同未关联此物料' };
+                }
+                const where = { contractId: contract.id, stuffId: stuff.id };
+                const exist_row = await sq.models.contract_stuff_price.findOne({ where });
+                if (body.unit_price === undefined || body.unit_price === null || body.unit_price === '') {
+                    if (exist_row) {
+                        await exist_row.destroy();
+                    }
+                } else {
+                    const unit_price = normalize_price(body.unit_price);
+                    if (exist_row) {
+                        exist_row.unit_price = unit_price;
+                        await exist_row.save();
+                    } else {
+                        await sq.models.contract_stuff_price.create({ ...where, unit_price });
+                    }
+                }
+                return { result: true };
+            },
         },
         export_plans: common.export_plans(async function (body, token) {
             let plans = await plan_lib.filter_plan4manager(body, token);

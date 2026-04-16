@@ -220,7 +220,44 @@ module.exports = {
         if (!company || !contract) {
             return false;
         }
-        return await company.hasSale_contract(contract);
+        if (await company.hasSale_contract(contract)) {
+            return true;
+        }
+        if (company.parentGroupCompanyId) {
+            const sq = db_opt.get_sq();
+            const owner = await sq.models.company.findByPk(company.parentGroupCompanyId);
+            if (owner && await owner.hasSale_contract(contract)) {
+                return true;
+            }
+        }
+        return false;
+    },
+    resolve_sale_contract_context_company: async function (token, stat_context_company_id, need_write = false) {
+        const sq = db_opt.get_sq();
+        const home_company = await rbac_lib.get_company_by_token(token);
+        if (!home_company) {
+            throw { err_msg: '无权限' };
+        }
+        if (stat_context_company_id === undefined || stat_context_company_id === null || stat_context_company_id === '') {
+            return home_company;
+        }
+        const context_id = Number(stat_context_company_id);
+        if (!Number.isFinite(context_id) || context_id === home_company.id) {
+            return home_company;
+        }
+        if (!home_company.is_group) {
+            throw { err_msg: '无权限' };
+        }
+        const user = await rbac_lib.get_user_by_token(token);
+        const member_company = await sq.models.company.findByPk(context_id);
+        if (!user || !member_company || member_company.parentGroupCompanyId !== home_company.id) {
+            throw { err_msg: '无权限' };
+        }
+        const has_access = await group_lib.user_has_member_data_access(user.id, member_company.id, need_write);
+        if (!has_access) {
+            throw { err_msg: '无权限' };
+        }
+        return member_company;
     },
     contractOutOfDate: function (endDate) {
         let ret = false;
@@ -232,6 +269,13 @@ module.exports = {
     },
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
+        let owner_company = _compnay;
+        if (_compnay && _compnay.parentGroupCompanyId) {
+            let parent_company = await sq.models.company.findByPk(_compnay.parentGroupCompanyId);
+            if (parent_company) {
+                owner_company = parent_company;
+            }
+        }
         let conditions = {
             order: [['updatedAt', 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
@@ -239,20 +283,67 @@ module.exports = {
             include: [
                 { model: sq.models.company, as: 'buy_company' },
                 { model: sq.models.stuff, },
-                { model: sq.models.rbac_user, }
+                { model: sq.models.rbac_user, },
+                { model: sq.models.contract_discount_scheme, as: 'discount_scheme' },
             ],
         };
         if (stuff_id != undefined) {
             conditions.include[1].where = { id: stuff_id };
             conditions.include[1].required = true;
         }
-        let rows = await _compnay.getSale_contracts(conditions);
-        let count = await _compnay.countSale_contracts();
+        let rows = await owner_company.getSale_contracts(conditions);
+        let count = await owner_company.countSale_contracts();
         rows.forEach(item => {
             item.company = item.buy_company
             item.expired = this.contractOutOfDate(item.end_time)
         })
+        if (rows.length > 0) {
+            const contract_ids = rows.map(item => item.id);
+            const price_rows = await sq.models.contract_stuff_price.findAll({
+                where: {
+                    contractId: {
+                        [db_opt.Op.in]: contract_ids
+                    }
+                },
+                include: [{ model: sq.models.stuff, attributes: ['id', 'name'] }],
+                order: [['id', 'ASC']],
+            });
+            const price_map = new Map();
+            price_rows.forEach((row) => {
+                const cid = row.contractId;
+                if (!price_map.has(cid)) {
+                    price_map.set(cid, []);
+                }
+                price_map.get(cid).push(row);
+            });
+            rows.forEach((item) => {
+                item.setDataValue('contract_stuff_prices', price_map.get(item.id) || []);
+            });
+        }
         return { rows: rows, count: count };
+    },
+    get_contract_stuff_price: async function (contract_id, stuff_id) {
+        const sq = db_opt.get_sq();
+        return await sq.models.contract_stuff_price.findOne({
+            where: {
+                contractId: contract_id,
+                stuffId: stuff_id,
+            }
+        });
+    },
+    get_contract_effective_unit_price: async function (contract, stuff, default_price) {
+        let final_price = default_price;
+        const override_price = await this.get_contract_stuff_price(contract.id, stuff.id);
+        if (override_price) {
+            final_price = override_price.unit_price;
+        } else if (contract.discountSchemeId) {
+            const sq = db_opt.get_sq();
+            const scheme = await sq.models.contract_discount_scheme.findByPk(contract.discountSchemeId);
+            if (scheme) {
+                final_price = Number(default_price) + Number(scheme.delta_price);
+            }
+        }
+        return Number(Number(final_price).toFixed(2));
     },
     get_all_buy_contracts: async function (_compnay, _pageNo) {
         let sq = db_opt.get_sq();

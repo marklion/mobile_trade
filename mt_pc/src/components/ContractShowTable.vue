@@ -1,12 +1,30 @@
 <template>
 <div>
+    <el-radio-group
+        v-if="show_stat_scope_selector && stat_scopes.length > 1"
+        v-model="stat_context_company_id"
+        size="small"
+        style="margin-right: 10px;"
+        @change="on_scope_change"
+    >
+        <el-radio-button v-for="s in stat_scopes" :key="s.id" :label="s.id">{{ s.name }}</el-radio-button>
+    </el-radio-group>
     <el-button v-if="is_motive" icon="el-icon-circle-plus" type="success" @click="prepare_new_contract">新增合同</el-button>
+    <el-button
+        v-if="can_manage_discount"
+        icon="el-icon-s-operation"
+        type="primary"
+        style="margin-left: 10px;"
+        @click="open_scheme_dialog"
+    >
+        优惠方案
+    </el-button>
     <el-input placeholder="输入公司名搜索" v-model="filter_string" clearable @clear="cancel_search" style="width: 300px;margin-left: 10px;">
         <template #append>
             <el-button type="primary" size="small" icon="el-icon-search" @click="do_search">搜索</el-button>
         </template>
     </el-input>
-    <page-content ref="contracts" body_key="contracts" enable :req_body="{}" :req_url="req_path" :search_input="filter_string" :search_key="['company.name']">
+    <page-content ref="contracts" body_key="contracts" enable :req_body="contract_req_body" :req_url="req_path" :search_input="filter_string" :search_key="['company.name']">
         <template v-slot:default="slotProps">
             <el-table :data="slotProps.content" stripe>
                 <el-table-column label="对方公司" min-width="170">
@@ -52,6 +70,16 @@
                         </div>
                     </template>
                 </el-table-column>
+                <el-table-column v-if="can_manage_discount" label="优惠策略" min-width="180">
+                    <template slot-scope="scope">
+                        <div>
+                            方案: {{ scope.row.discount_scheme ? scope.row.discount_scheme.name : '无' }}
+                        </div>
+                        <div v-if="scope.row.contract_stuff_prices && scope.row.contract_stuff_prices.length > 0">
+                            物料特价: {{ scope.row.contract_stuff_prices.length }} 项
+                        </div>
+                    </template>
+                </el-table-column>
                 <el-table-column label="操作" fixed="right" width="200">
                     <template slot-scope="scope">
                         <div v-if="is_motive">
@@ -62,6 +90,8 @@
                             <el-button type="text" size="small" @click="preview_company_attach(scope.row)">查看资质</el-button>
                             <el-button v-if="is_motive" type="text" size="small" @click="prepare_add_stuff(scope.row)">新增物料</el-button>
                             <el-button v-if="is_motive && !is_buy" type="text" size="small" @click="add_auth_user(scope.row)">新增授权</el-button>
+                            <el-button v-if="can_manage_discount" type="text" size="small" @click="prepare_contract_scheme(scope.row)">设置方案</el-button>
+                            <el-button v-if="can_manage_discount" type="text" size="small" @click="prepare_stuff_price(scope.row)">物料单价</el-button>
                         </div>
                     </template>
                 </el-table-column>
@@ -71,7 +101,7 @@
     <el-image-viewer v-if="show_pics" :on-close="close_preview" :url-list="pics">
     </el-image-viewer>
     <el-dialog title="新增物料" :visible.sync="show_add_stuff" width="30%">
-        <select-search body_key="stuff" :get_url="stuff_select_url" item_label="name" item_value="id" :permission_array="stuff_select_url === '/sale_management/get_stuff_for_contract' ? ['sale_management'] : ['stuff']" v-model="selected_stuff_id"></select-search>
+        <select-search body_key="stuff" :req_body="contract_req_body" :get_url="stuff_select_url" item_label="name" item_value="id" :permission_array="stuff_select_url === '/sale_management/get_stuff_for_contract' ? ['sale_management'] : ['stuff']" v-model="selected_stuff_id"></select-search>
         <span slot="footer">
             <el-button @click="show_add_stuff = false">取 消</el-button>
             <el-button type="primary" @click="do_add_stuff">确 定</el-button>
@@ -139,6 +169,55 @@
             </template>
         </page-content>
     </el-drawer>
+    <el-dialog title="优惠方案管理" :visible.sync="show_scheme_dialog" width="50%">
+        <el-form :inline="true" :model="scheme_form">
+            <el-form-item label="方案名称">
+                <el-input v-model="scheme_form.name" placeholder="如：单价-1元"></el-input>
+            </el-form-item>
+            <el-form-item label="单价调整">
+                <el-input-number v-model="scheme_form.delta_price" :step="0.1" :precision="2"></el-input-number>
+            </el-form-item>
+            <el-form-item>
+                <el-button type="primary" @click="save_scheme">保存</el-button>
+                <el-button @click="reset_scheme_form">重置</el-button>
+            </el-form-item>
+        </el-form>
+        <el-table :data="discount_schemes" stripe>
+            <el-table-column prop="name" label="方案名"></el-table-column>
+            <el-table-column prop="delta_price" label="单价调整"></el-table-column>
+            <el-table-column label="操作" width="160">
+                <template slot-scope="scope">
+                    <el-button type="text" size="small" @click="edit_scheme(scope.row)">编辑</el-button>
+                    <el-button type="text" size="small" style="color: #f56c6c" @click="delete_scheme(scope.row)">删除</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-dialog>
+    <el-dialog title="设置合同优惠方案" :visible.sync="show_contract_scheme_dialog" width="30%">
+        <el-select v-model="selected_scheme_id" clearable placeholder="请选择优惠方案" style="width: 100%;">
+            <el-option v-for="item in discount_schemes" :key="item.id" :label="`${item.name}（${item.delta_price}）`" :value="item.id"></el-option>
+        </el-select>
+        <span slot="footer">
+            <el-button @click="show_contract_scheme_dialog = false">取 消</el-button>
+            <el-button type="primary" @click="save_contract_scheme">确 定</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog title="设置合同物料单价" :visible.sync="show_stuff_price_dialog" width="40%">
+        <el-table :data="stuff_price_rows" stripe>
+            <el-table-column prop="name" label="物料"></el-table-column>
+            <el-table-column label="单价">
+                <template slot-scope="scope">
+                    <el-input-number v-model="scope.row.unit_price" :min="0" :step="0.1" :precision="2" :controls="false"></el-input-number>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作" width="180">
+                <template slot-scope="scope">
+                    <el-button type="text" size="small" @click="save_single_stuff_price(scope.row)">保存</el-button>
+                    <el-button type="text" size="small" @click="clear_single_stuff_price(scope.row)">清空</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+    </el-dialog>
 </div>
 </template>
 
@@ -182,6 +261,23 @@ export default {
                     trigger: 'blur'
                 }],
             },
+            stat_scopes: [],
+            stat_context_company_id: null,
+            show_scheme_dialog: false,
+            discount_schemes: [],
+            scheme_form: {
+                id: 0,
+                name: '',
+                delta_price: 0,
+            },
+            show_contract_scheme_dialog: false,
+            selected_scheme_id: null,
+            show_stuff_price_dialog: false,
+            stuff_price_rows: [],
+            self_info: {
+                company_is_group: false,
+                company_id: null,
+            },
         }
     },
     components: {
@@ -196,6 +292,23 @@ export default {
 
     },
     computed: {
+        can_manage_discount() {
+            return this.show_stat_scope_selector && this.has_group_member_scope && this.is_motive && !this.is_buy;
+        },
+        has_group_member_scope() {
+            if (!this.self_info || this.self_info.company_id == null) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
+        },
+        show_stat_scope_selector() {
+            return this.req_path === '/sale_management/contract_get'
+                && this.self_info
+                && this.self_info.company_is_group === true;
+        },
+        contract_req_body() {
+            return this.make_context_req();
+        },
         charge_history_url() {
             return this.req_path === '/customer/contract_get' ? '/customer/history' : '/cash/history';
         },
@@ -206,18 +319,164 @@ export default {
             return '/stuff/get_all';
         }
     },
+    mounted() {
+        this.load_self_info().then(() => {
+            this.load_stat_scopes();
+        });
+    },
     methods: {
+        load_self_info: async function () {
+            try {
+                const ret = await this.$send_req('/global/self_info', {});
+                this.self_info = ret || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+        },
+        make_context_req: function (body = {}) {
+            let ret = { ...body };
+            if (this.show_stat_scope_selector && this.stat_context_company_id != null) {
+                ret.stat_context_company_id = this.stat_context_company_id;
+            }
+            return ret;
+        },
+        load_stat_scopes: async function () {
+            if (
+                this.req_path !== '/sale_management/contract_get'
+                || !this.self_info
+                || this.self_info.company_is_group !== true
+            ) {
+                return;
+            }
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    this.stat_context_company_id = this.stat_scopes[0].id;
+                    this.$nextTick(() => {
+                        if (this.$refs.contracts) {
+                            this.$refs.contracts.refresh(1);
+                        }
+                    });
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        on_scope_change: function () {
+            this.$refs.contracts.refresh(1);
+            if (this.can_manage_discount) {
+                this.load_discount_schemes();
+            }
+        },
+        open_scheme_dialog: async function () {
+            this.show_scheme_dialog = true;
+            this.reset_scheme_form();
+            await this.load_discount_schemes();
+        },
+        load_discount_schemes: async function () {
+            const ret = await this.$send_req('/sale_management/discount_scheme_list', this.make_context_req({}));
+            this.discount_schemes = ret.schemes || [];
+        },
+        reset_scheme_form: function () {
+            this.scheme_form = {
+                id: 0,
+                name: '',
+                delta_price: 0,
+            };
+        },
+        edit_scheme: function (row) {
+            this.scheme_form = {
+                id: row.id,
+                name: row.name,
+                delta_price: row.delta_price,
+            };
+        },
+        save_scheme: async function () {
+            if (!this.scheme_form.name) {
+                this.$message.warning('请输入方案名称');
+                return;
+            }
+            await this.$send_req('/sale_management/discount_scheme_upsert', this.make_context_req({
+                id: this.scheme_form.id || undefined,
+                name: this.scheme_form.name,
+                delta_price: this.scheme_form.delta_price,
+            }));
+            this.$message.success('保存成功');
+            this.reset_scheme_form();
+            await this.load_discount_schemes();
+            this.$refs.contracts.refresh(1);
+        },
+        delete_scheme: function (row) {
+            this.$confirm(`确认删除优惠方案「${row.name}」吗？`, '提示', {
+                confirmButtonText: '确定',
+                cancelButtonText: '取消',
+                type: 'warning',
+            }).then(async () => {
+                await this.$send_req('/sale_management/discount_scheme_delete', this.make_context_req({ id: row.id }));
+                this.$message.success('删除成功');
+                await this.load_discount_schemes();
+                this.$refs.contracts.refresh(1);
+            });
+        },
+        prepare_contract_scheme: async function (contract) {
+            this.focus_contract = contract;
+            this.selected_scheme_id = contract.discountSchemeId || null;
+            await this.load_discount_schemes();
+            this.show_contract_scheme_dialog = true;
+        },
+        save_contract_scheme: async function () {
+            await this.$send_req('/sale_management/contract_set_discount_scheme', this.make_context_req({
+                contract_id: this.focus_contract.id,
+                scheme_id: this.selected_scheme_id || null,
+            }));
+            this.show_contract_scheme_dialog = false;
+            this.$message.success('设置成功');
+            this.$refs.contracts.refresh(this.$refs.contracts.cur_page || 1);
+        },
+        prepare_stuff_price: function (contract) {
+            this.focus_contract = contract;
+            const override_map = new Map();
+            (contract.contract_stuff_prices || []).forEach((x) => {
+                override_map.set(x.stuffId, x.unit_price);
+            });
+            this.stuff_price_rows = (contract.stuff || []).map((x) => ({
+                stuff_id: x.id,
+                name: x.name,
+                unit_price: override_map.get(x.id),
+            }));
+            this.show_stuff_price_dialog = true;
+        },
+        save_single_stuff_price: async function (row) {
+            await this.$send_req('/sale_management/contract_set_stuff_price', this.make_context_req({
+                contract_id: this.focus_contract.id,
+                stuff_id: row.stuff_id,
+                unit_price: row.unit_price,
+            }));
+            this.$message.success('保存成功');
+            this.$refs.contracts.refresh(this.$refs.contracts.cur_page || 1);
+        },
+        clear_single_stuff_price: async function (row) {
+            row.unit_price = undefined;
+            await this.$send_req('/sale_management/contract_set_stuff_price', this.make_context_req({
+                contract_id: this.focus_contract.id,
+                stuff_id: row.stuff_id,
+                unit_price: null,
+            }));
+            this.$message.success('已清空');
+            this.$refs.contracts.refresh(this.$refs.contracts.cur_page || 1);
+        },
         reverseCharge: function (charge) { 
             this.$confirm('确定冲销该充值吗?', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
             type: 'warning'
         }).then(async () => {
-            await this.$send_req('/cash/charge', {
+            await this.$send_req('/cash/charge', this.make_context_req({
                 contract_id: this.focus_contract.id,
                 cash_increased: -parseFloat(charge.cash_increased),
                 comment: `回退${charge.time}的充值: ${charge.comment}`
-            });
+            }));
             this.$refs.charge_history.refresh(1);
         });
         },      
@@ -228,13 +487,13 @@ export default {
                 type: 'warning'
             }).then(async () => {
                 if (this.is_buy) {
-                    await this.$send_req('/buy_management/contract_destroy', {
+                    await this.$send_req('/buy_management/contract_destroy', this.make_context_req({
                         contract_id: contract.id
-                    });
+                    }));
                 } else {
-                    await this.$send_req('/sale_management/contract_destroy', {
+                    await this.$send_req('/sale_management/contract_destroy', this.make_context_req({
                         contract_id: contract.id
-                    });
+                    }));
                 }
                 this.$refs.contracts.refresh(1);
             });
@@ -242,11 +501,11 @@ export default {
         do_charge: async function () {
             this.$refs.charge_form.validate(async (valid) => {
                 if (valid) {
-                    await this.$send_req('/cash/charge', {
+                    await this.$send_req('/cash/charge', this.make_context_req({
                         contract_id: this.focus_contract.id,
                         cash_increased: parseFloat(this.charge_req.cash_increased),
                         comment: this.charge_req.comment,
-                    });
+                    }));
                     this.$refs.contracts.refresh(1);
                     this.show_charge_diag = false;
                 }
@@ -292,13 +551,13 @@ export default {
                 if (this.is_buy) {
                     update_url = '/buy_management/contract_update';
                 }
-                await this.$send_req(update_url, this.contract_edit_body);
+                await this.$send_req(update_url, this.make_context_req(this.contract_edit_body));
             } else {
                 let make_url = '/sale_management/contract_make';
                 if (this.is_buy) {
                     make_url = '/buy_management/contract_make';
                 }
-                await this.$send_req(make_url, this.contract_edit_body);
+                await this.$send_req(make_url, this.make_context_req(this.contract_edit_body));
             }
             this.$refs.contracts.refresh(1);
             this.show_contract_edit = false;
@@ -312,10 +571,10 @@ export default {
             }).then(async ({
                 value
             }) => {
-                await this.$send_req('/sale_management/authorize_user', {
+                await this.$send_req('/sale_management/authorize_user', this.make_context_req({
                     contract_id: contract.id,
                     phone: value
-                });
+                }));
                 this.$refs.contracts.refresh(1);
             });
         },
@@ -328,7 +587,7 @@ export default {
             if (this.is_buy) {
                 url = "/buy_management/contract_add_stuff"
             }
-            await this.$send_req(url, req);
+            await this.$send_req(url, this.make_context_req(req));
             this.$refs.contracts.refresh(1);
             this.show_add_stuff = false;
         },
@@ -342,10 +601,10 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(async () => {
-                await this.$send_req('/sale_management/unauthorize_user', {
+                await this.$send_req('/sale_management/unauthorize_user', this.make_context_req({
                     contract_id: contract.id,
                     phone: user.phone,
-                });
+                }));
                 this.$refs.contracts.refresh(1);
             });
         },
@@ -380,10 +639,10 @@ export default {
                 if (this.is_buy) {
                     url = '/buy_management/contract_del_stuff';
                 }
-                await this.$send_req(url, {
+                await this.$send_req(url, this.make_context_req({
                     contract_id: contract.id,
                     stuff_id: stuff.id
-                });
+                }));
                 this.$refs.contracts.refresh(1);
             });
         },
