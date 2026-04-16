@@ -285,11 +285,6 @@ module.exports = {
                 { model: sq.models.stuff, },
                 { model: sq.models.rbac_user, },
                 { model: sq.models.contract_discount_scheme, as: 'discount_scheme' },
-                {
-                    model: sq.models.contract_stuff_price,
-                    separate: true,
-                    include: [{ model: sq.models.stuff, attributes: ['id', 'name'] }]
-                },
             ],
         };
         if (stuff_id != undefined) {
@@ -302,6 +297,29 @@ module.exports = {
             item.company = item.buy_company
             item.expired = this.contractOutOfDate(item.end_time)
         })
+        if (rows.length > 0) {
+            const contract_ids = rows.map(item => item.id);
+            const price_rows = await sq.models.contract_stuff_price.findAll({
+                where: {
+                    contractId: {
+                        [db_opt.Op.in]: contract_ids
+                    }
+                },
+                include: [{ model: sq.models.stuff, attributes: ['id', 'name'] }],
+                order: [['id', 'ASC']],
+            });
+            const price_map = new Map();
+            price_rows.forEach((row) => {
+                const cid = row.contractId;
+                if (!price_map.has(cid)) {
+                    price_map.set(cid, []);
+                }
+                price_map.get(cid).push(row);
+            });
+            rows.forEach((item) => {
+                item.setDataValue('contract_stuff_prices', price_map.get(item.id) || []);
+            });
+        }
         return { rows: rows, count: count };
     },
     get_contract_stuff_price: async function (contract_id, stuff_id) {
@@ -325,7 +343,7 @@ module.exports = {
                 final_price = Number(default_price) + Number(scheme.delta_price);
             }
         }
-        return Number(final_price);
+        return Number(Number(final_price).toFixed(2));
     },
     get_all_buy_contracts: async function (_compnay, _pageNo) {
         let sq = db_opt.get_sq();

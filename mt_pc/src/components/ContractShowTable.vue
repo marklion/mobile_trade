@@ -293,7 +293,7 @@ export default {
     },
     computed: {
         can_manage_discount() {
-            return this.show_stat_scope_selector && this.is_motive && !this.is_buy;
+            return this.show_stat_scope_selector && this.has_group_member_scope && this.is_motive && !this.is_buy;
         },
         has_group_member_scope() {
             if (!this.self_info || this.self_info.company_id == null) {
@@ -304,8 +304,7 @@ export default {
         show_stat_scope_selector() {
             return this.req_path === '/sale_management/contract_get'
                 && this.self_info
-                && this.self_info.company_is_group === true
-                && this.has_group_member_scope;
+                && this.self_info.company_is_group === true;
         },
         contract_req_body() {
             return this.make_context_req();
@@ -342,7 +341,11 @@ export default {
             return ret;
         },
         load_stat_scopes: async function () {
-            if (!this.show_stat_scope_selector) {
+            if (
+                this.req_path !== '/sale_management/contract_get'
+                || !this.self_info
+                || this.self_info.company_is_group !== true
+            ) {
                 return;
             }
             try {
