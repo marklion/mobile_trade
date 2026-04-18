@@ -590,9 +590,13 @@ module.exports = {
                 } else {
                     duplicateInfo = `此计划中的司机手机号 ${current_plan.driver.phone} 与 ${duplicatePlan.plan_time} 的其他计划重复`;
                 }
+                const buyer_name = duplicatePlan.company && duplicatePlan.company.name ? duplicatePlan.company.name : '未知下单方';
+                const seller_name = duplicatePlan.stuff && duplicatePlan.stuff.company && duplicatePlan.stuff.company.name
+                    ? duplicatePlan.stuff.company.name
+                    : '未知接单方';
                 return {
                     isDuplicate: true,
-                    message: `${duplicateInfo},下单方是${duplicatePlan.company.name},接单方是${duplicatePlan.stuff.company.name}。请核对信息!`
+                    message: `${duplicateInfo},下单方是${buyer_name},接单方是${seller_name}。请核对信息!`
                 };
             }
 
