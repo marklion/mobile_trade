@@ -294,9 +294,10 @@ module.exports = {
         let rows = await owner_company.getSale_contracts(conditions);
         let count = await owner_company.countSale_contracts();
         rows.forEach(item => {
-            item.company = item.buy_company
-            item.expired = this.contractOutOfDate(item.end_time)
-        })
+            item.company = item.buy_company;
+            item.expired = this.contractOutOfDate(item.end_time);
+        });
+        let price_map = new Map();
         if (rows.length > 0) {
             const contract_ids = rows.map(item => item.id);
             const price_rows = await sq.models.contract_stuff_price.findAll({
@@ -308,19 +309,22 @@ module.exports = {
                 include: [{ model: sq.models.stuff, attributes: ['id', 'name'] }],
                 order: [['id', 'ASC']],
             });
-            const price_map = new Map();
             price_rows.forEach((row) => {
                 const cid = row.contractId;
                 if (!price_map.has(cid)) {
                     price_map.set(cid, []);
                 }
-                price_map.get(cid).push(row);
-            });
-            rows.forEach((item) => {
-                item.setDataValue('contract_stuff_prices', price_map.get(item.id) || []);
+                price_map.get(cid).push(typeof row.toJSON === 'function' ? row.toJSON() : row);
             });
         }
-        return { rows: rows, count: count };
+        const plain_rows = rows.map((item) => {
+            const one = typeof item.toJSON === 'function' ? item.toJSON() : { ...item };
+            one.company = one.buy_company || one.company;
+            one.expired = this.contractOutOfDate(one.end_time);
+            one.contract_stuff_prices = price_map.get(one.id) || [];
+            return one;
+        });
+        return { rows: plain_rows, count: count };
     },
     get_contract_stuff_price: async function (contract_id, stuff_id) {
         const sq = db_opt.get_sq();

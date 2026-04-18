@@ -383,7 +383,29 @@ module.exports = {
                                 name: { type: String, mean: '用户姓名', example: '用户姓名' },
                                 phone: { type: String, mean: '用户电话', example: '用户电话' },
                             }
-                        }
+                        },
+                        discountSchemeId: { type: Number, mean: '优惠方案ID', example: 1 },
+                        discount_scheme: {
+                            type: Object, mean: '优惠方案', explain: {
+                                id: { type: Number, mean: '方案ID', example: 1 },
+                                name: { type: String, mean: '方案名', example: '单价-1元' },
+                                delta_price: { type: Number, mean: '单价调整值', example: -1 },
+                            }
+                        },
+                        contract_stuff_prices: {
+                            type: Array, mean: '合同物料特价', explain: {
+                                id: { type: Number, mean: 'ID', example: 1 },
+                                contractId: { type: Number, mean: '合同ID', example: 1 },
+                                stuffId: { type: Number, mean: '物料ID', example: 1 },
+                                unit_price: { type: Number, mean: '物料单价', example: 102.5 },
+                                stuff: {
+                                    type: Object, mean: '物料信息', explain: {
+                                        id: { type: Number, mean: '物料ID', example: 1 },
+                                        name: { type: String, mean: '物料名', example: 'LNG' },
+                                    }
+                                },
+                            }
+                        },
                     }
                 }
             },
