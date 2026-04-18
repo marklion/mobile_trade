@@ -191,7 +191,9 @@ Group Member Company Approval Config Isolated From Parent
     ${m2}  Create Dictionary  key=manual_verify_pay  enabled=${True}  approver_mode=default  auditer=rf_mem_approval_adm
     Append To List  ${mproj}  ${m1}
     Append To List  ${mproj}  ${m2}
-    Set Approval Projects  ${mproj}  ${mem_token}
+    ${mreq}  Create Dictionary  projects=${mproj}
+    ${merr}  Req to Server  /approval/set_approval_projects  ${mem_token}  ${mreq}  ${True}
+    Should Contain  ${merr}  当前公司不是集团
     ${pproj}  Create List
     ${n1}  Create Dictionary  key=closed_order_price  enabled=${False}  approver_mode=default  auditer=
     ${n2}  Create Dictionary  key=manual_verify_pay  enabled=${False}  approver_mode=default  auditer=
@@ -200,5 +202,5 @@ Group Member Company Approval Config Isolated From Parent
     Set Approval Projects  ${pproj}  ${sc_admin_token}
     ${mr}  Get Approval Projects  ${mem_token}
     ${pr}  Get Approval Projects  ${sc_admin_token}
-    Should Be Equal  ${mr}[projects][1][enabled]  ${True}
+    Should Be Equal  ${mr}[projects][1][enabled]  ${False}
     Should Be Equal  ${pr}[projects][1][enabled]  ${False}
