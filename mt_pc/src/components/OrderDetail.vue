@@ -98,7 +98,7 @@
             <el-divider content-position="center">安检信息</el-divider>
             <div v-if="plan.status == 3">
                 <div class="scroll-container">
-                    <div class="scroll-item" v-for="item in plan.sc_info" :key="item.id">
+                    <div class="scroll-item" v-for="item in (plan.sc_info || [])" :key="item.id">
                         <el-card :header="item.name">
                             <div v-if="item.sc_content">
                                 <div v-if="item.sc_content.input">
@@ -422,6 +422,9 @@ export default {
 
         },
         reorder_pics: function (id) {
+            if (!this.plan || !Array.isArray(this.plan.sc_info)) {
+                return [];
+            }
             let ret = [];
             let before_array = [];
             let after_array = [];
@@ -433,9 +436,9 @@ export default {
                     break;
                 }
             }
-            ret = before_array.concat(after_array).map(ele => {
-                return this.$make_file_url(ele.sc_content.attachment)
-            });
+            ret = before_array.concat(after_array)
+                .filter(ele => ele && ele.sc_content && ele.sc_content.attachment)
+                .map(ele => this.$make_file_url(ele.sc_content.attachment));
             return ret;
         },
         add_black_list: async function (type, id) {

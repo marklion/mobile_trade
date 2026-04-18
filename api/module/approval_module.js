@@ -1,6 +1,7 @@
 const db_opt = require('../db_opt');
 const approval_lib = require('../lib/approval_lib');
 const rbac_lib = require('../lib/rbac_lib');
+const group_lib = require('../lib/group_lib');
 module.exports = {
     name: 'approval',
     description: '新审批管理',
@@ -74,7 +75,7 @@ module.exports = {
             },
             result: { result: { type: Boolean, mean: '操作结果', example: true } },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let { company } = await group_lib.assert_group_manager_token(token);
                 await approval_lib.set_approval_projects(company, body.projects);
                 return { result: true };
             },

@@ -9,7 +9,7 @@
         </el-tab-pane>
         <el-tab-pane label="已驳回" name="closed">
         </el-tab-pane>
-        <el-tab-pane label="审批配置" name="config">
+        <el-tab-pane v-if="can_config_approval" label="审批配置" name="config">
             <el-form label-width="120px" class="approval-config-form">
                 <el-table :data="approval_config.projects" style="width: 100%" stripe>
                     <el-table-column prop="name" label="审批项目"></el-table-column>
@@ -88,6 +88,7 @@ export default {
     data: function () {
         return {
             activeName: 'all',
+            can_config_approval: false,
             approval_config: {
                 projects: [
                     { key: 'closed_order_price', name: '已关闭订单的调价', enabled: false, approver_mode: 'default', auditer: '' },
@@ -97,9 +98,21 @@ export default {
         };
     },
     methods: {
+        refresh_self_info: async function () {
+            const info = await this.$send_req('/global/self_info', {});
+            this.can_config_approval = !!(info && info.company_is_group && info.is_group_admin);
+            if (!this.can_config_approval && this.activeName === 'config') {
+                this.activeName = 'all';
+            }
+        },
         handle_tab_click: function () {
             this.$nextTick(async () => {
                 if (this.activeName == 'config') {
+                    if (!this.can_config_approval) {
+                        this.activeName = 'all';
+                        this.$message.warning('仅集团管理员可配置审批项');
+                        return;
+                    }
                     await this.refresh_config();
                     return;
                 }
@@ -150,6 +163,10 @@ export default {
             }
         },
         save_approval_config: async function () {
+            if (!this.can_config_approval) {
+                this.$message.error('仅集团管理员可配置审批项');
+                return;
+            }
             for (const row of this.approval_config.projects) {
                 if (row.enabled && row.approver_mode === 'default' && !row.auditer) {
                     this.$message.error(`「${row.name}」为默认审批人时请选择具体审批人`);
@@ -163,7 +180,10 @@ export default {
         },
     },
     mounted: async function () {
-        await this.refresh_config();
+        await this.refresh_self_info();
+        if (this.can_config_approval) {
+            await this.refresh_config();
+        }
     }
 }
 </script>

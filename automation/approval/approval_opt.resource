@@ -1,11 +1,14 @@
 *** Settings ***
 Resource  ../stuff/stuff_opt.resource
+Resource  ../group/group.resource
 Library  DateTime
 Library  Collections
 
 *** Keywords ***
 Prepare Approval Environment
     Prepare Sale and Buy
+    ${self}  Get Self Info  ${sc_admin_token}
+    Convert To Group By Super Admin  ${sale_company}[id]  ${self}[id]
     ${cfg_req}  Create Dictionary  verify_pay_by_cash=${True}
     Req to Server  /stuff/set_verify_pay_config  ${sc_admin_token}  ${cfg_req}
     Approval Reset

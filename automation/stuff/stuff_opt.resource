@@ -221,19 +221,43 @@ Get Cash Of A Company
 
 Prepare Sale and Buy
     Prepare Companies And Users
-    Add A Stuff To Sale  lng  lng_comment
-    Add A Stuff To Buy  LT  lt_comment
+    ${created_sale_stuff}  Add A Stuff To Sale  lng  lng_comment
+    ${created_buy_stuff}  Add A Stuff To Buy  LT  lt_comment
     Add A Company As Customer  ${buy_company1}[id]
     Add A Company As Supplier  ${buy_company1}[id]
     Add A Stuff To Contract  lng  bc1
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
-    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    ${target_sale_stuff}  Create Dictionary
+    FOR  ${one_stuff}  IN  @{stuffs_found}
+        IF  ${one_stuff}[id] == ${created_sale_stuff}[id]
+            ${target_sale_stuff}  Set Variable  ${one_stuff}
+            Exit For Loop
+        END
+    END
+    Should Not Be Empty  ${target_sale_stuff}
+    Set Suite Variable  ${test_stuff}  ${target_sale_stuff}
     Change Stuff Price  ${test_stuff}[id]  ${1212}
     @{stuffs_found}  Req Get to Server  /customer/get_stuff_on_sale  ${bc1_user_token}  stuff
-    Set Suite Variable  ${test_stuff}  ${stuffs_found}[0]
+    ${target_sale_stuff}  Create Dictionary
+    FOR  ${one_stuff}  IN  @{stuffs_found}
+        IF  ${one_stuff}[id] == ${created_sale_stuff}[id]
+            ${target_sale_stuff}  Set Variable  ${one_stuff}
+            Exit For Loop
+        END
+    END
+    Should Not Be Empty  ${target_sale_stuff}
+    Set Suite Variable  ${test_stuff}  ${target_sale_stuff}
     Authorize User to Contract  bc1  5678
     @{stuffs_found}  Req Get to Server  /supplier/get_stuff_need_buy  ${bc1_user_token}  stuff
-    Set Suite Variable  ${order_stuff}  ${stuffs_found}[0]
+    ${target_buy_stuff}  Create Dictionary
+    FOR  ${one_stuff}  IN  @{stuffs_found}
+        IF  ${one_stuff}[id] == ${created_buy_stuff}[id]
+            ${target_buy_stuff}  Set Variable  ${one_stuff}
+            Exit For Loop
+        END
+    END
+    Should Not Be Empty  ${target_buy_stuff}
+    Set Suite Variable  ${order_stuff}  ${target_buy_stuff}
 
 Authorize User to Contract
     [Arguments]  ${company_name}  ${user_phone}  ${token}=${sc_admin_token}

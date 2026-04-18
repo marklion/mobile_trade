@@ -76,7 +76,16 @@
                             方案: {{ scope.row.discount_scheme ? scope.row.discount_scheme.name : '无' }}
                         </div>
                         <div v-if="scope.row.contract_stuff_prices && scope.row.contract_stuff_prices.length > 0">
-                            物料特价: {{ scope.row.contract_stuff_prices.length }} 项
+                            <div>物料特价:</div>
+                            <el-tag
+                                v-for="one_price in scope.row.contract_stuff_prices"
+                                :key="one_price.id || (one_price.stuffId + '-' + one_price.unit_price)"
+                                size="mini"
+                                type="warning"
+                                style="margin: 4px 6px 0 0;"
+                            >
+                                {{ one_price.stuff && one_price.stuff.name ? one_price.stuff.name : ('物料#' + one_price.stuffId) }}: {{ one_price.unit_price }}
+                            </el-tag>
                         </div>
                     </template>
                 </el-table-column>

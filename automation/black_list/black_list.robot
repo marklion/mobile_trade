@@ -56,11 +56,11 @@ Test Create Purchase Plan With Blacklisted Vehicle
 
 Test Create Purchase Plan With Blacklisted Driver
     [Teardown]  Cleanup Blacklist
-    ${driver_ids}  Set Variable  1
-    Add To Blacklist  ${driver_ids}  driver  违规司机
     ${mv}  Search Main Vehicle by Index  0
     ${bv}  Search behind Vehicle by Index  0
     ${dv}  Search Driver by Index  0
+    ${driver_ids}  Convert To String  ${dv}[id]
+    Add To Blacklist  ${driver_ids}  driver  违规司机
     ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  exception=${True}
     Should Match Regexp  ${plan}  .*创建计划失败.*
 
