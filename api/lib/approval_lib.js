@@ -87,7 +87,14 @@ module.exports = {
         if (Number.isInteger(n)) {
             return String(n);
         }
-        return n.toFixed(2).replace(/\.?0+$/, '');
+        const fixed = n.toFixed(2);
+        if (fixed.endsWith('00')) {
+            return fixed.slice(0, -3);
+        }
+        if (fixed.endsWith('0')) {
+            return fixed.slice(0, -1);
+        }
+        return fixed;
     },
     safe_trim_comment: function (s) {
         let ret = s || '';
