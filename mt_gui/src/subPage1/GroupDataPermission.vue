@@ -4,9 +4,8 @@
             <text>当前公司不是集团，无法配置数据权限。</text>
         </view>
         <view v-else-if="selfLoaded && company_is_group && !is_group_admin" class="warn-box warn">
-            <text>您不是集团管理员，无法配置。</text>
+            <text>仅集团管理员可配置数据权限。</text>
         </view>
-        <view class="tip">指定成员公司数据由母公司哪位用户可查看、可操作。</view>
         <view class="btns">
             <fui-button type="primary" :disabled="!canManage" text="新增授权" @click="openDialog(null)"></fui-button>
             <fui-button :disabled="!canManage" text="刷新" @click="loadAll"></fui-button>
@@ -295,13 +294,6 @@ export default {
 .warn-box.warn {
     background: #fdf6ec;
     color: #e6a23c;
-}
-
-.tip {
-    color: #666;
-    font-size: 26rpx;
-    margin-bottom: 24rpx;
-    line-height: 1.5;
 }
 
 .btns {

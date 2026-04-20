@@ -1,12 +1,11 @@
 <template>
     <view class="page">
         <view v-if="selfLoaded && !company_is_group" class="warn-box err">
-            <text>当前登录公司还不是「集团」，无法使用成员管理。请先调用 company_convert_to_group 转集团。</text>
+            <text>当前登录公司不是集团，无法维护成员公司。</text>
         </view>
         <view v-else-if="selfLoaded && company_is_group && !is_group_admin" class="warn-box warn">
-            <text>您不是转集团时指定的集团管理员，无法维护成员。</text>
+            <text>仅集团管理员可维护成员公司。</text>
         </view>
-        <view class="tip">为集团母公司维护成员公司；不能添加已是其他集团成员的公司。</view>
         <view class="btns">
             <fui-button type="primary" :disabled="!canManage" text="添加成员公司" @click="openAdd"></fui-button>
             <fui-button :disabled="!canManage" text="刷新" @click="loadMembers"></fui-button>
@@ -192,13 +191,6 @@ export default {
 .warn-box.warn {
     background: #fdf6ec;
     color: #e6a23c;
-}
-
-.tip {
-    color: #666;
-    font-size: 26rpx;
-    margin-bottom: 24rpx;
-    line-height: 1.5;
 }
 
 .btns {
