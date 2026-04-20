@@ -1,15 +1,10 @@
 <template>
   <div class="group-members">
     <el-alert v-if="selfLoaded && !company_is_group"
-      title="当前登录公司在系统中还不是「集团」，所有 /group/* 接口会拒绝，因此无法拉取成员与候选公司列表（后台日志里会看到「当前公司不是集团」）。请先用具备 global 写权限的账号调用 company_convert_to_group 将本公司转为集团。"
+      title="当前登录公司不是集团，无法维护成员公司。"
       type="error" :closable="false" show-icon style="margin-bottom: 16px" />
-    <el-alert v-else-if="selfLoaded && company_is_group && !is_group_admin" title="您不是该公司在「转集团」时指定的集团管理员，无法维护成员与候选列表。"
+    <el-alert v-else-if="selfLoaded && company_is_group && !is_group_admin" title="仅集团管理员可维护成员公司。"
       type="warning" :closable="false" show-icon style="margin-bottom: 16px" />
-    <p class="tip">
-      为当前登录主体（集团母公司）维护成员公司。添加的公司不能已是其他集团的成员。将普通公司转为集团请调用接口
-      <code>POST {{ apiBase }}/global/company_convert_to_group</code>，请求体：
-      <code>company_id</code>、<code>admin_user_id</code>（须为该公司下已存在的用户）。需具备 global 模块<strong>写</strong>权限，无单独 Web 入口。
-    </p>
     <div class="toolbar">
       <el-button type="primary" :disabled="!canManage" @click="openAdd">添加成员公司</el-button>
       <el-button :disabled="!canManage" @click="loadMembers">刷新</el-button>
@@ -47,7 +42,6 @@ export default {
   },
   data() {
     return {
-      apiBase: process.env.VUE_APP_BASE_API || '/api/v1',
       selfLoaded: false,
       company_is_group: false,
       is_group_admin: false,
@@ -98,11 +92,9 @@ export default {
     openAdd() {
       if (!this.canManage) {
         if (!this.company_is_group) {
-          this.$message.warning(
-            '当前公司不是集团，无法请求候选公司。请先用 global 写权限调用 company_convert_to_group。'
-          )
+          this.$message.warning('当前公司不是集团，无法维护成员公司。')
         } else {
-          this.$message.warning('仅指定的集团管理员可使用此功能。')
+          this.$message.warning('仅集团管理员可使用此功能。')
         }
         return
       }
@@ -142,13 +134,6 @@ export default {
 <style scoped>
 .group-members {
   padding: 16px;
-}
-
-.tip {
-  color: #606266;
-  margin-bottom: 16px;
-  line-height: 1.6;
-  font-size: 13px;
 }
 
 .toolbar {

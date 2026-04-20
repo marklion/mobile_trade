@@ -1,12 +1,9 @@
 <template>
   <div class="group-grants" style="padding: 16px;">
-    <el-alert v-if="selfLoaded && !company_is_group" title="当前登录公司不是集团，无法使用数据权限接口。请先执行 company_convert_to_group。"
+    <el-alert v-if="selfLoaded && !company_is_group" title="当前登录公司不是集团，无法配置数据权限。"
       type="error" :closable="false" show-icon style="margin-bottom: 16px" />
-    <el-alert v-else-if="selfLoaded && company_is_group && !is_group_admin" title="您不是该公司指定的集团管理员，无法配置数据权限。"
+    <el-alert v-else-if="selfLoaded && company_is_group && !is_group_admin" title="仅集团管理员可配置数据权限。"
       type="warning" :closable="false" show-icon style="margin-bottom: 16px" />
-    <p class="tip" style="color: #606266; margin-bottom: 16px;">
-      指定<strong>某一成员公司</strong>的数据，允许集团母公司下的<strong>哪位用户</strong>以何种方式访问：可查看、可操作（写类操作以服务端校验为准）。
-    </p>
     <div style="margin-bottom: 12px;">
       <el-button type="primary" :disabled="!canManage" @click="openDialog()">新增授权</el-button>
       <el-button :disabled="!canManage" @click="loadAll">刷新</el-button>
@@ -161,8 +158,8 @@ export default {
       if (!this.canManage) {
         this.$message.warning(
           !this.company_is_group
-            ? '当前公司不是集团，无法配置。请先 company_convert_to_group。'
-            : '仅集团管理员可配置。'
+            ? '当前公司不是集团，无法配置数据权限。'
+            : '仅集团管理员可配置数据权限。'
         )
         return
       }
