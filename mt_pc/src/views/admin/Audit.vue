@@ -135,6 +135,7 @@ export default {
                 is_approve: is_approve,
             });
             this.refresh_record();
+            this.$store.dispatch('user/refreshApprovalTodoCount');
         },
         tableRowClassName({
             row,

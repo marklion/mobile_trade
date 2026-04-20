@@ -1,5 +1,11 @@
 <template>
 <div class="order_show">
+    <div v-if="show_sale_scope_selector && stat_scopes.length > 1" class="scope_bar">
+        <span class="scope_label">统计范围</span>
+        <el-radio-group v-model="stat_context_company_id" size="small" @change="refresh_order">
+            <el-radio-button v-for="s in stat_scopes" :key="s.id" :label="s.id">{{ s.name }}</el-radio-button>
+        </el-radio-group>
+    </div>
     <div class="filter_bar">
         <el-tabs v-model="status" @tab-click="refresh_order">
             <el-tab-pane label="全部" name="all"></el-tab-pane>
@@ -47,7 +53,7 @@
             </el-dropdown-menu>
         </el-dropdown>
         <div style="display:flex;">
-            <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id" @refresh="refresh_order"></select-search>
+            <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" :req_body="contract_req_body" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id" @refresh="refresh_order"></select-search>
             <select-search body_key="stuff" first_item="所有物料" get_url="/stuff/get_all" item_label="name" item_value="id" :permission_array="['stuff']" v-model="stuff_id" @refresh="refresh_order"></select-search>
             <el-input placeholder="输入车号过滤" v-model="filter_string" style="width: 250px;">
                 <div slot="suffix">
@@ -149,6 +155,21 @@ export default {
         'order-detail': OrderDetail,
     },
     computed: {
+        show_sale_scope_selector: function () {
+            return this.req_url === '/sale_management/order_search'
+                && this.self_info
+                && this.self_info.company_is_group === true
+                && this.has_group_member_scope;
+        },
+        has_group_member_scope: function () {
+            if (!this.self_info || this.self_info.company_id == null) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
+        },
+        contract_req_body: function () {
+            return this.make_context_req({});
+        },
         contract_get_url: function () {
             if (this.is_buy) {
                 return '/buy_management/contract_get';
@@ -193,6 +214,12 @@ export default {
             },
             filter_ready: false,
             pickerOptions: this.$quik_date_option,
+            stat_scopes: [],
+            stat_context_company_id: null,
+            self_info: {
+                company_is_group: false,
+                company_id: null,
+            },
             batch_operate_array: [{
                 name: '批量确认',
                 url: this.is_buy ? '/buy_management/order_buy_confirm/' : '/sale_management/order_sale_confirm',
@@ -236,6 +263,36 @@ export default {
         is_buy: Boolean,
     },
     methods: {
+        load_self_info: async function () {
+            try {
+                const ret = await this.$send_req('/global/self_info', {});
+                this.self_info = ret || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+        },
+        load_stat_scopes: async function () {
+            if (this.req_url !== '/sale_management/order_search') {
+                return;
+            }
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    this.stat_context_company_id = this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        make_context_req: function (body = {}) {
+            const ret = { ...body };
+            delete ret.stat_context_company_id;
+            if (this.show_sale_scope_selector && this.stat_context_company_id != null) {
+                ret.stat_context_company_id = this.stat_context_company_id;
+            }
+            return ret;
+        },
         get_pay_url: async function () {
             let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
             let url_prefix = '/sale_management';
@@ -327,37 +384,37 @@ export default {
             brief_filter.only_entered = undefined;
             brief_filter.status = undefined;
             this.count_by_status.unconfirmed = (await this.$send_req(this.req_url, {
-                ...brief_filter,
+                ...this.make_context_req(brief_filter),
                 status: 0,
                 only_count: true
             }, true)).total;
             if (!this.is_buy) {
                 this.count_by_status.unpayed = (await this.$send_req(this.req_url, {
-                    ...brief_filter,
+                    ...this.make_context_req(brief_filter),
                     status: 1,
                     only_count: true
                 }, true)).total;
             }
             this.count_by_status.unentered = (await this.$send_req(this.req_url, {
-                ...brief_filter,
+                ...this.make_context_req(brief_filter),
                 status: this.is_buy ? 1 : 2,
                 only_entered: false,
                 only_count: true
             }, true)).total;
             this.count_by_status.entered = (await this.$send_req(this.req_url, {
-                ...brief_filter,
+                ...this.make_context_req(brief_filter),
                 status: this.is_buy ? 1 : 2,
                 only_entered: true,
                 only_count: true
             }, true)).total;
             this.count_by_status.finished = (await this.$send_req(this.req_url, {
-                ...brief_filter,
+                ...this.make_context_req(brief_filter),
                 status: 3,
                 only_count: true,
                 hide_manual_close: true,
             }, true)).total;
             this.count_by_status.canceled = (await this.$send_req(this.req_url, {
-                ...brief_filter,
+                ...this.make_context_req(brief_filter),
                 status: 3,
                 only_count: true,
                 hide_manual_close: false,
@@ -403,6 +460,7 @@ export default {
             }
             this.filter.start_time = moment(this.date_range[0]).format('YYYY-MM-DD');
             this.filter.end_time = moment(this.date_range[1]).format('YYYY-MM-DD');
+            this.filter = this.make_context_req(this.filter);
             this.$nextTick(async () => {
                 this.$refs.order.refresh(1);
                 this.refresh_order_count();
@@ -430,7 +488,9 @@ export default {
             }
         },
     },
-    mounted: function () {
+    mounted: async function () {
+        await this.load_self_info();
+        await this.load_stat_scopes();
         this.reset_filter();
         this.get_price_display_config();
     }
@@ -448,5 +508,17 @@ export default {
     display: flex;
     justify-content: space-between;
     align-items: center;
+}
+
+.scope_bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.scope_label {
+    color: #606266;
+    font-size: 14px;
+    margin-right: 10px;
 }
 </style>

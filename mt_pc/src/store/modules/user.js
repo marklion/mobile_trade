@@ -1,6 +1,8 @@
 import { login, getInfo } from '@/api/user'
+import { getPendingTodoCount } from '@/api/approval'
 import { getToken, setToken, removeToken } from '@/utils/auth'
 import { resetRouter } from '@/router'
+import { Notification } from 'element-ui'
 
 const getDefaultState = () => {
   return {
@@ -10,6 +12,7 @@ const getDefaultState = () => {
     roles: [],
     company_name: '',
     id:0,
+    approval_todo_count: 0,
   }
 }
 
@@ -36,6 +39,9 @@ const mutations = {
   },
   SET_ID: (state, id) => {
     state.id = id
+  },
+  SET_APPROVAL_TODO_COUNT: (state, count) => {
+    state.approval_todo_count = count
   },
 }
 
@@ -77,10 +83,45 @@ const actions = {
       })
     })
   },
+  refreshApprovalTodoCount({ commit, state }, options = {}) {
+    const notify = !!options.notify
+    return new Promise((resolve) => {
+      if (!state.roles || !state.roles.includes('approval')) {
+        commit('SET_APPROVAL_TODO_COUNT', 0)
+        resolve(0)
+        return
+      }
+      getPendingTodoCount().then((ret) => {
+        const count = Number(ret.count) || 0
+        commit('SET_APPROVAL_TODO_COUNT', count)
+        if (notify && count > 0) {
+          const tokenKey = state.token || ''
+          const remindedKey = `approval_notify_once_${tokenKey}`
+          if (!sessionStorage.getItem(remindedKey)) {
+            Notification({
+              title: '审批提醒',
+              message: `有 ${count} 条待审批，请及时处理`,
+              type: 'warning',
+              duration: 6000,
+              position: 'top-right'
+            })
+            sessionStorage.setItem(remindedKey, '1')
+          }
+        }
+        resolve(count)
+      }).catch(() => {
+        commit('SET_APPROVAL_TODO_COUNT', 0)
+        resolve(0)
+      })
+    })
+  },
 
   // user logout
   logout({ commit, state }) {
     return new Promise((resolve, reject) => {
+      if (state.token) {
+        sessionStorage.removeItem(`approval_notify_once_${state.token}`)
+      }
       removeToken() // must remove  token  first
       resetRouter()
       commit('RESET_STATE')

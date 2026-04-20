@@ -79,8 +79,24 @@ module.exports = {
         delete pure_body.approval_auditer;
         return pure_body;
     },
-    /** 从请求体提取审批列表「审批事项」列可用的简短说明（VARCHAR 255） */
-    build_audit_comment_from_pure_body: function (pure_body) {
+    normalize_money: function (val) {
+        const n = Number(val);
+        if (!Number.isFinite(n)) {
+            return '0';
+        }
+        if (Number.isInteger(n)) {
+            return String(n);
+        }
+        return n.toFixed(2).replace(/\.?0+$/, '');
+    },
+    safe_trim_comment: function (s) {
+        let ret = s || '';
+        if (ret.length > 255) {
+            ret = ret.slice(0, 252) + '...';
+        }
+        return ret;
+    },
+    build_audit_comment_fallback: function (pure_body) {
         if (!pure_body || typeof pure_body !== 'object') {
             return '';
         }
@@ -100,11 +116,43 @@ module.exports = {
         if (msg) {
             parts.push(msg);
         }
-        let s = parts.join('；');
-        if (s.length > 255) {
-            s = s.slice(0, 252) + '...';
+        return this.safe_trim_comment(parts.join('；'));
+    },
+    get_plan_brief_for_comment: async function (plan_id) {
+        const sq = db_opt.get_sq();
+        return await sq.models.plan.findByPk(plan_id, {
+            include: [
+                { model: sq.models.company, paranoid: false },
+                { model: sq.models.vehicle, as: 'main_vehicle', paranoid: false },
+            ],
+        });
+    },
+    format_approval_comment: async function (project_key, pure_body) {
+        if (!pure_body || typeof pure_body !== 'object') {
+            return '';
         }
-        return s;
+        const plan_id = pure_body.plan_id;
+        if (!plan_id) {
+            return this.build_audit_comment_fallback(pure_body);
+        }
+        const plan = await this.get_plan_brief_for_comment(plan_id);
+        if (!plan) {
+            return this.build_audit_comment_fallback(pure_body);
+        }
+        const date_text = (plan.plan_time || '').slice(0, 10) || moment().format('YYYY-MM-DD');
+        const plate = plan.main_vehicle ? plan.main_vehicle.plate : 'NA';
+        const customer_name = plan.company ? plan.company.name : 'NA';
+
+        if (project_key === APPROVAL_PROJECTS.MANUAL_VERIFY_PAY.key) {
+            const arrears = this.normalize_money(plan.arrears || 0);
+            return this.safe_trim_comment(`${date_text} ${plate} ${customer_name}-${arrears}元`);
+        }
+        if (project_key === APPROVAL_PROJECTS.CLOSED_ORDER_PRICE.key) {
+            const old_price = this.normalize_money(plan.unit_price || 0);
+            const new_price = this.normalize_money(pure_body.unit_price);
+            return this.safe_trim_comment(`${date_text} ${plate} ${customer_name}-${old_price}元改为${new_price}元`);
+        }
+        return this.build_audit_comment_fallback(pure_body);
     },
     find_audit_record_by_pure_body: async function (sq, url, pure_body) {
         return sq.models.audit_record.findOne({
@@ -138,7 +186,7 @@ module.exports = {
         throw { err_msg: '请在提交时指定审批人' };
     },
     create_pending_audit_record: async function (sq, url, pure_body, project, company, user, auditer) {
-        const summary_comment = this.build_audit_comment_from_pure_body(pure_body);
+        const summary_comment = await this.format_approval_comment(project.key, pure_body);
         let new_one = await sq.models.audit_record.create({
             url: url,
             body: JSON.stringify(pure_body),
@@ -285,5 +333,34 @@ module.exports = {
         ret.total = resp.count;
         ret.records = resp.rows;
         return ret;
+    },
+    get_pending_todo_count: async function (user) {
+        if (!user) {
+            return { count: 0 };
+        }
+        const sq = db_opt.get_sq();
+        const company = await user.getCompany();
+        if (!company) {
+            return { count: 0 };
+        }
+        const can_audit = (await rbac_lib.rbac_check(user.online_token, 'approval', true)).length == 0;
+        if (!can_audit) {
+            return { count: 0 };
+        }
+        const count = await sq.models.audit_record.count({
+            where: {
+                companyId: company.id,
+                status: 'pending',
+                submiter: {
+                    [db_opt.Op.ne]: user.name,
+                },
+                [db_opt.Op.or]: [
+                    { auditer: user.name },
+                    { auditer: '' },
+                    { auditer: null },
+                ],
+            },
+        });
+        return { count };
     },
 };
