@@ -687,6 +687,45 @@ module.exports = {
                 })
             }
         },
+        export_sale_summary: {
+            name: '导出销售汇总表',
+            description: '导出销售汇总表',
+            is_write: false,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await common.do_export_later(token, '销售汇总表', async () => {
+                    return await plan_lib.make_sale_summary_file(body, token);
+                })
+            }
+        },
+        export_customer_statement: {
+            name: '导出客户对账单',
+            description: '导出客户对账单',
+            is_write: false,
+            is_get_api: false,
+            need_rbac: true,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                company_id: { type: Number, have_to: true, mean: '客户ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await common.do_export_later(token, '客户对账单', async () => {
+                    return await plan_lib.make_customer_statement_file(body, token);
+                })
+            }
+        },
         get_count_by_customer: {
             name: '获取客户订单数量',
             description: '获取客户订单数量',

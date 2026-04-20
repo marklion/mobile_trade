@@ -35,6 +35,12 @@
         <vue-cell class="cell_show" width="4of12" v-if="$hasPermission('sale_management')">
             <export-date export_name="现场检查表" @do_export="export_fc"></export-date>
         </vue-cell>
+        <vue-cell class="cell_show" width="4of12" v-if="$hasPermission('sale_management')">
+            <export-date export_name="销售汇总表" @do_export="export_sale_summary"></export-date>
+        </vue-cell>
+        <vue-cell class="cell_show" width="4of12" v-if="$hasPermission('sale_management')">
+            <export-date need_company export_name="客户对账单" @do_export="export_customer_statement"></export-date>
+        </vue-cell>
     </vue-grid>
 </div>
 </template>
@@ -265,6 +271,29 @@ export default {
                 await this.$send_req('/sc/export_fc_table', {
                     start_time: filter.start_time,
                     end_time: filter.end_time,
+                });
+                this.show_export_success();
+            } catch (error) {
+                this.show_export_fail(error);
+            }
+        },
+        export_sale_summary: async function (filter) {
+            try {
+                await this.$send_req('/sale_management/export_sale_summary', {
+                    start_time: filter.start_time,
+                    end_time: filter.end_time,
+                });
+                this.show_export_success();
+            } catch (error) {
+                this.show_export_fail(error);
+            }
+        },
+        export_customer_statement: async function (filter) {
+            try {
+                await this.$send_req('/sale_management/export_customer_statement', {
+                    start_time: filter.start_time,
+                    end_time: filter.end_time,
+                    company_id: filter.company_id,
                 });
                 this.show_export_success();
             } catch (error) {

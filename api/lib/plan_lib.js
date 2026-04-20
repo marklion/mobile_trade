@@ -2126,6 +2126,481 @@ module.exports = {
         await workbook.xlsx.writeFile('/database' + file_name);
         return file_name;
     },
+    make_sale_summary_file: async function (body, token) {
+        const sq = db_opt.get_sq();
+        const report_start = moment(body.start_time, 'YYYY-MM-DD').startOf('day');
+        const report_end = moment(body.end_time, 'YYYY-MM-DD').endOf('day');
+        if (!report_start.isValid() || !report_end.isValid() || report_end.isBefore(report_start)) {
+            throw { err_msg: '导出时间范围错误' };
+        }
+
+        const year_start = report_start.clone().startOf('year');
+        const home_company = await rbac_lib.get_company_by_token(token);
+        if (!home_company) {
+            throw { err_msg: '无权限' };
+        }
+
+        let owner_company = home_company;
+        if (home_company.parentGroupCompanyId) {
+            const parent_company = await sq.models.company.findByPk(home_company.parentGroupCompanyId);
+            if (parent_company) {
+                owner_company = parent_company;
+            }
+        }
+
+        const contracts = await owner_company.getSale_contracts({
+            include: [{ model: sq.models.company, as: 'buy_company' }],
+            order: [['id', 'ASC']],
+        });
+
+        const summary_by_customer = new Map();
+        contracts.forEach((contract) => {
+            if (!contract.buyCompanyId) {
+                return;
+            }
+            const key = contract.buyCompanyId;
+            const exist = summary_by_customer.get(key) || {
+                customer_code: '',
+                customer_name: contract.buy_company ? contract.buy_company.name : '',
+                month_begin_balance: 0,
+                month_prepayment: 0,
+                month_sale_count: 0,
+                month_sale_amount: 0,
+                month_end_balance: 0,
+                year_begin_balance: 0,
+                year_prepayment: 0,
+                year_sale_count: 0,
+                year_sale_amount: 0,
+                contract_count: 0,
+            };
+            if (!exist.customer_code && contract.customer_code) {
+                exist.customer_code = contract.customer_code;
+            }
+            if (!exist.customer_name && contract.buy_company) {
+                exist.customer_name = contract.buy_company.name;
+            }
+            exist.contract_count += 1;
+            summary_by_customer.set(key, exist);
+        });
+
+        const contract_ids = contracts.map((item) => item.id);
+        if (contract_ids.length > 0) {
+            const histories = await sq.models.balance_history.findAll({
+                where: {
+                    contractId: { [db_opt.Op.in]: contract_ids },
+                },
+                attributes: ['contractId', 'time', 'cash_increased'],
+                order: [['id', 'ASC']],
+                raw: true,
+            });
+            const history_map = new Map();
+            histories.forEach((row) => {
+                if (!history_map.has(row.contractId)) {
+                    history_map.set(row.contractId, []);
+                }
+                history_map.get(row.contractId).push(row);
+            });
+
+            const start_prev = report_start.clone().subtract(1, 'seconds');
+            const year_start_prev = year_start.clone().subtract(1, 'seconds');
+            contracts.forEach((contract) => {
+                const key = contract.buyCompanyId;
+                const node = summary_by_customer.get(key);
+                if (!node) {
+                    return;
+                }
+                const history_list = history_map.get(contract.id) || [];
+                let sum_after_month_start = 0;
+                let sum_after_report_end = 0;
+                let sum_after_year_start = 0;
+                let month_prepayment = 0;
+                let year_prepayment = 0;
+                history_list.forEach((history) => {
+                    const history_time = moment(history.time);
+                    if (!history_time.isValid()) {
+                        return;
+                    }
+                    const delta = Number(history.cash_increased) || 0;
+                    if (history_time.isAfter(start_prev)) {
+                        sum_after_month_start += delta;
+                    }
+                    if (history_time.isAfter(report_end)) {
+                        sum_after_report_end += delta;
+                    }
+                    if (history_time.isAfter(year_start_prev)) {
+                        sum_after_year_start += delta;
+                    }
+                    if (history_time.isBetween(report_start, report_end, undefined, '[]')) {
+                        month_prepayment += delta;
+                    }
+                    if (history_time.isBetween(year_start, report_end, undefined, '[]')) {
+                        year_prepayment += delta;
+                    }
+                });
+                const current_balance = Number(contract.balance) || 0;
+                node.month_begin_balance += current_balance - sum_after_month_start;
+                node.month_end_balance += current_balance - sum_after_report_end;
+                node.year_begin_balance += current_balance - sum_after_year_start;
+                node.month_prepayment += month_prepayment;
+                node.year_prepayment += year_prepayment;
+            });
+        }
+
+        const stuff_rows = await owner_company.getStuff({ attributes: ['id'] });
+        const stuff_ids = stuff_rows.map((item) => item.id);
+        if (stuff_ids.length > 0) {
+            const plan_where = {
+                is_buy: false,
+                stuffId: { [db_opt.Op.in]: stuff_ids },
+                [db_opt.Op.and]: [
+                    sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                        [db_opt.Op.gte]: sq.fn('TIMESTAMP', year_start.format('YYYY-MM-DD HH:mm:ss'))
+                    }),
+                    sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                        [db_opt.Op.lte]: sq.fn('TIMESTAMP', report_end.format('YYYY-MM-DD HH:mm:ss'))
+                    }),
+                ],
+            };
+            const plans = await sq.models.plan.findAll({
+                where: plan_where,
+                include: [{ model: sq.models.company, paranoid: false }],
+            });
+            plans.forEach((plan) => {
+                const customer_id = plan.companyId;
+                if (!customer_id) {
+                    return;
+                }
+                if (!summary_by_customer.has(customer_id)) {
+                    summary_by_customer.set(customer_id, {
+                        customer_code: '',
+                        customer_name: plan.company ? plan.company.name : '',
+                        month_begin_balance: 0,
+                        month_prepayment: 0,
+                        month_sale_count: 0,
+                        month_sale_amount: 0,
+                        month_end_balance: 0,
+                        year_begin_balance: 0,
+                        year_prepayment: 0,
+                        year_sale_count: 0,
+                        year_sale_amount: 0,
+                        contract_count: 0,
+                    });
+                }
+                const node = summary_by_customer.get(customer_id);
+                const plan_time = moment(plan.plan_time);
+                if (!plan_time.isValid()) {
+                    return;
+                }
+                const count = Number(plan.count) || 0;
+                const amount = count * (Number(plan.unit_price) || 0);
+                if (plan_time.isBetween(report_start, report_end, undefined, '[]')) {
+                    node.month_sale_count += count;
+                    node.month_sale_amount += amount;
+                }
+                if (plan_time.isBetween(year_start, report_end, undefined, '[]')) {
+                    node.year_sale_count += count;
+                    node.year_sale_amount += amount;
+                }
+            });
+        }
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('客户总销售汇总表');
+        const total_columns = 14;
+
+        worksheet.addRow([owner_company.name || '']);
+        worksheet.addRow([`${body.start_time} ~ ${body.end_time}客户总销售汇总表`]);
+        worksheet.addRow([
+            '客户编码', '客户名称', '期初预收款余额', '本月预收款', '本月销售', '', '', '月末预收款余额',
+            '年初预收款余额', '本年累计预收款', '本年累计销售', '', '', '年末预收款余额'
+        ]);
+        worksheet.addRow([
+            '', '', '', '', '销售数量', '单价', '销售额', '', '', '', '销售数量', '单价', '销售额', ''
+        ]);
+
+        worksheet.mergeCells(1, 1, 1, total_columns);
+        worksheet.mergeCells(2, 1, 2, total_columns);
+        worksheet.mergeCells(3, 1, 4, 1);
+        worksheet.mergeCells(3, 2, 4, 2);
+        worksheet.mergeCells(3, 3, 4, 3);
+        worksheet.mergeCells(3, 4, 4, 4);
+        worksheet.mergeCells(3, 5, 3, 7);
+        worksheet.mergeCells(3, 8, 4, 8);
+        worksheet.mergeCells(3, 9, 4, 9);
+        worksheet.mergeCells(3, 10, 4, 10);
+        worksheet.mergeCells(3, 11, 3, 13);
+        worksheet.mergeCells(3, 14, 4, 14);
+
+        const rows = Array.from(summary_by_customer.values()).sort((a, b) => {
+            return (a.customer_name || '').localeCompare((b.customer_name || ''), 'zh-Hans-CN');
+        });
+        rows.forEach((item) => {
+            const month_unit_price = item.month_sale_count > 0 ? item.month_sale_amount / item.month_sale_count : 0;
+            const year_unit_price = item.year_sale_count > 0 ? item.year_sale_amount / item.year_sale_count : 0;
+            worksheet.addRow([
+                item.customer_code || '',
+                item.customer_name || '',
+                item.month_begin_balance,
+                item.month_prepayment,
+                item.month_sale_count,
+                month_unit_price,
+                item.month_sale_amount,
+                item.month_end_balance,
+                item.year_begin_balance,
+                item.year_prepayment,
+                item.year_sale_count,
+                year_unit_price,
+                item.year_sale_amount,
+                item.month_end_balance,
+            ]);
+        });
+
+        worksheet.eachRow((row, row_number) => {
+            row.eachCell((cell) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                if (row_number <= 4) {
+                    cell.font = { bold: true };
+                }
+            });
+        });
+
+        [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14].forEach((index) => {
+            worksheet.getColumn(index).numFmt = '0.00';
+        });
+        worksheet.getColumn(1).numFmt = undefined;
+        worksheet.getColumn(2).numFmt = undefined;
+
+        const file_name = '/uploads/sale_summary' + uuid.v4() + '.xlsx';
+        await workbook.xlsx.writeFile('/database' + file_name);
+        return file_name;
+    },
+    make_customer_statement_file: async function (body, token) {
+        const sq = db_opt.get_sq();
+        const report_start = moment(body.start_time, 'YYYY-MM-DD').startOf('day');
+        const report_end = moment(body.end_time, 'YYYY-MM-DD').endOf('day');
+        if (!report_start.isValid() || !report_end.isValid() || report_end.isBefore(report_start)) {
+            throw { err_msg: '导出时间范围错误' };
+        }
+
+        const customer_id = Number(body.company_id);
+        if (!Number.isFinite(customer_id) || customer_id <= 0) {
+            throw { err_msg: '请选择客户' };
+        }
+
+        const home_company = await rbac_lib.get_company_by_token(token);
+        if (!home_company) {
+            throw { err_msg: '无权限' };
+        }
+        let owner_company = home_company;
+        if (home_company.parentGroupCompanyId) {
+            const parent_company = await sq.models.company.findByPk(home_company.parentGroupCompanyId);
+            if (parent_company) {
+                owner_company = parent_company;
+            }
+        }
+
+        const contracts = await this.get_sale_contracts_for_buyer_and_supply_company(customer_id, owner_company.id);
+        if (contracts.length === 0) {
+            throw { err_msg: '该客户不存在可用销售合同' };
+        }
+        const customer = await sq.models.company.findByPk(customer_id);
+        if (!customer) {
+            throw { err_msg: '客户不存在' };
+        }
+
+        const contract_ids = contracts.map((item) => item.id);
+        const history_rows = await sq.models.balance_history.findAll({
+            where: {
+                contractId: { [db_opt.Op.in]: contract_ids },
+            },
+            attributes: ['id', 'contractId', 'time', 'comment', 'cash_increased'],
+            order: [['id', 'ASC']],
+            raw: true,
+        });
+        const history_by_contract = new Map();
+        history_rows.forEach((row) => {
+            if (!history_by_contract.has(row.contractId)) {
+                history_by_contract.set(row.contractId, []);
+            }
+            history_by_contract.get(row.contractId).push(row);
+        });
+
+        const start_prev = report_start.clone().subtract(1, 'seconds');
+        let opening_balance = 0;
+        contracts.forEach((contract) => {
+            const list = history_by_contract.get(contract.id) || [];
+            let sum_after_start = 0;
+            list.forEach((history) => {
+                const history_time = moment(history.time);
+                if (!history_time.isValid()) {
+                    return;
+                }
+                if (history_time.isAfter(start_prev)) {
+                    sum_after_start += Number(history.cash_increased) || 0;
+                }
+            });
+            opening_balance += (Number(contract.balance) || 0) - sum_after_start;
+        });
+
+        const stuff_rows = await owner_company.getStuff({ attributes: ['id'] });
+        const stuff_ids = stuff_rows.map((item) => item.id);
+        const plan_events = [];
+        if (stuff_ids.length > 0) {
+            const plans = await sq.models.plan.findAll({
+                where: {
+                    is_buy: false,
+                    companyId: customer_id,
+                    stuffId: { [db_opt.Op.in]: stuff_ids },
+                    count: { [db_opt.Op.ne]: 0 },
+                    [db_opt.Op.and]: [
+                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                            [db_opt.Op.gte]: sq.fn('TIMESTAMP', report_start.format('YYYY-MM-DD HH:mm:ss'))
+                        }),
+                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
+                            [db_opt.Op.lte]: sq.fn('TIMESTAMP', report_end.format('YYYY-MM-DD HH:mm:ss'))
+                        }),
+                    ],
+                },
+                include: [
+                    { model: sq.models.stuff, paranoid: false },
+                    { model: sq.models.vehicle, as: 'main_vehicle', paranoid: false },
+                    { model: sq.models.vehicle, as: 'behind_vehicle', paranoid: false },
+                ],
+                order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'], ['id', 'ASC']],
+            });
+            plans.forEach((plan) => {
+                const count = Number(plan.count) || 0;
+                const unit_price = Number(plan.unit_price) || 0;
+                plan_events.push({
+                    event_type: 'plan',
+                    event_time: moment(plan.plan_time).isValid() ? plan.plan_time : '',
+                    date: (plan.plan_time || '').slice(0, 10),
+                    ticket_no: plan.ticket_no || 'NA',
+                    stuff_name: plan.stuff ? plan.stuff.name : 'NA',
+                    main_vehicle: plan.main_vehicle ? plan.main_vehicle.plate : 'NA',
+                    behind_vehicle: plan.behind_vehicle ? plan.behind_vehicle.plate : 'NA',
+                    p_weight: Number(plan.p_weight) || 0,
+                    m_weight: Number(plan.m_weight) || 0,
+                    net_weight: count,
+                    unit_price,
+                    amount: count * unit_price,
+                    prepayment: 0,
+                });
+            });
+        }
+
+        const prepay_events = [];
+        history_rows.forEach((history) => {
+            const history_time = moment(history.time);
+            if (!history_time.isValid()) {
+                return;
+            }
+            if (!history_time.isBetween(report_start, report_end, undefined, '[]')) {
+                return;
+            }
+            const delta = Number(history.cash_increased) || 0;
+            if ((history.comment || '').indexOf('出货扣除') >= 0) {
+                return;
+            }
+            prepay_events.push({
+                event_type: 'prepay',
+                event_time: history.time,
+                date: history.time.slice(0, 10),
+                ticket_no: 'NA',
+                stuff_name: 'NA',
+                main_vehicle: 'NA',
+                behind_vehicle: 'NA',
+                p_weight: 0,
+                m_weight: 0,
+                net_weight: 0,
+                unit_price: 0,
+                amount: 0,
+                prepayment: delta,
+            });
+        });
+
+        const all_events = plan_events.concat(prepay_events);
+        all_events.sort((a, b) => {
+            const ta = moment(a.event_time).valueOf();
+            const tb = moment(b.event_time).valueOf();
+            if (ta === tb) {
+                if (a.event_type === b.event_type) {
+                    return 0;
+                }
+                return a.event_type === 'prepay' ? -1 : 1;
+            }
+            return ta - tb;
+        });
+
+        let running_balance = opening_balance;
+        const table_rows = [];
+        let total_net_weight = 0;
+        let total_amount = 0;
+        let total_prepayment = 0;
+        all_events.forEach((event, index) => {
+            running_balance += event.prepayment - event.amount;
+            total_net_weight += event.net_weight;
+            total_amount += event.amount;
+            total_prepayment += event.prepayment;
+            table_rows.push({
+                seq: index + 1,
+                date: event.date,
+                ticket_no: event.ticket_no,
+                stuff_name: event.stuff_name,
+                main_vehicle: event.main_vehicle,
+                behind_vehicle: event.behind_vehicle,
+                p_weight: event.p_weight,
+                m_weight: event.m_weight,
+                net_weight: event.net_weight,
+                unit_price: event.unit_price,
+                amount: event.amount,
+                prepayment: event.prepayment,
+                balance: running_balance,
+            });
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('客户对账单');
+        const title = `${customer.name}${body.start_time} ~ ${body.end_time}对账单`;
+        worksheet.addRow([title]);
+        worksheet.mergeCells(1, 1, 1, 13);
+        worksheet.addRow([
+            '序号', '日期', '磅单号', '物料名称', '车牌号', '挂车号',
+            '皮重(吨)', '毛重(吨)', '净重(吨)', '单价(元)', '金额(元)', '预收款(元)', '结余(元)'
+        ]);
+
+        table_rows.forEach((row) => {
+            worksheet.addRow([
+                row.seq, row.date, row.ticket_no, row.stuff_name, row.main_vehicle, row.behind_vehicle,
+                row.p_weight, row.m_weight, row.net_weight, row.unit_price, row.amount, row.prepayment, row.balance
+            ]);
+        });
+        worksheet.addRow([
+            '', '合计', '', '', '', '',
+            '', '', total_net_weight, '', total_amount, total_prepayment, running_balance
+        ]);
+
+        worksheet.eachRow((row, row_number) => {
+            row.eachCell((cell) => {
+                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                if (row_number <= 2 || row_number === worksheet.rowCount) {
+                    cell.font = { bold: true };
+                }
+            });
+        });
+
+        const widths = [8, 12, 14, 14, 12, 12, 10, 10, 10, 10, 12, 12, 12];
+        widths.forEach((width, idx) => {
+            worksheet.getColumn(idx + 1).width = width;
+        });
+        [7, 8, 9, 10, 11, 12, 13].forEach((col) => {
+            worksheet.getColumn(col).numFmt = '0.00';
+        });
+
+        const file_name = '/uploads/customer_statement' + uuid.v4() + '.xlsx';
+        await workbook.xlsx.writeFile('/database' + file_name);
+        return file_name;
+    },
     auto_close_plan: async function () {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findAll({ where: { close_time: { [db_opt.Op.ne]: null } } });
