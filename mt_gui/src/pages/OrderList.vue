@@ -46,7 +46,18 @@
             <fui-button text="恢复默认" @click="reset_order_date" btnSize="mini" type="primary"></fui-button>
         </view>
     </u-cell>
+    <u-cell v-if="show_sale_scope_switch && stat_scopes.length > 1" title="统计范围" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
     <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
+    <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
+        <fui-list>
+            <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
+                <view class="scope-row">
+                    <view class="scope-name">{{ s.name }}</view>
+                    <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#1E9FFF"></fui-icon>
+                </view>
+            </fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
     <u-checkbox-group v-model="plan_selected" placement="column">
         <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
             <view v-for="item in sp_data2show" :key="item.id">
@@ -645,9 +656,32 @@ export default {
             gallery_index: 0,
             is_the_order_display_price: false,
             is_allowed_order_return: false,
+            stat_scopes: [],
+            stat_context_company_id: null,
+            show_scope_picker: false,
+            self_info: {
+                company_is_group: false,
+                company_id: null,
+            },
         }
     },
     computed: {
+        show_sale_scope_switch: function () {
+            return this.cur_get_url === '/sale_management/order_search'
+                && this.self_info
+                && this.self_info.company_is_group === true
+                && this.has_group_member_scope;
+        },
+        has_group_member_scope: function () {
+            if (!this.self_info || this.self_info.company_id == null) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((item) => item.id !== this.self_info.company_id);
+        },
+        current_scope_name: function () {
+            const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
+            return current ? current.name : '';
+        },
         get_both_attach: function () {
             let ret = [];
             let func = (path) => {
@@ -708,14 +742,18 @@ export default {
             return ret;
         },
         plan_filter: function () {
-            return {
+            const ret = {
                 start_time: this.begin_time,
                 end_time: this.end_time,
                 status: this.focus_status,
                 stuff_id: this.stuff_filter.id,
                 company_id: this.company_filter.id,
                 ...this.tabs[this.tab_current].filter,
+            };
+            if (this.show_sale_scope_switch && this.stat_context_company_id != null) {
+                ret.stat_context_company_id = this.stat_context_company_id;
             }
+            return ret;
         },
         plan_owner: function () {
             let ret = false;
@@ -729,6 +767,46 @@ export default {
 
     },
     methods: {
+        load_self_info: async function () {
+            try {
+                const info = await this.$send_req('/global/self_info', {});
+                this.self_info = info || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+        },
+        load_stat_scopes: async function () {
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    this.stat_context_company_id = this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        open_scope_picker: function () {
+            this.show_scope_picker = true;
+        },
+        choose_stat_scope: function (company_id) {
+            if (this.stat_context_company_id === company_id) {
+                this.show_scope_picker = false;
+                return;
+            }
+            this.stat_context_company_id = company_id;
+            this.show_scope_picker = false;
+            this.refresh_plans();
+        },
+        make_context_req: function (body = {}, url = '') {
+            const ret = { ...body };
+            delete ret.stat_context_company_id;
+            const hit_sale_api = url.startsWith('/sale_management/');
+            if (hit_sale_api && this.show_sale_scope_switch && this.stat_context_company_id != null) {
+                ret.stat_context_company_id = this.stat_context_company_id;
+            }
+            return ret;
+        },
         get_pay_url: async function () {
             let verify_pay_by_cash = (await this.$send_req('/stuff/get_verify_pay_config', {})).verify_pay_by_cash;
             let url_prefix = '/sale_management';
@@ -1316,9 +1394,9 @@ export default {
             if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && item.company.id) {
                 try {
                     let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                    let resp = await this.$send_req(url, {
+                    let resp = await this.$send_req(url, this.make_context_req({
                         [this.cur_is_buy ? 'supplier_id' : 'customer_id']: item.company.id,
-                    })
+                    }, url))
                     // 标注合同是否一个月内即将到期
                     const oneMonthFromNow = moment().add(1, 'month');
                     const contractEndDate = moment(resp.end_time);
@@ -1475,10 +1553,10 @@ export default {
             return this.cur_get_url;
         },
         get_sold_plans: async function (pageNo, [plan_filter, cur_get_url, cur_is_motion]) {
-            let res = await this.$send_req(cur_get_url, {
+            let res = await this.$send_req(cur_get_url, this.make_context_req({
                 ...plan_filter,
                 pageNo: pageNo,
-            });
+            }, cur_get_url));
             let ret = [];
             res.plans.forEach(element => {
                 element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
@@ -1522,9 +1600,9 @@ export default {
                 return ele.name
             })
             if (mods.indexOf('stuff') != -1) {
-                let ret = await this.$send_req('/sale_management/contract_get', {
+                let ret = await this.$send_req('/sale_management/contract_get', this.make_context_req({
                     pageNo: pageNo
-                });
+                }, '/sale_management/contract_get'));
                 ret.contracts.forEach(item => {
                     item.search_cond = item.company.name;
                 });
@@ -1655,7 +1733,9 @@ export default {
         this.refresh_plans();
         uni.stopPullDownRefresh();
     },
-    onLoad() {
+    async onLoad() {
+        await this.load_self_info();
+        await this.load_stat_scopes();
         this.reset_order_date(false);
         this.init_top_seg();
         let tom = new Date();
@@ -1695,6 +1775,21 @@ export default {
     z-index: 2000;
     top: 20rpx;
     right: 20rpx;
+}
+
+.scope-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.scope-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 20rpx;
 }
 
 .sc-image-viewer {

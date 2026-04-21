@@ -121,6 +121,20 @@ module.exports = {
                 return resp;
             },
         },
+        get_pending_todo_count: {
+            name: '获取待我审批数量',
+            description: '仅统计当前用户可审批的待审批数量',
+            is_write: false,
+            is_get_api: true,
+            params: {},
+            result: {
+                count: { type: Number, mean: '待审批数量', example: 3 },
+            },
+            func: async function (body, token) {
+                const user = await rbac_lib.get_user_by_token(token);
+                return await approval_lib.get_pending_todo_count(user);
+            },
+        },
         audit_req: {
             name: '审批请求',
             description: '审批请求',
