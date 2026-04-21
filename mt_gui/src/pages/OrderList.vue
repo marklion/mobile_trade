@@ -59,9 +59,9 @@
         </fui-list>
     </fui-bottom-popup>
     <u-checkbox-group v-model="plan_selected" placement="column">
-        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
+        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion, make_context_req, show_sale_scope_switch, stat_context_company_id]">
             <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="prepare_plan_detail(item)">
+                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="prepare_plan_detail(item, make_context_req, show_sale_scope_switch, stat_context_company_id)">
                     <view slot="icon" style="display:flex;">
                         <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
                         </u-checkbox>
@@ -108,7 +108,7 @@
         </fui-bottom-popup>
         <fui-bottom-popup :show="show_company_filter" @close="show_company_filter= false">
             <fui-list>
-                <list-show v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh">
+                <list-show v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh" :fetch_params="[make_context_req, show_sale_scope_switch, stat_context_company_id]">
                     <fui-list-cell arrow v-for="item in customer_data2show" :key="item.id" @click="choose_company(item)">
                         {{item.company.name}}
                     </fui-list-cell>
@@ -748,7 +748,7 @@ export default {
                 status: this.focus_status,
                 stuff_id: this.stuff_filter.id,
                 company_id: this.company_filter.id,
-                ...this.tabs[this.tab_current].filter,
+                ...this.tabs[this.tab_current]?.filter,
             };
             if (this.show_sale_scope_switch && this.stat_context_company_id != null) {
                 ret.stat_context_company_id = this.stat_context_company_id;
@@ -798,12 +798,12 @@ export default {
             this.show_scope_picker = false;
             this.refresh_plans();
         },
-        make_context_req: function (body = {}, url = '') {
+        make_context_req: function (body = {}, url = '', ssss_bool = false, scci = null) {
             const ret = { ...body };
             delete ret.stat_context_company_id;
             const hit_sale_api = url.startsWith('/sale_management/');
-            if (hit_sale_api && this.show_sale_scope_switch && this.stat_context_company_id != null) {
-                ret.stat_context_company_id = this.stat_context_company_id;
+            if (hit_sale_api && ssss_bool && scci != null) {
+                ret.stat_context_company_id = scci;
             }
             return ret;
         },
@@ -1389,14 +1389,14 @@ export default {
             this.show_plan_detail = false;
             this.refresh_plans();
         },
-        prepare_plan_detail: async function (item) {
+        prepare_plan_detail: async function (item, make_context_req, ssss_bool, scci) {
             // 获取销售或采购合同信息
             if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && item.company.id) {
                 try {
                     let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                    let resp = await this.$send_req(url, this.make_context_req({
+                    let resp = await this.$send_req(url, make_context_req({
                         [this.cur_is_buy ? 'supplier_id' : 'customer_id']: item.company.id,
-                    }, url))
+                    }, url, ssss_bool, scci))
                     // 标注合同是否一个月内即将到期
                     const oneMonthFromNow = moment().add(1, 'month');
                     const contractEndDate = moment(resp.end_time);
@@ -1552,12 +1552,14 @@ export default {
         make_plan_get_url: function () {
             return this.cur_get_url;
         },
-        get_sold_plans: async function (pageNo, [plan_filter, cur_get_url, cur_is_motion]) {
-            let res = await this.$send_req(cur_get_url, this.make_context_req({
+        get_sold_plans: async function (pageNo, [plan_filter, cur_get_url, cur_is_motion, make_context_req, ssss_bool, scci]) {
+            let res = await this.$send_req(cur_get_url, make_context_req({
                 ...plan_filter,
                 pageNo: pageNo,
-            }, cur_get_url));
+            }, cur_get_url, ssss_bool, scci));
             let ret = [];
+            if (res.plans)
+            {
             res.plans.forEach(element => {
                 element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
                 if (cur_is_motion) {
@@ -1567,6 +1569,8 @@ export default {
                 }
                 ret.push(element)
             });
+            }
+
             return ret;
         },
         init_number_of_sold_plan: async function () {
@@ -1595,14 +1599,14 @@ export default {
                 return [];
             }
         },
-        get_customers: async function (pageNo) {
+        get_customers: async function (pageNo, [make_context_req, ssss_bool, scci]) {
             let mods = uni.getStorageSync('self_info').modules.map(ele => {
                 return ele.name
             })
             if (mods.indexOf('stuff') != -1) {
-                let ret = await this.$send_req('/sale_management/contract_get', this.make_context_req({
+                let ret = await this.$send_req('/sale_management/contract_get', make_context_req({
                     pageNo: pageNo
-                }, '/sale_management/contract_get'));
+                }, '/sale_management/contract_get', ssss_bool, scci));
                 ret.contracts.forEach(item => {
                     item.search_cond = item.company.name;
                 });
