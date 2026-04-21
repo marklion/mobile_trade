@@ -113,6 +113,14 @@ module.exports = {
     },
     get_stuff_on_sale: async function (_buy_company, pageNo) {
         let sq = db_opt.get_sq();
+        const sale_owner_company_sql = `COALESCE((
+                SELECT pg.id
+                FROM company sc
+                INNER JOIN company pg ON pg.id = sc.parentGroupCompanyId
+                WHERE sc.id = stuff.companyId
+                  AND pg.is_group = 1
+                LIMIT 1
+            ), stuff.companyId)`;
         return await sq.models.stuff.findAndCountAll({
             where: {
                 use_for_buy: false,
@@ -121,13 +129,10 @@ module.exports = {
                         SELECT 1 FROM contract c
                         WHERE c.deletedAt IS NULL
                           AND c.buyCompanyId = ${_buy_company.id}
-                          AND c.saleCompanyId = IFNULL((SELECT parentGroupCompanyId FROM company WHERE id = stuff.companyId), stuff.companyId)
-                          AND (
-                            (SELECT buy_config_hard FROM company WHERE id = stuff.companyId) = 0
-                            OR EXISTS (
-                                SELECT 1 FROM contract_stuff cs
-                                WHERE cs.stuffId = stuff.id AND cs.contractId = c.id
-                            )
+                          AND c.saleCompanyId = ${sale_owner_company_sql}
+                          AND EXISTS (
+                              SELECT 1 FROM contract_stuff cs
+                              WHERE cs.stuffId = stuff.id AND cs.contractId = c.id
                           )
                     )`)
                 ]
@@ -196,7 +201,16 @@ module.exports = {
         if (!sale_company) {
             return null;
         }
-        return sale_company.parentGroupCompanyId || sale_company.id;
+        if (!sale_company.parentGroupCompanyId) {
+            return sale_company.id;
+        }
+        const parent_company = await sq.models.company.findByPk(sale_company.parentGroupCompanyId, {
+            ...(transaction && { transaction })
+        });
+        if (parent_company && parent_company.is_group === true) {
+            return parent_company.id;
+        }
+        return sale_company.id;
     },
     get_sale_contracts_for_buyer_and_supply_company: async function (buy_company_id, supply_company_id, include_users = false, transaction = null) {
         const sq = db_opt.get_sq();
