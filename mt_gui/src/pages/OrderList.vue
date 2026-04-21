@@ -59,7 +59,7 @@
         </fui-list>
     </fui-bottom-popup>
     <u-checkbox-group v-model="plan_selected" placement="column">
-        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
+        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="'get_sold_plans'" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion]">
             <view v-for="item in sp_data2show" :key="item.id">
                 <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="prepare_plan_detail(item)">
                     <view slot="icon" style="display:flex;">
@@ -99,7 +99,7 @@
     <module-filter require_module="stuff">
         <fui-bottom-popup :show="show_stuff_list" @close="show_stuff_list = false">
             <fui-list>
-                <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
+                <list-show v-model="stuff_data2show" :fetch_function="'get_stuff'" search_key="name" height="40vh">
                     <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="choose_stuff(item)">
                         {{item.name}}
                     </fui-list-cell>
@@ -108,7 +108,7 @@
         </fui-bottom-popup>
         <fui-bottom-popup :show="show_company_filter" @close="show_company_filter= false">
             <fui-list>
-                <list-show v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh">
+                <list-show v-model="customer_data2show" :fetch_function="'get_customers'" search_key="search_cond" height="40vh">
                     <fui-list-cell arrow v-for="item in customer_data2show" :key="item.id" @click="choose_company(item)">
                         {{item.company.name}}
                     </fui-list-cell>
@@ -320,7 +320,7 @@
 
     <fui-bottom-popup :show="choose_company_show" @close="choose_company_show= false" z-index="1002">
         <fui-list>
-            <list-show v-model="supplier_list" :fetch_function="get_buy_contracts" search_key="cond" height="40vh">
+            <list-show v-model="supplier_list" :fetch_function="'get_buy_contracts'" search_key="cond" height="40vh">
                 <fui-list-cell v-for="item in supplier_list" :key="item.id" arrow @click="assign_supplier(item.company.id)">
                     {{item.company.name}}
                 </fui-list-cell>
@@ -742,13 +742,15 @@ export default {
             return ret;
         },
         plan_filter: function () {
+            const focus_tab = this.tabs[this.tab_current] || {};
+            const tab_filter = focus_tab.filter || {};
             const ret = {
                 start_time: this.begin_time,
                 end_time: this.end_time,
                 status: this.focus_status,
                 stuff_id: this.stuff_filter.id,
                 company_id: this.company_filter.id,
-                ...this.tabs[this.tab_current].filter,
+                ...tab_filter,
             };
             if (this.show_sale_scope_switch && this.stat_context_company_id != null) {
                 ret.stat_context_company_id = this.stat_context_company_id;
@@ -1546,8 +1548,8 @@ export default {
             } else {
                 this.focus_status = undefined;
             }
-            this.refresh_plans();
             this.tab_current = index;
+            this.refresh_plans();
         },
         make_plan_get_url: function () {
             return this.cur_get_url;
@@ -1557,6 +1559,9 @@ export default {
                 ...plan_filter,
                 pageNo: pageNo,
             }, cur_get_url));
+            if (!res || !Array.isArray(res.plans)) {
+                return [];
+            }
             let ret = [];
             res.plans.forEach(element => {
                 element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
@@ -1579,7 +1584,7 @@ export default {
                     only_count: true,
                     ...single_tab.filter,
                 }, true);
-                single_tab.badge = res.total;
+                single_tab.badge = (res && typeof res.total === 'number') ? res.total : 0;
             }
         },
         get_stuff: async function (pageNo) {
@@ -1744,6 +1749,7 @@ export default {
         this.init_number_of_sold_plan();
         this.get_is_allowed_order_return();
         this.get_price_display_config();
+        this.refresh_plans();
     },
 }
 </script>

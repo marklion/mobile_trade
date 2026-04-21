@@ -62,7 +62,7 @@ export default {
             default: '100%'
         },
         fetch_function: {
-            type: Function,
+            type: [Function, String],
         },
         search_key: {
             type: String,
@@ -80,6 +80,33 @@ export default {
         }
     },
     methods: {
+        resolve_fetch_by_name: function (fn_name) {
+            let cur = this.$parent;
+            while (cur) {
+                if (typeof cur[fn_name] === 'function') {
+                    return {
+                        ctx: cur,
+                        func: cur[fn_name],
+                    };
+                }
+                cur = cur.$parent;
+            }
+            return null;
+        },
+        resolve_fetch_context: function (req_func) {
+            let cur = this.$parent;
+            while (cur) {
+                const methods = cur.$options && cur.$options.methods;
+                if (methods) {
+                    const is_owner = Object.keys(methods).some((key) => cur[key] === req_func);
+                    if (is_owner) {
+                        return cur;
+                    }
+                }
+                cur = cur.$parent;
+            }
+            return this.$parent || this;
+        },
         cancel: function () {
             this.search_condition = '';
             this.$refs.searchBar.reset()
@@ -96,16 +123,40 @@ export default {
         fetch_new: async function () {
             if (!this.finish && !this.fetching) {
                 this.fetching = true;
-                let new_data = await this.fetch_function(this.page, this.fetch_params);
-                if (new_data.length == 0) {
+                try {
+                    let req_func = this.fetch_function;
+                    let exec_ctx = this.$parent || this;
+                    if (typeof req_func === 'string') {
+                        const resolved = this.resolve_fetch_by_name(req_func);
+                        if (!resolved) {
+                            console.error('ListShow can not resolve fetch function by name', req_func);
+                            this.finish = true;
+                            return;
+                        }
+                        req_func = resolved.func;
+                        exec_ctx = resolved.ctx;
+                    } else if (typeof req_func === 'function') {
+                        exec_ctx = this.resolve_fetch_context(req_func);
+                    } else {
+                        console.error('ListShow fetch_function is not function/string', req_func);
+                        this.finish = true;
+                        return;
+                    }
+                    const new_data = await req_func.call(exec_ctx, this.page, this.fetch_params);
+                    if (!Array.isArray(new_data) || new_data.length == 0) {
+                        this.finish = true;
+                    } else {
+                        new_data.forEach(ele => {
+                            this.$set(this.all_data, this.all_data.length, ele)
+                        });
+                        this.page++;
+                    }
+                } catch (err) {
+                    console.log(err);
                     this.finish = true;
-                } else {
-                    new_data.forEach(ele => {
-                        this.$set(this.all_data, this.all_data.length, ele)
-                    });
-                    this.page++;
+                } finally {
+                    this.fetching = false;
                 }
-                this.fetching = false;
                 if (this.show_count < 20) {
                     this.fetch_new();
                 }
