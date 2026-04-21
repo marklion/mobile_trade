@@ -1560,15 +1560,15 @@ export default {
             let ret = [];
             if (res.plans)
             {
-            res.plans.forEach(element => {
-                element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
-                if (cur_is_motion) {
-                    element.company_show = element.stuff.company.name;
-                } else {
-                    element.company_show = element.company.name;
-                }
-                ret.push(element)
-            });
+                res.plans.forEach(element => {
+                    element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
+                    if (cur_is_motion) {
+                        element.company_show = element.stuff.company.name;
+                    } else {
+                        element.company_show = element.company.name;
+                    }
+                    ret.push(element)
+                });
             }
 
             return ret;
