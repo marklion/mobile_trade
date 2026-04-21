@@ -12,7 +12,7 @@
             <fui-tag :scaleRatio="0.8" originLeft type="primary" text="优惠方案管理" @click="open_scheme_manager"></fui-tag>
         </view>
     </fui-card>
-    <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls]" v-if="cur_urls && cur_urls.get_url">
+    <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" v-if="cur_urls && cur_urls.get_url">
         <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']" :title="item.company.name" color="black" :tag="'￥' + item.balance.toFixed(2)">
             <view style="padding: 0 20rpx;position: relative;">
                 <view v-if="item.expired" class="expired_text">已过期</view>
@@ -99,7 +99,7 @@
     <fui-date-picker range :show="show_date_range" type="3" :value="new_contract.begin_time" :valueEnd="new_contract.end_time" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
-            <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls && cur_urls.buy_setting]" search_key="name" height="40vh">
+            <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2contract(item)">
                     {{item.name}}
                 </fui-list-cell>
@@ -126,7 +126,7 @@
     </fui-modal>
     <fui-bottom-popup :show="show_charge_history" @close="show_charge_history = false">
         <fui-list>
-            <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id]" search_key="search_cond" height="40vh">
+            <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id, cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="search_cond" height="40vh">
                 <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased.toFixed(2)">
                     <view slot="label">
                         {{item.time}}:{{item.comment}}
@@ -306,12 +306,11 @@ export default {
                 this.self_info = { company_is_group: false, company_id: null };
             }
         },
-        make_context_req: function (body = {}, url = '') {
+        make_context_req: function (body = {}, url = '', show_scope_switch = false, company_is_group = false, stat_context_company_id = null) {
             const ret = { ...body };
-            const use_sale_context = this.show_scope_switch;
-            const hit_sale_api = url.startsWith('/sale_management/') && this.self_info && this.self_info.company_is_group === true;
-            if ((use_sale_context || hit_sale_api) && this.stat_context_company_id != null) {
-                ret.stat_context_company_id = this.stat_context_company_id;
+            const hit_sale_api = url.startsWith('/sale_management/') && company_is_group === true;
+            if ((show_scope_switch || hit_sale_api) && stat_context_company_id != null) {
+                ret.stat_context_company_id = stat_context_company_id;
             }
             return ret;
         },
@@ -347,7 +346,7 @@ export default {
             this.show_scheme_manager = true;
         },
         load_discount_schemes: async function () {
-            const req = this.make_context_req({}, '/sale_management/discount_scheme_list');
+            const req = this.make_context_req({}, '/sale_management/discount_scheme_list', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id);
             const ret = await this.$send_req('/sale_management/discount_scheme_list', req);
             this.discount_schemes = ret.schemes || [];
         },
@@ -376,7 +375,7 @@ export default {
                 id: this.scheme_edit_form.id || undefined,
                 name: this.scheme_edit_form.name,
                 delta_price: parseFloat(this.scheme_edit_form.delta_price),
-            }, '/sale_management/discount_scheme_upsert');
+            }, '/sale_management/discount_scheme_upsert', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id);
             await this.$send_req('/sale_management/discount_scheme_upsert', req);
             this.show_scheme_modal = false;
             await this.load_discount_schemes();
@@ -388,7 +387,7 @@ export default {
         },
         delete_scheme: async function (detail) {
             if (detail.index === 1) {
-                const req = this.make_context_req({ id: this.focus_scheme.id }, '/sale_management/discount_scheme_delete');
+                const req = this.make_context_req({ id: this.focus_scheme.id }, '/sale_management/discount_scheme_delete', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id);
                 await this.$send_req('/sale_management/discount_scheme_delete', req);
                 await this.load_discount_schemes();
                 uni.startPullDownRefresh();
@@ -404,7 +403,7 @@ export default {
             const req = this.make_context_req({
                 contract_id: this.focus_item.id,
                 scheme_id: scheme_id,
-            }, '/sale_management/contract_set_discount_scheme');
+            }, '/sale_management/contract_set_discount_scheme', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id);
             await this.$send_req('/sale_management/contract_set_discount_scheme', req);
             this.show_contract_scheme_picker = false;
             uni.startPullDownRefresh();
@@ -435,7 +434,7 @@ export default {
                     contract_id: this.focus_item.id,
                     stuff_id: this.focus_stuff.id,
                     unit_price: unit_price,
-                }, '/sale_management/contract_set_stuff_price');
+                }, '/sale_management/contract_set_stuff_price', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id);
                 await this.$send_req('/sale_management/contract_set_stuff_price', req);
                 this.show_stuff_price_modal = false;
                 this.show_stuff_price_popup = false;
@@ -549,18 +548,18 @@ export default {
                 };
             }
         },
-        get_history: async function (_pageNo, [id]) {
+        get_history: async function (_pageNo, [id, cur_urls, make_context_req, show_scope_switch, company_is_group, stat_context_company_id]) {
             if (id == 0) {
                 return [];
             }
             let history_url = '/cash/history';
-            if (this.cur_urls && this.cur_urls.get_url === '/customer/contract_get') {
+            if (cur_urls && cur_urls.get_url === '/customer/contract_get') {
                 history_url = '/customer/history';
             }
-            let ret = await this.$send_req(history_url, this.make_context_req({
+            let ret = await this.$send_req(history_url, make_context_req({
                 contract_id: id,
                 pageNo: _pageNo
-            }, history_url));
+            }, history_url, show_scope_switch, company_is_group, stat_context_company_id));
             ret.histories.forEach(item => {
                 item.search_cond = item.operator + item.cash_increased + item.comment;
             });
@@ -596,7 +595,7 @@ export default {
                     contract_id: this.focus_item.id,
                     cash_increased: parseFloat(this.cash),
                     comment: this.comment
-                }, charge_url));
+                }, charge_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                 uni.startPullDownRefresh();
             }
             this.show_charge = false;
@@ -613,7 +612,7 @@ export default {
                 }
                 await this.$send_req(this.cur_urls.del_url, this.make_context_req({
                     contract_id: this.focus_item.id
-                }, this.cur_urls.del_url));
+                }, this.cur_urls.del_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                 uni.startPullDownRefresh();
             }
             this.show_del = false;
@@ -631,7 +630,7 @@ export default {
                 await this.$send_req('/sale_management/unauthorize_user', this.make_context_req({
                     contract_id: this.focus_item.id,
                     phone: this.focus_user.phone,
-                }, '/sale_management/unauthorize_user'));
+                }, '/sale_management/unauthorize_user', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                 uni.startPullDownRefresh();
             }
             this.show_unauth = false;
@@ -653,7 +652,7 @@ export default {
                         await this.$send_req('/sale_management/authorize_user', this.make_context_req({
                             contract_id: this.focus_item.id,
                             phone: this.phone
-                        }, '/sale_management/authorize_user'));
+                        }, '/sale_management/authorize_user', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                         uni.startPullDownRefresh();
                         this.close_add_auth()
                     }
@@ -677,7 +676,7 @@ export default {
                 await this.$send_req(url, this.make_context_req({
                     contract_id: this.focus_item.id,
                     stuff_id: this.focus_stuff.id
-                }, url));
+                }, url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                 uni.startPullDownRefresh();
             }
             this.show_del_stuff = false;
@@ -691,13 +690,14 @@ export default {
             if (this.cur_urls && this.cur_urls.buy_setting) {
                 url = "/buy_management/contract_add_stuff"
             }
-            await this.$send_req(url, this.make_context_req(req, url));
+            await this.$send_req(url, this.make_context_req(req, url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
             uni.startPullDownRefresh();
             this.show_add_stuff = false;
         },
-        get_stuff: async function (pageNo, [buy_setting]) {
+        get_stuff: async function (pageNo, [cur_urls, make_context_req, show_scope_switch, company_is_group, stat_context_company_id]) {
+            const buy_setting = !!(cur_urls && cur_urls.buy_setting);
             const use_sale_management_stuff =
-                this.cur_urls && this.cur_urls.motive && !buy_setting;
+                cur_urls && cur_urls.motive && !buy_setting;
             const has_required_module = use_sale_management_stuff
                 ? this.$has_module('sale_management')
                 : this.$has_module('stuff');
@@ -708,9 +708,9 @@ export default {
             if (use_sale_management_stuff) {
                 stuff_url = '/sale_management/get_stuff_for_contract';
             }
-            let resp = await this.$send_req(stuff_url, this.make_context_req({
+            let resp = await this.$send_req(stuff_url, make_context_req({
                 pageNo: pageNo
-            }, stuff_url));
+            }, stuff_url, show_scope_switch, company_is_group, stat_context_company_id));
             let ret = []
             console.log(buy_setting);
             resp.stuff.forEach(ele => {
@@ -747,7 +747,7 @@ export default {
                     console.error('cur_urls.update_url 未定义');
                     return;
                 }
-                await this.$send_req(this.cur_urls.update_url, this.make_context_req(this.new_contract, this.cur_urls.update_url));
+                await this.$send_req(this.cur_urls.update_url, this.make_context_req(this.new_contract, this.cur_urls.update_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                 uni.startPullDownRefresh();
             }
             this.show_update_contract = false;
@@ -769,7 +769,7 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                await this.$send_req(this.cur_urls.make_url, this.make_context_req(this.new_contract, this.cur_urls.make_url));
+                await this.$send_req(this.cur_urls.make_url, this.make_context_req(this.new_contract, this.cur_urls.make_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                 uni.startPullDownRefresh();
             }
             this.show_add_contract = false;
@@ -784,20 +784,21 @@ export default {
             this.focus_item = item;
             this.focus_user = single_user;
         },
-        get_sale_contract: async function (pageNo, [cur_urls]) {
+        get_sale_contract: async function (pageNo, [cur_urls, make_context_req, show_scope_switch, company_is_group, stat_context_company_id]) {
             // 添加安全检查，防止访问未定义对象的属性
             if (!cur_urls || !cur_urls.get_url) {
                 console.error('cur_urls 或 cur_urls.get_url 未定义');
                 return [];
             }
-            let ret = await this.$send_req(cur_urls.get_url, this.make_context_req({
+            let ret = await this.$send_req(cur_urls.get_url, make_context_req({
                 pageNo: pageNo
-            }, cur_urls.get_url));
+            }, cur_urls.get_url, show_scope_switch, company_is_group, stat_context_company_id));
             ret.contracts.forEach(item => {
                 item.search_cond = item.company.name;
             });
             return ret.contracts;
-        }
+        },
+        
     },
     created: function () {
         // 在组件创建时立即初始化，防止模板渲染时访问未定义属性
