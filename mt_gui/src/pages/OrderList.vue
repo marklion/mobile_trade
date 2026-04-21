@@ -1558,7 +1558,7 @@ export default {
                 pageNo: pageNo,
             }, cur_get_url, ssss_bool, scci));
             let ret = [];
-            if (res.plans)
+            if (res && res.plans)
             {
                 res.plans.forEach(element => {
                     element.search_cond = element.main_vehicle.plate + element.behind_vehicle.plate;
