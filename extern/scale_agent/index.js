@@ -2,13 +2,11 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const readline = require('readline');
-const vm = require('vm');
 const yaml = require('js-yaml');
 const { SerialPort } = require('serialport');
 
 const PORT = 39109;
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'scale_agent.config.json');
-const SCRIPT_MAX_LENGTH = 2000;
 
 function safeNumber(value) {
   const n = Number(value);
@@ -18,14 +16,27 @@ function safeNumber(value) {
   return n;
 }
 
+function parseByteIndex(value, fallback) {
+  const idx = Math.floor(safeNumber(value));
+  if (idx < 0) {
+    return fallback;
+  }
+  return idx;
+}
+
+function computeScaleByFixedFormula(array, firstIndex, secondIndex) {
+  const values = Array.isArray(array) ? array : [];
+  return safeNumber(values[firstIndex]) + safeNumber(values[secondIndex]);
+}
+
 class OutputHelper {
   constructor() {
     this.serialName = '';
     this.baudRate = 9600;
-    this.scriptText = 'function (array) { return array[0] + array[1]; }';
+    this.firstByteIndex = 0;
+    this.secondByteIndex = 1;
     this.scaleValue = 0;
     this.lastBytes = [];
-    this.compiledScript = this.compileScript(this.scriptText);
     this.serialPort = null;
     this.serialBuffer = Buffer.alloc(0);
   }
@@ -38,51 +49,26 @@ class OutputHelper {
     return {
       serial: this.serialName,
       baudRate: this.baudRate,
-      script: this.scriptText,
+      firstByteIndex: this.firstByteIndex,
+      secondByteIndex: this.secondByteIndex,
       currentScale: this.scale(),
       lastBytes: this.lastBytes,
     };
   }
 
-  compileScript(scriptText) {
-    const text = String(scriptText || '').trim();
-    if (!text) {
-      return () => 0;
-    }
-    if (text.length > SCRIPT_MAX_LENGTH) {
-      throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
-    }
-    if (/process|require|global|globalThis|constructor|Function|eval|import|child_process/.test(text)) {
-      throw new Error('脚本包含不允许的关键字');
-    }
-    const wrapped = `(${text})`;
-    const probe = vm.runInNewContext(wrapped, Object.create(null), { timeout: 300 });
-    if (typeof probe !== 'function') {
-      throw new Error('脚本必须是函数，例如 function (array) { return array[0] + array[1]; }');
-    }
-    return (array) => {
-      const script = `'use strict';(${text})(array)`;
-      const sandbox = Object.create(null);
-      sandbox.array = Object.freeze(Array.from(array || []));
-      sandbox.Math = Math;
-      sandbox.Number = Number;
-      sandbox.parseInt = parseInt;
-      sandbox.parseFloat = parseFloat;
-      return vm.runInNewContext(script, sandbox, { timeout: 300 });
-    };
-  }
-
-  async applyConfig({ serial, baudRate, script }) {
-    if (script !== undefined) {
-      this.compiledScript = this.compileScript(script);
-      this.scriptText = String(script);
-    }
+  async applyConfig({ serial, baudRate, firstByteIndex, secondByteIndex }) {
     if (baudRate !== undefined) {
       const parsedBaudRate = Math.floor(safeNumber(baudRate));
       if (parsedBaudRate <= 0) {
         throw new Error('波特率必须是正整数');
       }
       this.baudRate = parsedBaudRate;
+    }
+    if (firstByteIndex !== undefined) {
+      this.firstByteIndex = parseByteIndex(firstByteIndex, this.firstByteIndex);
+    }
+    if (secondByteIndex !== undefined) {
+      this.secondByteIndex = parseByteIndex(secondByteIndex, this.secondByteIndex);
     }
     if (serial !== undefined) {
       this.serialName = String(serial || '').trim();
@@ -139,10 +125,10 @@ class OutputHelper {
     this.lastBytes = nowArray;
 
     try {
-      const result = this.compiledScript(nowArray);
+      const result = computeScaleByFixedFormula(nowArray, this.firstByteIndex, this.secondByteIndex);
       this.scaleValue = safeNumber(result);
     } catch (err) {
-      console.error('[output_helper] 脚本执行失败:', err.message);
+      console.error('[output_helper] 固定公式计算失败:', err.message);
     }
   }
 }
@@ -152,7 +138,8 @@ function loadConfig(configPath) {
     return {
       serial: '',
       baudRate: 9600,
-      script: 'function (array) { return array[0] + array[1]; }',
+      firstByteIndex: 0,
+      secondByteIndex: 1,
     };
   }
   const text = fs.readFileSync(configPath, 'utf8');
@@ -203,11 +190,13 @@ function printHelp() {
   console.log('命令说明:');
   console.log('  serial <串口名>          例如: serial COM1');
   console.log('  baud <波特率>            例如: baud 9600');
-  console.log('  script <函数脚本>        例如: script function (array) { return array[0] + array[1]; }');
+  console.log('  idx1 <字节下标>          例如: idx1 0');
+  console.log('  idx2 <字节下标>          例如: idx2 1');
   console.log('  save                     保存并应用配置');
   console.log('  show                     显示当前状态');
   console.log('  help                     显示帮助');
   console.log('  exit                     退出程序');
+  console.log('  当前计算公式固定为: array[idx1] + array[idx2]');
   console.log('');
 }
 
@@ -218,12 +207,14 @@ async function main() {
   let config = loadConfig(configPath);
   let draftSerial = config.serial || '';
   let draftBaudRate = Math.floor(safeNumber(config.baudRate || 9600)) || 9600;
-  let draftScript = config.script || output_helper.scriptText;
+  let draftFirstByteIndex = parseByteIndex(config.firstByteIndex, 0);
+  let draftSecondByteIndex = parseByteIndex(config.secondByteIndex, 1);
 
   await output_helper.applyConfig({
     serial: draftSerial,
     baudRate: draftBaudRate,
-    script: draftScript,
+    firstByteIndex: draftFirstByteIndex,
+    secondByteIndex: draftSecondByteIndex,
   });
 
   const server = createServer(output_helper);
@@ -233,7 +224,7 @@ async function main() {
     printHelp();
     console.log(`当前串口: ${draftSerial || '(未设置)'}`);
     console.log(`当前波特率: ${draftBaudRate}`);
-    console.log(`当前脚本: ${draftScript}`);
+    console.log(`当前取值下标: idx1=${draftFirstByteIndex}, idx2=${draftSecondByteIndex}`);
   });
 
   const rl = readline.createInterface({
@@ -259,8 +250,9 @@ async function main() {
       console.log('当前配置草稿:');
       console.log(`  串口: ${draftSerial || '(未设置)'}`);
       console.log(`  波特率: ${draftBaudRate}`);
-      console.log(`  脚本: ${draftScript}`);
+      console.log(`  公式: array[${draftFirstByteIndex}] + array[${draftSecondByteIndex}] (固定)`);
       console.log('运行状态:');
+      console.log(`  生效下标: idx1=${state.firstByteIndex}, idx2=${state.secondByteIndex}`);
       console.log(`  scale: ${state.currentScale}`);
       console.log(`  lastBytes: [${state.lastBytes.join(', ')}]`);
       rl.prompt();
@@ -275,7 +267,8 @@ async function main() {
         config = {
           serial: draftSerial,
           baudRate: draftBaudRate,
-          script: draftScript,
+          firstByteIndex: draftFirstByteIndex,
+          secondByteIndex: draftSecondByteIndex,
         };
         saveConfig(configPath, config);
         await output_helper.applyConfig(config);
@@ -293,8 +286,7 @@ async function main() {
       return;
     }
     if (input.startsWith('script ')) {
-      draftScript = input.slice('script '.length).trim();
-      console.log('脚本草稿已更新');
+      console.log('已固定公式，不再支持 script 命令');
       rl.prompt();
       return;
     }
@@ -306,6 +298,18 @@ async function main() {
         draftBaudRate = nextBaudRate;
         console.log(`波特率草稿已更新: ${draftBaudRate}`);
       }
+      rl.prompt();
+      return;
+    }
+    if (input.startsWith('idx1 ')) {
+      draftFirstByteIndex = parseByteIndex(input.slice('idx1 '.length).trim(), draftFirstByteIndex);
+      console.log(`idx1 草稿已更新: ${draftFirstByteIndex}`);
+      rl.prompt();
+      return;
+    }
+    if (input.startsWith('idx2 ')) {
+      draftSecondByteIndex = parseByteIndex(input.slice('idx2 '.length).trim(), draftSecondByteIndex);
+      console.log(`idx2 草稿已更新: ${draftSecondByteIndex}`);
       rl.prompt();
       return;
     }
