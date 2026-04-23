@@ -5,6 +5,50 @@ const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const moment = require('moment');
+
+function build_one_time_scale_context(plan, one_weight) {
+    const first_weight_key = plan.is_buy ? 'm_weight' : 'p_weight';
+    const second_weight_key = plan.is_buy ? 'p_weight' : 'm_weight';
+    const first_time_key = plan.is_buy ? 'm_time' : 'p_time';
+    const second_time_key = plan.is_buy ? 'p_time' : 'm_time';
+    return {
+        first_weight_key,
+        second_weight_key,
+        first_time_key,
+        second_time_key,
+        expect_status: plan.is_buy ? 1 : 2,
+        first_weight: Number(plan[first_weight_key]) || 0,
+        second_weight: Number(plan[second_weight_key]) || 0,
+        now_time: moment().format('YYYY-MM-DD HH:mm:ss'),
+        one_weight,
+    };
+}
+
+async function save_first_scale(plan_id, token, context) {
+    await plan_lib.action_in_plan(plan_id, token, context.expect_status, async (latest_plan, t) => {
+        latest_plan[context.first_weight_key] = context.one_weight;
+        latest_plan[context.first_time_key] = context.now_time;
+        await latest_plan.save({ transaction: t });
+    });
+}
+
+async function deliver_second_scale(plan_id, token, plan, context) {
+    const p_weight = context.second_weight_key === 'p_weight' ? context.one_weight : context.first_weight;
+    const m_weight = context.second_weight_key === 'm_weight' ? context.one_weight : context.first_weight;
+    const p_time = context.second_time_key === 'p_time' ? context.now_time : plan.p_time;
+    const m_time = context.second_time_key === 'm_time' ? context.now_time : plan.m_time;
+    const count = Math.abs(m_weight - p_weight);
+    await plan_lib.deliver_plan(
+        plan_id,
+        token,
+        count,
+        p_weight,
+        m_weight,
+        p_time,
+        m_time
+    );
+}
+
 module.exports = {
     name: 'scale',
     description: '计量管理',
@@ -377,39 +421,15 @@ module.exports = {
                 if (Number.isNaN(oneWeight) || oneWeight < 0) {
                     throw { err_msg: '重量数据错误' };
                 }
-                const firstWeightKey = plan.is_buy ? 'm_weight' : 'p_weight';
-                const secondWeightKey = plan.is_buy ? 'p_weight' : 'm_weight';
-                const firstTimeKey = plan.is_buy ? 'm_time' : 'p_time';
-                const secondTimeKey = plan.is_buy ? 'p_time' : 'm_time';
-                const expectStatus = plan.is_buy ? 1 : 2;
-                const firstWeight = Number(plan[firstWeightKey]) || 0;
-                const secondWeight = Number(plan[secondWeightKey]) || 0;
-                const nowTime = moment().format('YYYY-MM-DD HH:mm:ss');
+                const scale_context = build_one_time_scale_context(plan, oneWeight);
 
-                if (firstWeight <= 0) {
-                    await plan_lib.action_in_plan(body.plan_id, token, expectStatus, async (latestPlan, t) => {
-                        latestPlan[firstWeightKey] = oneWeight;
-                        latestPlan[firstTimeKey] = nowTime;
-                        await latestPlan.save({ transaction: t });
-                    });
+                if (scale_context.first_weight <= 0) {
+                    await save_first_scale(body.plan_id, token, scale_context);
                     return { result: true };
                 }
 
-                if (secondWeight <= 0) {
-                    const pWeight = secondWeightKey === 'p_weight' ? oneWeight : firstWeight;
-                    const mWeight = secondWeightKey === 'm_weight' ? oneWeight : firstWeight;
-                    const pTime = secondTimeKey === 'p_time' ? nowTime : plan.p_time;
-                    const mTime = secondTimeKey === 'm_time' ? nowTime : plan.m_time;
-                    const count = Math.abs(mWeight - pWeight);
-                    await plan_lib.deliver_plan(
-                        body.plan_id,
-                        token,
-                        count,
-                        pWeight,
-                        mWeight,
-                        pTime,
-                        mTime
-                    );
+                if (scale_context.second_weight <= 0) {
+                    await deliver_second_scale(body.plan_id, token, plan, scale_context);
                     return { result: true };
                 }
 
