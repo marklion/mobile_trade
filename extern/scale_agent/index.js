@@ -8,6 +8,7 @@ const { SerialPort } = require('serialport');
 
 const PORT = 39109;
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'scale_agent.config.json');
+const SCRIPT_MAX_LENGTH = 2000;
 
 function safeNumber(value) {
   const n = Number(value);
@@ -48,12 +49,27 @@ class OutputHelper {
     if (!text) {
       return () => 0;
     }
+    if (text.length > SCRIPT_MAX_LENGTH) {
+      throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
+    }
+    if (/process|require|global|globalThis|constructor|Function|eval|import|child_process/.test(text)) {
+      throw new Error('脚本包含不允许的关键字');
+    }
     const wrapped = `(${text})`;
-    const fn = vm.runInNewContext(wrapped, {}, { timeout: 1000 });
-    if (typeof fn !== 'function') {
+    const probe = vm.runInNewContext(wrapped, Object.create(null), { timeout: 300 });
+    if (typeof probe !== 'function') {
       throw new Error('脚本必须是函数，例如 function (array) { return array[0] + array[1]; }');
     }
-    return fn;
+    return (array) => {
+      const script = `'use strict';(${text})(array)`;
+      const sandbox = Object.create(null);
+      sandbox.array = Object.freeze(Array.from(array || []));
+      sandbox.Math = Math;
+      sandbox.Number = Number;
+      sandbox.parseInt = parseInt;
+      sandbox.parseFloat = parseFloat;
+      return vm.runInNewContext(script, sandbox, { timeout: 300 });
+    };
   }
 
   async applyConfig({ serial, baudRate, script }) {
@@ -122,17 +138,8 @@ class OutputHelper {
     const nowArray = Array.from(chunk);
     this.lastBytes = nowArray;
 
-    const sandbox = {
-      array: nowArray,
-      arrary: nowArray, // 兼容示例里的拼写
-      Math,
-      Number,
-      parseInt,
-      parseFloat,
-    };
-
     try {
-      const result = this.compiledScript(sandbox.array);
+      const result = this.compiledScript(nowArray);
       this.scaleValue = safeNumber(result);
     } catch (err) {
       console.error('[output_helper] 脚本执行失败:', err.message);
@@ -167,20 +174,9 @@ function saveConfig(configPath, data) {
 
 function createServer(output_helper) {
   const server = http.createServer((req, res) => {
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, Token',
-    };
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204, corsHeaders);
-      res.end();
-      return;
-    }
     if (req.method === 'GET' && req.url === '/scale') {
       const body = JSON.stringify({ scale: output_helper.scale() });
       res.writeHead(200, {
-        ...corsHeaders,
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': Buffer.byteLength(body),
       });
@@ -189,14 +185,12 @@ function createServer(output_helper) {
     }
     if (req.method === 'GET' && req.url === '/healthz') {
       res.writeHead(200, {
-        ...corsHeaders,
         'Content-Type': 'text/plain; charset=utf-8',
       });
       res.end('ok');
       return;
     }
     res.writeHead(404, {
-      ...corsHeaders,
       'Content-Type': 'application/json; charset=utf-8',
     });
     res.end(JSON.stringify({ err: 'not found' }));
