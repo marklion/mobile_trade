@@ -4,6 +4,7 @@ const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
+const moment = require('moment');
 module.exports = {
     name: 'scale',
     description: '计量管理',
@@ -335,7 +336,6 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                const moment = require('moment');
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
                     plan.count = body.count;
                     plan.first_weight = body.first_weight;
@@ -354,6 +354,66 @@ module.exports = {
                     }
                 });
                 return { result: true };
+            }
+        },
+        one_time_scale: {
+            name: '单次计量',
+            description: '根据当前状态记录一次或二次重量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                weight: { type: Number, have_to: true, mean: '本次重量', example: 26.03 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan) {
+                    throw { err_msg: '计划不存在' };
+                }
+                const oneWeight = Number(body.weight);
+                if (Number.isNaN(oneWeight) || oneWeight < 0) {
+                    throw { err_msg: '重量数据错误' };
+                }
+                const firstWeightKey = plan.is_buy ? 'm_weight' : 'p_weight';
+                const secondWeightKey = plan.is_buy ? 'p_weight' : 'm_weight';
+                const firstTimeKey = plan.is_buy ? 'm_time' : 'p_time';
+                const secondTimeKey = plan.is_buy ? 'p_time' : 'm_time';
+                const expectStatus = plan.is_buy ? 1 : 2;
+                const firstWeight = Number(plan[firstWeightKey]) || 0;
+                const secondWeight = Number(plan[secondWeightKey]) || 0;
+                const nowTime = moment().format('YYYY-MM-DD HH:mm:ss');
+
+                if (firstWeight <= 0) {
+                    await plan_lib.action_in_plan(body.plan_id, token, expectStatus, async (latestPlan, t) => {
+                        latestPlan[firstWeightKey] = oneWeight;
+                        latestPlan[firstTimeKey] = nowTime;
+                        await latestPlan.save({ transaction: t });
+                    });
+                    return { result: true };
+                }
+
+                if (secondWeight <= 0) {
+                    const pWeight = secondWeightKey === 'p_weight' ? oneWeight : firstWeight;
+                    const mWeight = secondWeightKey === 'm_weight' ? oneWeight : firstWeight;
+                    const pTime = secondTimeKey === 'p_time' ? nowTime : plan.p_time;
+                    const mTime = secondTimeKey === 'm_time' ? nowTime : plan.m_time;
+                    const count = Math.abs(mWeight - pWeight);
+                    await plan_lib.deliver_plan(
+                        body.plan_id,
+                        token,
+                        count,
+                        pWeight,
+                        mWeight,
+                        pTime,
+                        mTime
+                    );
+                    return { result: true };
+                }
+
+                throw { err_msg: '该订单已完成两次计量' };
             }
         },
         input_psi_info: {
