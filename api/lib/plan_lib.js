@@ -16,6 +16,12 @@ const king_dee_start_lib = require('./king_dee_start_lib');
 const { Sequelize } = require('sequelize');
 const g_verify_pay_company_set = new Set();
 const g_vpcs_mutex = new Mutex();
+
+function is_manual_recharge_history(history) {
+    const delta = Number(history.cash_increased) || 0;
+    return delta > 0 && (history.operator || '') !== '系统';
+}
+
 module.exports = {
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
@@ -2211,7 +2217,7 @@ module.exports = {
                 where: {
                     contractId: { [db_opt.Op.in]: contract_ids },
                 },
-                attributes: ['contractId', 'time', 'cash_increased'],
+                attributes: ['contractId', 'time', 'cash_increased', 'operator'],
                 order: [['id', 'ASC']],
                 raw: true,
             });
@@ -2252,10 +2258,10 @@ module.exports = {
                     if (history_time.isAfter(year_start_prev)) {
                         sum_after_year_start += delta;
                     }
-                    if (history_time.isBetween(report_start, report_end, undefined, '[]')) {
+                    if (history_time.isBetween(report_start, report_end, undefined, '[]') && is_manual_recharge_history(history)) {
                         month_prepayment += delta;
                     }
-                    if (history_time.isBetween(year_start, report_end, undefined, '[]')) {
+                    if (history_time.isBetween(year_start, report_end, undefined, '[]') && is_manual_recharge_history(history)) {
                         year_prepayment += delta;
                     }
                 });
