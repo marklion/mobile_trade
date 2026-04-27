@@ -46,11 +46,16 @@ function parseScriptShape(scriptText) {
     throw new Error('脚本参数名错误');
   }
   const body = String(match[2] || '').trim();
-  const bodyMatch = body.match(/^return\s+([\s\S]*?);?$/);
-  if (!bodyMatch) {
+  if (!body.startsWith('return')) {
     throw new Error('脚本函数体仅允许 return 表达式');
   }
-  const expression = String(bodyMatch[1] || '').trim();
+  const returnPayload = body.slice('return'.length).trim();
+  if (!returnPayload) {
+    throw new Error('return 表达式不能为空');
+  }
+  const expression = returnPayload.endsWith(';')
+    ? returnPayload.slice(0, -1).trim()
+    : returnPayload;
   if (!expression) {
     throw new Error('return 表达式不能为空');
   }
