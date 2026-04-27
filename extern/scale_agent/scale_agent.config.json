@@ -1,0 +1,5 @@
+{
+  "serial": "COM1",
+  "baudRate": 9600,
+  "script": "function (arrayBuffer) { return arrayBuffer[0] + arrayBuffer[1]; }"
+}
