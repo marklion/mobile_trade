@@ -2,14 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const readline = require('readline');
-const vm = require('vm');
 const yaml = require('js-yaml');
 const { SerialPort } = require('serialport');
 
 const PORT = 39109;
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'scale_agent.config.json');
-const SCRIPT_TIMEOUT_MS = 300;
 const SCRIPT_MAX_LENGTH = 8000;
+const SCRIPT_EXPRESSION_MAX_LENGTH = 2000;
 
 function safeNumber(value) {
   const n = Number(value);
@@ -30,35 +29,242 @@ function normalizeScriptText(scriptText) {
   );
 }
 
-function compileScaleScript(scriptText) {
+function parseScriptShape(scriptText) {
   const normalized = normalizeScriptText(scriptText);
+  if (!normalized) {
+    throw new Error('脚本不能为空');
+  }
   if (normalized.length > SCRIPT_MAX_LENGTH) {
     throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
   }
-  if (/\b(require|process|global|globalThis|module|exports|Function|eval|import)\b/.test(normalized)) {
-    throw new Error('脚本包含不允许的关键字');
+  const match = normalized.match(/^function\s*\(([^)]*)\)\s*\{([\s\S]*)\}$/);
+  if (!match) {
+    throw new Error('脚本格式错误，示例: function (arrayBuffer):Number { return arrayBuffer[0] + arrayBuffer[1]; }');
   }
-  const wrapped = `(${normalized})`;
-  // NOSONAR: 业务要求支持用户配置解析函数，这里在隔离上下文+超时下执行
-  const probe = vm.runInNewContext(wrapped, Object.create(null), { timeout: SCRIPT_TIMEOUT_MS });
-  if (typeof probe !== 'function') {
-    throw new Error('脚本必须是函数，例如 function (arrayBuffer) { return arrayBuffer[0] + arrayBuffer[1]; }');
+  const paramName = String(match[1] || '').trim();
+  if (!paramName || !/^[A-Za-z_]\w*$/.test(paramName)) {
+    throw new Error('脚本参数名错误');
   }
+  const body = String(match[2] || '').trim();
+  const bodyMatch = body.match(/^return\s+([\s\S]*?);?$/);
+  if (!bodyMatch) {
+    throw new Error('脚本函数体仅允许 return 表达式');
+  }
+  const expression = String(bodyMatch[1] || '').trim();
+  if (!expression) {
+    throw new Error('return 表达式不能为空');
+  }
+  if (expression.length > SCRIPT_EXPRESSION_MAX_LENGTH) {
+    throw new Error(`return 表达式长度不能超过 ${SCRIPT_EXPRESSION_MAX_LENGTH} 个字符`);
+  }
+  return { normalized, paramName, expression };
+}
+
+function tokenizeExpression(expression) {
+  const tokens = [];
+  let index = 0;
+  const pushToken = (type, value) => tokens.push({ type, value });
+  while (index < expression.length) {
+    const ch = expression[index];
+    if (/\s/.test(ch)) {
+      index += 1;
+      continue;
+    }
+    if ('()+-*/%'.includes(ch)) {
+      pushToken('op', ch);
+      index += 1;
+      continue;
+    }
+    if (expression.startsWith('0x', index) || expression.startsWith('0X', index)) {
+      let j = index + 2;
+      while (j < expression.length && /[0-9a-fA-F]/.test(expression[j])) {
+        j += 1;
+      }
+      const value = Number(expression.slice(index, j));
+      if (!Number.isFinite(value)) {
+        throw new Error('表达式中包含非法数字');
+      }
+      pushToken('number', value);
+      index = j;
+      continue;
+    }
+    if (/[0-9.]/.test(ch)) {
+      let j = index + 1;
+      while (j < expression.length && /[0-9.]/.test(expression[j])) {
+        j += 1;
+      }
+      const value = Number(expression.slice(index, j));
+      if (!Number.isFinite(value)) {
+        throw new Error('表达式中包含非法数字');
+      }
+      pushToken('number', value);
+      index = j;
+      continue;
+    }
+    if (/[A-Za-z_]/.test(ch)) {
+      let j = index + 1;
+      while (j < expression.length && /[A-Za-z0-9_]/.test(expression[j])) {
+        j += 1;
+      }
+      const identifier = expression.slice(index, j);
+      while (j < expression.length && /\s/.test(expression[j])) {
+        j += 1;
+      }
+      if (expression[j] !== '[') {
+        throw new Error(`表达式变量不允许: ${identifier}`);
+      }
+      j += 1;
+      while (j < expression.length && /\s/.test(expression[j])) {
+        j += 1;
+      }
+      let k = j;
+      while (k < expression.length && /[0-9]/.test(expression[k])) {
+        k += 1;
+      }
+      if (k === j) {
+        throw new Error('数组下标必须是非负整数');
+      }
+      while (k < expression.length && /\s/.test(expression[k])) {
+        k += 1;
+      }
+      if (expression[k] !== ']') {
+        throw new Error('数组下标语法错误');
+      }
+      pushToken('ref', { identifier, idx: Number(expression.slice(j, k)) });
+      index = k + 1;
+      continue;
+    }
+    throw new Error(`表达式包含不支持的字符: ${ch}`);
+  }
+  return tokens;
+}
+
+function compileExpression(expression, allowedIdentifiers) {
+  const tokens = tokenizeExpression(expression);
+  const precedence = { 'u+': 3, 'u-': 3, '*': 2, '/': 2, '%': 2, '+': 1, '-': 1 };
+  const output = [];
+  const operators = [];
+  const isLeftAssoc = (op) => !op.startsWith('u');
+  let prevType = 'start';
+
+  const pushOperator = (op) => {
+    while (operators.length > 0) {
+      const top = operators[operators.length - 1];
+      if (top === '(') {
+        break;
+      }
+      const topP = precedence[top] || 0;
+      const curP = precedence[op] || 0;
+      if (topP > curP || (topP === curP && isLeftAssoc(op))) {
+        output.push({ type: 'op', value: operators.pop() });
+      } else {
+        break;
+      }
+    }
+    operators.push(op);
+  };
+
+  tokens.forEach((token) => {
+    if (token.type === 'number' || token.type === 'ref') {
+      if (token.type === 'ref' && !allowedIdentifiers.has(token.value.identifier)) {
+        throw new Error(`表达式变量不允许: ${token.value.identifier}`);
+      }
+      output.push(token);
+      prevType = 'value';
+      return;
+    }
+    if (token.type !== 'op') {
+      throw new Error('表达式语法错误');
+    }
+    if (token.value === '(') {
+      operators.push('(');
+      prevType = '(';
+      return;
+    }
+    if (token.value === ')') {
+      while (operators.length > 0 && operators[operators.length - 1] !== '(') {
+        output.push({ type: 'op', value: operators.pop() });
+      }
+      if (operators.length === 0 || operators.pop() !== '(') {
+        throw new Error('括号不匹配');
+      }
+      prevType = 'value';
+      return;
+    }
+    if ('+-*/%'.includes(token.value)) {
+      let op = token.value;
+      if ((op === '+' || op === '-') && (prevType === 'start' || prevType === '(' || prevType === 'op')) {
+        op = op === '+' ? 'u+' : 'u-';
+      }
+      pushOperator(op);
+      prevType = 'op';
+      return;
+    }
+    throw new Error(`表达式不支持操作符: ${token.value}`);
+  });
+
+  while (operators.length > 0) {
+    const op = operators.pop();
+    if (op === '(') {
+      throw new Error('括号不匹配');
+    }
+    output.push({ type: 'op', value: op });
+  }
+
+  return (arrayBuffer) => {
+    const stack = [];
+    output.forEach((token) => {
+      if (token.type === 'number') {
+        stack.push(token.value);
+        return;
+      }
+      if (token.type === 'ref') {
+        const idx = token.value.idx;
+        const value = idx >= 0 && idx < arrayBuffer.length ? arrayBuffer[idx] : 0;
+        stack.push(safeNumber(value));
+        return;
+      }
+      if (token.value === 'u+' || token.value === 'u-') {
+        const a = stack.pop();
+        if (a === undefined) {
+          throw new Error('表达式语法错误');
+        }
+        stack.push(token.value === 'u+' ? +a : -a);
+        return;
+      }
+      const b = stack.pop();
+      const a = stack.pop();
+      if (a === undefined || b === undefined) {
+        throw new Error('表达式语法错误');
+      }
+      if (token.value === '+') {
+        stack.push(a + b);
+      } else if (token.value === '-') {
+        stack.push(a - b);
+      } else if (token.value === '*') {
+        stack.push(a * b);
+      } else if (token.value === '/') {
+        stack.push(b === 0 ? 0 : a / b);
+      } else if (token.value === '%') {
+        stack.push(b === 0 ? 0 : a % b);
+      } else {
+        throw new Error(`表达式不支持操作符: ${token.value}`);
+      }
+    });
+    if (stack.length !== 1) {
+      throw new Error('表达式语法错误');
+    }
+    return stack[0];
+  };
+}
+
+function compileScaleScript(scriptText) {
+  const { normalized, paramName, expression } = parseScriptShape(scriptText);
+  const evaluator = compileExpression(expression, new Set([paramName, 'arrayBuffer', 'array', 'arrary']));
   return {
     source: normalized,
-    run(arrayBuffer, chunkBuffer) {
-      const sandbox = Object.create(null);
-      sandbox.arrayBuffer = Object.freeze(Array.from(arrayBuffer || []));
-      sandbox.array = sandbox.arrayBuffer;
-      sandbox.arrary = sandbox.arrayBuffer;
-      sandbox.chunk = Buffer.from(chunkBuffer || []);
-      sandbox.Math = Math;
-      sandbox.Number = Number;
-      sandbox.parseInt = parseInt;
-      sandbox.parseFloat = parseFloat;
-      sandbox.BigInt = BigInt;
-      // NOSONAR: 业务要求支持用户配置解析函数，这里在隔离上下文+超时下执行
-      return vm.runInNewContext(`(${normalized})(arrayBuffer)`, sandbox, { timeout: SCRIPT_TIMEOUT_MS });
+    run(arrayBuffer) {
+      return safeNumber(evaluator(Array.from(arrayBuffer || [])));
     },
   };
 }
@@ -156,7 +362,7 @@ class OutputHelper {
     this.lastBytes = nowArray;
 
     try {
-      const result = this.compiledScript.run(nowArray, chunk);
+      const result = this.compiledScript.run(nowArray);
       this.scaleValue = safeNumber(result);
     } catch (err) {
       console.error('[output_helper] 脚本执行失败:', err.message);
@@ -226,6 +432,7 @@ function printHelp() {
   console.log('  help                     显示帮助');
   console.log('  exit                     退出程序');
   console.log('  支持脚本格式: function (arrayBuffer):Number { ... } 或 function (arrayBuffer) { ... }');
+  console.log('  return 表达式仅支持: arrayBuffer[i]/array[i]/arrary[i]、数字、()+-*/%');
   console.log('');
 }
 
