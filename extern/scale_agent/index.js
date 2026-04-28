@@ -2,12 +2,14 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const readline = require('readline');
+const vm = require('vm');
 const yaml = require('js-yaml');
 const { SerialPort } = require('serialport');
 
 const PORT = 39109;
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'scale_agent.config.json');
 const SCRIPT_MAX_LENGTH = 8000;
+const SCRIPT_RUN_TIMEOUT_MS = 50;
 const FRAME_START = 0x02;
 const FRAME_END_A = 0x03;
 const FRAME_END_B = 0x0d;
@@ -39,9 +41,24 @@ function compileScaleScript(scriptText) {
   if (normalized.length > SCRIPT_MAX_LENGTH) {
     throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
   }
+  const sandbox = {
+    Math,
+    Number,
+    Array,
+    JSON,
+    parseInt,
+    parseFloat,
+    isNaN,
+    isFinite,
+  };
+  vm.createContext(sandbox);
+
   let scriptFn;
+  let runScript;
   try {
-    scriptFn = (new Function(`return (${normalized});`))();
+    const factoryScript = new vm.Script(`(${normalized})`);
+    scriptFn = factoryScript.runInContext(sandbox, { timeout: SCRIPT_RUN_TIMEOUT_MS });
+    runScript = new vm.Script('__userScript(__frameArray, __helpers)');
   } catch (error) {
     throw new Error(`脚本编译失败: ${error.message}`);
   }
@@ -51,7 +68,16 @@ function compileScaleScript(scriptText) {
   return {
     source: normalized,
     run(frameArray, helpers) {
-      const ret = scriptFn(Array.from(frameArray || []), helpers);
+      const safeHelpers = Object.freeze({
+        parseFrameByConfig: (frame, frameParsers) => parseFrameByConfig(frame, frameParsers),
+        frameParsers: Array.isArray(helpers?.frameParsers) ? helpers.frameParsers.slice() : [],
+      });
+      sandbox.__userScript = scriptFn;
+      sandbox.__frameArray = Array.from(frameArray || []);
+      sandbox.__helpers = safeHelpers;
+      const ret = runScript.runInContext(sandbox, { timeout: SCRIPT_RUN_TIMEOUT_MS });
+      delete sandbox.__frameArray;
+      delete sandbox.__helpers;
       if (ret === null || ret === undefined) {
         return null;
       }
@@ -254,9 +280,73 @@ function getDefaultConfig() {
 
 function parseJsonConfigWithComments(text) {
   const raw = String(text || '');
-  const withoutBlockComments = raw.replace(/\/\*[\s\S]*?\*\//g, '');
-  const withoutLineComments = withoutBlockComments.replace(/^\s*\/\/.*$/gm, '');
-  return JSON.parse(withoutLineComments);
+  let out = '';
+  let i = 0;
+  let inString = false;
+  let escaped = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  while (i < raw.length) {
+    const ch = raw[i];
+    const next = i + 1 < raw.length ? raw[i + 1] : '';
+
+    if (inLineComment) {
+      if (ch === '\n') {
+        inLineComment = false;
+        out += ch;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (ch === '*' && next === '/') {
+        inBlockComment = false;
+        i += 2;
+      } else {
+        i += 1;
+      }
+      continue;
+    }
+
+    if (inString) {
+      out += ch;
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === '"') {
+        inString = false;
+      }
+      i += 1;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = true;
+      out += ch;
+      i += 1;
+      continue;
+    }
+
+    if (ch === '/' && next === '/') {
+      inLineComment = true;
+      i += 2;
+      continue;
+    }
+
+    if (ch === '/' && next === '*') {
+      inBlockComment = true;
+      i += 2;
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
+
+  return JSON.parse(out);
 }
 
 class OutputHelper {
