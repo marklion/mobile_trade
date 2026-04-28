@@ -53,6 +53,7 @@ export default {
       searchKey: '',
       plans: [],
       selectedPlan: null,
+      selectedTicket: null,
       scaleValue: null,
       isMeasuring: false,
       weightTimer: null,
@@ -101,8 +102,8 @@ export default {
       return [
         { label: '主车', value: this.selectedPlan.main_vehicle ? this.selectedPlan.main_vehicle.plate : 'xxxx' },
         { label: '挂车', value: this.selectedPlan.behind_vehicle ? this.selectedPlan.behind_vehicle.plate : 'xxxx' },
-        { label: '皮重', value: this.showWeight(this.selectedPlan.p_weight) },
-        { label: '毛重', value: this.showWeight(this.selectedPlan.m_weight) },
+        { label: '皮重', value: this.showWeight(this.selectedTicket ? this.selectedTicket.p_weight : this.selectedPlan.p_weight) },
+        { label: '毛重', value: this.showWeight(this.selectedTicket ? this.selectedTicket.m_weight : this.selectedPlan.m_weight) },
         { label: '公司', value: this.selectedPlan.company ? this.selectedPlan.company.name : '-' },
         { label: '物料', value: this.selectedPlan.stuff ? this.selectedPlan.stuff.name : '-' },
       ];
@@ -130,6 +131,20 @@ export default {
     },
     selectPlan(item) {
       this.selectedPlan = item;
+      this.refreshSelectedTicket();
+    },
+    async refreshSelectedTicket() {
+      if (!this.selectedPlan) {
+        this.selectedTicket = null;
+        return;
+      }
+      try {
+        this.selectedTicket = await this.$send_req('/global/get_ticket', {
+          id: this.selectedPlan.id,
+        }, true);
+      } catch (error) {
+        this.selectedTicket = null;
+      }
     },
     async loadPlans() {
       const resp = await this.$send_req('/scale/wait_que', {
@@ -139,10 +154,12 @@ export default {
       this.plans = resp.plans || [];
       if (!this.selectedPlan) {
         this.selectedPlan = this.filteredPlans[0] || null;
+        this.refreshSelectedTicket();
         return;
       }
       const latest = this.plans.find((item) => item.id === this.selectedPlan.id);
       this.selectedPlan = latest || this.filteredPlans[0] || null;
+      this.refreshSelectedTicket();
     },
     async pollScale() {
       try {
@@ -171,10 +188,14 @@ export default {
       try {
         await this.$send_req('/scale/one_time_scale', {
           plan_id: this.selectedPlan.id,
+          planId: this.selectedPlan.id,
           weight,
         });
         this.$message.success('计量成功');
+        await this.refreshSelectedTicket();
         await this.loadPlans();
+      } catch (error) {
+        this.$message.error(error.message || '计量失败');
       } finally {
         this.isMeasuring = false;
       }

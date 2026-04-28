@@ -8,7 +8,9 @@ const { SerialPort } = require('serialport');
 const PORT = 39109;
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'scale_agent.config.json');
 const SCRIPT_MAX_LENGTH = 8000;
-const SCRIPT_EXPRESSION_MAX_LENGTH = 2000;
+const FRAME_START = 0x02;
+const FRAME_END_A = 0x03;
+const FRAME_END_B = 0x0d;
 
 function safeNumber(value) {
   const n = Number(value);
@@ -21,7 +23,7 @@ function safeNumber(value) {
 function normalizeScriptText(scriptText) {
   const raw = String(scriptText || '').trim();
   if (!raw) {
-    return 'function (arrayBuffer) { return arrayBuffer[0] + arrayBuffer[1]; }';
+    return '';
   }
   return raw.replace(
     /^function\s*\(([^)]*)\)\s*:\s*Number\s*\{/,
@@ -29,7 +31,7 @@ function normalizeScriptText(scriptText) {
   );
 }
 
-function parseScriptShape(scriptText) {
+function compileScaleScript(scriptText) {
   const normalized = normalizeScriptText(scriptText);
   if (!normalized) {
     throw new Error('脚本不能为空');
@@ -37,249 +39,234 @@ function parseScriptShape(scriptText) {
   if (normalized.length > SCRIPT_MAX_LENGTH) {
     throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
   }
-  const match = normalized.match(/^function\s*\(([^)]*)\)\s*\{([\s\S]*)\}$/);
-  if (!match) {
-    throw new Error('脚本格式错误，示例: function (arrayBuffer):Number { return arrayBuffer[0] + arrayBuffer[1]; }');
+  let scriptFn;
+  try {
+    scriptFn = (new Function(`return (${normalized});`))();
+  } catch (error) {
+    throw new Error(`脚本编译失败: ${error.message}`);
   }
-  const paramName = String(match[1] || '').trim();
-  if (!paramName || !/^[A-Za-z_]\w*$/.test(paramName)) {
-    throw new Error('脚本参数名错误');
+  if (typeof scriptFn !== 'function') {
+    throw new Error('脚本必须是函数，例如: function (frameArray, helpers) { return 0; }');
   }
-  const body = String(match[2] || '').trim();
-  if (!body.startsWith('return')) {
-    throw new Error('脚本函数体仅允许 return 表达式');
-  }
-  const returnPayload = body.slice('return'.length).trim();
-  if (!returnPayload) {
-    throw new Error('return 表达式不能为空');
-  }
-  const expression = returnPayload.endsWith(';')
-    ? returnPayload.slice(0, -1).trim()
-    : returnPayload;
-  if (!expression) {
-    throw new Error('return 表达式不能为空');
-  }
-  if (expression.length > SCRIPT_EXPRESSION_MAX_LENGTH) {
-    throw new Error(`return 表达式长度不能超过 ${SCRIPT_EXPRESSION_MAX_LENGTH} 个字符`);
-  }
-  return { normalized, paramName, expression };
-}
-
-function tokenizeExpression(expression) {
-  const tokens = [];
-  let index = 0;
-  const pushToken = (type, value) => tokens.push({ type, value });
-  while (index < expression.length) {
-    const ch = expression[index];
-    if (/\s/.test(ch)) {
-      index += 1;
-      continue;
-    }
-    if ('()+-*/%'.includes(ch)) {
-      pushToken('op', ch);
-      index += 1;
-      continue;
-    }
-    if (expression.startsWith('0x', index) || expression.startsWith('0X', index)) {
-      let j = index + 2;
-      while (j < expression.length && /[0-9a-fA-F]/.test(expression[j])) {
-        j += 1;
-      }
-      const value = Number(expression.slice(index, j));
-      if (!Number.isFinite(value)) {
-        throw new Error('表达式中包含非法数字');
-      }
-      pushToken('number', value);
-      index = j;
-      continue;
-    }
-    if (/[0-9.]/.test(ch)) {
-      let j = index + 1;
-      while (j < expression.length && /[0-9.]/.test(expression[j])) {
-        j += 1;
-      }
-      const value = Number(expression.slice(index, j));
-      if (!Number.isFinite(value)) {
-        throw new Error('表达式中包含非法数字');
-      }
-      pushToken('number', value);
-      index = j;
-      continue;
-    }
-    if (/[A-Za-z_]/.test(ch)) {
-      let j = index + 1;
-      while (j < expression.length && /[A-Za-z0-9_]/.test(expression[j])) {
-        j += 1;
-      }
-      const identifier = expression.slice(index, j);
-      while (j < expression.length && /\s/.test(expression[j])) {
-        j += 1;
-      }
-      if (expression[j] !== '[') {
-        throw new Error(`表达式变量不允许: ${identifier}`);
-      }
-      j += 1;
-      while (j < expression.length && /\s/.test(expression[j])) {
-        j += 1;
-      }
-      let k = j;
-      while (k < expression.length && /[0-9]/.test(expression[k])) {
-        k += 1;
-      }
-      if (k === j) {
-        throw new Error('数组下标必须是非负整数');
-      }
-      while (k < expression.length && /\s/.test(expression[k])) {
-        k += 1;
-      }
-      if (expression[k] !== ']') {
-        throw new Error('数组下标语法错误');
-      }
-      pushToken('ref', { identifier, idx: Number(expression.slice(j, k)) });
-      index = k + 1;
-      continue;
-    }
-    throw new Error(`表达式包含不支持的字符: ${ch}`);
-  }
-  return tokens;
-}
-
-function compileExpression(expression, allowedIdentifiers) {
-  const tokens = tokenizeExpression(expression);
-  const precedence = { 'u+': 3, 'u-': 3, '*': 2, '/': 2, '%': 2, '+': 1, '-': 1 };
-  const output = [];
-  const operators = [];
-  const isLeftAssoc = (op) => !op.startsWith('u');
-  let prevType = 'start';
-
-  const pushOperator = (op) => {
-    while (operators.length > 0) {
-      const top = operators[operators.length - 1];
-      if (top === '(') {
-        break;
-      }
-      const topP = precedence[top] || 0;
-      const curP = precedence[op] || 0;
-      if (topP > curP || (topP === curP && isLeftAssoc(op))) {
-        output.push({ type: 'op', value: operators.pop() });
-      } else {
-        break;
-      }
-    }
-    operators.push(op);
-  };
-
-  tokens.forEach((token) => {
-    if (token.type === 'number' || token.type === 'ref') {
-      if (token.type === 'ref' && !allowedIdentifiers.has(token.value.identifier)) {
-        throw new Error(`表达式变量不允许: ${token.value.identifier}`);
-      }
-      output.push(token);
-      prevType = 'value';
-      return;
-    }
-    if (token.type !== 'op') {
-      throw new Error('表达式语法错误');
-    }
-    if (token.value === '(') {
-      operators.push('(');
-      prevType = '(';
-      return;
-    }
-    if (token.value === ')') {
-      while (operators.length > 0 && operators[operators.length - 1] !== '(') {
-        output.push({ type: 'op', value: operators.pop() });
-      }
-      if (operators.length === 0 || operators.pop() !== '(') {
-        throw new Error('括号不匹配');
-      }
-      prevType = 'value';
-      return;
-    }
-    if ('+-*/%'.includes(token.value)) {
-      let op = token.value;
-      if ((op === '+' || op === '-') && (prevType === 'start' || prevType === '(' || prevType === 'op')) {
-        op = op === '+' ? 'u+' : 'u-';
-      }
-      pushOperator(op);
-      prevType = 'op';
-      return;
-    }
-    throw new Error(`表达式不支持操作符: ${token.value}`);
-  });
-
-  while (operators.length > 0) {
-    const op = operators.pop();
-    if (op === '(') {
-      throw new Error('括号不匹配');
-    }
-    output.push({ type: 'op', value: op });
-  }
-
-  return (arrayBuffer) => {
-    const stack = [];
-    output.forEach((token) => {
-      if (token.type === 'number') {
-        stack.push(token.value);
-        return;
-      }
-      if (token.type === 'ref') {
-        const idx = token.value.idx;
-        const value = idx >= 0 && idx < arrayBuffer.length ? arrayBuffer[idx] : 0;
-        stack.push(safeNumber(value));
-        return;
-      }
-      if (token.value === 'u+' || token.value === 'u-') {
-        const a = stack.pop();
-        if (a === undefined) {
-          throw new Error('表达式语法错误');
-        }
-        stack.push(token.value === 'u+' ? +a : -a);
-        return;
-      }
-      const b = stack.pop();
-      const a = stack.pop();
-      if (a === undefined || b === undefined) {
-        throw new Error('表达式语法错误');
-      }
-      if (token.value === '+') {
-        stack.push(a + b);
-      } else if (token.value === '-') {
-        stack.push(a - b);
-      } else if (token.value === '*') {
-        stack.push(a * b);
-      } else if (token.value === '/') {
-        stack.push(b === 0 ? 0 : a / b);
-      } else if (token.value === '%') {
-        stack.push(b === 0 ? 0 : a % b);
-      } else {
-        throw new Error(`表达式不支持操作符: ${token.value}`);
-      }
-    });
-    if (stack.length !== 1) {
-      throw new Error('表达式语法错误');
-    }
-    return stack[0];
-  };
-}
-
-function compileScaleScript(scriptText) {
-  const { normalized, paramName, expression } = parseScriptShape(scriptText);
-  const evaluator = compileExpression(expression, new Set([paramName, 'arrayBuffer', 'array', 'arrary']));
   return {
     source: normalized,
-    run(arrayBuffer) {
-      return safeNumber(evaluator(Array.from(arrayBuffer || [])));
+    run(frameArray, helpers) {
+      const ret = scriptFn(Array.from(frameArray || []), helpers);
+      if (ret === null || ret === undefined) {
+        return null;
+      }
+      const value = Number(ret);
+      if (Number.isNaN(value) || !Number.isFinite(value)) {
+        throw new Error('脚本返回值必须是数字、null 或 undefined');
+      }
+      return value;
     },
   };
 }
 
+function normalizeByte(value, fieldName) {
+  if (value === undefined || value === null || value === '') {
+    return null;
+  }
+  if (typeof value === 'number') {
+    const intValue = Math.floor(value);
+    if (intValue < 0 || intValue > 255) {
+      throw new Error(`${fieldName} 必须在 0~255`);
+    }
+    return intValue;
+  }
+  const text = String(value).trim();
+  if (!text) {
+    return null;
+  }
+  let parsed = NaN;
+  if (text.toLowerCase().startsWith('0x')) {
+    parsed = parseInt(text, 16);
+  } else if (/^[0-9a-fA-F]{2}$/.test(text)) {
+    parsed = parseInt(text, 16);
+  } else if (/^\d+$/.test(text)) {
+    parsed = parseInt(text, 10);
+  }
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 255) {
+    throw new Error(`${fieldName} 格式错误: ${value}`);
+  }
+  return parsed;
+}
+
+function normalizeByteList(values, fieldName) {
+  if (values === undefined || values === null) {
+    return [];
+  }
+  if (!Array.isArray(values)) {
+    throw new Error(`${fieldName} 必须是数组`);
+  }
+  return values
+    .map((value) => normalizeByte(value, fieldName))
+    .filter((value) => value !== null);
+}
+
+function normalizeFrameParsers(frameParsers) {
+  const source = Array.isArray(frameParsers) && frameParsers.length > 0
+    ? frameParsers
+    : [];
+  return source.map((item, idx) => {
+    const parser = item || {};
+    const parserType = String(parser.parserType || '').trim();
+    if (!parserType) {
+      throw new Error(`frameParsers[${idx}] 缺少 parserType`);
+    }
+    const name = String(parser.name || `${parserType}_${idx + 1}`).trim();
+    const options = parser.options && typeof parser.options === 'object'
+      ? parser.options
+      : {};
+    const normalized = {
+      name,
+      enabled: parser.enabled !== false,
+      parserType,
+      startByte: normalizeByte(parser.startByte, `frameParsers[${idx}].startByte`),
+      endByte: normalizeByte(parser.endByte, `frameParsers[${idx}].endByte`),
+      secondByteIn: normalizeByteList(parser.secondByteIn, `frameParsers[${idx}].secondByteIn`),
+      minLength: Math.max(0, Math.floor(safeNumber(parser.minLength || 0))),
+      maxLength: Math.max(0, Math.floor(safeNumber(parser.maxLength || 0))),
+      divisor: safeNumber(parser.divisor || 1) || 1,
+      options,
+    };
+    if (normalized.maxLength > 0 && normalized.maxLength < normalized.minLength) {
+      throw new Error(`frameParsers[${idx}] maxLength 不能小于 minLength`);
+    }
+    return normalized;
+  });
+}
+
+function frameMatchesParser(frame, parser) {
+  if (!Array.isArray(frame) || frame.length < 2 || !parser.enabled) {
+    return false;
+  }
+  if (parser.startByte !== null && frame[0] !== parser.startByte) {
+    return false;
+  }
+  if (parser.endByte !== null && frame[frame.length - 1] !== parser.endByte) {
+    return false;
+  }
+  if (parser.minLength > 0 && frame.length < parser.minLength) {
+    return false;
+  }
+  if (parser.maxLength > 0 && frame.length > parser.maxLength) {
+    return false;
+  }
+  if (parser.secondByteIn.length > 0 && !parser.secondByteIn.includes(frame[1])) {
+    return false;
+  }
+  const acceptableLengths = Array.isArray(parser.options.acceptableLengths)
+    ? parser.options.acceptableLengths.map((v) => Math.floor(safeNumber(v))).filter((v) => v > 0)
+    : [];
+  if (acceptableLengths.length > 0 && !acceptableLengths.includes(frame.length)) {
+    return false;
+  }
+  return true;
+}
+
+function parseBySignedTailDigits(frame, parser) {
+  const options = parser.options || {};
+  const digitStartIndex = Math.max(0, Math.floor(safeNumber(options.digitStartIndex || 2)));
+  const digitEndOffset = Math.max(0, Math.floor(safeNumber(options.digitEndOffset || 1)));
+  const tailDigits = Math.max(1, Math.floor(safeNumber(options.tailDigits || 6)));
+  const negativeSecondBytes = normalizeByteList(
+    options.negativeSecondBytes || [0x2d],
+    `${parser.name}.options.negativeSecondBytes`
+  );
+  const digitEndExclusive = Math.max(digitStartIndex, frame.length - digitEndOffset);
+  const digits = [];
+  for (let i = digitStartIndex; i < digitEndExclusive; i += 1) {
+    const ch = frame[i];
+    if (ch >= 0x30 && ch <= 0x39) {
+      digits.push(ch - 0x30);
+    }
+  }
+  if (digits.length === 0) {
+    return null;
+  }
+  const tail = digits.slice(-tailDigits);
+  let value = 0;
+  for (let i = 0; i < tail.length; i += 1) {
+    value = value * 10 + tail[i];
+  }
+  if (negativeSecondBytes.includes(frame[1])) {
+    value = -value;
+  }
+  return safeNumber(value / parser.divisor);
+}
+
+function parseByTldStyle(frame, parser) {
+  const options = parser.options || {};
+  const dotMask = Math.max(0, Math.floor(safeNumber(options.dotMask || 0x07)));
+  const baseExponent = Math.floor(safeNumber(options.baseExponent || 2));
+  const digitStartIndex = Math.max(0, Math.floor(safeNumber(options.digitStartIndex || 4)));
+  const digitCount = Math.max(1, Math.floor(safeNumber(options.digitCount || 6)));
+  if (frame.length <= digitStartIndex) {
+    return null;
+  }
+  let powNumber = baseExponent - (frame[1] & dotMask);
+  if (powNumber > 0) {
+    powNumber = 0;
+  }
+  let rawValue = 0;
+  for (let i = 0; i < digitCount; i += 1) {
+    const byteValue = frame[digitStartIndex + i];
+    const digit = byteValue >= 0x30 && byteValue <= 0x39 ? byteValue - 0x30 : 0;
+    rawValue += digit * Math.pow(10, digitCount - 1 + powNumber - i);
+  }
+  return safeNumber(rawValue / parser.divisor);
+}
+
+function parseFrameByConfig(frame, frameParsers) {
+  for (let i = 0; i < frameParsers.length; i += 1) {
+    const parser = frameParsers[i];
+    if (!frameMatchesParser(frame, parser)) {
+      continue;
+    }
+    if (parser.parserType === 'signedTailDigits') {
+      const value = parseBySignedTailDigits(frame, parser);
+      if (value !== null) {
+        return value;
+      }
+      continue;
+    }
+    if (parser.parserType === 'tldStyle') {
+      const value = parseByTldStyle(frame, parser);
+      if (value !== null) {
+        return value;
+      }
+      continue;
+    }
+  }
+  return null;
+}
+
+function getDefaultConfig() {
+  return {
+    serial: '',
+    baudRate: 9600,
+    script: '',
+    frameParsers: [],
+  };
+}
+
+function parseJsonConfigWithComments(text) {
+  const raw = String(text || '');
+  const withoutBlockComments = raw.replace(/\/\*[\s\S]*?\*\//g, '');
+  const withoutLineComments = withoutBlockComments.replace(/^\s*\/\/.*$/gm, '');
+  return JSON.parse(withoutLineComments);
+}
+
 class OutputHelper {
   constructor() {
+    const defaults = getDefaultConfig();
     this.serialName = '';
     this.baudRate = 9600;
-    this.scriptText = 'function (arrayBuffer) { return arrayBuffer[0] + arrayBuffer[1]; }';
-    this.compiledScript = compileScaleScript(this.scriptText);
+    this.scriptText = defaults.script;
+    this.compiledScript = null;
+    this.frameParsers = normalizeFrameParsers(defaults.frameParsers);
     this.scaleValue = 0;
     this.lastBytes = [];
     this.serialPort = null;
@@ -295,12 +282,13 @@ class OutputHelper {
       serial: this.serialName,
       baudRate: this.baudRate,
       script: this.scriptText,
+      frameParsers: this.frameParsers,
       currentScale: this.scale(),
       lastBytes: this.lastBytes,
     };
   }
 
-  async applyConfig({ serial, baudRate, script }) {
+  async applyConfig({ serial, baudRate, script, frameParsers }) {
     if (baudRate !== undefined) {
       const parsedBaudRate = Math.floor(safeNumber(baudRate));
       if (parsedBaudRate <= 0) {
@@ -308,9 +296,15 @@ class OutputHelper {
       }
       this.baudRate = parsedBaudRate;
     }
+    if (frameParsers !== undefined) {
+      this.frameParsers = normalizeFrameParsers(frameParsers);
+    }
     if (script !== undefined) {
       this.compiledScript = compileScaleScript(script);
       this.scriptText = normalizeScriptText(script);
+    }
+    if (!this.compiledScript) {
+      throw new Error('脚本不能为空');
     }
     if (serial !== undefined) {
       this.serialName = String(serial || '').trim();
@@ -363,32 +357,72 @@ class OutputHelper {
       this.serialBuffer = this.serialBuffer.slice(-4096);
     }
 
-    const nowArray = Array.from(chunk);
-    this.lastBytes = nowArray;
+    while (this.serialBuffer.length > 0) {
+      const stxPos = this.serialBuffer.indexOf(FRAME_START);
+      if (stxPos < 0) {
+        this.serialBuffer = Buffer.alloc(0);
+        break;
+      }
+      if (stxPos > 0) {
+        this.serialBuffer = this.serialBuffer.slice(stxPos);
+      }
 
-    try {
-      const result = this.compiledScript.run(nowArray);
-      this.scaleValue = safeNumber(result);
-    } catch (err) {
-      console.error('[output_helper] 脚本执行失败:', err.message);
+      const etxPos = this.serialBuffer.indexOf(FRAME_END_A, 1);
+      const crPos = this.serialBuffer.indexOf(FRAME_END_B, 1);
+      let endPos = -1;
+      if (etxPos >= 0 && crPos >= 0) {
+        endPos = Math.min(etxPos, crPos);
+      } else if (etxPos >= 0) {
+        endPos = etxPos;
+      } else if (crPos >= 0) {
+        endPos = crPos;
+      }
+      if (endPos < 0) {
+        break;
+      }
+
+      const frame = this.serialBuffer.slice(0, endPos + 1);
+      this.serialBuffer = this.serialBuffer.slice(endPos + 1);
+      const frameArray = Array.from(frame);
+      this.lastBytes = frameArray;
+
+      try {
+        const parsedValue = this.compiledScript.run(frameArray, {
+          parseFrameByConfig,
+          frameParsers: this.frameParsers,
+        });
+        if (parsedValue !== null && parsedValue !== undefined) {
+          this.scaleValue = safeNumber(parsedValue);
+        } else {
+          console.warn('[output_helper] 脚本未返回有效重量:', frameArray);
+        }
+      } catch (err) {
+        console.error('[output_helper] 脚本执行失败:', err.message);
+      }
     }
   }
 }
 
 function loadConfig(configPath) {
+  const defaults = getDefaultConfig();
   if (!fs.existsSync(configPath)) {
-    return {
-      serial: '',
-      baudRate: 9600,
-      script: 'function (arrayBuffer) { return arrayBuffer[0] + arrayBuffer[1]; }',
-    };
+    return defaults;
   }
   const text = fs.readFileSync(configPath, 'utf8');
   const ext = path.extname(configPath).toLowerCase();
+  let loaded = {};
   if (ext === '.yml' || ext === '.yaml') {
-    return yaml.load(text) || {};
+    loaded = yaml.load(text) || {};
+  } else {
+    loaded = parseJsonConfigWithComments(text);
   }
-  return JSON.parse(text);
+  return {
+    ...defaults,
+    ...loaded,
+    frameParsers: Array.isArray(loaded.frameParsers) && loaded.frameParsers.length > 0
+      ? loaded.frameParsers
+      : defaults.frameParsers,
+  };
 }
 
 function saveConfig(configPath, data) {
@@ -402,6 +436,14 @@ function saveConfig(configPath, data) {
 
 function createServer(output_helper) {
   const server = http.createServer((req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
     if (req.method === 'GET' && req.url === '/scale') {
       const body = JSON.stringify({ scale: output_helper.scale() });
       res.writeHead(200, {
@@ -431,13 +473,11 @@ function printHelp() {
   console.log('命令说明:');
   console.log('  serial <串口名>          例如: serial COM1');
   console.log('  baud <波特率>            例如: baud 9600');
-  console.log('  script <解析脚本>        例如: script function (arrayBuffer) { return arrayBuffer[4] + arrayBuffer[6]; }');
+  console.log('  script <解析脚本>        例如: script function (frameArray, helpers) { return helpers.parseFrameByConfig(frameArray, helpers.frameParsers); }');
   console.log('  save                     保存并应用配置');
   console.log('  show                     显示当前状态');
   console.log('  help                     显示帮助');
   console.log('  exit                     退出程序');
-  console.log('  支持脚本格式: function (arrayBuffer):Number { ... } 或 function (arrayBuffer) { ... }');
-  console.log('  return 表达式仅支持: arrayBuffer[i]/array[i]/arrary[i]、数字、()+-*/%');
   console.log('');
 }
 
@@ -449,11 +489,13 @@ async function main() {
   let draftSerial = config.serial || '';
   let draftBaudRate = Math.floor(safeNumber(config.baudRate || 9600)) || 9600;
   let draftScript = normalizeScriptText(config.script);
+  let draftFrameParsers = Array.isArray(config.frameParsers) ? config.frameParsers : [];
 
   await output_helper.applyConfig({
     serial: draftSerial,
     baudRate: draftBaudRate,
     script: draftScript,
+    frameParsers: draftFrameParsers,
   });
 
   const server = createServer(output_helper);
@@ -506,6 +548,7 @@ async function main() {
           serial: draftSerial,
           baudRate: draftBaudRate,
           script: draftScript,
+          frameParsers: draftFrameParsers,
         };
         saveConfig(configPath, config);
         await output_helper.applyConfig(config);
@@ -522,12 +565,6 @@ async function main() {
       rl.prompt();
       return;
     }
-    if (input.startsWith('script ')) {
-      draftScript = input.slice('script '.length).trim();
-      console.log('脚本草稿已更新');
-      rl.prompt();
-      return;
-    }
     if (input.startsWith('baud ')) {
       const nextBaudRate = Math.floor(safeNumber(input.slice('baud '.length).trim()));
       if (nextBaudRate <= 0) {
@@ -535,6 +572,18 @@ async function main() {
       } else {
         draftBaudRate = nextBaudRate;
         console.log(`波特率草稿已更新: ${draftBaudRate}`);
+      }
+      rl.prompt();
+      return;
+    }
+    if (input.startsWith('script ')) {
+      const nextScript = input.slice('script '.length).trim();
+      try {
+        compileScaleScript(nextScript);
+        draftScript = normalizeScriptText(nextScript);
+        console.log('脚本草稿已更新');
+      } catch (err) {
+        console.log(`脚本无效: ${err.message}`);
       }
       rl.prompt();
       return;
