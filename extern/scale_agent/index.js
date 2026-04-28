@@ -44,6 +44,14 @@ function normalizeScriptText(scriptText) {
   );
 }
 
+function validateScriptSecurity(scriptText) {
+  SCRIPT_FORBIDDEN_PATTERNS.forEach((pattern) => {
+    if (pattern.test(scriptText)) {
+      throw new Error(`脚本包含不允许的标识: ${pattern}`);
+    }
+  });
+}
+
 function compileScaleScript(scriptText) {
   const normalized = normalizeScriptText(scriptText);
   if (!normalized) {
@@ -52,13 +60,9 @@ function compileScaleScript(scriptText) {
   if (normalized.length > SCRIPT_MAX_LENGTH) {
     throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
   }
-  SCRIPT_FORBIDDEN_PATTERNS.forEach((pattern) => {
-    if (pattern.test(normalized)) {
-      throw new Error(`脚本包含不允许的标识: ${pattern}`);
-    }
-  });
+  validateScriptSecurity(normalized);
 
-  const sandbox = {
+  const sandbox = Object.assign(Object.create(null), {
     Math,
     Number,
     Array,
@@ -67,7 +71,7 @@ function compileScaleScript(scriptText) {
     parseFloat,
     isNaN,
     isFinite,
-  };
+  });
   vm.createContext(sandbox, {
     codeGeneration: {
       strings: false,
@@ -78,9 +82,13 @@ function compileScaleScript(scriptText) {
   let scriptFn;
   let runScript;
   try {
-    const factoryScript = new vm.Script(`(${normalized})`);
+    // Security boundary:
+    // 1) script text is pre-validated by deny-list;
+    // 2) vm context disables nested code generation;
+    // 3) runtime is bounded by timeout.
+    const factoryScript = new vm.Script(`"use strict";\n(${normalized})`);
     scriptFn = factoryScript.runInContext(sandbox, { timeout: SCRIPT_RUN_TIMEOUT_MS });
-    runScript = new vm.Script('__userScript(__frameArray, __helpers)');
+    runScript = new vm.Script('"use strict";\n__userScript(__frameArray, __helpers)');
   } catch (error) {
     throw new Error(`脚本编译失败: ${error.message}`);
   }
