@@ -10,6 +10,17 @@ const PORT = 39109;
 const DEFAULT_CONFIG_PATH = path.join(__dirname, 'scale_agent.config.json');
 const SCRIPT_MAX_LENGTH = 8000;
 const SCRIPT_RUN_TIMEOUT_MS = 50;
+const SCRIPT_FORBIDDEN_PATTERNS = [
+  /\brequire\b/,
+  /\bprocess\b/,
+  /\bglobalThis\b/,
+  /\bglobal\b/,
+  /\bFunction\b/,
+  /\beval\b/,
+  /__proto__/,
+  /\bprototype\b/,
+  /\bconstructor\b/,
+];
 const FRAME_START = 0x02;
 const FRAME_END_A = 0x03;
 const FRAME_END_B = 0x0d;
@@ -41,6 +52,12 @@ function compileScaleScript(scriptText) {
   if (normalized.length > SCRIPT_MAX_LENGTH) {
     throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
   }
+  SCRIPT_FORBIDDEN_PATTERNS.forEach((pattern) => {
+    if (pattern.test(normalized)) {
+      throw new Error(`脚本包含不允许的标识: ${pattern}`);
+    }
+  });
+
   const sandbox = {
     Math,
     Number,
@@ -51,7 +68,12 @@ function compileScaleScript(scriptText) {
     isNaN,
     isFinite,
   };
-  vm.createContext(sandbox);
+  vm.createContext(sandbox, {
+    codeGeneration: {
+      strings: false,
+      wasm: false,
+    },
+  });
 
   let scriptFn;
   let runScript;
@@ -75,9 +97,14 @@ function compileScaleScript(scriptText) {
       sandbox.__userScript = scriptFn;
       sandbox.__frameArray = Array.from(frameArray || []);
       sandbox.__helpers = safeHelpers;
-      const ret = runScript.runInContext(sandbox, { timeout: SCRIPT_RUN_TIMEOUT_MS });
-      delete sandbox.__frameArray;
-      delete sandbox.__helpers;
+      let ret;
+      try {
+        ret = runScript.runInContext(sandbox, { timeout: SCRIPT_RUN_TIMEOUT_MS });
+      } finally {
+        delete sandbox.__frameArray;
+        delete sandbox.__helpers;
+        delete sandbox.__userScript;
+      }
       if (ret === null || ret === undefined) {
         return null;
       }
