@@ -228,6 +228,12 @@ export const asyncRoutes = [
         meta: { title: '排队车辆' }
       },
       {
+        path: 'scale',
+        name: 'scale',
+        component: () => import('@/views/field/Scale'),
+        meta: { title: '过磅' }
+      },
+      {
         path: 'devopt',
         name: 'devopt',
         component: () => import('@/views/field/DevOpt'),

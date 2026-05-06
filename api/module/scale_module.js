@@ -4,6 +4,51 @@ const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
+const moment = require('moment');
+
+function build_one_time_scale_context(plan, one_weight) {
+    const first_weight_key = plan.is_buy ? 'm_weight' : 'p_weight';
+    const second_weight_key = plan.is_buy ? 'p_weight' : 'm_weight';
+    const first_time_key = plan.is_buy ? 'm_time' : 'p_time';
+    const second_time_key = plan.is_buy ? 'p_time' : 'm_time';
+    return {
+        first_weight_key,
+        second_weight_key,
+        first_time_key,
+        second_time_key,
+        expect_status: plan.is_buy ? 1 : 2,
+        first_weight: Number(plan[first_weight_key]) || 0,
+        second_weight: Number(plan[second_weight_key]) || 0,
+        now_time: moment().format('YYYY-MM-DD HH:mm:ss'),
+        one_weight,
+    };
+}
+
+async function save_first_scale(plan_id, token, context) {
+    await plan_lib.action_in_plan(plan_id, token, context.expect_status, async (latest_plan, t) => {
+        latest_plan[context.first_weight_key] = context.one_weight;
+        latest_plan[context.first_time_key] = context.now_time;
+        await latest_plan.save({ transaction: t });
+    });
+}
+
+async function deliver_second_scale(plan_id, token, plan, context) {
+    const p_weight = context.second_weight_key === 'p_weight' ? context.one_weight : context.first_weight;
+    const m_weight = context.second_weight_key === 'm_weight' ? context.one_weight : context.first_weight;
+    const p_time = context.second_time_key === 'p_time' ? context.now_time : plan.p_time;
+    const m_time = context.second_time_key === 'm_time' ? context.now_time : plan.m_time;
+    const count = Math.abs(m_weight - p_weight);
+    await plan_lib.deliver_plan(
+        plan_id,
+        token,
+        count,
+        p_weight,
+        m_weight,
+        p_time,
+        m_time
+    );
+}
+
 module.exports = {
     name: 'scale',
     description: '计量管理',
@@ -335,7 +380,6 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                const moment = require('moment');
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
                     plan.count = body.count;
                     plan.first_weight = body.first_weight;
@@ -354,6 +398,42 @@ module.exports = {
                     }
                 });
                 return { result: true };
+            }
+        },
+        one_time_scale: {
+            name: '单次计量',
+            description: '根据当前状态记录一次或二次重量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                weight: { type: Number, have_to: true, mean: '本次重量', example: 26.03 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan) {
+                    throw { err_msg: '计划不存在' };
+                }
+                const oneWeight = Number(body.weight);
+                if (Number.isNaN(oneWeight) || oneWeight < 0) {
+                    throw { err_msg: '重量数据错误' };
+                }
+                const scale_context = build_one_time_scale_context(plan, oneWeight);
+
+                if (scale_context.first_weight <= 0) {
+                    await save_first_scale(body.plan_id, token, scale_context);
+                    return { result: true };
+                }
+
+                if (scale_context.second_weight <= 0) {
+                    await deliver_second_scale(body.plan_id, token, plan, scale_context);
+                    return { result: true };
+                }
+
+                throw { err_msg: '该订单已完成两次计量' };
             }
         },
         input_psi_info: {

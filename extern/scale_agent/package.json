@@ -1,0 +1,18 @@
+{
+  "name": "scale_agent",
+  "version": "1.0.0",
+  "description": "Scale agent: serial + script to localhost:39109/scale",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "build:win": "pkg index.js --targets node18-win-x64 --output dist/scale_agent.exe"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "serialport": "^12.0.0"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.1"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "serial": "/dev/ttys001",
+  "baudRate": 9600,
+  "script": "function (frameArray) {\n  if (!Array.isArray(frameArray) || frameArray.length < 3) {\n    return null;\n  }\n\n  var parsers = [\n    {\n      name: 'type 1',\n      match: function (frame) {\n        return frame[0] === 0x02 && frame[frame.length - 1] === 0x03 && (frame[1] === 0x2b || frame[1] === 0x2d);\n      },\n      parse: function (frame) {\n        var digits = [];\n        for (var i = 2; i < frame.length - 1; i += 1) {\n          var ch = frame[i];\n          if (ch >= 0x30 && ch <= 0x39) {\n            digits.push(ch - 0x30);\n          }\n        }\n        if (digits.length === 0) {\n          return null;\n        }\n        var tail = digits.slice(-6);\n        var value = 0;\n        for (var j = 0; j < tail.length; j += 1) {\n          value = value * 10 + tail[j];\n        }\n        if (frame[1] === 0x2d) {\n          value = -value;\n        }\n        return value / 1000;\n      }\n    },\n    {\n      name: 'type 2',\n      match: function (frame) {\n        return frame[0] === 0x02 && frame[frame.length - 1] === 0x0d && (frame.length === 17 || frame.length === 18);\n      },\n      parse: function (frame) {\n        var dotPos = frame[1] & 0x07;\n        var powNum = 2 - dotPos;\n        if (powNum > 0) {\n          powNum = 0;\n        }\n        var raw = 0;\n        for (var k = 0; k < 6; k += 1) {\n          var b = frame[4 + k];\n          var d = (b >= 0x30 && b <= 0x39) ? (b - 0x30) : 0;\n          raw += d * Math.pow(10, 5 + powNum - k);\n        }\n        return raw / 1000;\n      }\n    }\n  ];\n\n  for (var p = 0; p < parsers.length; p += 1) {\n    var parser = parsers[p];\n    if (!parser.match(frameArray)) {\n      continue;\n    }\n    var result = parser.parse(frameArray);\n    if (result !== null && result !== undefined && !Number.isNaN(Number(result))) {\n      return Number(result);\n    }\n  }\n\n  return null;\n}",
+  "_script_var_comments": {
+    "怎么配脚本": "脚本必须是 function(frameArray) { ... }，入参是字节数组，长度不足时建议直接 return null。",
+    "parsers怎么写": "建议用 parsers 数组，每项都包含 name + match(frame) + parse(frame)。先 match 命中，再 parse 取重量。",
+    "match规则": "match 里只做格式判断：帧头/帧尾/长度/关键字节。不要在 match 里算重量。",
+    "parse规则": "parse 里只做数值解析。成功返回数字，失败返回 null。不要抛异常。",
+    "返回约定": "脚本最终只能返回 数字 或 null。数字会作为当前重量；null 表示本帧不识别。",
+    "单位约定": "当前示例统一返回 吨。若设备上报是千克，请在 parse 里除以1000。",
+    "新增一种设备": "复制一个 parser，改 name、match 条件、parse 计算逻辑即可，不要改主循环。",
+    "避免出错1": "frameArray 元素是 0~255 的数字，不是字符；0x30~0x39 才是字符'0'~'9'。",
+    "避免出错2": "先用真实报文做 2~3 条样例验证，再上线；至少验证正数、0值、边界长度。",
+    "避免出错3": "脚本是字符串，JSON 内换行要用 \\n，单引号建议保留，避免转义混乱。"
+  },
+  "_script_variables": {
+    "frameArray": "整条报文（字节数组）",
+    "parsers": "所有协议规则列表",
+    "frame": "当前正在判断的报文",
+    "digits": "报文里提取出的数字集合",
+    "tail": "最后6个数字",
+    "value": "type 1 算出来的重量",
+    "dotPos": "小数位信息",
+    "powNum": "指数偏移量",
+    "raw": "type 2 原始累计值",
+    "result": "当前规则解析结果",
+    "parser": "当前命中的规则",
+    "i/j/k/p": "循环计数下标",
+    "ch": "当前字节值",
+    "b": "type 2 当前位字节",
+    "d": "把字节转成的数字"
+  }
+}
