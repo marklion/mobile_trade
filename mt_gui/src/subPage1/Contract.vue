@@ -16,13 +16,13 @@
         <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']" :title="item.company.name" color="black" :tag="'￥' + item.balance.toFixed(2)">
             <view style="padding: 0 20rpx;position: relative;">
                 <view v-if="item.expired" class="expired_text">已过期</view>
-                <module-filter require_module="sale_management">
+                <module-filter require_module="sale_management" :rm_array="['buy_management']">
                     <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
                         <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" originLeft :scaleRatio="0.8" type="purple">
                             {{single_stuff.name}}
                             <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
                         </fui-tag>
-                        <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && cur_urls.need_su">
+                        <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
                             <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" originLeft :scaleRatio="0.8" type="success">
                                 {{single_user.name?single_user.name +'|'+single_user.phone: single_user.phone}}
                                 <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
@@ -31,7 +31,7 @@
                     </view>
                     <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
                         <fui-tag text="新增物料" :scaleRatio="0.8" originLeft type="purple" @click="prepare_add_stuff(item)"></fui-tag>
-                        <fui-tag v-if="cur_urls && cur_urls.need_su" :scaleRatio="0.8" originLeft type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
+                        <fui-tag v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)" :scaleRatio="0.8" originLeft type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
                     </view>
                 </module-filter>
                 <fui-tag text="查看资质" :scaleRatio="0.8" originLeft type="primary" @click="show_attach_pic(item)"></fui-tag>
@@ -627,10 +627,14 @@ export default {
         },
         unauth_user: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/sale_management/unauthorize_user', this.make_context_req({
+                let unauth_url = '/sale_management/unauthorize_user';
+                if (this.cur_urls && this.cur_urls.buy_setting) {
+                    unauth_url = '/buy_management/unauthorize_user';
+                }
+                await this.$send_req(unauth_url, this.make_context_req({
                     contract_id: this.focus_item.id,
                     phone: this.focus_user.phone,
-                }, '/sale_management/unauthorize_user', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
+                }, unauth_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                 uni.startPullDownRefresh();
             }
             this.show_unauth = false;
@@ -649,10 +653,14 @@ export default {
                     msg: ["请输入手机号", "请输入有效手机号"]
                 }]).then(async res => {
                     if (res.isPassed) {
-                        await this.$send_req('/sale_management/authorize_user', this.make_context_req({
+                        let auth_url = '/sale_management/authorize_user';
+                        if (this.cur_urls && this.cur_urls.buy_setting) {
+                            auth_url = '/buy_management/authorize_user';
+                        }
+                        await this.$send_req(auth_url, this.make_context_req({
                             contract_id: this.focus_item.id,
                             phone: this.phone
-                        }, '/sale_management/authorize_user', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
+                        }, auth_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                         uni.startPullDownRefresh();
                         this.close_add_auth()
                     }
