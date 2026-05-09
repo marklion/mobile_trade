@@ -307,6 +307,7 @@ module.exports = {
                         id: { type: Number, mean: '货物ID', example: 1 },
                         name: { type: String, mean: '货物名', example: 'A公司-煤炭' },
                         companyId: { type: Number, mean: '归属公司ID', example: 1 },
+                        use_for_buy: { type: Boolean, mean: '是否采购物料', example: false },
                     }
                 },
                 total: { type: Number, mean: '总条数', example: 1 },
