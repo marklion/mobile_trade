@@ -711,9 +711,11 @@ export default {
             let resp = await this.$send_req(stuff_url, make_context_req({
                 pageNo: pageNo
             }, stuff_url, show_scope_switch, company_is_group, stat_context_company_id));
-            let ret = []
-            console.log(buy_setting);
-            resp.stuff.forEach(ele => {
+            if (use_sale_management_stuff) {
+                return resp.stuff || [];
+            }
+            let ret = [];
+            (resp.stuff || []).forEach(ele => {
                 if (ele.use_for_buy == buy_setting) {
                     ret.push(ele)
                 }
