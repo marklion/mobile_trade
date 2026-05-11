@@ -16,7 +16,7 @@
         <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']" :title="item.company.name" color="black" :tag="'￥' + item.balance.toFixed(2)">
             <view style="padding: 0 20rpx;position: relative;">
                 <view v-if="item.expired" class="expired_text">已过期</view>
-                <module-filter>
+                <module-filter :rm_array="['buy_management','sale_management']">
                     <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
                         <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" originLeft :scaleRatio="0.8" type="purple">
                             {{single_stuff.name}}
