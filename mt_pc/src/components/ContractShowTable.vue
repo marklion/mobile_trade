@@ -98,7 +98,7 @@
                         <div>
                             <el-button type="text" size="small" @click="preview_company_attach(scope.row)">查看资质</el-button>
                             <el-button v-if="is_motive" type="text" size="small" @click="prepare_add_stuff(scope.row)">新增物料</el-button>
-                            <el-button v-if="is_motive && !is_buy" type="text" size="small" @click="add_auth_user(scope.row)">新增授权</el-button>
+                            <el-button v-if="is_motive" type="text" size="small" @click="add_auth_user(scope.row)">新增授权</el-button>
                             <el-button v-if="can_manage_discount" type="text" size="small" @click="prepare_contract_scheme(scope.row)">设置方案</el-button>
                             <el-button v-if="can_manage_discount" type="text" size="small" @click="prepare_stuff_price(scope.row)">物料单价</el-button>
                         </div>
@@ -580,7 +580,11 @@ export default {
             }).then(async ({
                 value
             }) => {
-                await this.$send_req('/sale_management/authorize_user', this.make_context_req({
+                let url = '/sale_management/authorize_user';
+                if (this.is_buy) {
+                    url = '/buy_management/authorize_user';
+                }
+                await this.$send_req(url, this.make_context_req({
                     contract_id: contract.id,
                     phone: value
                 }));
@@ -610,7 +614,11 @@ export default {
                 cancelButtonText: '取消',
                 type: 'warning'
             }).then(async () => {
-                await this.$send_req('/sale_management/unauthorize_user', this.make_context_req({
+                let url = '/sale_management/unauthorize_user';
+                if (this.is_buy) {
+                    url = '/buy_management/unauthorize_user';
+                }
+                await this.$send_req(url, this.make_context_req({
                     contract_id: contract.id,
                     phone: user.phone,
                 }));

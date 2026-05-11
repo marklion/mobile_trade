@@ -145,7 +145,7 @@ module.exports = {
                 if (ctx.id !== home.id) {
                     search_ret = await plan_lib.search_bought_plans_as_buyer_company(ctx, body.pageNo, body, true);
                 } else {
-                    search_ret = await plan_lib.search_bought_plans(user, body.pageNo, body, true);
+                    search_ret = await plan_lib.search_bought_plans_with_contract_authorization(user, home, body.pageNo, body, true);
                 }
                 return { plans: search_ret.rows, total: search_ret.count };
             },

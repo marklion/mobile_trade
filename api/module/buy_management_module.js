@@ -293,6 +293,40 @@ module.exports = {
                 return ret;
             },
         },
+        authorize_user: {
+            name: '授权用户',
+            description: '授权用户',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                phone: { type: String, have_to: true, mean: '用户电话', example: '用户电话' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.authorize_user2contract(body.phone, body.contract_id, token);
+                return { result: true };
+            }
+        },
+        unauthorize_user: {
+            name: '取消授权用户',
+            description: '取消授权用户',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                phone: { type: String, have_to: true, mean: '用户电话', example: '用户电话' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                await plan_lib.unauthorize_user2contract(body.phone, body.contract_id, token);
+                return { result: true };
+            }
+        },
         export_plans: common.export_plans(async function (body, token) {
             let plans = await plan_lib.filter_plan4manager(body, token, true);
             return await plan_lib.make_file_by_plans(plans, body.columns);

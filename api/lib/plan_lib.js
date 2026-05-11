@@ -252,6 +252,15 @@ module.exports = {
         }
         return false;
     },
+    has_contract_operate_permission: async function (company, contract) {
+        if (!company || !contract) {
+            return false;
+        }
+        if (await this.has_sale_contract_operate_permission(company, contract)) {
+            return true;
+        }
+        return await company.hasBuy_contract(contract);
+    },
     resolve_sale_contract_context_company: async function (token, stat_context_company_id, need_write = false) {
         const sq = db_opt.get_sq();
         const home_company = await rbac_lib.get_company_by_token(token);
@@ -692,6 +701,40 @@ module.exports = {
         };
         return await this.searchPlansByModel(company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
     },
+    search_bought_plans_with_contract_authorization: async function (user, buyer_company, _pageNo, _condition, is_buy = false) {
+        let sq = db_opt.get_sq();
+        let where_condition = this.make_plan_where_condition(_condition, is_buy);
+        where_condition[db_opt.Op.and].push({ companyId: buyer_company.id });
+
+        const authorized_visibility_sql = `EXISTS (
+            SELECT 1
+            FROM stuff s
+            INNER JOIN contract c
+                ON c.buyCompanyId = plan.companyId
+               AND c.saleCompanyId = s.companyId
+               AND c.deletedAt IS NULL
+            INNER JOIN user_contract uc
+                ON uc.contractId = c.id
+            WHERE s.id = plan.stuffId
+              AND uc.rbacUserId = ${user.id}
+        )`;
+        where_condition[db_opt.Op.and].push({
+            [db_opt.Op.or]: [
+                { rbacUserId: user.id },
+                sq.where(sq.literal(authorized_visibility_sql), true),
+            ],
+        });
+
+        let search_condition = {
+            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            offset: _pageNo * 20,
+            limit: 20,
+            where: where_condition,
+            include: util_lib.plan_detail_include(),
+        };
+
+        return await this.searchPlansByModel(buyer_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+    },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
@@ -791,7 +834,7 @@ module.exports = {
         let user = await rbac_lib.add_user(_phone);
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await sq.models.contract.findByPk(_contract_id);
-        if (contract && user && company && await this.has_sale_contract_operate_permission(company, contract)) {
+        if (contract && user && company && await this.has_contract_operate_permission(company, contract)) {
             if (! await contract.hasRbac_user(user)) {
                 await contract.addRbac_user(user);
             }
@@ -805,7 +848,7 @@ module.exports = {
         let user = await rbac_lib.add_user(_phone);
         let company = await rbac_lib.get_company_by_token(_token);
         let contract = await sq.models.contract.findByPk(_contract_id);
-        if (contract && user && company && await this.has_sale_contract_operate_permission(company, contract)) {
+        if (contract && user && company && await this.has_contract_operate_permission(company, contract)) {
             if (await contract.hasRbac_user(user)) {
                 await contract.removeRbac_user(user);
             }
