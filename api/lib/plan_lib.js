@@ -865,13 +865,14 @@ module.exports = {
             }
         }, force, t, true);
     },
-    verify_pay_against_same_company: function (company_id) {
+    verify_pay_against_same_company: function (company_id, skip_plan_ids = []) {
         setImmediate(async () => {
             let rl = await g_vpcs_mutex.acquire();
             try {
                 if (g_verify_pay_company_set.has(company_id)) {
                 }
                 else {
+                    let skip_plan_id_set = new Set(skip_plan_ids || []);
                     g_verify_pay_company_set.add(company_id);
                     await db_opt.get_sq().transaction({
                         savepoint: true,
@@ -879,6 +880,9 @@ module.exports = {
                     }, async (t) => {
                         let plans = await db_opt.get_sq().models.plan.findAll({ where: { status: 1, is_buy: false, companyId: company_id } });
                         for (let element of plans) {
+                            if (skip_plan_id_set.has(element.id)) {
+                                continue;
+                            }
                             await this.verify_plan_pay(element, t)
                         }
                     });
@@ -956,6 +960,7 @@ module.exports = {
     plan_rollback: async function (_plan_id, _token, msg, for_checkout_rollback = false, existing_t = null, allow_group_member_operate = false) {
         await this.action_in_plan(_plan_id, _token, -1, async (plan, t) => {
             let need_verify_balance = false;
+            let skip_self_auto_verify = false;
             let rollback_content = '';
             if (plan.manual_close) {
                 throw { err_msg: '已关闭,无法回退' };
@@ -997,6 +1002,7 @@ module.exports = {
                 else {
                     plan.status = 1;
                     rollback_content = '回退验款';
+                    skip_self_auto_verify = true;
                     if (plan.register_time) {
                         await field_lib.handle_cancel_check_in(plan);
                     }
@@ -1021,7 +1027,8 @@ module.exports = {
             wx_api_util.send_plan_status_msg(plan)
             await this.record_plan_history(plan, (await rbac_lib.get_user_by_token(_token)).name, rollback_content);
             if (need_verify_balance) {
-                this.verify_pay_against_same_company(plan.company.id);
+                const skip_plan_ids = skip_self_auto_verify ? [plan.id] : [];
+                this.verify_pay_against_same_company(plan.company.id, skip_plan_ids);
             }
         }, false, existing_t, allow_group_member_operate);
     },

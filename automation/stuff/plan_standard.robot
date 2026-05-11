@@ -49,6 +49,27 @@ Plan Confirm with Enough Cash and Check
     Search And Verify Plan  ${mv}  ${bv}  ${dv}  ${plan}[id]  2
     Charge To A Company  ${buy_company1}[id]  ${unit_price * -22}
     Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
+Auto Checked Plan Can Rollback To Unchecked
+    [Teardown]  Plan Reset
+    ${unit_price}  Set Variable  ${test_stuff}[price]
+    Charge To A Company  ${buy_company1}[id]  ${unit_price * 22}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  2
+    Rollback Plan  ${plan}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  1
+    ${latest_node}  Get Latest History Node  ${cur_plan}
+    Should Contain  ${latest_node}[action_type]  回退
+    Should Contain  ${latest_node}[action_type]  验款
+    Manual Pay A Plan  ${plan}
+    ${cur_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${cur_plan}[status]  2
+    Charge To A Company  ${buy_company1}[id]  ${unit_price * -22}
 Plan Confirm with Not Enough Cash and Check
     [Teardown]  Plan Reset
     ${unit_price}  Set Variable  ${test_stuff}[price]
