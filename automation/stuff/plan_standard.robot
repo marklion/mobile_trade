@@ -190,6 +190,60 @@ Plan Confirm with No User Authorized
     Req to Server  /sale_management/order_sale_confirm  ${sc_admin_token}  ${req}  ${True}
     Authorize User to Contract  ${buy_company1}[name]  5678
 
+Unauthorized Lisi Cannot See Zhangsan Plan
+    [Teardown]  Plan Reset
+    ${bc1_admin_phone_num}  Evaluate  random.randint(15000000000, 15999999999)  modules=random
+    ${bc1_admin_phone}  Convert To String  ${bc1_admin_phone_num}
+    ${bc1_admin_token}  Login As Admin Of Company  ${buy_company1}[id]  ${bc1_admin_phone}  bc1_admin
+    ${lisi_phone_num}  Evaluate  random.randint(13000000000, 13999999999)  modules=random
+    ${lisi_phone}  Convert To String  ${lisi_phone_num}
+    ${lisi_open_id}  Set Variable  open_id_${lisi_phone}
+    ${lisi_token}  New User Login  ${lisi_phone}  ${buy_company1}[name]  ${lisi_open_id}  lisi
+    Add Module To User  ${bc1_admin_token}  ${lisi_phone}  customer
+    Unauthorize User to Contract  ${buy_company1}[name]  ${lisi_phone}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  ${bc1_user_token}
+    ${plan_id}  Get From Dictionary  ${plan}  id
+    ${lisi_plans}  Search Plans Based on User  ${lisi_token}  ${False}
+    ${found_by_lisi}  Set Variable  ${False}
+    FOR  ${itr}  IN  @{lisi_plans}
+        ${pid}  Get From Dictionary  ${itr}  id
+        IF  $pid == $plan_id
+            ${found_by_lisi}  Set Variable  ${True}
+            Exit For Loop
+        END
+    END
+    Should Be Equal  ${found_by_lisi}  ${False}
+
+Authorized Lisi Can See Zhangsan Plan
+    [Teardown]  Plan Reset
+    ${bc1_admin_phone_num}  Evaluate  random.randint(16000000000, 16999999999)  modules=random
+    ${bc1_admin_phone}  Convert To String  ${bc1_admin_phone_num}
+    ${bc1_admin_token}  Login As Admin Of Company  ${buy_company1}[id]  ${bc1_admin_phone}  bc1_admin
+    ${lisi_phone_num}  Evaluate  random.randint(13000000000, 13999999999)  modules=random
+    ${lisi_phone}  Convert To String  ${lisi_phone_num}
+    ${lisi_open_id}  Set Variable  open_id_${lisi_phone}
+    ${lisi_token}  New User Login  ${lisi_phone}  ${buy_company1}[name]  ${lisi_open_id}  lisi
+    Add Module To User  ${bc1_admin_token}  ${lisi_phone}  customer
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  ${bc1_user_token}
+    ${plan_id}  Get From Dictionary  ${plan}  id
+    Authorize User to Contract  ${buy_company1}[name]  ${lisi_phone}
+    ${lisi_plans}  Search Plans Based on User  ${lisi_token}  ${False}
+    ${found_by_lisi}  Set Variable  ${False}
+    FOR  ${itr}  IN  @{lisi_plans}
+        ${pid}  Get From Dictionary  ${itr}  id
+        IF  $pid == $plan_id
+            ${found_by_lisi}  Set Variable  ${True}
+            Exit For Loop
+        END
+    END
+    Should Be True  ${found_by_lisi}
+
 Charge After Plan Confirmed
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0
