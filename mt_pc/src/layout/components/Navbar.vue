@@ -24,11 +24,26 @@
                         主页
                     </el-dropdown-item>
                 </router-link>
+                <el-dropdown-item @click.native="openContactDialog">
+                    <span class="contact-text">联系方式：{{ company_contact || '点击设置' }}</span>
+                </el-dropdown-item>
                 <el-dropdown-item divided @click.native="logout">
                     <span style="display:block; color:red;">退出登录</span>
                 </el-dropdown-item>
             </el-dropdown-menu>
         </el-dropdown>
+        <el-dialog title="设置联系方式" :visible.sync="contact_dialog_visible" width="420px">
+            <el-input
+                v-model="contact_input"
+                maxlength="2048"
+                placeholder="请输入当前公司联系方式"
+                clearable
+            />
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="contact_dialog_visible = false">取 消</el-button>
+                <el-button type="primary" :loading="contact_saving" @click="saveCompanyContact">保 存</el-button>
+            </span>
+        </el-dialog>
     </div>
 </div>
 </template>
@@ -45,6 +60,14 @@ export default {
         Breadcrumb,
         Hamburger
     },
+    data() {
+        return {
+            company_contact: '',
+            contact_dialog_visible: false,
+            contact_input: '',
+            contact_saving: false
+        }
+    },
     computed: {
         ...mapGetters([
             'sidebar',
@@ -53,9 +76,37 @@ export default {
             'company_name'
         ])
     },
+    mounted() {
+        this.loadCompanyContact()
+    },
     methods: {
         toggleSideBar() {
             this.$store.dispatch('app/toggleSideBar')
+        },
+        async loadCompanyContact() {
+            try {
+                const ret = await this.$send_req('/global/get_company_contact', {}, true)
+                this.company_contact = ret.contact || ''
+            } catch (error) {
+                this.company_contact = ''
+            }
+        },
+        openContactDialog() {
+            this.contact_input = this.company_contact
+            this.contact_dialog_visible = true
+        },
+        async saveCompanyContact() {
+            this.contact_saving = true
+            try {
+                await this.$send_req('/global/set_company_contact', {
+                    contact: this.contact_input || ''
+                }, true)
+                this.company_contact = (this.contact_input || '').trim()
+                this.contact_dialog_visible = false
+                this.$message.success('联系方式已更新')
+            } finally {
+                this.contact_saving = false
+            }
         },
         async logout() {
             await this.$store.dispatch('user/logout')
@@ -119,6 +170,14 @@ export default {
 
         .avatar-container {
             margin-right: 30px;
+
+            .contact-text {
+                display: block;
+                max-width: 260px;
+                white-space: normal;
+                line-height: 20px;
+                color: #303133;
+            }
 
             .company-name {
                 font-weight: bold;

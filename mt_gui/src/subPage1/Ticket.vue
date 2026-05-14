@@ -106,6 +106,9 @@ export default {
                 label: ticket.order_company || '下单公司',
                 value: ticket.company_name
             }, {
+                label: '联系方式',
+                value: ticket.company_contact
+            }, {
                 label: '主车号',
                 value: ticket.plate,
             }, {
@@ -113,6 +116,9 @@ export default {
                 value: ticket.behind_plate
             }, ],
         };
+        if (!ticket.company_contact) {
+            this.ticket_content.list = this.ticket_content.list.filter(item => item.label !== '联系方式');
+        }
         if (ticket.second_unit && ticket.coefficient) {
             let su_value = ticket.coefficient * ticket.count;
             let su_decimal = ticket.second_unit_decimal;

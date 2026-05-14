@@ -149,6 +149,7 @@ async function get_ticket_func(body, token) {
     if (!plan) {
         plan = orig_plan;
     }
+    const order_company_contact = orig_plan?.stuff?.company?.contact || plan?.stuff?.company?.contact || '';
     let delegate_name = ''
     let delegate_stamp_path = ''
     if (plan.delegate) {
@@ -172,6 +173,7 @@ async function get_ticket_func(body, token) {
     return {
         id: plan.id,
         company_name: plan.company.name,
+        company_contact: order_company_contact,
         order_company_name: plan.stuff.company.name,
         plate: plan.main_vehicle.plate,
         behind_plate: plan.behind_vehicle.plate,
@@ -847,6 +849,53 @@ module.exports = {
                 return ret;
             }
         },
+        get_company_contact: {
+            name: '获取当前公司联系方式',
+            description: '获取当前公司联系方式',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                contact: { type: String, mean: '联系方式', example: '13800138000' },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司不存在' };
+                }
+                return { contact: company.contact || '' };
+            },
+        },
+        set_company_contact: {
+            name: '设置当前公司联系方式',
+            description: '设置当前公司联系方式',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contact: { type: String, have_to: false, mean: '联系方式', example: '13800138000' },
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司不存在' };
+                }
+                let contact = '';
+                if (body.contact !== undefined && body.contact !== null) {
+                    contact = String(body.contact).trim();
+                }
+                if (contact.length > 2048) {
+                    throw { err_msg: '联系方式过长' };
+                }
+                company.contact = contact;
+                await company.save();
+                return { result: true };
+            },
+        },
         home_stat_scope_list: {
             name: '首页统计可切换的公司范围',
             description: '集团员工：母公司 + 已授权成员公司；非集团仅当前公司',
@@ -862,7 +911,7 @@ module.exports = {
                         id: { type: Number, mean: '公司id', example: 1 },
                         name: { type: String, mean: '公司名', example: 'A公司' },
                     },
-                },
+                }
             },
             func: async function (body, token) {
                 return await group_lib.list_home_stat_scopes(token);
@@ -1455,7 +1504,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },
