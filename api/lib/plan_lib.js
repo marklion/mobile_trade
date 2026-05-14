@@ -19,7 +19,16 @@ const g_vpcs_mutex = new Mutex();
 
 function is_manual_recharge_history(history) {
     const delta = Number(history.cash_increased) || 0;
-    return delta > 0 && (history.operator || '') !== '系统';
+    if (delta === 0) {
+        return false;
+    }
+    if ((history.operator || '') === '系统') {
+        return false;
+    }
+    if ((history.comment || '').indexOf('出货扣除') >= 0) {
+        return false;
+    }
+    return true;
 }
 
 module.exports = {
@@ -2267,7 +2276,7 @@ module.exports = {
                 where: {
                     contractId: { [db_opt.Op.in]: contract_ids },
                 },
-                attributes: ['contractId', 'time', 'cash_increased', 'operator'],
+                attributes: ['contractId', 'time', 'cash_increased', 'operator', 'comment'],
                 order: [['id', 'ASC']],
                 raw: true,
             });
@@ -2412,6 +2421,17 @@ module.exports = {
         const rows = Array.from(summary_by_customer.values()).sort((a, b) => {
             return (a.customer_name || '').localeCompare((b.customer_name || ''), 'zh-Hans-CN');
         });
+        const total = {
+            month_begin_balance: 0,
+            month_prepayment: 0,
+            month_sale_count: 0,
+            month_sale_amount: 0,
+            month_end_balance: 0,
+            year_begin_balance: 0,
+            year_prepayment: 0,
+            year_sale_count: 0,
+            year_sale_amount: 0,
+        };
         rows.forEach((item) => {
             const month_unit_price = item.month_sale_count > 0 ? item.month_sale_amount / item.month_sale_count : 0;
             const year_unit_price = item.year_sale_count > 0 ? item.year_sale_amount / item.year_sale_count : 0;
@@ -2431,7 +2451,35 @@ module.exports = {
                 item.year_sale_amount,
                 item.month_end_balance,
             ]);
+            total.month_begin_balance += item.month_begin_balance;
+            total.month_prepayment += item.month_prepayment;
+            total.month_sale_count += item.month_sale_count;
+            total.month_sale_amount += item.month_sale_amount;
+            total.month_end_balance += item.month_end_balance;
+            total.year_begin_balance += item.year_begin_balance;
+            total.year_prepayment += item.year_prepayment;
+            total.year_sale_count += item.year_sale_count;
+            total.year_sale_amount += item.year_sale_amount;
         });
+        const total_month_unit_price = total.month_sale_count > 0 ? total.month_sale_amount / total.month_sale_count : 0;
+        const total_year_unit_price = total.year_sale_count > 0 ? total.year_sale_amount / total.year_sale_count : 0;
+        const total_row = worksheet.addRow([
+            '',
+            '合计',
+            total.month_begin_balance,
+            total.month_prepayment,
+            total.month_sale_count,
+            total_month_unit_price,
+            total.month_sale_amount,
+            total.month_end_balance,
+            total.year_begin_balance,
+            total.year_prepayment,
+            total.year_sale_count,
+            total_year_unit_price,
+            total.year_sale_amount,
+            total.month_end_balance,
+        ]);
+        total_row.font = { bold: true };
 
         worksheet.eachRow((row, row_number) => {
             row.eachCell((cell) => {
@@ -2615,13 +2663,19 @@ module.exports = {
         let total_net_weight = 0;
         let total_amount = 0;
         let total_prepayment = 0;
-        all_events.forEach((event, index) => {
+        let seq = 1;
+        let pending_prepayment = 0;
+        all_events.forEach((event) => {
             running_balance += event.prepayment - event.amount;
             total_net_weight += event.net_weight;
             total_amount += event.amount;
             total_prepayment += event.prepayment;
+            if (event.event_type === 'prepay') {
+                pending_prepayment += event.prepayment;
+                return;
+            }
             table_rows.push({
-                seq: index + 1,
+                seq: seq++,
                 date: event.date,
                 ticket_no: event.ticket_no,
                 stuff_name: event.stuff_name,
@@ -2632,9 +2686,10 @@ module.exports = {
                 net_weight: event.net_weight,
                 unit_price: event.unit_price,
                 amount: event.amount,
-                prepayment: event.prepayment,
+                prepayment: pending_prepayment,
                 balance: running_balance,
             });
+            pending_prepayment = 0;
         });
 
         const workbook = new ExcelJS.Workbook();
@@ -2671,9 +2726,10 @@ module.exports = {
         widths.forEach((width, idx) => {
             worksheet.getColumn(idx + 1).width = width;
         });
-        [7, 8, 9, 10, 11, 12, 13].forEach((col) => {
+        [7, 8, 9, 10, 11, 12].forEach((col) => {
             worksheet.getColumn(col).numFmt = '0.00';
         });
+        worksheet.getColumn(13).numFmt = '#,##0.00';
 
         const file_name = '/uploads/customer_statement' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
