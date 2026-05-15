@@ -710,28 +710,58 @@ module.exports = {
         };
         return await this.searchPlansByModel(company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
     },
+    get_authorized_sale_company_ids_for_user: async function (user_id, buyer_company_id) {
+        let sq = db_opt.get_sq();
+        const contracts = await sq.models.contract.findAll({
+            attributes: ['saleCompanyId'],
+            where: {
+                buyCompanyId: buyer_company_id,
+            },
+            include: [{
+                model: sq.models.rbac_user,
+                where: { id: user_id },
+                required: true,
+                attributes: [],
+                through: { attributes: [] },
+            }],
+        });
+        const sale_company_id_set = new Set();
+        for (let i = 0; i < contracts.length; i++) {
+            if (contracts[i].saleCompanyId) {
+                sale_company_id_set.add(contracts[i].saleCompanyId);
+            }
+        }
+        return Array.from(sale_company_id_set);
+    },
     search_bought_plans_with_contract_authorization: async function (user, buyer_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         where_condition[db_opt.Op.and].push({ companyId: buyer_company.id });
 
-        const authorized_visibility_sql = `EXISTS (
-            SELECT 1
-            FROM stuff s
-            INNER JOIN contract c
-                ON c.buyCompanyId = plan.companyId
-               AND c.saleCompanyId = s.companyId
-               AND c.deletedAt IS NULL
-            INNER JOIN user_contract uc
-                ON uc.contractId = c.id
-            WHERE s.id = plan.stuffId
-              AND uc.rbacUserId = ${user.id}
-        )`;
+        const authorized_sale_company_ids = await this.get_authorized_sale_company_ids_for_user(user.id, buyer_company.id);
+        let authorized_stuff_ids = [];
+        if (authorized_sale_company_ids.length > 0) {
+            const authorized_stuff = await sq.models.stuff.findAll({
+                attributes: ['id'],
+                where: {
+                    companyId: {
+                        [db_opt.Op.in]: authorized_sale_company_ids,
+                    }
+                }
+            });
+            authorized_stuff_ids = authorized_stuff.map((item) => item.id);
+        }
+
+        const or_condition = [{ rbacUserId: user.id }];
+        if (authorized_stuff_ids.length > 0) {
+            or_condition.push({
+                stuffId: {
+                    [db_opt.Op.in]: authorized_stuff_ids,
+                },
+            });
+        }
         where_condition[db_opt.Op.and].push({
-            [db_opt.Op.or]: [
-                { rbacUserId: user.id },
-                sq.where(sq.literal(authorized_visibility_sql), true),
-            ],
+            [db_opt.Op.or]: or_condition,
         });
 
         let search_condition = {
@@ -1849,8 +1879,15 @@ module.exports = {
     },
     filter_plan4user: async function (body, token, is_buy = false) {
         let sq = db_opt.get_sq();
+        let user = await rbac_lib.get_user_by_token(token);
+        let buyer_company = await rbac_lib.get_company_by_token(token);
+        if (!user || !buyer_company) {
+            return [];
+        }
+
         let cond = {
             [db_opt.Op.and]: this.buildTimeCondition(body, sq),
+            companyId: buyer_company.id,
         };
         let order = this.default_export_sort(sq);
         if (is_buy) {
@@ -1863,9 +1900,40 @@ module.exports = {
             cond.status = 3;
             cond.manual_close = false;
         }
-        let user = await rbac_lib.get_user_by_token(token);
+        if (body.stuff_id) {
+            cond.stuffId = body.stuff_id;
+        }
 
-        return await user.getPlans({ where: cond, order: order, include: util_lib.plan_detail_include() });
+        const authorized_sale_company_ids = await this.get_authorized_sale_company_ids_for_user(user.id, buyer_company.id);
+        let authorized_stuff_ids = [];
+        if (authorized_sale_company_ids.length > 0) {
+            let authorized_stuff_where = {
+                companyId: {
+                    [db_opt.Op.in]: authorized_sale_company_ids,
+                }
+            };
+            if (body.stuff_id) {
+                authorized_stuff_where.id = body.stuff_id;
+            }
+            const authorized_stuff = await sq.models.stuff.findAll({
+                attributes: ['id'],
+                where: authorized_stuff_where,
+            });
+            authorized_stuff_ids = authorized_stuff.map((item) => item.id);
+        }
+        const or_condition = [{ rbacUserId: user.id }];
+        if (authorized_stuff_ids.length > 0) {
+            or_condition.push({
+                stuffId: {
+                    [db_opt.Op.in]: authorized_stuff_ids,
+                },
+            });
+        }
+        cond[db_opt.Op.and].push({
+            [db_opt.Op.or]: or_condition,
+        });
+
+        return await sq.models.plan.findAll({ where: cond, order: order, include: util_lib.plan_detail_include() });
     },
     default_export_sort: function (sq) {
         const order = [
