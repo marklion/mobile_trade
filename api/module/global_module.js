@@ -149,6 +149,7 @@ async function get_ticket_func(body, token) {
     if (!plan) {
         plan = orig_plan;
     }
+    const order_company_contact = orig_plan?.stuff?.company?.contact || plan?.stuff?.company?.contact || '';
     let delegate_name = ''
     let delegate_stamp_path = ''
     if (plan.delegate) {
@@ -172,6 +173,7 @@ async function get_ticket_func(body, token) {
     return {
         id: plan.id,
         company_name: plan.company.name,
+        company_contact: order_company_contact,
         order_company_name: plan.stuff.company.name,
         plate: plan.main_vehicle.plate,
         behind_plate: plan.behind_vehicle.plate,
@@ -862,7 +864,7 @@ module.exports = {
                         id: { type: Number, mean: '公司id', example: 1 },
                         name: { type: String, mean: '公司名', example: 'A公司' },
                     },
-                },
+                }
             },
             func: async function (body, token) {
                 return await group_lib.list_home_stat_scopes(token);
@@ -1455,7 +1457,7 @@ module.exports = {
                 const uuid = require('uuid');
                 real_file_name = uuid.v4();
                 const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + id, '/database' + filePath);
+                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
                 return { url: filePath };
             },
         },

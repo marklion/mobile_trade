@@ -165,6 +165,7 @@ module.exports = {
     ticket_content: {
         id: { type: Number, mean: 'ID', example: 1 },
         company_name: { type: String, mean: '公司名', example: 'company_example' },
+        company_contact: { type: String, mean: '公司联系方式', example: '13800138000' },
         order_company_name: { type: String, mean: '下单公司名', example: 'order_company_example' },
         plate: { type: String, mean: '车牌', example: 'plate_example' },
         behind_plate: { type: String, mean: '挂车牌', example: 'behind_plate_example' },
