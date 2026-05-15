@@ -67,6 +67,22 @@
 
 <script>
 import DataFilter from '../components/DataFilter.vue'
+
+function formatUserDisplay(u) {
+    if (!u) {
+        return ''
+    }
+    const name = String(u.name || '').trim()
+    const phone = String(u.phone || '').trim()
+    if (name && phone && name === phone) {
+        return name
+    }
+    if (name && phone) {
+        return name + ' · ' + phone
+    }
+    return name || phone || '—'
+}
+
 export default {
     name: 'GroupDataPermission',
     components: {
@@ -139,7 +155,7 @@ export default {
             const ret = await this.$send_req('/group/group_company_user_list', { pageNo })
             return (ret.all_user || []).map((u) => ({
                 id: u.id,
-                name: this.formatUserDisplay(u),
+                name: formatUserDisplay(u),
                 raw: u,
             }))
         },
@@ -216,18 +232,7 @@ export default {
         },
         /** name、phone 相同时（如都是邮箱）只展示一段，避免重复 */
         formatUserDisplay(u) {
-            if (!u) {
-                return ''
-            }
-            const name = String(u.name || '').trim()
-            const phone = String(u.phone || '').trim()
-            if (name && phone && name === phone) {
-                return name
-            }
-            if (name && phone) {
-                return name + ' · ' + phone
-            }
-            return name || phone || '—'
+            return formatUserDisplay(u)
         },
         displayGrantUser(g) {
             return this.formatUserDisplay({ name: g.user_name, phone: g.user_phone })
