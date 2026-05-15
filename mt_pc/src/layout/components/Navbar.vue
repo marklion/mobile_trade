@@ -32,18 +32,15 @@
                 </el-dropdown-item>
             </el-dropdown-menu>
         </el-dropdown>
-        <el-dialog title="设置联系方式" :visible.sync="contact_dialog_visible" width="420px">
-            <el-input
-                v-model="contact_input"
-                maxlength="2048"
-                placeholder="请输入当前公司联系方式"
-                clearable
-            />
-            <span slot="footer" class="dialog-footer">
-                <el-button @click="contact_dialog_visible = false">取 消</el-button>
-                <el-button type="primary" :loading="contact_saving" @click="saveCompanyContact">保 存</el-button>
-            </span>
-        </el-dialog>
+            <el-dialog title="设置联系方式" :visible.sync="contact_dialog_visible" width="420px" :modal="false"
+                append-to-body>
+                <el-input v-model="contact_input" maxlength="2048" placeholder="请输入当前公司联系方式" clearable />
+                <span slot="footer" class="dialog-footer">
+                    <el-button @click="contact_dialog_visible = false">取 消</el-button>
+                    <el-button type="primary" :loading="contact_saving" @click="saveCompanyContact">保 存</el-button>
+                </span>
+            </el-dialog>
+   
     </div>
 </div>
 </template>
@@ -85,7 +82,7 @@ export default {
         },
         async loadCompanyContact() {
             try {
-                const ret = await this.$send_req('/global/get_company_contact', {}, true)
+                const ret = await this.$send_req('/rbac/get_company_contact', {}, true)
                 this.company_contact = ret.contact || ''
             } catch (error) {
                 this.company_contact = ''
@@ -98,7 +95,7 @@ export default {
         async saveCompanyContact() {
             this.contact_saving = true
             try {
-                await this.$send_req('/global/set_company_contact', {
+                await this.$send_req('/rbac/set_company_contact', {
                     contact: this.contact_input || ''
                 }, true)
                 this.company_contact = (this.contact_input || '').trim()

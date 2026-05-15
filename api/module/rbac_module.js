@@ -266,6 +266,53 @@ module.exports = {
                 return { result: true };
             },
         },
+        get_company_contact: {
+            name: '获取当前公司联系方式',
+            description: '获取当前公司联系方式',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                contact: { type: String, mean: '联系方式', example: '13800138000' },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司不存在' };
+                }
+                return { contact: company.contact || '' };
+            },
+        },
+        set_company_contact: {
+            name: '设置当前公司联系方式',
+            description: '设置当前公司联系方式',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                contact: { type: String, have_to: false, mean: '联系方式', example: '13800138000' },
+            },
+            result: {
+                result: { type: Boolean, mean: '设置结果', example: true },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司不存在' };
+                }
+                let contact = '';
+                if (body.contact !== undefined && body.contact !== null) {
+                    contact = String(body.contact).trim();
+                }
+                if (contact.length > 2048) {
+                    throw { err_msg: '联系方式过长' };
+                }
+                company.contact = contact;
+                await company.save();
+                return { result: true };
+            },
+        },
         add_fc_table2role: {
             name: '添加检查表到角色',
             description: '添加检查表到角色',
