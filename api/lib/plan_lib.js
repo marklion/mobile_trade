@@ -31,6 +31,24 @@ function is_manual_recharge_history(history) {
     return true;
 }
 
+function is_statement_prepayment_history(history) {
+    const delta = Number(history.cash_increased) || 0;
+    if (delta === 0) {
+        return false;
+    }
+    const comment = history.comment || '';
+    // 对账单中的预收款仅统计手动充值或退回。
+    if (comment.indexOf('回退出货增加') >= 0 || comment.indexOf('退回') >= 0) {
+        return true;
+    }
+    return is_manual_recharge_history(history);
+}
+
+function is_statement_amount_history(history) {
+    const comment = history.comment || '';
+    return comment.indexOf('出货扣除') >= 0 || comment.indexOf('回退出货增加') >= 0;
+}
+
 module.exports = {
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
@@ -2603,6 +2621,8 @@ module.exports = {
         }
 
         const contract_ids = contracts.map((item) => item.id);
+        const stuff_rows = await owner_company.getStuff({ attributes: ['id'] });
+        const stuff_ids = stuff_rows.map((item) => item.id);
         const history_rows = await sq.models.balance_history.findAll({
             where: {
                 contractId: { [db_opt.Op.in]: contract_ids },
@@ -2611,33 +2631,37 @@ module.exports = {
             order: [['id', 'ASC']],
             raw: true,
         });
-        const history_by_contract = new Map();
-        history_rows.forEach((row) => {
-            if (!history_by_contract.has(row.contractId)) {
-                history_by_contract.set(row.contractId, []);
+        // 初期=开始日前一天(例如选择4/30开始，则初期取4/29结余)。
+        const opening_cutoff = report_start.clone().subtract(1, 'day').endOf('day');
+        // 期初结余使用截止到 opening_cutoff 的流水按同口径倒推，避免使用合同余额带入其他业务口径。
+        const opening_daily_map = new Map();
+        history_rows.forEach((history) => {
+            const history_time = moment(history.time);
+            if (!history_time.isValid() || !history_time.isSameOrBefore(opening_cutoff)) {
+                return;
             }
-            history_by_contract.get(row.contractId).push(row);
+            const date = history.time.slice(0, 10);
+            if (!opening_daily_map.has(date)) {
+                opening_daily_map.set(date, { prepayment: 0, amount: 0 });
+            }
+            const delta = Number(history.cash_increased) || 0;
+            const day_node = opening_daily_map.get(date);
+            if (is_statement_prepayment_history(history)) {
+                day_node.prepayment += delta;
+            } else if (is_statement_amount_history(history)) {
+                // balance_history 的出货类流水是“余额增量”，这里转换为“金额”口径。
+                day_node.amount += -delta;
+            }
         });
-
-        const start_prev = report_start.clone().subtract(1, 'seconds');
         let opening_balance = 0;
-        contracts.forEach((contract) => {
-            const list = history_by_contract.get(contract.id) || [];
-            let sum_after_start = 0;
-            list.forEach((history) => {
-                const history_time = moment(history.time);
-                if (!history_time.isValid()) {
-                    return;
-                }
-                if (history_time.isAfter(start_prev)) {
-                    sum_after_start += Number(history.cash_increased) || 0;
-                }
-            });
-            opening_balance += (Number(contract.balance) || 0) - sum_after_start;
+        const opening_days = Array.from(opening_daily_map.keys()).sort(
+            (a, b) => moment(a, 'YYYY-MM-DD').valueOf() - moment(b, 'YYYY-MM-DD').valueOf()
+        );
+        opening_days.forEach((date) => {
+            const day_node = opening_daily_map.get(date);
+            opening_balance = Math.max(0, opening_balance + day_node.prepayment - day_node.amount);
         });
 
-        const stuff_rows = await owner_company.getStuff({ attributes: ['id'] });
-        const stuff_ids = stuff_rows.map((item) => item.id);
         const plan_events = [];
         if (stuff_ids.length > 0) {
             const plans = await sq.models.plan.findAll({
@@ -2645,7 +2669,6 @@ module.exports = {
                     is_buy: false,
                     companyId: customer_id,
                     stuffId: { [db_opt.Op.in]: stuff_ids },
-                    count: { [db_opt.Op.ne]: 0 },
                     [db_opt.Op.and]: [
                         sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
                             [db_opt.Op.gte]: sq.fn('TIMESTAMP', report_start.format('YYYY-MM-DD HH:mm:ss'))
@@ -2683,7 +2706,7 @@ module.exports = {
             });
         }
 
-        const prepay_events = [];
+        const prepay_by_date = new Map();
         history_rows.forEach((history) => {
             const history_time = moment(history.time);
             if (!history_time.isValid()) {
@@ -2692,73 +2715,78 @@ module.exports = {
             if (!history_time.isBetween(report_start, report_end, undefined, '[]')) {
                 return;
             }
-            const delta = Number(history.cash_increased) || 0;
-            if ((history.comment || '').indexOf('出货扣除') >= 0) {
+            if (!is_statement_prepayment_history(history)) {
                 return;
             }
-            prepay_events.push({
-                event_type: 'prepay',
-                event_time: history.time,
-                date: history.time.slice(0, 10),
-                ticket_no: 'NA',
-                stuff_name: 'NA',
-                main_vehicle: 'NA',
-                behind_vehicle: 'NA',
-                p_weight: 0,
-                m_weight: 0,
-                net_weight: 0,
-                unit_price: 0,
-                amount: 0,
-                prepayment: delta,
-            });
+            const delta = Number(history.cash_increased) || 0;
+            const date = history.time.slice(0, 10);
+            prepay_by_date.set(date, (prepay_by_date.get(date) || 0) + delta);
         });
 
-        const all_events = plan_events.concat(prepay_events);
-        all_events.sort((a, b) => {
-            const ta = moment(a.event_time).valueOf();
-            const tb = moment(b.event_time).valueOf();
-            if (ta === tb) {
-                if (a.event_type === b.event_type) {
-                    return 0;
-                }
-                return a.event_type === 'prepay' ? -1 : 1;
-            }
-            return ta - tb;
-        });
-
-        let running_balance = opening_balance;
+        let running_balance = Math.max(0, opening_balance);
         const table_rows = [];
         let total_net_weight = 0;
         let total_amount = 0;
         let total_prepayment = 0;
         let seq = 1;
-        let pending_prepayment = 0;
-        all_events.forEach((event) => {
-            running_balance += event.prepayment - event.amount;
-            total_net_weight += event.net_weight;
-            total_amount += event.amount;
-            total_prepayment += event.prepayment;
-            if (event.event_type === 'prepay') {
-                pending_prepayment += event.prepayment;
-                return;
+        const plan_events_by_date = new Map();
+        plan_events.forEach((event) => {
+            if (!plan_events_by_date.has(event.date)) {
+                plan_events_by_date.set(event.date, []);
             }
-            table_rows.push({
-                seq: seq++,
-                date: event.date,
-                ticket_no: event.ticket_no,
-                stuff_name: event.stuff_name,
-                main_vehicle: event.main_vehicle,
-                behind_vehicle: event.behind_vehicle,
-                p_weight: event.p_weight,
-                m_weight: event.m_weight,
-                net_weight: event.net_weight,
-                unit_price: event.unit_price,
-                amount: event.amount,
-                prepayment: pending_prepayment,
-                balance: running_balance,
-            });
-            pending_prepayment = 0;
+            plan_events_by_date.get(event.date).push(event);
         });
+        let iter_date = report_start.clone().startOf('day');
+        const iter_end = report_end.clone().startOf('day');
+        while (!iter_date.isAfter(iter_end)) {
+            const date_key = iter_date.format('YYYY-MM-DD');
+            const day_prepayment = prepay_by_date.get(date_key) || 0;
+            running_balance = Math.max(0, running_balance + day_prepayment);
+            total_prepayment += day_prepayment;
+
+            const day_plan_events = plan_events_by_date.get(date_key) || [];
+            let show_day_prepayment = day_prepayment;
+            day_plan_events.forEach((event) => {
+                running_balance = Math.max(0, running_balance - event.amount);
+                total_net_weight += event.net_weight;
+                total_amount += event.amount;
+                table_rows.push({
+                    seq: seq++,
+                    date: event.date,
+                    ticket_no: event.ticket_no,
+                    stuff_name: event.stuff_name,
+                    main_vehicle: event.main_vehicle,
+                    behind_vehicle: event.behind_vehicle,
+                    p_weight: event.p_weight,
+                    m_weight: event.m_weight,
+                    net_weight: event.net_weight,
+                    unit_price: event.unit_price,
+                    amount: event.amount,
+                    prepayment: show_day_prepayment,
+                    balance: running_balance,
+                });
+                show_day_prepayment = 0;
+            });
+            if (day_plan_events.length === 0 && day_prepayment !== 0) {
+                table_rows.push({
+                    seq: seq++,
+                    date: date_key,
+                    ticket_no: '',
+                    stuff_name: '',
+                    main_vehicle: '',
+                    behind_vehicle: '',
+                    p_weight: 0,
+                    m_weight: 0,
+                    net_weight: 0,
+                    unit_price: 0,
+                    amount: 0,
+                    prepayment: day_prepayment,
+                    balance: running_balance,
+                });
+            }
+
+            iter_date.add(1, 'day');
+        }
 
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('客户对账单');
