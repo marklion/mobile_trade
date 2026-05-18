@@ -181,12 +181,8 @@ module.exports = {
         }
         let row = await sq.models.group_member_data_grant.findOne({
             where: { groupCompanyId: group_company_id, memberCompanyId: member_company_id, rbacUserId: rbac_user_id },
-            paranoid: false,
         });
         if (row) {
-            if (row.deletedAt) {
-                await row.restore();
-            }
             row.can_view = !!can_view;
             row.can_operate = !!can_operate;
             await row.save();
