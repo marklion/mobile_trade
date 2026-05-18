@@ -18,8 +18,8 @@
                     <view class="line"><text class="label">查看</text>{{ g.can_view ? '是' : '否' }}　<text
                             class="label">操作</text>{{ g.can_operate ? '是' : '否' }}</view>
                     <view class="actions" v-if="canManage">
-                        <fui-button type="primary" btnSize="mini" plain text="修改" @click="openDialog(g)"></fui-button>
-                        <fui-button type="danger" btnSize="mini" plain text="删除" @click="removeRow(g)"></fui-button>
+                        <fui-button type="warning" btnSize="mini" text="修改" @click="openDialog(g)"></fui-button>
+                        <fui-button type="danger" btnSize="mini" text="删除" @click="removeRow(g)"></fui-button>
                     </view>
                 </view>
             </fui-list-cell>
