@@ -2586,7 +2586,9 @@ module.exports = {
             }
         });
         let opening_balance = 0;
-        const opening_days = Array.from(opening_daily_map.keys()).sort();
+        const opening_days = Array.from(opening_daily_map.keys()).sort(
+            (a, b) => moment(a, 'YYYY-MM-DD').valueOf() - moment(b, 'YYYY-MM-DD').valueOf()
+        );
         opening_days.forEach((date) => {
             const day_node = opening_daily_map.get(date);
             opening_balance = Math.max(0, opening_balance + day_node.prepayment - day_node.amount);
