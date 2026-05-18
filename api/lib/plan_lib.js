@@ -414,6 +414,7 @@ module.exports = {
             include: [
                 { model: sq.models.company, as: 'sale_company' },
                 { model: sq.models.stuff },
+                { model: sq.models.rbac_user },
             ]
         };
         let rows = await _compnay.getBuy_contracts(conditions);
@@ -728,13 +729,15 @@ module.exports = {
         };
         return await this.searchPlansByModel(company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
     },
-    get_authorized_sale_company_ids_for_user: async function (user_id, buyer_company_id) {
+    get_authorized_counterparty_company_ids_for_user: async function (user_id, home_company_id, is_buy = false) {
         let sq = db_opt.get_sq();
+        const attr_key = is_buy ? 'buyCompanyId' : 'saleCompanyId';
+        const where_clause = is_buy
+            ? { saleCompanyId: home_company_id }
+            : { buyCompanyId: home_company_id };
         const contracts = await sq.models.contract.findAll({
-            attributes: ['saleCompanyId'],
-            where: {
-                buyCompanyId: buyer_company_id,
-            },
+            attributes: [attr_key],
+            where: where_clause,
             include: [{
                 model: sq.models.rbac_user,
                 where: { id: user_id },
@@ -743,20 +746,37 @@ module.exports = {
                 through: { attributes: [] },
             }],
         });
-        const sale_company_id_set = new Set();
+        const company_id_set = new Set();
         for (let i = 0; i < contracts.length; i++) {
-            if (contracts[i].saleCompanyId) {
-                sale_company_id_set.add(contracts[i].saleCompanyId);
+            const company_id = contracts[i][attr_key];
+            if (company_id) {
+                company_id_set.add(company_id);
             }
         }
-        return Array.from(sale_company_id_set);
+        // 合同中的对手方可能是集团公司，而实际下单物料属于其成员公司。
+        // 这里把对手方公司的成员公司ID一并纳入授权范围，避免漏查同公司他人订单。
+        if (company_id_set.size > 0) {
+            const owner_ids = Array.from(company_id_set);
+            const member_companies = await sq.models.company.findAll({
+                attributes: ['id'],
+                where: {
+                    parentGroupCompanyId: {
+                        [db_opt.Op.in]: owner_ids,
+                    }
+                }
+            });
+            for (let i = 0; i < member_companies.length; i++) {
+                company_id_set.add(member_companies[i].id);
+            }
+        }
+        return Array.from(company_id_set);
     },
     search_bought_plans_with_contract_authorization: async function (user, buyer_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         where_condition[db_opt.Op.and].push({ companyId: buyer_company.id });
 
-        const authorized_sale_company_ids = await this.get_authorized_sale_company_ids_for_user(user.id, buyer_company.id);
+        const authorized_sale_company_ids = await this.get_authorized_counterparty_company_ids_for_user(user.id, buyer_company.id, is_buy);
         let authorized_stuff_ids = [];
         if (authorized_sale_company_ids.length > 0) {
             const authorized_stuff = await sq.models.stuff.findAll({
@@ -1922,7 +1942,7 @@ module.exports = {
             cond.stuffId = body.stuff_id;
         }
 
-        const authorized_sale_company_ids = await this.get_authorized_sale_company_ids_for_user(user.id, buyer_company.id);
+        const authorized_sale_company_ids = await this.get_authorized_counterparty_company_ids_for_user(user.id, buyer_company.id, is_buy);
         let authorized_stuff_ids = [];
         if (authorized_sale_company_ids.length > 0) {
             let authorized_stuff_where = {
