@@ -265,6 +265,60 @@ Authorized Lisi Can See Zhangsan Plan
     END
     Should Be True  ${found_by_lisi}
 
+Unauthorized Lisi Cannot See Zhangsan Order
+    [Teardown]  Plan Reset
+    ${bc1_admin_phone_num}  Evaluate  random.randint(17000000000, 17999999999)  modules=random
+    ${bc1_admin_phone}  Convert To String  ${bc1_admin_phone_num}
+    ${bc1_admin_token}  Login As Admin Of Company  ${buy_company1}[id]  ${bc1_admin_phone}  bc1_admin
+    ${lisi_phone_num}  Evaluate  random.randint(13000000000, 13999999999)  modules=random
+    ${lisi_phone}  Convert To String  ${lisi_phone_num}
+    ${lisi_open_id}  Set Variable  open_id_${lisi_phone}
+    ${lisi_token}  New User Login  ${lisi_phone}  ${buy_company1}[name]  ${lisi_open_id}  lisi
+    Add Module To User  ${bc1_admin_token}  ${lisi_phone}  supplier
+    Unauthorize User to Buy Contract  ${buy_company1}[name]  ${lisi_phone}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${order}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]  ${bc1_user_token}
+    ${order_id}  Get From Dictionary  ${order}  id
+    ${lisi_orders}  Search Orders Based on User  ${lisi_token}  ${True}
+    ${found_by_lisi}  Set Variable  ${False}
+    FOR  ${itr}  IN  @{lisi_orders}
+        ${pid}  Get From Dictionary  ${itr}  id
+        IF  $pid == $order_id
+            ${found_by_lisi}  Set Variable  ${True}
+            Exit For Loop
+        END
+    END
+    Should Be Equal  ${found_by_lisi}  ${False}
+
+Authorized Lisi Can See Zhangsan Order
+    [Teardown]  Plan Reset
+    ${bc1_admin_phone_num}  Evaluate  random.randint(18000000000, 18999999999)  modules=random
+    ${bc1_admin_phone}  Convert To String  ${bc1_admin_phone_num}
+    ${bc1_admin_token}  Login As Admin Of Company  ${buy_company1}[id]  ${bc1_admin_phone}  bc1_admin
+    ${lisi_phone_num}  Evaluate  random.randint(13000000000, 13999999999)  modules=random
+    ${lisi_phone}  Convert To String  ${lisi_phone_num}
+    ${lisi_open_id}  Set Variable  open_id_${lisi_phone}
+    ${lisi_token}  New User Login  ${lisi_phone}  ${buy_company1}[name]  ${lisi_open_id}  lisi
+    Add Module To User  ${bc1_admin_token}  ${lisi_phone}  supplier
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${order}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]  ${bc1_user_token}
+    ${order_id}  Get From Dictionary  ${order}  id
+    Authorize User to Buy Contract  ${buy_company1}[name]  ${lisi_phone}
+    ${lisi_orders}  Search Orders Based on User  ${lisi_token}  ${True}
+    ${found_by_lisi}  Set Variable  ${False}
+    FOR  ${itr}  IN  @{lisi_orders}
+        ${pid}  Get From Dictionary  ${itr}  id
+        IF  $pid == $order_id
+            ${found_by_lisi}  Set Variable  ${True}
+            Exit For Loop
+        END
+    END
+    Should Be True  ${found_by_lisi}
+
 Charge After Plan Confirmed
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0

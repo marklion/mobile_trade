@@ -112,6 +112,13 @@ module.exports = {
                                 name: { type: String, mean: '货物名称', example: '货物名称' },
                             }
                         },
+                        rbac_users: {
+                            type: Array, mean: '授权用户', explain: {
+                                id: { type: Number, mean: '用户ID', example: 1 },
+                                name: { type: String, mean: '用户姓名', example: '用户姓名' },
+                                phone: { type: String, mean: '用户电话', example: '用户电话' },
+                            }
+                        },
                     }
                 }
             },

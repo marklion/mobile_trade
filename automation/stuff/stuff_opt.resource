@@ -21,6 +21,8 @@ ${DATE_FORMAT}  %Y-%m-%d
 Prepare Companies And Users
     ${buy_company1}  Create One Company  bc1
     ${buy_company2}  Create One Company  bc2
+    Add Module To Company  ${buy_company1}[id]  supplier
+    Add Module To Company  ${buy_company2}[id]  supplier
     ${sale_company}  Create One Company  sc
     Company Set Script  ${sale_company}[id]  normal
     ${sc_admin_token}  Login As Admin Of Company  ${sale_company}[id]  1234  sc_admin
@@ -271,6 +273,18 @@ Authorize User to Contract
         END
     END
 
+Authorize User to Buy Contract
+    [Arguments]  ${company_name}  ${user_phone}  ${token}=${sc_admin_token}
+    ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${token}  contracts
+    FOR  ${itr}  IN  @{found_contracts}
+        ${supplier_name}  Get From Dictionary  ${itr}[company]  name
+        IF  $supplier_name == $company_name
+            ${req}  Create Dictionary  contract_id=${itr}[id]  phone=${user_phone}
+            Req to Server  /buy_management/authorize_user  ${token}  ${req}
+            Exit For Loop
+        END
+    END
+
 Unauthorize User to Contract
     [Arguments]  ${company_name}  ${user_phone}
     ${found_contracts}  Req Get to Server  /sale_management/contract_get  ${sc_admin_token}  contracts
@@ -283,6 +297,19 @@ Unauthorize User to Contract
         END
     END
     Req to Server  /sale_management/unauthorize_user  ${sc_admin_token}  ${req}
+
+Unauthorize User to Buy Contract
+    [Arguments]  ${company_name}  ${user_phone}
+    ${found_contracts}  Req Get to Server  /buy_management/contract_get  ${sc_admin_token}  contracts
+    FOR  ${itr}  IN  @{found_contracts}
+        ${supplier_name}  Get From Dictionary  ${itr}[company]  name
+        IF  $supplier_name == $company_name
+            ${req}  Create Dictionary  contract_id=${itr}[id]  phone=${user_phone}
+            Req to Server  /buy_management/unauthorize_user  ${sc_admin_token}  ${req}
+            Exit For Loop
+        END
+    END
+    Req to Server  /buy_management/unauthorize_user  ${sc_admin_token}  ${req}
 
 Re-Add Stuff
     Add A Stuff To Sale  lng  lng_comment
