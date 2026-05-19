@@ -672,7 +672,9 @@ module.exports = {
                     const has_member_operate_permission = user
                         && await group_lib.user_has_member_data_access(user.id, stuff.companyId, true);
                     if (!has_member_operate_permission) {
-                        throw { err_msg: '无权限' };
+                        const err = new Error('无权限');
+                        err.err_msg = '无权限';
+                        throw err;
                     }
                 }
                 if (!(await contract.hasStuff(stuff))) {
