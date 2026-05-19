@@ -667,6 +667,14 @@ module.exports = {
                 if (!contract || !stuff || !(await plan_lib.has_sale_contract_operate_permission(company, contract))) {
                     throw { err_msg: '无权限' };
                 }
+                if (company.is_group && stuff.companyId !== company.id) {
+                    const user = await rbac_lib.get_user_by_token(token);
+                    const has_member_operate_permission = user
+                        && await group_lib.user_has_member_data_access(user.id, stuff.companyId, true);
+                    if (!has_member_operate_permission) {
+                        throw { err_msg: '无权限' };
+                    }
+                }
                 if (!(await contract.hasStuff(stuff))) {
                     throw { err_msg: '该合同未关联此物料' };
                 }

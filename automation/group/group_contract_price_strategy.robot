@@ -184,3 +184,12 @@ Group ViewOnly User Cannot Configure Member Company Price Strategy
     ...  stat_context_company_id=${MEMBER_COMPANY}[id]
     ${err2}  Req to Server  /sale_management/contract_set_stuff_price  ${PARENT_TOKEN}  ${set_override_req}  ${True}
     Should Contain  ${err2}  无权限
+
+Group ViewOnly User Cannot Set Member Stuff Price Without Context
+    [Setup]  Setup Group Contract Price Scenario  ${False}
+    ${set_override_req}  Create Dictionary
+    ...  contract_id=${CONTRACT}[id]
+    ...  stuff_id=${MEMBER_STUFF}[id]
+    ...  unit_price=${95.5}
+    ${err}  Req to Server  /sale_management/contract_set_stuff_price  ${PARENT_TOKEN}  ${set_override_req}  ${True}
+    Should Contain  ${err}  无权限
