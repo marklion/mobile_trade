@@ -5,7 +5,7 @@ export default {
     },
     onShow: async function (options) {
         let path = options.path;
-        if (path == 'subPage/Ticket' || path == 'subPage/Driver') {
+        if (path == 'pages/Driver' || path == 'pages/Ticket' || path == 'subPage1/Ticket' || path == 'subPage1/Driver') {
             console.log('Driver or Ticket');
         } else {
             await this.$init_self();
