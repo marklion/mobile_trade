@@ -719,14 +719,14 @@ let db_opt = {
         _sq.models.rbac_user.hasMany(_sq.models.group_member_data_grant, { as: 'group_member_data_grants', foreignKey: 'rbacUserId', constraints: false });
         _sq.models.company.belongsToMany(_sq.models.rbac_user, {
             as: 'granted_users',
-            through: _sq.models.group_member_data_grant,
+            through: { model: _sq.models.group_member_data_grant, unique: false },
             foreignKey: { name: 'groupCompanyId', allowNull: false },
             otherKey: { name: 'rbacUserId', allowNull: false },
             constraints: false,
         });
         _sq.models.rbac_user.belongsToMany(_sq.models.company, {
             as: 'authorized_groups',
-            through: _sq.models.group_member_data_grant,
+            through: { model: _sq.models.group_member_data_grant, unique: false },
             foreignKey: { name: 'rbacUserId', allowNull: false },
             otherKey: { name: 'groupCompanyId', allowNull: false },
             constraints: false,
