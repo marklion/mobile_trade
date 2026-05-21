@@ -100,7 +100,7 @@
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
             <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="name" height="40vh">
-                <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2contract(item)">
+                <fui-list-cell arrow v-for="(item, index) in (stuff_data2show || [])" :key="item.id" :index="index" @click="add_stuff2contract_by_index">
                     {{item.name}}
                 </fui-list-cell>
             </list-show>
@@ -179,7 +179,7 @@
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_stuff_price_popup" @close="show_stuff_price_popup = false">
         <fui-list>
-            <fui-list-cell v-for="single_stuff in focus_item.stuff || []" :key="single_stuff.id" arrow @click="edit_stuff_price(single_stuff)">
+            <fui-list-cell v-for="(single_stuff, index) in (focus_item.stuff || [])" :key="single_stuff.id" :index="index" arrow @click="edit_stuff_price_by_index">
                 {{single_stuff.name}}（当前: {{get_override_text(single_stuff.id)}}）
             </fui-list-cell>
         </fui-list>
@@ -423,6 +423,15 @@ export default {
             const found = prices.find(x => x.stuffId === single_stuff.id);
             this.stuff_price_input = found ? String(found.unit_price) : '';
             this.show_stuff_price_modal = true;
+        },
+        edit_stuff_price_by_index: function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const single_stuff = ((this.focus_item && this.focus_item.stuff) || [])[index];
+            if (!single_stuff || !single_stuff.id) {
+                uni.showToast({ title: '未找到物料，请重试', icon: 'none' });
+                return;
+            }
+            this.edit_stuff_price(single_stuff);
         },
         save_stuff_price: async function (detail) {
             if (detail.index === 1) {
@@ -701,6 +710,15 @@ export default {
             await this.$send_req(url, this.make_context_req(req, url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
             uni.startPullDownRefresh();
             this.show_add_stuff = false;
+        },
+        add_stuff2contract_by_index: async function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const item = (this.stuff_data2show || [])[index];
+            if (!item || !item.id) {
+                uni.showToast({ title: '未找到物料，请重试', icon: 'none' });
+                return;
+            }
+            await this.add_stuff2contract(item);
         },
         get_stuff: async function (pageNo, [cur_urls, make_context_req, show_scope_switch, company_is_group, stat_context_company_id]) {
             const buy_setting = !!(cur_urls && cur_urls.buy_setting);
