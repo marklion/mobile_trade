@@ -18,6 +18,25 @@ function normalize_price(v) {
 async function resolve_contract_context_company(token, stat_context_company_id, need_write = false) {
     return await plan_lib.resolve_sale_contract_context_company(token, stat_context_company_id, need_write);
 }
+
+async function resolve_contract_stuff_operate_context(token, body) {
+    const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+    const contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
+    const stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
+    const stuff_company = stuff ? await stuff.getCompany() : null;
+    let can_use_stuff = false;
+    if (company && stuff_company) {
+        if (stuff_company.id === company.id) {
+            can_use_stuff = true;
+        } else if (company.is_group && stuff_company.parentGroupCompanyId === company.id) {
+            const user = await rbac_lib.get_user_by_token(token);
+            can_use_stuff = !!(user && await group_lib.user_has_member_data_access(user.id, stuff_company.id, true));
+        }
+    }
+    const can_operate = !!(contract && stuff && company && can_use_stuff
+        && await plan_lib.has_sale_contract_operate_permission(company, contract));
+    return { contract, stuff, can_operate };
+}
 module.exports = {
     name: 'sale_management',
     description: '销售管理',
@@ -439,25 +458,11 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let ret = { result: false };
-                let company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
-                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
-                let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
-                let stuff_company = stuff ? await stuff.getCompany() : null;
-                let can_use_stuff = false;
-                if (company && stuff_company) {
-                    if (stuff_company.id === company.id) {
-                        can_use_stuff = true;
-                    } else if (company.is_group && stuff_company.parentGroupCompanyId === company.id) {
-                        const user = await rbac_lib.get_user_by_token(token);
-                        can_use_stuff = !!(user && await group_lib.user_has_member_data_access(user.id, stuff_company.id, true));
-                    }
-                }
-                if (contract && stuff && company && can_use_stuff && await plan_lib.has_sale_contract_operate_permission(company, contract)) {
+                const { contract, stuff, can_operate } = await resolve_contract_stuff_operate_context(token, body);
+                if (can_operate) {
                     await plan_lib.add_stuff_to_contract(stuff, contract);
-                    ret.result = true;
                 }
-                return ret;
+                return { result: can_operate };
             },
         },
         contract_del_stuff: {
@@ -475,25 +480,11 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let ret = { result: false };
-                let company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
-                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
-                let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
-                let stuff_company = stuff ? await stuff.getCompany() : null;
-                let can_use_stuff = false;
-                if (company && stuff_company) {
-                    if (stuff_company.id === company.id) {
-                        can_use_stuff = true;
-                    } else if (company.is_group && stuff_company.parentGroupCompanyId === company.id) {
-                        const user = await rbac_lib.get_user_by_token(token);
-                        can_use_stuff = !!(user && await group_lib.user_has_member_data_access(user.id, stuff_company.id, true));
-                    }
-                }
-                if (contract && stuff && company && can_use_stuff && await plan_lib.has_sale_contract_operate_permission(company, contract)) {
+                const { contract, stuff, can_operate } = await resolve_contract_stuff_operate_context(token, body);
+                if (can_operate) {
                     await plan_lib.del_stuff_from_contract(stuff, contract);
-                    ret.result = true;
                 }
-                return ret;
+                return { result: can_operate };
             },
         },
         authorize_user: {
