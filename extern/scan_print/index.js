@@ -104,6 +104,10 @@ async function print(ip, content) {
 				{ text: (content.seal_no ? content.seal_no : ''), align: "LEFT", width: sec_width },
 			],)
 			.tableCustom([
+				{ text: '联系方式', align: "LEFT", width: width },
+				{ text: (content.company_contact ? content.company_contact : ''), align: "LEFT", width: sec_width },
+			],)
+			.tableCustom([
 				{ text: (trans_company_name ? '运输公司' : ''), align: "LEFT", width: width },
 				{ text: (trans_company_name ? trans_company_name : ''), align: "LEFT", width: sec_width },
 			])
