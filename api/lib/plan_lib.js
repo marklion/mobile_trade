@@ -325,14 +325,13 @@ module.exports = {
     },
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
-        let owner_company = _compnay;
-        if (_compnay && _compnay.parentGroupCompanyId) {
-            let parent_company = await sq.models.company.findByPk(_compnay.parentGroupCompanyId);
-            if (parent_company) {
-                owner_company = parent_company;
-            }
+        if (!_compnay) {
+            return { rows: [], count: 0 };
         }
         let conditions = {
+            where: {
+                saleCompanyId: _compnay.id
+            },
             order: [['updatedAt', 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
             limit: 20,
@@ -347,8 +346,12 @@ module.exports = {
             conditions.include[1].where = { id: stuff_id };
             conditions.include[1].required = true;
         }
-        let rows = await owner_company.getSale_contracts(conditions);
-        let count = await owner_company.countSale_contracts();
+        let found_ret = await sq.models.contract.findAndCountAll({
+            ...conditions,
+            distinct: true,
+        });
+        let rows = found_ret.rows;
+        let count = found_ret.count;
         rows.forEach(item => {
             item.company = item.buy_company;
             item.expired = this.contractOutOfDate(item.end_time);

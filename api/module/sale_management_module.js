@@ -320,10 +320,15 @@ module.exports = {
                 }
                 let company_ids = [company.id];
                 if (company.is_group) {
+                    const user = await rbac_lib.get_user_by_token(token);
                     const members = await company.getGroup_member_companies({ attributes: ['id'] });
-                    members.forEach((m) => {
-                        company_ids.push(m.id);
-                    });
+                    for (const m of members) {
+                        const has_member_access = user
+                            && await group_lib.user_has_member_data_access(user.id, m.id, false);
+                        if (has_member_access) {
+                            company_ids.push(m.id);
+                        }
+                    }
                 }
                 const ret = await sq.models.stuff.findAndCountAll({
                     where: {
@@ -439,10 +444,15 @@ module.exports = {
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
                 let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
                 let stuff_company = stuff ? await stuff.getCompany() : null;
-                let can_use_stuff = !!(company && stuff_company && (
-                    stuff_company.id === company.id ||
-                    (company.is_group && stuff_company.parentGroupCompanyId === company.id)
-                ));
+                let can_use_stuff = false;
+                if (company && stuff_company) {
+                    if (stuff_company.id === company.id) {
+                        can_use_stuff = true;
+                    } else if (company.is_group && stuff_company.parentGroupCompanyId === company.id) {
+                        const user = await rbac_lib.get_user_by_token(token);
+                        can_use_stuff = !!(user && await group_lib.user_has_member_data_access(user.id, stuff_company.id, true));
+                    }
+                }
                 if (contract && stuff && company && can_use_stuff && await plan_lib.has_sale_contract_operate_permission(company, contract)) {
                     await plan_lib.add_stuff_to_contract(stuff, contract);
                     ret.result = true;
@@ -470,10 +480,15 @@ module.exports = {
                 let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
                 let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
                 let stuff_company = stuff ? await stuff.getCompany() : null;
-                let can_use_stuff = !!(company && stuff_company && (
-                    stuff_company.id === company.id ||
-                    (company.is_group && stuff_company.parentGroupCompanyId === company.id)
-                ));
+                let can_use_stuff = false;
+                if (company && stuff_company) {
+                    if (stuff_company.id === company.id) {
+                        can_use_stuff = true;
+                    } else if (company.is_group && stuff_company.parentGroupCompanyId === company.id) {
+                        const user = await rbac_lib.get_user_by_token(token);
+                        can_use_stuff = !!(user && await group_lib.user_has_member_data_access(user.id, stuff_company.id, true));
+                    }
+                }
                 if (contract && stuff && company && can_use_stuff && await plan_lib.has_sale_contract_operate_permission(company, contract)) {
                     await plan_lib.del_stuff_from_contract(stuff, contract);
                     ret.result = true;
