@@ -2651,35 +2651,29 @@ module.exports = {
             order: [['id', 'ASC']],
             raw: true,
         });
-        // 初期=开始日前一天(例如选择4/30开始，则初期取4/29结余)。
-        const opening_cutoff = report_start.clone().subtract(1, 'day').endOf('day');
-        // 期初结余使用截止到 opening_cutoff 的流水按同口径倒推，避免使用合同余额带入其他业务口径。
-        const opening_daily_map = new Map();
-        history_rows.forEach((history) => {
-            const history_time = moment(history.time);
-            if (!history_time.isValid() || !history_time.isSameOrBefore(opening_cutoff)) {
-                return;
+        const history_by_contract = new Map();
+        history_rows.forEach((row) => {
+            if (!history_by_contract.has(row.contractId)) {
+                history_by_contract.set(row.contractId, []);
             }
-            const date = history.time.slice(0, 10);
-            if (!opening_daily_map.has(date)) {
-                opening_daily_map.set(date, { prepayment: 0, amount: 0 });
-            }
-            const delta = Number(history.cash_increased) || 0;
-            const day_node = opening_daily_map.get(date);
-            if (is_statement_prepayment_history(history)) {
-                day_node.prepayment += delta;
-            } else if (is_statement_amount_history(history)) {
-                // balance_history 的出货类流水是“余额增量”，这里转换为“金额”口径。
-                day_node.amount += -delta;
-            }
+            history_by_contract.get(row.contractId).push(row);
         });
+        // 期初=报表开始时刻的合同余额（与余额明细表一致）。
+        const start_prev = report_start.clone().subtract(1, 'seconds');
         let opening_balance = 0;
-        const opening_days = Array.from(opening_daily_map.keys()).sort(
-            (a, b) => moment(a, 'YYYY-MM-DD').valueOf() - moment(b, 'YYYY-MM-DD').valueOf()
-        );
-        opening_days.forEach((date) => {
-            const day_node = opening_daily_map.get(date);
-            opening_balance = Math.max(0, opening_balance + day_node.prepayment - day_node.amount);
+        contracts.forEach((contract) => {
+            const list = history_by_contract.get(contract.id) || [];
+            let sum_after_start = 0;
+            list.forEach((history) => {
+                const history_time = moment(history.time);
+                if (!history_time.isValid()) {
+                    return;
+                }
+                if (history_time.isAfter(start_prev)) {
+                    sum_after_start += Number(history.cash_increased) || 0;
+                }
+            });
+            opening_balance += (Number(contract.balance) || 0) - sum_after_start;
         });
 
         const plan_events = [];
@@ -2689,6 +2683,8 @@ module.exports = {
                     is_buy: false,
                     companyId: customer_id,
                     stuffId: { [db_opt.Op.in]: stuff_ids },
+                    manual_close: false,
+                    count: { [db_opt.Op.gt]: 0 },
                     [db_opt.Op.and]: [
                         sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
                             [db_opt.Op.gte]: sq.fn('TIMESTAMP', report_start.format('YYYY-MM-DD HH:mm:ss'))
@@ -2727,6 +2723,7 @@ module.exports = {
         }
 
         const prepay_by_date = new Map();
+        const amount_by_date = new Map();
         history_rows.forEach((history) => {
             const history_time = moment(history.time);
             if (!history_time.isValid()) {
@@ -2735,12 +2732,14 @@ module.exports = {
             if (!history_time.isBetween(report_start, report_end, undefined, '[]')) {
                 return;
             }
-            if (!is_statement_prepayment_history(history)) {
-                return;
-            }
-            const delta = Number(history.cash_increased) || 0;
             const date = history.time.slice(0, 10);
-            prepay_by_date.set(date, (prepay_by_date.get(date) || 0) + delta);
+            if (is_statement_prepayment_history(history)) {
+                const delta = Number(history.cash_increased) || 0;
+                prepay_by_date.set(date, (prepay_by_date.get(date) || 0) + delta);
+            } else if (is_statement_amount_history(history)) {
+                const delta = Number(history.cash_increased) || 0;
+                amount_by_date.set(date, (amount_by_date.get(date) || 0) + (-delta));
+            }
         });
 
         let running_balance = Math.max(0, opening_balance);
@@ -2765,7 +2764,31 @@ module.exports = {
             total_prepayment += day_prepayment;
 
             const day_plan_events = plan_events_by_date.get(date_key) || [];
+            const day_plan_amount = day_plan_events.reduce((sum, event) => sum + event.amount, 0);
+            const day_history_amount = amount_by_date.get(date_key) || 0;
+            const orphan_amount = Math.max(0, day_history_amount - day_plan_amount);
+
             let show_day_prepayment = day_prepayment;
+            if (orphan_amount > 0) {
+                running_balance = Math.max(0, running_balance - orphan_amount);
+                total_amount += orphan_amount;
+                table_rows.push({
+                    seq: seq++,
+                    date: date_key,
+                    ticket_no: '',
+                    stuff_name: '',
+                    main_vehicle: '',
+                    behind_vehicle: '',
+                    p_weight: 0,
+                    m_weight: 0,
+                    net_weight: 0,
+                    unit_price: 0,
+                    amount: orphan_amount,
+                    prepayment: show_day_prepayment,
+                    balance: running_balance,
+                });
+                show_day_prepayment = 0;
+            }
             day_plan_events.forEach((event) => {
                 running_balance = Math.max(0, running_balance - event.amount);
                 total_net_weight += event.net_weight;
