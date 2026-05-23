@@ -26,6 +26,24 @@ function clean_plan_str(value, upperCase = false) {
     return upperCase ? cleaned.toUpperCase() : cleaned;
 }
 
+const orderUpdateStrFields = [
+    ['main_vehicle_plate', true],
+    ['behind_vehicle_plate', true],
+    ['driver_name', true],
+    ['driver_phone', true],
+    ['trans_company_name', false],
+    ['comment', false],
+];
+
+function sanitize_order_update_body(body) {
+    for (const [key, upperCase] of orderUpdateStrFields) {
+        if (body[key]) {
+            body[key] = clean_plan_str(body[key], upperCase);
+        }
+    }
+    return body;
+}
+
 function is_manual_recharge_history(history) {
     const delta = Number(history.cash_increased) || 0;
     if (delta === 0) {
@@ -60,6 +78,7 @@ function is_statement_amount_history(history) {
 
 module.exports = {
     clean_plan_str,
+    sanitize_order_update_body,
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
         plan.arrears = 0;

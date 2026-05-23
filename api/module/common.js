@@ -87,24 +87,7 @@ module.exports = {
             result: { type: Boolean, mean: '结果', example: true }
         },
         func: async function (body, token) {
-            if (body.main_vehicle_plate) {
-                body.main_vehicle_plate = plan_lib.clean_plan_str(body.main_vehicle_plate, true);
-            }
-            if (body.behind_vehicle_plate) {
-                body.behind_vehicle_plate = plan_lib.clean_plan_str(body.behind_vehicle_plate, true);
-            }
-            if (body.driver_name) {
-                body.driver_name = plan_lib.clean_plan_str(body.driver_name, true);
-            }
-            if (body.driver_phone) {
-                body.driver_phone = plan_lib.clean_plan_str(body.driver_phone, true);
-            }
-            if (body.trans_company_name) {
-                body.trans_company_name = plan_lib.clean_plan_str(body.trans_company_name);
-            }
-            if (body.comment) {
-                body.comment = plan_lib.clean_plan_str(body.comment);
-            }
+            plan_lib.sanitize_order_update_body(body);
             let main_vehicle_id = undefined;
             if (body.main_vehicle_plate) {
                 main_vehicle_id = (await plan_lib.fetch_vehicle(body.main_vehicle_plate, false)).id;
