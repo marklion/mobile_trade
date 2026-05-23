@@ -17,7 +17,7 @@ Update Plan While Created
     Update Plan by Creator  ${plan}[id]  &{update_info}
     ${resp}  Search Plans Based on User  ${sc_admin_token}
     Should Be Equal As Strings  ${resp}[0][driver][phone]  1901
-    Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  hh11
+    Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  HH11
     Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  ${bv}[plate]
     Should Be Equal As Strings  ${resp}[0][comment]  new_comment
     Should Be Equal As Strings  ${resp}[0][use_for]  测试用途
@@ -27,9 +27,9 @@ Update Plan While Created
     Should Be Equal As Strings  ${resp}[0][plan_time]  2021-10-10 11:12:11
     Should Be Equal As Strings  ${resp}[0][use_for]  abcd
     Should Be Equal As Strings  ${resp}[0][drop_address]  def
-    Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  bb22
+    Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  BB22
     Should Be Equal As Strings  ${resp}[0][driver][phone]  1901
-    Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  hh11
+    Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  HH11
     Check New Status And History  ${plan}  0  改为  def
 Cancel While Created
     [Teardown]  Plan Reset
@@ -99,13 +99,13 @@ Update While Confirmed
     ${update_info}  Create Dictionary  behind_vehicle_plate=f121  plan_time=2021-10-10 11:12:11  use_for=abcd  drop_address=def
     Update Plan by Creator    ${plan}[id]  &{update_info}
     ${resp}  Search Plans Based on User  ${sc_admin_token}
-    Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  f121
+    Should Be Equal As Strings  ${resp}[0][behind_vehicle][plate]  F121
     ${plan}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
     Confirm A Order  ${plan}
     ${update_info}  Create Dictionary  main_vehicle_plate=f121
     Update Order by Owner    ${plan}[id]  &{update_info}
     ${resp}  Search Orders Based on User  ${sc_admin_token}
-    Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  f121
+    Should Be Equal As Strings  ${resp}[0][main_vehicle][plate]  F121
 
 Close While Confirmed
     [Teardown]  Plan Reset
