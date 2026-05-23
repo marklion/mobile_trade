@@ -87,6 +87,7 @@ module.exports = {
             result: { type: Boolean, mean: '结果', example: true }
         },
         func: async function (body, token) {
+            plan_lib.sanitize_order_update_body(body);
             let main_vehicle_id = undefined;
             if (body.main_vehicle_plate) {
                 main_vehicle_id = (await plan_lib.fetch_vehicle(body.main_vehicle_plate, false)).id;
