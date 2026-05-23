@@ -227,6 +227,9 @@ export default {
             }
         },
         show_today_yesterday: async function () {
+            if (!this.$hasPermission('stuff')) {
+                return;
+            }
             this.stat_loading = true;
             let resp = await this.$send_req('/stuff/get_count_by_today_yesterday', {
                 stat_context_company_id: this.stat_context_company_id,
