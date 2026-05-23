@@ -162,7 +162,7 @@ module.exports = {
                         SELECT 1 FROM contract c
                         WHERE c.deletedAt IS NULL
                           AND c.buyCompanyId = ${_buy_company.id}
-                          AND c.saleCompanyId = ${sale_owner_company_sql}
+                          AND c.saleCompanyId IN (${sale_owner_company_sql}, stuff.companyId)
                           AND EXISTS (
                               SELECT 1 FROM contract_stuff cs
                               WHERE cs.stuffId = stuff.id AND cs.contractId = c.id
@@ -248,12 +248,22 @@ module.exports = {
     get_sale_contracts_for_buyer_and_supply_company: async function (buy_company_id, supply_company_id, include_users = false, transaction = null) {
         const sq = db_opt.get_sq();
         const owner_company_id = await this.get_sale_contract_owner_company_id(supply_company_id, transaction);
-        if (!owner_company_id) {
+        const sale_company_ids = [];
+        if (owner_company_id) {
+            sale_company_ids.push(owner_company_id);
+        }
+        const supply_id = Number(supply_company_id);
+        if (Number.isFinite(supply_id) && supply_id > 0 && !sale_company_ids.includes(supply_id)) {
+            sale_company_ids.push(supply_id);
+        }
+        if (sale_company_ids.length === 0) {
             return [];
         }
         const query_opt = {
             where: {
-                saleCompanyId: owner_company_id,
+                saleCompanyId: sale_company_ids.length === 1
+                    ? sale_company_ids[0]
+                    : { [db_opt.Op.in]: sale_company_ids },
                 buyCompanyId: buy_company_id
             },
             ...(transaction && { transaction })
@@ -269,6 +279,13 @@ module.exports = {
         }
         if (await company.hasSale_contract(contract)) {
             return true;
+        }
+        if (company.is_group && contract.saleCompanyId && contract.saleCompanyId !== company.id) {
+            const sq = db_opt.get_sq();
+            const sale_company = await sq.models.company.findByPk(contract.saleCompanyId);
+            if (sale_company && sale_company.parentGroupCompanyId === company.id) {
+                return true;
+            }
         }
         if (company.parentGroupCompanyId) {
             const sq = db_opt.get_sq();
@@ -1991,20 +2008,45 @@ module.exports = {
             [db_opt.Op.and]: this.buildTimeCondition(body, sq),
         };
         let order = this.default_export_sort(sq);
-        if (body.stuff_id) {
-            cond.stuffId = body.stuff_id
-        }
-        else {
-            let company = await rbac_lib.get_company_by_token(token);
-            let stuff = await company.getStuff();
-            let stuff_array = [];
-            for (let index = 0; index < stuff.length; index++) {
-                const element = stuff[index];
-                stuff_array.push(element.id);
+        const home_company = await rbac_lib.get_company_by_token(token);
+        if (!home_company || !home_company.is_group) {
+            if (body.stuff_id) {
+                cond.stuffId = body.stuff_id;
+            } else {
+                let stuff = await home_company.getStuff();
+                let stuff_array = [];
+                for (let index = 0; index < stuff.length; index++) {
+                    stuff_array.push(stuff[index].id);
+                }
+                cond.stuffId = {
+                    [db_opt.Op.or]: stuff_array,
+                };
             }
-            cond.stuffId = {
-                [db_opt.Op.or]: stuff_array
+        } else {
+            const user = await rbac_lib.get_user_by_token(token);
+            let allowed_company_ids = [home_company.id];
+            if (user) {
+                const member_ids = await group_lib.list_member_company_ids_for_stuff(user.id, home_company);
+                allowed_company_ids.push(...member_ids);
             }
+            allowed_company_ids = [...new Set(allowed_company_ids)];
+            let stuff_ids = [];
+            if (body.stuff_id) {
+                const stuff = await sq.models.stuff.findByPk(body.stuff_id, { attributes: ['id', 'companyId'] });
+                if (stuff && allowed_company_ids.includes(stuff.companyId)) {
+                    stuff_ids = [stuff.id];
+                }
+            } else if (allowed_company_ids.length > 0) {
+                const stuff_rows = await sq.models.stuff.findAll({
+                    where: { companyId: { [db_opt.Op.in]: allowed_company_ids } },
+                    attributes: ['id'],
+                });
+                stuff_ids = stuff_rows.map((s) => s.id);
+            }
+            if (stuff_ids.length === 0) {
+                return [];
+            }
+            cond.stuffId = stuff_ids.length === 1 ? stuff_ids[0] : { [db_opt.Op.in]: stuff_ids };
         }
         if (body.company_id) {
             cond.companyId = body.company_id
@@ -2030,7 +2072,9 @@ module.exports = {
             return input
         }
     },
-    make_file_by_plans: async function (plans, columns_defined) {
+    make_file_by_plans: async function (plans, columns_defined, token) {
+        const home_company = token ? await rbac_lib.get_company_by_token(token) : null;
+        const include_supply_company = !!(home_company && home_company.is_group);
         let json = [];
         let unifiedDecimalPlaces = 2;
         let totalOrders = 0;
@@ -2087,6 +2131,7 @@ module.exports = {
                 })(),
                 plan_counts: countVal,
                 total_orders: totalOrders,
+                ...(include_supply_company ? { supply_company: element.stuff?.company?.name || '' } : {}),
             });
         }
         let columns = [{
@@ -2174,10 +2219,20 @@ module.exports = {
             header: '金蝶星辰同步信息',
             key: 'king_dee_comment'
         }];
+        if (include_supply_company) {
+            columns.splice(2, 0, {
+                header: '货源公司',
+                key: 'supply_company',
+            });
+        }
         let workbook = new ExcelJS.Workbook();
         let worksheet = workbook.addWorksheet('Plans');
         if (columns_defined) {
-            worksheet.columns = columns_defined.map((item) => {
+            let cols = columns_defined;
+            if (!include_supply_company) {
+                cols = cols.filter((item) => item.name !== 'supply_company');
+            }
+            worksheet.columns = cols.map((item) => {
                 return {
                     header: item.label,
                     key: item.name,

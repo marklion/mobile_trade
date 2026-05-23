@@ -1394,9 +1394,14 @@ export default {
             if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && item.company.id) {
                 try {
                     let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                    let resp = await this.$send_req(url, make_context_req({
-                        [this.cur_is_buy ? 'supplier_id' : 'customer_id']: item.company.id,
-                    }, url, ssss_bool, scci))
+                    let contract_req = {};
+                    if (this.cur_is_buy) {
+                        contract_req.supplier_id = item.stuff.company.id;
+                    } else {
+                        contract_req.customer_id = item.company.id;
+                        contract_req.supply_company_id = item.stuff.company.id;
+                    }
+                    let resp = await this.$send_req(url, make_context_req(contract_req, url, ssss_bool, scci))
                     // 标注合同是否一个月内即将到期
                     const oneMonthFromNow = moment().add(1, 'month');
                     const contractEndDate = moment(resp.end_time);

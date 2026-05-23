@@ -107,7 +107,7 @@
                                 </el-table-column>
                                 <el-table-column label="操作">
                                     <template slot-scope="scope">
-                                        <el-button v-if="price != -1" size="mini" type="primary" @click="start_plan_creation(scope.row, true)" min-width="40">下单</el-button>
+                                        <el-button v-if="scope.row.price != -1" size="mini" type="primary" @click="start_plan_creation(scope.row, true)" min-width="40">下单</el-button>
                                     </template>
                                 </el-table-column>
                             </el-table>

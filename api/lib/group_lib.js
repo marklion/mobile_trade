@@ -208,6 +208,59 @@ module.exports = {
         }
     },
 
+    user_is_group_admin: function (user_id, group_company) {
+        return !!(group_company && group_company.is_group && group_company.group_admin_user_id === user_id);
+    },
+
+    user_has_any_member_operate_grant: async function (user_id, group_company_id) {
+        const sq = db_opt.get_sq();
+        const row = await sq.models.group_member_data_grant.findOne({
+            where: {
+                groupCompanyId: group_company_id,
+                rbacUserId: user_id,
+                can_operate: true,
+            },
+        });
+        return !!row;
+    },
+
+    /** 集团下选用/操作成员公司物料：任一成员有「可操作」授权则可操作全部成员；否则按单成员授权 */
+    user_can_use_group_member_stuff: async function (user_id, group_company, member_company_id, need_write) {
+        if (!group_company || !group_company.is_group) {
+            return false;
+        }
+        if (member_company_id === group_company.id) {
+            return true;
+        }
+        const sq = db_opt.get_sq();
+        const member_c = await sq.models.company.findByPk(member_company_id);
+        if (!member_c || member_c.parentGroupCompanyId !== group_company.id) {
+            return false;
+        }
+        if (this.user_is_group_admin(user_id, group_company)) {
+            return true;
+        }
+        if (await this.user_has_any_member_operate_grant(user_id, group_company.id)) {
+            return true;
+        }
+        return await this.user_has_member_data_access(user_id, member_company_id, need_write);
+    },
+
+    list_member_company_ids_for_stuff: async function (user_id, group_company) {
+        const members = await group_company.getGroup_member_companies({ attributes: ['id'] });
+        if (this.user_is_group_admin(user_id, group_company)
+            || await this.user_has_any_member_operate_grant(user_id, group_company.id)) {
+            return members.map((m) => m.id);
+        }
+        const ids = [];
+        for (const m of members) {
+            if (await this.user_has_member_data_access(user_id, m.id, false)) {
+                ids.push(m.id);
+            }
+        }
+        return ids;
+    },
+
     user_has_member_data_access: async function (user_id, member_company_id, need_write) {
         const sq = db_opt.get_sq();
         const user = await sq.models.rbac_user.findByPk(user_id);

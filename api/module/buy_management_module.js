@@ -69,12 +69,11 @@ module.exports = {
             result: common.contract_res_detail_define,
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                let contracts = await company.getBuy_contracts({
-                    where: {
-                        saleCompanyId: body.supplier_id
-                    },
-                    include: db_opt.get_sq().models.rbac_user
-                })
+                let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(
+                    company.id,
+                    body.supplier_id,
+                    true
+                );
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
@@ -336,7 +335,7 @@ module.exports = {
         },
         export_plans: common.export_plans(async function (body, token) {
             let plans = await plan_lib.filter_plan4manager(body, token, true);
-            return await plan_lib.make_file_by_plans(plans, body.columns);
+            return await plan_lib.make_file_by_plans(plans, body.columns, token);
         }),
     }
 }

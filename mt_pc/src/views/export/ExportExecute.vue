@@ -2,7 +2,7 @@
 <div class="export_execute_show">
     <div class="export_execute_header">
         <h2>订单明细导出</h2>
-        <array-selector-button v-model="columns_defined" @change="save_cd_local"></array-selector-button>
+        <array-selector-button v-model="columns_defined" :options="export_column_options" @change="save_cd_local"></array-selector-button>
     </div>
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
@@ -52,6 +52,102 @@ import {
     VueCell
 } from 'vue-grd';
 import ArraySelectorButton from '../../components/ArraySelectorButton.vue';
+
+const BASE_EXPORT_COLUMNS = [{
+    label: '下单公司',
+    name: 'create_company',
+}, {
+    label: '接单公司',
+    name: 'accept_company',
+}, {
+    label: '计划时间',
+    name: 'plan_time',
+}, {
+    label: '过皮时间',
+    name: 'p_time',
+}, {
+    label: '过毛时间',
+    name: 'm_time',
+}, {
+    label: '主车号',
+    name: 'mv',
+}, {
+    label: '挂车号',
+    name: 'bv',
+}, {
+    label: '司机姓名',
+    name: 'driver_name',
+}, {
+    label: '司机电话',
+    name: 'driver_phone',
+}, {
+    label: '皮重',
+    name: 'p_weight',
+}, {
+    label: '毛重',
+    name: 'm_weight',
+}, {
+    label: '装车量',
+    name: 'count',
+}, {
+    label: '单价',
+    name: 'unit_price',
+}, {
+    label: '总价',
+    name: 'total_price',
+}, {
+    label: '铅封号',
+    name: 'seal_no',
+}, {
+    label: '磅单号',
+    name: 'ticket_no',
+}, {
+    label: '物料名',
+    name: 'stuff_name',
+}, {
+    label: '卸货地址',
+    name: 'drop_address',
+}, {
+    label: '发票已开?',
+    name: 'fapiao_delivered',
+}, {
+    label: '备注',
+    name: 'comment',
+}, {
+    label: '装卸区域',
+    name: 'drop_take_zone_name',
+}, {
+    label: '代理公司',
+    name: 'delegate',
+}, {
+    label: '打折后单价',
+    name: 'subsidy_price',
+}, {
+    label: '打折后总价',
+    name: 'subsidy_total_price',
+}, {
+    label: '打折数',
+    name: 'subsidy_discount',
+}, {
+    label: '第二单位',
+    name: 'second_unit',
+}, {
+    label: '第二单位装卸量',
+    name: 'second_value',
+}, {
+    label: '金蝶星辰同步信息',
+    name: 'king_dee_comment',
+}];
+
+const SUPPLY_EXPORT_COLUMN = { label: '货源公司', name: 'supply_company' };
+
+function insert_supply_column(columns) {
+    const cols = columns.filter((c) => c.name !== 'supply_company');
+    const accept_idx = cols.findIndex((c) => c.name === 'accept_company');
+    cols.splice(accept_idx >= 0 ? accept_idx + 1 : 2, 0, SUPPLY_EXPORT_COLUMN);
+    return cols;
+}
+
 export default {
     name: 'ExportExecute',
     components: {
@@ -62,91 +158,8 @@ export default {
     },
     data: function () {
         return {
-            columns_defined: [{
-                label: '下单公司',
-                name: 'create_company',
-            }, {
-                label: '接单公司',
-                name: 'accept_company',
-            }, {
-                label: '计划时间',
-                name: 'plan_time',
-            }, {
-                label: '过皮时间',
-                name: 'p_time',
-            }, {
-                label: '过毛时间',
-                name: 'm_time',
-            }, {
-                label: '主车号',
-                name: 'mv',
-            }, {
-                label: '挂车号',
-                name: 'bv',
-            }, {
-                label: '司机姓名',
-                name: 'driver_name',
-            }, {
-                label: '司机电话',
-                name: 'driver_phone',
-            }, {
-                label: '皮重',
-                name: 'p_weight',
-            }, {
-                label: '毛重',
-                name: 'm_weight',
-            }, {
-                label: '装车量',
-                name: 'count',
-            }, {
-                label: '单价',
-                name: 'unit_price',
-            }, {
-                label: '总价',
-                name: 'total_price',
-            }, {
-                label: '铅封号',
-                name: 'seal_no',
-            }, {
-                label: '磅单号',
-                name: 'ticket_no',
-            }, {
-                label: '物料名',
-                name: 'stuff_name',
-            }, {
-                label: '卸货地址',
-                name: 'drop_address',
-            }, {
-                label: '发票已开?',
-                name: 'fapiao_delivered',
-            }, {
-                label: '备注',
-                name: 'comment',
-            }, {
-                label: '装卸区域',
-                name: 'drop_take_zone_name'
-            }, {
-                label: '代理公司',
-                name: 'delegate'
-            }, {
-                label: '打折后单价',
-                name: 'subsidy_price'
-            }, {
-                label: '打折后总价',
-                name: 'subsidy_total_price'
-            }, {
-                label: '打折数',
-                name: 'subsidy_discount'
-            }, {
-                label: '第二单位',
-                name: 'second_unit'
-            }, {
-                label: '第二单位装卸量',
-                name: 'second_value'
-            }, {
-                label: '金蝶星辰同步信息',
-                name: 'king_dee_comment'
-            }],
+            columns_defined: [...BASE_EXPORT_COLUMNS],
+            company_is_group: false,
             orig_all_module: [{
                     module: 'sale_management',
                     module_name: '销售接单',
@@ -178,8 +191,21 @@ export default {
                 return this.$hasPermission(module.module);
             });
         },
+        export_column_options: function () {
+            return this.company_is_group
+                ? insert_supply_column(BASE_EXPORT_COLUMNS)
+                : [...BASE_EXPORT_COLUMNS];
+        },
     },
     methods: {
+        load_self_info: async function () {
+            try {
+                const ret = await this.$send_req('/global/self_info', {});
+                this.company_is_group = !!(ret && ret.company_is_group);
+            } catch (e) {
+                this.company_is_group = false;
+            }
+        },
         show_export_success: function () {
             this.$notify({
                 title: '导出成功',
@@ -310,6 +336,13 @@ export default {
                 console.error('Failed to parse columns_defined from localStorage:', error);
             }
         }
+        await this.load_self_info();
+        const opts = this.export_column_options;
+        let cols = this.columns_defined.filter((c) => opts.some((o) => o.name === c.name));
+        if (this.company_is_group && !cols.some((c) => c.name === 'supply_company')) {
+            cols = insert_supply_column(cols);
+        }
+        this.columns_defined = cols;
     },
 }
 </script>
