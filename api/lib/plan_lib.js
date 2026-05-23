@@ -16,6 +16,15 @@ const king_dee_start_lib = require('./king_dee_start_lib');
 const { Sequelize } = require('sequelize');
 const g_verify_pay_company_set = new Set();
 const g_vpcs_mutex = new Mutex();
+const regStrReplace = /[\t\s]/g;
+
+function clean_plan_str(value, upperCase = false) {
+    if (value == null || value === '') {
+        return value;
+    }
+    const cleaned = String(value).replaceAll(regStrReplace, '');
+    return upperCase ? cleaned.toUpperCase() : cleaned;
+}
 
 function is_manual_recharge_history(history) {
     const delta = Number(history.cash_increased) || 0;
@@ -50,6 +59,7 @@ function is_statement_amount_history(history) {
 }
 
 module.exports = {
+    clean_plan_str,
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
         plan.arrears = 0;

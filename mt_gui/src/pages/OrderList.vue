@@ -958,8 +958,24 @@ export default {
                 }
             });
         },
+        clean_plan_input: function (value, upperCase) {
+            if (value == null || value === '') {
+                return value;
+            }
+            const cleaned = String(value).replace(/[\t\s]/g, '');
+            return upperCase ? cleaned.toUpperCase() : cleaned;
+        },
+        sanitize_update_req: function () {
+            this.update_req.main_vehicle_plate = this.clean_plan_input(this.update_req.main_vehicle_plate, true);
+            this.update_req.behind_vehicle_plate = this.clean_plan_input(this.update_req.behind_vehicle_plate, true);
+            this.update_req.driver_name = this.clean_plan_input(this.update_req.driver_name, true);
+            this.update_req.driver_phone = this.clean_plan_input(this.update_req.driver_phone, true);
+            this.update_req.trans_company_name = this.clean_plan_input(this.update_req.trans_company_name);
+            this.update_req.comment = this.clean_plan_input(this.update_req.comment);
+        },
         update_plan: async function (e) {
             if (e.index == 1) {
+                this.sanitize_update_req();
                 let rules = [{
                         name: 'main_vehicle_plate',
                         rule: ['isCarNo'],
