@@ -229,7 +229,10 @@ module.exports = {
                     await new_plan.setRbac_user(user);
                     await plan_lib.rp_history_create(new_plan, user.name);
                     new_plan.unit_price = stuff.price;
-                    let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company.id, sale_company.id);
+                    let contracts = plan_lib.pick_sale_contracts_for_supply(
+                        await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company.id, sale_company.id),
+                        sale_company.id
+                    );
                     if (contracts.length === 1) {
                         new_plan.unit_price = await plan_lib.get_contract_effective_unit_price(contracts[0], stuff, new_plan.unit_price);
                     }
@@ -396,7 +399,7 @@ module.exports = {
         },
         export_plans: common.export_plans(async function (body, token) {
             let plans = await plan_lib.filter_plan4user(body, token, false);
-            return await plan_lib.make_file_by_plans(plans, body.columns);
+            return await plan_lib.make_file_by_plans(plans, body.columns, token);
         }),
         checkout_plan: {
             name: '结算',

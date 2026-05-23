@@ -303,10 +303,15 @@ export default {
     props: {
         plan: Object,
         motived: Boolean,
+        stat_context_company_id: {
+            type: Number,
+            default: null,
+        },
     },
     watch: {
         'plan.id': function () {
             this.refresh_approval_projects();
+            this.init_contract();
         },
     },
     methods: {
@@ -652,9 +657,17 @@ export default {
             if ((this.$hasPermission('sale_management') || this.$hasPermission('buy_management')) && this.plan.company.id) {
                 try {
                     let url = this.plan.is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                    let resp = await this.$send_req(url, {
-                        [this.plan.is_buy ? 'supplier_id' : 'customer_id']: this.plan.company.id,
-                    })
+                    let req = {};
+                    if (this.plan.is_buy) {
+                        req.supplier_id = this.plan.stuff.company.id;
+                    } else {
+                        req.customer_id = this.plan.company.id;
+                        req.supply_company_id = this.plan.stuff.company.id;
+                    }
+                    if (this.stat_context_company_id != null) {
+                        req.stat_context_company_id = this.stat_context_company_id;
+                    }
+                    let resp = await this.$send_req(url, req);
                     // 标注合同是否一个月内即将到期
                     const oneMonthFromNow = moment().add(1, 'month');
                     const contractEndDate = moment(resp.end_time);

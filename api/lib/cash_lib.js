@@ -230,7 +230,11 @@ module.exports = {
                     }))[0];
                 }
                 else {
-                    contract = (await plan_lib.get_sale_contracts_for_buyer_and_supply_company(company.id, u8c_oi.company.id))[0];
+                    const contracts = plan_lib.pick_sale_contracts_for_supply(
+                        await plan_lib.get_sale_contracts_for_buyer_and_supply_company(company.id, u8c_oi.company.id),
+                        u8c_oi.company.id
+                    );
+                    contract = contracts[0];
                 }
             }
 

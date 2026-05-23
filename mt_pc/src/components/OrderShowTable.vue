@@ -130,7 +130,7 @@
         </template>
     </page-content>
     <el-drawer destroy-on-close title="计划详情" :visible.sync="show_plan_detail" direction="rtl" size="70%">
-        <order-detail :motived="motived" :plan="focus_plan" @refresh="show_plan_detail= false; refresh_order()"></order-detail>
+        <order-detail :motived="motived" :plan="focus_plan" :stat_context_company_id="stat_context_company_id" @refresh="show_plan_detail= false; refresh_order()"></order-detail>
     </el-drawer>
     <el-dialog append-to-body title="设置代理" :visible.sync="delegate_show" width="30%">
         <select-search body_key="delegates" get_url="/stuff/get_delegates" item_label="name" item_value="id" :permission_array="['sale_management', 'buy_management']" v-model="delegate_id"></select-search>

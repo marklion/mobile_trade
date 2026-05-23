@@ -162,7 +162,10 @@ module.exports = {
                         { model: sq.models.stuff, include: [sq.models.company] }]
                 });
                 if (buy_company && bc && bc.stuff && bc.stuff.company) {
-                    let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company.id, bc.stuff.company.id);
+                    let contracts = plan_lib.pick_sale_contracts_for_supply(
+                        await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company.id, bc.stuff.company.id),
+                        bc.stuff.company.id
+                    );
                     if (contracts.length == 1) {
                         let cur_balance = contracts[0].balance;
                         if (cur_balance >= bc.pay_first) {

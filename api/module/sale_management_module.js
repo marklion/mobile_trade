@@ -20,21 +20,24 @@ async function resolve_contract_context_company(token, stat_context_company_id, 
 }
 
 async function resolve_contract_stuff_operate_context(token, body) {
+    const home_company = await rbac_lib.get_company_by_token(token);
     const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+    const group_company = home_company && home_company.is_group ? home_company : company;
     const contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id);
     const stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
     const stuff_company = stuff ? await stuff.getCompany() : null;
     let can_use_stuff = false;
-    if (company && stuff_company) {
-        if (stuff_company.id === company.id) {
+    if (group_company && stuff_company) {
+        if (stuff_company.id === company.id || stuff_company.id === group_company.id) {
             can_use_stuff = true;
-        } else if (company.is_group && stuff_company.parentGroupCompanyId === company.id) {
+        } else if (group_company.is_group && stuff_company.parentGroupCompanyId === group_company.id) {
             const user = await rbac_lib.get_user_by_token(token);
-            can_use_stuff = !!(user && await group_lib.user_has_member_data_access(user.id, stuff_company.id, true));
+            can_use_stuff = !!(user && await group_lib.user_can_use_group_member_stuff(user.id, group_company, stuff_company.id, true));
         }
     }
-    const can_operate = !!(contract && stuff && company && can_use_stuff
-        && await plan_lib.has_sale_contract_operate_permission(company, contract));
+    const permission_company = group_company || company;
+    const can_operate = !!(contract && stuff && permission_company && can_use_stuff
+        && await plan_lib.has_sale_contract_operate_permission(permission_company, contract));
     return { contract, stuff, can_operate };
 }
 module.exports = {
@@ -296,15 +299,38 @@ module.exports = {
             is_get_api: false,
             params: {
                 customer_id: { type: Number, have_to: true, mean: '客户ID', example: 1 },
+                supply_company_id: { type: Number, have_to: false, mean: '供货/卖方公司ID（订单物料归属公司）', example: 1 },
                 stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: common.contract_res_detail_define,
             func: async function (body, token) {
+                const sq = db_opt.get_sq();
                 let company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
                 if (!company) {
                     throw { err_msg: '无权限' };
                 }
-                let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(body.customer_id, company.id, true);
+                let supply_company_id = company.id;
+                if (body.supply_company_id !== undefined && body.supply_company_id !== null && body.supply_company_id !== '') {
+                    const supply_id = Number(body.supply_company_id);
+                    if (Number.isFinite(supply_id)) {
+                        if (supply_id !== company.id) {
+                            const supply_company = await sq.models.company.findByPk(supply_id);
+                            const home_company = await rbac_lib.get_company_by_token(token);
+                            const user = await rbac_lib.get_user_by_token(token);
+                            if (!supply_company || !home_company || !home_company.is_group || !user
+                                || !(await group_lib.user_can_use_group_member_stuff(user.id, home_company, supply_id, false))) {
+                                throw { err_msg: '无权限' };
+                            }
+                        }
+                        supply_company_id = supply_id;
+                    }
+                }
+                let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(
+                    body.customer_id,
+                    supply_company_id,
+                    true
+                );
+                contracts = plan_lib.pick_sale_contracts_for_supply(contracts, supply_company_id);
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
@@ -333,22 +359,21 @@ module.exports = {
             },
             func: async function (body, token) {
                 const sq = db_opt.get_sq();
-                const company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
-                if (!company) {
+                const home_company = await rbac_lib.get_company_by_token(token);
+                const context_company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
+                if (!context_company || !home_company) {
                     return { stuff: [], total: 0 };
                 }
-                let company_ids = [company.id];
-                if (company.is_group) {
+                const group_company = home_company.is_group ? home_company : context_company;
+                let company_ids = [group_company.id];
+                if (group_company.is_group) {
                     const user = await rbac_lib.get_user_by_token(token);
-                    const members = await company.getGroup_member_companies({ attributes: ['id'] });
-                    for (const m of members) {
-                        const has_member_access = user
-                            && await group_lib.user_has_member_data_access(user.id, m.id, false);
-                        if (has_member_access) {
-                            company_ids.push(m.id);
-                        }
+                    if (user) {
+                        const member_ids = await group_lib.list_member_company_ids_for_stuff(user.id, group_company);
+                        company_ids.push(...member_ids);
                     }
                 }
+                company_ids = [...new Set(company_ids)];
                 const ret = await sq.models.stuff.findAndCountAll({
                     where: {
                         use_for_buy: false,
@@ -362,7 +387,7 @@ module.exports = {
                     limit: 20,
                 });
                 ret.rows.forEach((item) => {
-                    if (item.companyId !== company.id) {
+                    if (group_company.is_group && item.companyId !== group_company.id && item.company) {
                         item.name = `${item.company.name}-${item.name}`;
                     }
                 });
@@ -667,21 +692,20 @@ module.exports = {
             },
             func: async function (body, token) {
                 const sq = db_opt.get_sq();
-                const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
-                const contract = await sq.models.contract.findByPk(body.contract_id);
-                const stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (!contract || !stuff || !(await plan_lib.has_sale_contract_operate_permission(company, contract))) {
+                const home_company = await rbac_lib.get_company_by_token(token);
+                const stuff_preview = await sq.models.stuff.findByPk(body.stuff_id);
+                const stuff_company = stuff_preview ? await stuff_preview.getCompany() : null;
+                if (home_company && home_company.is_group && stuff_company
+                    && stuff_company.parentGroupCompanyId === home_company.id
+                    && stuff_company.id !== home_company.id
+                    && (body.stat_context_company_id === undefined
+                        || body.stat_context_company_id === null
+                        || body.stat_context_company_id === '')) {
                     throw { err_msg: '无权限' };
                 }
-                if (company.is_group && stuff.companyId !== company.id) {
-                    const user = await rbac_lib.get_user_by_token(token);
-                    const has_member_operate_permission = user
-                        && await group_lib.user_has_member_data_access(user.id, stuff.companyId, true);
-                    if (!has_member_operate_permission) {
-                        const err = new Error('无权限');
-                        err.err_msg = '无权限';
-                        throw err;
-                    }
+                const { contract, stuff, can_operate } = await resolve_contract_stuff_operate_context(token, body);
+                if (!can_operate || !contract || !stuff) {
+                    throw { err_msg: '无权限' };
                 }
                 if (!(await contract.hasStuff(stuff))) {
                     throw { err_msg: '该合同未关联此物料' };
@@ -706,7 +730,7 @@ module.exports = {
         },
         export_plans: common.export_plans(async function (body, token) {
             let plans = await plan_lib.filter_plan4manager(body, token);
-            return await plan_lib.make_file_by_plans(plans, body.columns);
+            return await plan_lib.make_file_by_plans(plans, body.columns, token);
         }),
         export_exe_rate: {
             name: '导出执行率',
