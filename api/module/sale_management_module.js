@@ -691,8 +691,9 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
+                const sq = db_opt.get_sq();
                 const home_company = await rbac_lib.get_company_by_token(token);
-                const stuff_preview = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
+                const stuff_preview = await sq.models.stuff.findByPk(body.stuff_id);
                 const stuff_company = stuff_preview ? await stuff_preview.getCompany() : null;
                 if (home_company && home_company.is_group && stuff_company
                     && stuff_company.parentGroupCompanyId === home_company.id
