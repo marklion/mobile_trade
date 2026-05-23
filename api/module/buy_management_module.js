@@ -69,10 +69,13 @@ module.exports = {
             result: common.contract_res_detail_define,
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
-                let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(
-                    company.id,
-                    body.supplier_id,
-                    true
+                let contracts = plan_lib.pick_sale_contracts_for_supply(
+                    await plan_lib.get_sale_contracts_for_buyer_and_supply_company(
+                        company.id,
+                        body.supplier_id,
+                        true
+                    ),
+                    body.supplier_id
                 );
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }

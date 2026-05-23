@@ -2118,7 +2118,9 @@ module.exports = {
             totalPriceSum += totalPriceVal;
             json.push({
                 create_company: this.place_hold(element.company, { name: '(司机选择)' }).name,
-                accept_company: element.stuff.company.name,
+                accept_company: include_supply_company
+                    ? (home_company.name || element.stuff?.company?.name || '')
+                    : element.stuff.company.name,
                 stuff_name: element.stuff.name,
                 plan_time: element.plan_time,
                 ticket_no: element.ticket_no,
