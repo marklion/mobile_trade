@@ -273,6 +273,17 @@ module.exports = {
         }
         return await sq.models.contract.findAll(query_opt);
     },
+    pick_sale_contracts_for_supply: function (contracts, supply_company_id) {
+        if (!contracts || contracts.length <= 1) {
+            return contracts || [];
+        }
+        const supply_id = Number(supply_company_id);
+        if (!Number.isFinite(supply_id)) {
+            return contracts;
+        }
+        const preferred = contracts.filter((c) => c.saleCompanyId === supply_id);
+        return preferred.length > 0 ? preferred : contracts;
+    },
     has_sale_contract_operate_permission: async function (company, contract) {
         if (!company || !contract) {
             return false;
@@ -975,7 +986,10 @@ module.exports = {
                 }
             }
 
-            let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(company_id, plan.stuff.company.id);
+            let contracts = this.pick_sale_contracts_for_supply(
+                await this.get_sale_contracts_for_buyer_and_supply_company(company_id, plan.stuff.company.id),
+                plan.stuff.company.id
+            );
             let creator = await plan.getRbac_user();
             if (force || (creator && ((contracts.length == 1 && await contracts[0].hasRbac_user(creator)) || plan.is_buy))) {
                 plan.status = 1;
@@ -1173,7 +1187,10 @@ module.exports = {
         }, false, existing_t, allow_group_member_operate);
     },
     plan_cost: async function (plan) {
-        let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(plan.company.id, plan.stuff.company.id);
+        let contracts = this.pick_sale_contracts_for_supply(
+            await this.get_sale_contracts_for_buyer_and_supply_company(plan.company.id, plan.stuff.company.id),
+            plan.stuff.company.id
+        );
         if (contracts.length == 1) {
             let contract = contracts[0];
             let decrease_cash = plan.unit_price * plan.count;
@@ -1200,7 +1217,10 @@ module.exports = {
         }
     },
     plan_undo_cost: async function (plan) {
-        let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(plan.company.id, plan.stuff.company.id);
+        let contracts = this.pick_sale_contracts_for_supply(
+            await this.get_sale_contracts_for_buyer_and_supply_company(plan.company.id, plan.stuff.company.id),
+            plan.stuff.company.id
+        );
         if (contracts.length == 1) {
             let contract = contracts[0];
             let decrease_cash = plan.unit_price * plan.count;
@@ -1547,11 +1567,14 @@ module.exports = {
             return { arrears: 0, outstanding_vehicles: 0 };
         }
         const price_to_use = unit_price !== null ? unit_price : plan.unit_price;
-        let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(
-            plan.company.id,
-            plan.stuff.company.id,
-            false,
-            transaction
+        let contracts = this.pick_sale_contracts_for_supply(
+            await this.get_sale_contracts_for_buyer_and_supply_company(
+                plan.company.id,
+                plan.stuff.company.id,
+                false,
+                transaction
+            ),
+            plan.stuff.company.id
         );
         let cur_balance = 0;
         if (contracts.length == 1) {

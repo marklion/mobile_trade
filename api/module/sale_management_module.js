@@ -330,12 +330,7 @@ module.exports = {
                     supply_company_id,
                     true
                 );
-                if (contracts.length > 1) {
-                    const preferred = contracts.filter((item) => item.saleCompanyId === supply_company_id);
-                    if (preferred.length === 1) {
-                        contracts = preferred;
-                    }
-                }
+                contracts = plan_lib.pick_sale_contracts_for_supply(contracts, supply_company_id);
                 if (contracts.length != 1) {
                     throw { err_msg: "合同不存在" }
                 }
@@ -696,22 +691,20 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                const sq = db_opt.get_sq();
-                const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
-                const contract = await sq.models.contract.findByPk(body.contract_id);
-                const stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (!contract || !stuff || !(await plan_lib.has_sale_contract_operate_permission(company, contract))) {
+                const home_company = await rbac_lib.get_company_by_token(token);
+                const stuff_preview = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
+                const stuff_company = stuff_preview ? await stuff_preview.getCompany() : null;
+                if (home_company && home_company.is_group && stuff_company
+                    && stuff_company.parentGroupCompanyId === home_company.id
+                    && stuff_company.id !== home_company.id
+                    && (body.stat_context_company_id === undefined
+                        || body.stat_context_company_id === null
+                        || body.stat_context_company_id === '')) {
                     throw { err_msg: '无权限' };
                 }
-                if (company.is_group && stuff.companyId !== company.id) {
-                    const user = await rbac_lib.get_user_by_token(token);
-                    const has_member_operate_permission = user
-                        && await group_lib.user_can_use_group_member_stuff(user.id, company, stuff.companyId, true);
-                    if (!has_member_operate_permission) {
-                        const err = new Error('无权限');
-                        err.err_msg = '无权限';
-                        throw err;
-                    }
+                const { contract, stuff, can_operate } = await resolve_contract_stuff_operate_context(token, body);
+                if (!can_operate || !contract || !stuff) {
+                    throw { err_msg: '无权限' };
                 }
                 if (!(await contract.hasStuff(stuff))) {
                     throw { err_msg: '该合同未关联此物料' };
