@@ -101,6 +101,11 @@
                             <div>
                                 {{status_string(scope.row.status)}}
                             </div>
+                            <div v-if="scope.row.register_time">
+                                <el-tag size="mini" type="danger">
+                                    已排号
+                                </el-tag>
+                            </div>
                             <div v-if="scope.row.status == 3 && !scope.row.manual_close">
                                 <el-tag size="mini" type="primary">
                                     装卸量:{{scope.row.count}}

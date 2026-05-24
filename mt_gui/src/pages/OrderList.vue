@@ -70,6 +70,7 @@
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
                         <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
+                        <fui-tag v-if="item.register_time" theme="plain" text="已排号" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.count && item.count != 0" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
                         <fui-tag v-if="item.status == 1 && item.arrears > 0" theme="plain" :text="'欠款额:' + item.arrears + '需付'+ item.outstanding_vehicles + '车'" :scaleRatio="0.8" type="warning"></fui-tag>
@@ -172,6 +173,7 @@
                     </u-cell>
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
+                            <fui-tag v-if="focus_plan.register_time" theme="plain" text="已排号" :scaleRatio="0.8" type="primary"></fui-tag>
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
                             <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
                             <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
