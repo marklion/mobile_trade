@@ -364,12 +364,14 @@ module.exports = {
                 if (!context_company || !home_company) {
                     return { stuff: [], total: 0 };
                 }
-                const group_company = home_company.is_group ? home_company : context_company;
-                let company_ids = [group_company.id];
-                if (group_company.is_group) {
+                // 统计范围切换到成员公司时，仅返回该成员公司的物料；
+                // 统计范围是集团公司时，返回集团及其可见成员公司物料。
+                const scope_company = context_company;
+                let company_ids = [scope_company.id];
+                if (scope_company.is_group) {
                     const user = await rbac_lib.get_user_by_token(token);
                     if (user) {
-                        const member_ids = await group_lib.list_member_company_ids_for_stuff(user.id, group_company);
+                        const member_ids = await group_lib.list_member_company_ids_for_stuff(user.id, scope_company);
                         company_ids.push(...member_ids);
                     }
                 }
@@ -387,7 +389,10 @@ module.exports = {
                     limit: 20,
                 });
                 ret.rows.forEach((item) => {
-                    if (group_company.is_group && item.companyId !== group_company.id && item.company) {
+                    const should_prefix_member_company_name = home_company.is_group
+                        && item.company
+                        && item.company.id !== home_company.id;
+                    if (should_prefix_member_company_name) {
                         item.name = `${item.company.name}-${item.name}`;
                     }
                 });

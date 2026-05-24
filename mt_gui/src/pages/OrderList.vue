@@ -6,12 +6,12 @@
         <fui-row :gutter="20">
             <fui-col :span="16" v-if="!select_active">
                 <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <fui-tag theme="plain" type="purple" @click="show_stuff_list = true" marginLeft="20">
+                    <fui-tag theme="plain" type="purple" @click="open_stuff_filter" marginLeft="20">
                         {{stuff_filter.name}}
                         <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
                         <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
                     </fui-tag>
-                    <fui-tag theme="plain" type="success" @click="show_company_filter = true" marginLeft="20">
+                    <fui-tag theme="plain" type="success" @click="open_company_filter" marginLeft="20">
                         {{company_filter.name}}
                         <fui-icon v-if="!company_filter.id" name="arrowright" size="32"></fui-icon>
                         <fui-icon v-else name="close" size="32" @click.native.stop="reset_company_filter"></fui-icon>
@@ -99,7 +99,7 @@
     <module-filter require_module="stuff">
         <fui-bottom-popup :show="show_stuff_list" @close="show_stuff_list = false">
             <fui-list>
-                <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
+                <list-show ref="stuff_filter_list" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[show_sale_scope_switch, stat_context_company_id]" search_key="name" height="40vh">
                     <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="choose_stuff(item)">
                         {{item.name}}
                     </fui-list-cell>
@@ -108,7 +108,7 @@
         </fui-bottom-popup>
         <fui-bottom-popup :show="show_company_filter" @close="show_company_filter= false">
             <fui-list>
-                <list-show v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh" :fetch_params="[make_context_req, show_sale_scope_switch, stat_context_company_id]">
+                <list-show ref="company_filter_list" v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh" :fetch_params="[make_context_req, show_sale_scope_switch, stat_context_company_id]">
                     <fui-list-cell arrow v-for="item in customer_data2show" :key="item.id" @click="choose_company(item)">
                         {{item.company.name}}
                     </fui-list-cell>
@@ -789,6 +789,22 @@ export default {
         open_scope_picker: function () {
             this.show_scope_picker = true;
         },
+        open_stuff_filter: function () {
+            this.show_stuff_list = true;
+            this.$nextTick(() => {
+                if (this.$refs.stuff_filter_list) {
+                    this.$refs.stuff_filter_list.refresh();
+                }
+            });
+        },
+        open_company_filter: function () {
+            this.show_company_filter = true;
+            this.$nextTick(() => {
+                if (this.$refs.company_filter_list) {
+                    this.$refs.company_filter_list.refresh();
+                }
+            });
+        },
         choose_stat_scope: function (company_id) {
             if (this.stat_context_company_id === company_id) {
                 this.show_scope_picker = false;
@@ -796,6 +812,22 @@ export default {
             }
             this.stat_context_company_id = company_id;
             this.show_scope_picker = false;
+            this.company_filter = {
+                name: '全部公司',
+                id: undefined,
+            };
+            this.stuff_filter = {
+                name: '全部物料',
+                id: undefined,
+            };
+            this.$nextTick(() => {
+                if (this.$refs.company_filter_list) {
+                    this.$refs.company_filter_list.refresh();
+                }
+                if (this.$refs.stuff_filter_list) {
+                    this.$refs.stuff_filter_list.refresh();
+                }
+            });
             this.refresh_plans();
         },
         make_context_req: function (body = {}, url = '', ssss_bool = false, scci = null) {
@@ -1591,14 +1623,20 @@ export default {
                 single_tab.badge = res.total;
             }
         },
-        get_stuff: async function (pageNo) {
+        get_stuff: async function (pageNo, [ssss_bool, scci]) {
             let mods = uni.getStorageSync('self_info').modules.map(ele => {
                 return ele.name
             })
             if (mods.indexOf('stuff') != -1) {
-                let ret = await this.$send_req('/stuff/get_all', {
+                let req_url = '/stuff/get_all';
+                let req_body = {
                     pageNo: pageNo
-                });
+                };
+                if (ssss_bool && scci != null) {
+                    req_url = '/sale_management/get_stuff_for_contract';
+                    req_body.stat_context_company_id = scci;
+                }
+                let ret = await this.$send_req(req_url, req_body);
                 return ret.stuff;
             } else {
                 return [];
