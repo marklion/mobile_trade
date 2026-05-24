@@ -40,6 +40,8 @@
                                 </el-table-column>
                                 <el-table-column prop="confirm_count" min-width="25" label="总数">
                                 </el-table-column>
+                                <el-table-column prop="cancel_count" min-width="25" label="取消">
+                                </el-table-column>
                                 <el-table-column prop="finish_count" min-width="25" label="完成">
                                 </el-table-column>
                             </el-table>

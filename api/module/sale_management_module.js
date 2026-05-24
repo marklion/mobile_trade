@@ -809,10 +809,12 @@ module.exports = {
                         },
                         confirm_count: { type: Number, mean: '确认订单数量', example: 1 },
                         finish_count: { type: Number, mean: '完成订单数量', example: 1 },
+                        cancel_count: { type: Number, mean: '取消订单数量', example: 1 },
                     }
                 },
                 total_confirm_count:{type: Number, mean: '确认订单总数量', example: 1},
                 total_finish_count:{type: Number, mean: '完成订单总数量', example: 1},
+                total_cancel_count:{type: Number, mean: '取消订单总数量', example: 1},
             },
             func: async function (body, token) {
                 let ret = [];
@@ -878,19 +880,34 @@ module.exports = {
                     let finish_count = await customer.countPlans({
                         where: tmp_cond
                     });
+                    let cancel_count = await customer.countPlans({
+                        where: {
+                            ...condition,
+                            status: 3,
+                            manual_close: true,
+                        }
+                    });
                     ret.push({
                         company: customer,
                         confirm_count: confirm_count,
-                        finish_count: finish_count
+                        finish_count: finish_count,
+                        cancel_count: cancel_count,
                     })
                 }
                 let total_confirm_count = 0;
                 let total_finish_count = 0;
+                let total_cancel_count = 0;
                 for (let i = 0; i < ret.length; i++) {
                     total_confirm_count += ret[i].confirm_count;
                     total_finish_count += ret[i].finish_count;
+                    total_cancel_count += ret[i].cancel_count;
                 }
-                return { statistic: ret, total_confirm_count: total_confirm_count, total_finish_count: total_finish_count };
+                return {
+                    statistic: ret,
+                    total_confirm_count: total_confirm_count,
+                    total_finish_count: total_finish_count,
+                    total_cancel_count: total_cancel_count,
+                };
             },
         },
         set_fapiao_delivered: {

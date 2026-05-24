@@ -169,6 +169,10 @@ export default {
                 label: '总车数',
                 width: '160'
             }, {
+                prop: 'cancel_count',
+                label: '取消',
+                width: '160'
+            }, {
                 prop: 'finish_count',
                 label: '完成数',
                 width: '160'
@@ -218,6 +222,7 @@ export default {
             this.tableData.push({
                 company_name: '合计',
                 confirm_count: resp.total_confirm_count,
+                cancel_count: resp.total_cancel_count,
                 finish_count: resp.total_finish_count,
             });
             for (let index = 0; index < resp.statistic.length; index++) {
@@ -225,6 +230,7 @@ export default {
                 this.tableData.push({
                     company_name: element.company.name,
                     confirm_count: element.confirm_count,
+                    cancel_count: element.cancel_count,
                     finish_count: element.finish_count,
                 })
             }
