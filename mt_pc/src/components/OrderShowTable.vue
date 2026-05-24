@@ -220,6 +220,8 @@ export default {
                 company_is_group: false,
                 company_id: null,
             },
+            auto_refresh_timer: null,
+            auto_refresh_interval_ms: 2 * 60 * 1000,
             batch_operate_array: [{
                 name: '批量确认',
                 url: this.is_buy ? '/buy_management/order_buy_confirm/' : '/sale_management/order_sale_confirm',
@@ -487,13 +489,36 @@ export default {
                 this.is_the_order_display_price = false;
             }
         },
+        start_auto_refresh_timer: function () {
+            this.stop_auto_refresh_timer();
+            this.auto_refresh_timer = setInterval(() => {
+                this.refresh_order();
+            }, this.auto_refresh_interval_ms);
+        },
+        stop_auto_refresh_timer: function () {
+            if (this.auto_refresh_timer) {
+                clearInterval(this.auto_refresh_timer);
+                this.auto_refresh_timer = null;
+            }
+        },
     },
     mounted: async function () {
         await this.load_self_info();
         await this.load_stat_scopes();
         this.reset_filter();
         this.get_price_display_config();
-    }
+        this.start_auto_refresh_timer();
+    },
+    activated: function () {
+        this.refresh_order();
+        this.start_auto_refresh_timer();
+    },
+    deactivated: function () {
+        this.stop_auto_refresh_timer();
+    },
+    beforeDestroy: function () {
+        this.stop_auto_refresh_timer();
+    },
 
 }
 </script>
