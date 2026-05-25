@@ -1,8 +1,22 @@
 <template>
 <view>
     <u-subsection :list="seg_list" :current="cur_seg" @change="seg_change"></u-subsection>
+    <u-cell v-if="cur_seg == 0 && show_scope_switch && stat_scopes.length > 1" title="统计范围" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
+    <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
+        <fui-list>
+            <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
+                <view class="scope-row">
+                    <view class="scope-name">{{ s.name }}</view>
+                    <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#1E9FFF"></fui-icon>
+                </view>
+            </fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
     <view v-if="cur_seg == 0">
-        <list-show style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" search_key="name" height="90vh">
+        <view class="stuff-top-actions">
+            <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
+        </view>
+        <list-show :key="`stuff-${stat_context_company_id || 'default'}`" style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" :fetch_params="[stat_context_company_id]" search_key="name" height="82vh">
             <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name" :tag="item.price + ''" v-for="(item, index) in data2show2" :key="index">
                 <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
                     <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
@@ -219,7 +233,6 @@
                 </u-collapse>
             </fui-card>
         </list-show>
-        <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
     </view>
     <view v-else-if="cur_seg == 1">
         <u-cell title="默认调价影响计划">
@@ -326,7 +339,7 @@
     <fui-date-picker :show="show_next_date" :minDate="today_date" :value="today_date" type="5" @change="set_next_date" @cancel="show_next_date = false"></fui-date-picker>
     <fui-bottom-popup :show="show_history" @close="show_history = false">
         <view>
-            <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id]" search_key="comment" height="40vh">
+            <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id, stat_context_company_id]" search_key="comment" height="40vh">
                 <u-cell v-for="(item, index) in data2show" :key="index" size="large" :title="item.operator" :value="item.new_price">
                     <template #label>
                         <view style="display:flex;">
@@ -364,6 +377,13 @@ export default {
             showDelayCheckoutPicker: null,
             cur_seg: 0,
             seg_list: ['物料配置', '全局策略', '黑名单'],
+            stat_scopes: [],
+            stat_context_company_id: null,
+            show_scope_picker: false,
+            self_info: {
+                company_is_group: false,
+                company_id: null,
+            },
             show_cancel_next_price: false,
             cancel_next_stuff_id: 0,
             show_next_date: false,
@@ -497,7 +517,76 @@ export default {
             }
         }
     },
+    computed: {
+        show_scope_switch: function () {
+            return this.self_info
+                && this.self_info.company_is_group === true
+                && this.has_group_member_scope;
+        },
+        has_group_member_scope: function () {
+            if (!this.self_info || this.self_info.company_id == null) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
+        },
+        current_scope_name: function () {
+            const current = (this.stat_scopes || []).find((s) => s.id === this.stat_context_company_id);
+            return current ? current.name : '';
+        }
+    },
     methods: {
+        make_scope_req: function (body = {}) {
+            const req = { ...body };
+            if (this.show_scope_switch && this.stat_context_company_id != null) {
+                req.stat_context_company_id = this.stat_context_company_id;
+            }
+            return req;
+        },
+        load_self_info: async function () {
+            try {
+                const info = await this.$send_req('/global/self_info', {});
+                this.self_info = info || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+        },
+        load_stat_scopes: async function () {
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    const first_member_scope = this.stat_scopes.find((s) => this.self_info && s.id !== this.self_info.company_id);
+                    this.stat_context_company_id = first_member_scope ? first_member_scope.id : this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        init_scope_and_refresh: async function () {
+            await this.load_self_info();
+            await this.load_stat_scopes();
+            this.$nextTick(() => {
+                if (this.$refs?.stuff_ref) {
+                    this.$refs.stuff_ref.refresh();
+                }
+            });
+        },
+        open_scope_picker: function () {
+            this.show_scope_picker = true;
+        },
+        choose_stat_scope: function (company_id) {
+            if (this.stat_context_company_id === company_id) {
+                this.show_scope_picker = false;
+                return;
+            }
+            this.stat_context_company_id = company_id;
+            this.show_scope_picker = false;
+            this.$nextTick(() => {
+                if (this.$refs?.stuff_ref) {
+                    this.$refs.stuff_ref.refresh();
+                }
+            });
+        },
         handleBatchCheckout(item, event) {
             if (event?.stopPropagation) {
                 event.stopPropagation();
@@ -518,9 +607,9 @@ export default {
                 });
 
                 if (confirm) {
-                    let resp = await this.$send_req('/sale_management/batch_checkout', {
+                    let resp = await this.$send_req('/sale_management/batch_checkout', this.make_scope_req({
                         stuff_id: item.id
-                    });
+                    }));
                     uni.showToast({
                         title: `一键结算成功，${resp.order_count}个订单已结算`,
                         icon: 'success'
@@ -542,10 +631,10 @@ export default {
         },
         async set_delay_checkout_time(item) {
             try {
-                await this.$send_req('/stuff/set_delay_checkout_time', {
+                await this.$send_req('/stuff/set_delay_checkout_time', this.make_scope_req({
                     stuff_id: item.id,
                     delay_checkout_time: item.delay_checkout_time || ''
-                });
+                }));
                 uni.showToast({
                     title: '保存成功',
                     icon: 'success'
@@ -559,10 +648,10 @@ export default {
             }
         },
         save_ticket_prefix: async function (item) {
-            await this.$send_req('/stuff/set_ticket_prefix', {
+            await this.$send_req('/stuff/set_ticket_prefix', this.make_scope_req({
                 stuff_id: item.id,
                 ticket_prefix: item.ticket_prefix
-            });
+            }));
             uni.startPullDownRefresh();
         },
         prepare_del_zone: function (zone_id) {
@@ -571,9 +660,9 @@ export default {
         },
         delete_zone: async function (e) {
             if (e.index == 1) {
-                await this.$send_req('/stuff/del_zone', {
+                await this.$send_req('/stuff/del_zone', this.make_scope_req({
                     id: this.del_zone_id
-                });
+                }));
                 uni.startPullDownRefresh();
             }
             this.show_zone_del = false;
@@ -590,10 +679,10 @@ export default {
                 if (!val_ret.isPassed) {
                     return;
                 }
-                await this.$send_req('/stuff/add_zone', {
+                await this.$send_req('/stuff/add_zone', this.make_scope_req({
                     stuff_id: this.add_zone_stuff_id,
                     name: this.zone_req.zone_name
-                });
+                }));
                 uni.startPullDownRefresh();
                 this.zone_req.zone_name = '';
             }
@@ -642,53 +731,53 @@ export default {
             this.show_close_time = false;
         },
         change_no_need_register: async function (event, item) {
-            await this.$send_req('/stuff/no_need_register', {
+            await this.$send_req('/stuff/no_need_register', this.make_scope_req({
                 stuff_id: item.id,
                 no_need_register: event.detail.value,
-            });
+            }));
         },
         change_need_exam: async function (event, item) {
-            await this.$send_req('/stuff/exam_config', {
+            await this.$send_req('/stuff/exam_config', this.make_scope_req({
                 stuff_id: item.id,
                 need_exam: event.detail.value,
-            });
+            }));
         },
         change_checkout_delay: async function (event, item) {
-            await this.$send_req('/stuff/checkout_delay_config', {
+            await this.$send_req('/stuff/checkout_delay_config', this.make_scope_req({
                 stuff_id: item.id,
                 checkout_delay: event.detail.value,
-            });
+            }));
         },
         change_manual_weight: async function (event, item) {
             item.manual_weight = event.detail.value;
-            await this.$send_req('/stuff/manual_weight_config', {
+            await this.$send_req('/stuff/manual_weight_config', this.make_scope_req({
                 stuff_id: item.id,
                 manual_weight: event.detail.value
-            });
+            }));
         },
         change_auto_confirm_goods: async function (event, item) {
-            await this.$send_req('/stuff/auto_confirm_goods', {
+            await this.$send_req('/stuff/auto_confirm_goods', this.make_scope_req({
                 stuff_id: item.id,
                 auto_confirm_goods: event.detail.value
-            });
+            }));
         },
         change_need_driver_sign: async function (event, item) {
-            await this.$send_req('/stuff/need_driver_sign', {
+            await this.$send_req('/stuff/need_driver_sign', this.make_scope_req({
                 stuff_id: item.id,
                 need_driver_sign: event.detail.value
-            });
+            }));
         },
         change_need_enter_weight: async function (event, item) {
-            await this.$send_req('/stuff/enter_weight', {
+            await this.$send_req('/stuff/enter_weight', this.make_scope_req({
                 stuff_id: item.id,
                 need_enter_weight: event.detail.value
-            });
+            }));
         },
         change_need_expect_weight: async function (event, item) {
-            await this.$send_req('/stuff/expect_weight_config', {
+            await this.$send_req('/stuff/expect_weight_config', this.make_scope_req({
                 stuff_id: item.id,
                 need_expect_weight: event.detail.value
-            });
+            }));
         },
         set_scunit_coe_configuration: async function (item) {
             try {
@@ -699,14 +788,14 @@ export default {
                     });
                     return;
                 }
-                await this.$send_req('/stuff/set_unit_coefficient', {
+                await this.$send_req('/stuff/set_unit_coefficient', this.make_scope_req({
                     stuff_id: item.id,
                     unit_coefficient: {
                         second_unit: item.second_unit || '',
                         coefficient: item.coefficient || 0,
                         second_unit_decimal: parseInt(item.second_unit_decimal == undefined ? 2 : item.second_unit_decimal, 10)
                     }
-                });
+                }));
                 uni.showToast({
                     title: '保存成功',
                     icon: 'success'
@@ -720,19 +809,23 @@ export default {
             }
         },
         change_need_sc: async function (event, item) {
-            await this.$send_req('/stuff/sc_config', {
+            await this.$send_req('/stuff/sc_config', this.make_scope_req({
                 stuff_id: item.id,
                 need_sc: event.detail.value
-            });
+            }));
         },
         get_price_history: async function (_pageNo, params) {
             if (params[0] == 0) {
                 return [];
             }
-            let ret = await this.$send_req('/stuff/get_price_history', {
+            const req = {
                 pageNo: _pageNo,
                 stuff_id: params[0]
-            });
+            };
+            if (params[1] != null) {
+                req.stat_context_company_id = params[1];
+            }
+            let ret = await this.$send_req('/stuff/get_price_history', req);
 
             return ret.histories;
         },
@@ -753,21 +846,21 @@ export default {
                 }
                 let clm = new Date(this.next_price_req.next_time).getTime() - new Date().getTime();
                 clm = clm / 1000 / 60;
-                await this.$send_req('/stuff/set_next_price', {
+                await this.$send_req('/stuff/set_next_price', this.make_scope_req({
                     stuff_id: this.next_price_req.stuff_id,
                     next_price: parseFloat(this.next_price_req.next_price),
                     next_comment: this.next_price_req.next_comment,
                     change_last_minutes: clm
-                });
+                }));
                 uni.startPullDownRefresh();
             }
             this.show_next_price = false;
         },
         do_cancel_next_price: async function (e) {
             if (e.index == 1) {
-                await this.$send_req('/stuff/clear_next_price', {
+                await this.$send_req('/stuff/clear_next_price', this.make_scope_req({
                     stuff_id: this.cancel_next_stuff_id,
-                })
+                }))
                 uni.startPullDownRefresh();
             }
             this.show_cancel_next_price = false;
@@ -803,16 +896,16 @@ export default {
                     return;
                 }
                 this.stuff2change_price.price = parseFloat(this.stuff2change_price.price);
-                await this.$send_req('/stuff/change_price', this.stuff2change_price);
+                await this.$send_req('/stuff/change_price', this.make_scope_req(this.stuff2change_price));
                 uni.startPullDownRefresh();
             }
             this.show_change_price = false;
         },
         delete_stuff: async function (detail) {
             if (detail.index == 1) {
-                await this.$send_req('/stuff/del', {
+                await this.$send_req('/stuff/del', this.make_scope_req({
                     id: this.item_for_delete.id
-                });
+                }));
                 uni.startPullDownRefresh();
             }
             this.show_delete = false;
@@ -872,15 +965,19 @@ export default {
                 if (this.stuff_ready_fetch.delay_days) {
                     this.stuff_ready_fetch.delay_days = parseInt(this.stuff_ready_fetch.delay_days)
                 }
-                await this.$send_req('/stuff/fetch', this.stuff_ready_fetch);
+                await this.$send_req('/stuff/fetch', this.make_scope_req(this.stuff_ready_fetch));
                 uni.startPullDownRefresh();
             }
             this.show_stuff_fetch = false;
         },
-        get_all_stuff: async function (_pageNo) {
-            let ret = await this.$send_req('/stuff/get_all', {
+        get_all_stuff: async function (_pageNo, params) {
+            const req = {
                 pageNo: _pageNo
-            });
+            };
+            if (params && params[0] != null) {
+                req.stat_context_company_id = params[0];
+            }
+            let ret = await this.$send_req('/stuff/get_all', req);
             return ret.stuff
         },
 
@@ -1017,10 +1114,14 @@ export default {
         uni.stopPullDownRefresh();
     },
     onLoad: function () {
+        this.init_scope_and_refresh();
         this.init_price_profile();
         this.get_company_qualification();
         this.get_verify_pay_config();
         this.initAllGlobalConfigs();
+    },
+    onShow: function () {
+        this.init_scope_and_refresh();
     }
 }
 </script>
@@ -1044,5 +1145,22 @@ export default {
     padding: 20rpx;
     display: flex;
     justify-content: center;
+}
+
+.stuff-top-actions {
+    padding: 12rpx 20rpx;
+    background: #fff;
+}
+
+.scope-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.scope-name {
+    font-size: 30rpx;
+    color: #333;
 }
 </style>

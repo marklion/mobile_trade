@@ -2,6 +2,14 @@
 <el-container>
     <el-header height="50" style="padding-top: 20px;">
         <template>
+            <group-stat-scope-selector
+                v-if="show_stat_scope_selector"
+                v-model="stat_context_company_id"
+                :scopes="stat_scopes"
+                :home-company-id="self_info.company_id"
+                class="stuff_scope_selector"
+                @change="on_stat_scope_change"
+            />
             <el-button icon="el-icon-circle-plus" type="success" @click="show_stuff_fetch = true; is_update = false;clean_form()">新增物料</el-button>
             <el-input placeholder="输入物料名称搜索" v-model="filter_string" clearable @clear="cancel_search" style="width: 300px;margin-left: 10px;">
                 <template #append>
@@ -12,7 +20,7 @@
     </el-header>
     <el-main>
         <template>
-            <page-content ref="stuff" body_key="stuff" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :enable="true">
+            <page-content ref="stuff" body_key="stuff" :search_input="filter_string" :search_key="['name']" :req_url="'/stuff/get_all'" :req_body="stuff_req_body" :enable="true">
                 <template v-slot:default="slotProps">
                     <div>
                         <el-table :data="slotProps.content" style="width: 100%" stripe :default-sort="{ prop: 'name', order: 'ascending' }">
@@ -277,13 +285,41 @@
 <script>
 import moment from 'moment';
 import PageContent from '../../components/PageContent.vue';
+import GroupStatScopeSelector from '../../components/GroupStatScopeSelector.vue';
 export default {
     name: 'StuffConfig',
     components: {
         'page-content': PageContent,
+        'group-stat-scope-selector': GroupStatScopeSelector,
+    },
+    computed: {
+        show_stat_scope_selector: function () {
+            return this.self_info
+                && this.self_info.company_is_group === true
+                && this.has_group_member_scope;
+        },
+        has_group_member_scope: function () {
+            if (!this.self_info || this.self_info.company_id == null) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
+        },
+        stuff_req_body: function () {
+            const req = {};
+            if (this.show_stat_scope_selector && this.stat_context_company_id != null) {
+                req.stat_context_company_id = this.stat_context_company_id;
+            }
+            return req;
+        }
     },
     data: function () {
         return {
+            stat_scopes: [],
+            stat_context_company_id: null,
+            self_info: {
+                company_is_group: false,
+                company_id: null,
+            },
             history_filter_string: '',
             filter_string: '',
             price_profile: {
@@ -392,10 +428,54 @@ export default {
             }
         }
     },
+    watch: {
+        stat_context_company_id: function (newVal, oldVal) {
+            if (newVal === oldVal) {
+                return;
+            }
+            this.$nextTick(() => {
+                if (this.$refs.stuff) {
+                    this.$refs.stuff.refresh(1);
+                }
+            });
+        }
+    },
     mounted: async function () {
+        await this.load_self_info();
+        await this.load_stat_scopes();
         await this.update_price_profile();
     },
+    activated: function () {
+        this.$nextTick(() => {
+            if (this.$refs.stuff) {
+                this.$refs.stuff.refresh(1);
+            }
+        });
+    },
     methods: {
+        load_self_info: async function () {
+            try {
+                const ret = await this.$send_req('/global/self_info', {});
+                this.self_info = ret || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+        },
+        load_stat_scopes: async function () {
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    const first_member_scope = this.stat_scopes.find((s) => this.self_info && s.id !== this.self_info.company_id);
+                    this.stat_context_company_id = first_member_scope ? first_member_scope.id : this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        on_stat_scope_change: function () {
+            this.refresh_stuff();
+        },
         batch_checkout: async function (stuff_id) {
             try {
                 await this.$confirm('确定要一键结算吗？', '提示', {
@@ -404,7 +484,8 @@ export default {
                     type: 'warning'
                 });
                 let resp = await this.$send_req('/sale_management/batch_checkout', {
-                    stuff_id: stuff_id
+                    stuff_id: stuff_id,
+                    stat_context_company_id: this.show_stat_scope_selector ? this.stat_context_company_id : undefined,
                 });
                 this.$message.success(`一键结算成功，${resp.order_count}个订单已结算`);
             } catch (error) {
@@ -767,7 +848,11 @@ export default {
                     if (this.stuff_ready_fetch.close_time) {
                         this.stuff_ready_fetch.close_time = moment(this.stuff_ready_fetch.close_time).format('HH:mm');
                     }
-                    await this.$send_req('/stuff/fetch', this.stuff_ready_fetch);
+                    const req = { ...this.stuff_ready_fetch };
+                    if (this.show_stat_scope_selector && this.stat_context_company_id != null) {
+                        req.stat_context_company_id = this.stat_context_company_id;
+                    }
+                    await this.$send_req('/stuff/fetch', req);
                     this.show_stuff_fetch = false;
                     this.refresh_stuff();
                 } else {
@@ -780,6 +865,10 @@ export default {
 </script>
 
 <style>
+.stuff_scope_selector {
+    margin-right: 10px;
+}
+
 .stuff_card_list {
     display: flex;
     flex-wrap: wrap;

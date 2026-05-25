@@ -5,11 +5,39 @@ const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const cash_lib = require('../lib/cash_lib');
 const sq = db_opt.get_sq();
-async function change_stuff_single_switch(stuff_id, switch_name, switch_value, token) {
+async function resolve_stuff_scope_company(token, stat_context_company_id, need_write = false) {
+    const home_company = await rbac_lib.get_company_by_token(token);
+    if (!home_company) {
+        return null;
+    }
+    if (stat_context_company_id === undefined || stat_context_company_id === null || stat_context_company_id === '') {
+        return home_company;
+    }
+    const scope_id = Number(stat_context_company_id);
+    if (!Number.isFinite(scope_id) || scope_id === home_company.id) {
+        return home_company;
+    }
+    if (!home_company.is_group) {
+        throw { err_msg: '无权限' };
+    }
+    const user = await rbac_lib.get_user_by_token(token);
+    if (!user) {
+        throw { err_msg: '无权限' };
+    }
+    const member_company = await sq.models.company.findByPk(scope_id);
+    if (!member_company) {
+        throw { err_msg: '无权限' };
+    }
+    const can_use = await group_lib.user_can_use_group_member_stuff(user.id, home_company, member_company.id, need_write);
+    if (!can_use) {
+        throw { err_msg: '无权限' };
+    }
+    return member_company;
+}
+async function change_stuff_single_switch(stuff_id, switch_name, switch_value, token, stat_context_company_id) {
     let sq = db_opt.get_sq();
-    let company = await rbac_lib.get_company_by_token(token);
     let stuff = await sq.models.stuff.findByPk(stuff_id);
-    if (stuff && company && await company.hasStuff(stuff)) {
+    if (await can_operate_stuff(token, stuff, stat_context_company_id)) {
         stuff[switch_name] = switch_value;
         await stuff.save();
     } else {
@@ -18,7 +46,65 @@ async function change_stuff_single_switch(stuff_id, switch_name, switch_value, t
     return { result: true };
 }
 async function checkout_delay_config_func(body, token) {
-    return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token);
+    return await change_stuff_single_switch(body.stuff_id, 'checkout_delay', body.checkout_delay, token, body.stat_context_company_id);
+}
+async function can_operate_stuff(token, stuff, stat_context_company_id) {
+    if (!stuff) {
+        return false;
+    }
+    const home_company = await rbac_lib.get_company_by_token(token);
+    if (!home_company) {
+        return false;
+    }
+    try {
+        const scope_company = await resolve_stuff_scope_company(token, stat_context_company_id, true);
+        if (scope_company && await scope_company.hasStuff(stuff)) {
+            return true;
+        }
+    } catch (e) {
+        // ignore scope error and fallback to home-company check
+    }
+    if (await home_company.hasStuff(stuff)) {
+        return true;
+    }
+    if (home_company.is_group !== true) {
+        return false;
+    }
+    const user = await rbac_lib.get_user_by_token(token);
+    const stuff_company = await stuff.getCompany();
+    if (!user || !stuff_company) {
+        return false;
+    }
+    return await group_lib.user_can_use_group_member_stuff(user.id, home_company, stuff_company.id, true);
+}
+async function can_view_stuff(token, stuff, stat_context_company_id) {
+    if (!stuff) {
+        return false;
+    }
+    const home_company = await rbac_lib.get_company_by_token(token);
+    if (!home_company) {
+        return false;
+    }
+    try {
+        const scope_company = await resolve_stuff_scope_company(token, stat_context_company_id, false);
+        if (scope_company && await scope_company.hasStuff(stuff)) {
+            return true;
+        }
+    } catch (e) {
+        // ignore scope error and fallback to home-company check
+    }
+    if (await home_company.hasStuff(stuff)) {
+        return true;
+    }
+    if (home_company.is_group !== true) {
+        return false;
+    }
+    const user = await rbac_lib.get_user_by_token(token);
+    const stuff_company = await stuff.getCompany();
+    if (!user || !stuff_company) {
+        return false;
+    }
+    return await group_lib.user_can_use_group_member_stuff(user.id, home_company, stuff_company.id, false);
 }
 module.exports = {
     name: 'stuff',
@@ -37,7 +123,8 @@ module.exports = {
                 close_time: { type: String, have_to: false, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, have_to: false, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, have_to: false, mean: '关注发票', example: false },
-                stuff_code: { type: String, have_to: false, mean: '物料编码', example: '物料编码' }
+                stuff_code: { type: String, have_to: false, mean: '物料编码', example: '物料编码' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 id: { type: Number, mean: '货物ID', example: 1 },
@@ -55,7 +142,7 @@ module.exports = {
                 close_today: { type: Boolean, mean: '是否关闭今天的计划', example: false },
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await resolve_stuff_scope_company(token, body.stat_context_company_id, true);
                 return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao, body.stuff_code, body.close_today);
             }
         },
@@ -64,7 +151,9 @@ module.exports = {
             description: '获取所有物料',
             is_write: false,
             is_get_api: true,
-            params: {},
+            params: {
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
+            },
             result: {
                 stuff: {
                     type: Array, mean: '物料列表', explain: {
@@ -114,7 +203,10 @@ module.exports = {
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                if (!company) {
+                    return { stuff: [], total: 0 };
+                }
                 return {
                     stuff: await company.getStuff(
                         {
@@ -166,15 +258,15 @@ module.exports = {
             is_get_api: false,
             params: {
                 id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
                 let sq = db_opt.get_sq();
                 let stuff = await sq.models.stuff.findByPk(body.id);
-                if (stuff && company && company.hasStuff(stuff)) {
+                if (await can_operate_stuff(token, stuff, body.stat_context_company_id)) {
                     await stuff.destroy();
                 }
                 return { result: true };
@@ -193,7 +285,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'no_need_register', body.no_need_register, token);
+                return await change_stuff_single_switch(body.stuff_id, 'no_need_register', body.no_need_register, token, body.stat_context_company_id);
             },
         },
         enter_weight: {
@@ -209,7 +301,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'need_enter_weight', body.need_enter_weight, token);
+                return await change_stuff_single_switch(body.stuff_id, 'need_enter_weight', body.need_enter_weight, token, body.stat_context_company_id);
             },
         },
         exam_config: {
@@ -225,7 +317,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'need_exam', body.need_exam, token);
+                return await change_stuff_single_switch(body.stuff_id, 'need_exam', body.need_exam, token, body.stat_context_company_id);
             },
         },
         sc_config: {
@@ -241,7 +333,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'need_sc', body.need_sc, token);
+                return await change_stuff_single_switch(body.stuff_id, 'need_sc', body.need_sc, token, body.stat_context_company_id);
             },
         },
         checkout_delay_config: {
@@ -273,7 +365,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'need_expect_weight', body.need_expect_weight, token);
+                return await change_stuff_single_switch(body.stuff_id, 'need_expect_weight', body.need_expect_weight, token, body.stat_context_company_id);
             },
         },
         auto_confirm_goods: {
@@ -289,7 +381,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'auto_confirm_goods', body.auto_confirm_goods, token);
+                return await change_stuff_single_switch(body.stuff_id, 'auto_confirm_goods', body.auto_confirm_goods, token, body.stat_context_company_id);
             },
         },
         set_unit_coefficient: {
@@ -311,9 +403,9 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await change_stuff_single_switch(body.stuff_id, 'second_unit', body.unit_coefficient.second_unit, token);
-                await change_stuff_single_switch(body.stuff_id, 'coefficient', body.unit_coefficient.coefficient, token);
-                await change_stuff_single_switch(body.stuff_id, 'second_unit_decimal', body.unit_coefficient.second_unit_decimal, token);
+                await change_stuff_single_switch(body.stuff_id, 'second_unit', body.unit_coefficient.second_unit, token, body.stat_context_company_id);
+                await change_stuff_single_switch(body.stuff_id, 'coefficient', body.unit_coefficient.coefficient, token, body.stat_context_company_id);
+                await change_stuff_single_switch(body.stuff_id, 'second_unit_decimal', body.unit_coefficient.second_unit_decimal, token, body.stat_context_company_id);
                 return { result: true }
             }
         },
@@ -330,7 +422,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'manual_weight', body.manual_weight, token);
+                return await change_stuff_single_switch(body.stuff_id, 'manual_weight', body.manual_weight, token, body.stat_context_company_id);
             },
         },
         change_price: {
@@ -360,6 +452,7 @@ module.exports = {
             is_get_api: true,
             params: {
                 stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 histories: {
@@ -373,8 +466,17 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let ret = await plan_lib.get_price_history(body.stuff_id, token, body.pageNo);
-                return { histories: ret.rows, total: ret.count };
+                const stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (!await can_view_stuff(token, stuff, body.stat_context_company_id)) {
+                    throw { err_msg: '未找到货物' };
+                }
+                const rows = await stuff.getPrice_histories({
+                    order: [['id', 'DESC']],
+                    offset: body.pageNo * 20,
+                    limit: 20,
+                });
+                const count = await stuff.countPrice_histories();
+                return { histories: rows, total: count };
             }
         },
         get_notice: {
@@ -435,15 +537,14 @@ module.exports = {
                 next_price: { type: Number, have_to: true, mean: '下次单价', example: 1 },
                 change_last_minutes: { type: Number, have_to: true, mean: '调价所剩分钟', example: 23 },
                 next_comment: { type: String, have_to: true, mean: '下次调价备注', example: '备注' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
-                if (stuff.length == 1) {
-                    stuff = stuff[0];
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (await can_operate_stuff(token, stuff, body.stat_context_company_id)) {
                     stuff.next_price = body.next_price;
                     stuff.change_last_minutes = body.change_last_minutes;
                     stuff.next_comment = body.next_comment;
@@ -463,15 +564,14 @@ module.exports = {
             is_get_api: false,
             params: {
                 stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
-                if (stuff.length == 1) {
-                    stuff = stuff[0];
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (await can_operate_stuff(token, stuff, body.stat_context_company_id)) {
                     stuff.next_price = 0;
                     stuff.change_last_minutes = 0;
                     stuff.next_comment = '';
@@ -799,15 +899,15 @@ module.exports = {
             is_get_api: false,
             params: {
                 name: { type: String, have_to: true, mean: '区域名称', example: 'A区' },
-                stuff_id: { type: Number, have_to: true, mean: '物料', example: 1 }
+                stuff_id: { type: Number, have_to: true, mean: '物料', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                let company = await rbac_lib.get_company_by_token(token);
-                if (stuff && company && await company.hasStuff(stuff)) {
+                if (await can_operate_stuff(token, stuff, body.stat_context_company_id)) {
                     let exist_zones = await stuff.getDrop_take_zones({ where: { name: body.name } });
                     if (exist_zones.length == 0) {
                         let zone = await sq.models.drop_take_zone.create({
@@ -828,16 +928,16 @@ module.exports = {
             is_write: true,
             is_get_api: false,
             params: {
-                id: { type: Number, have_to: true, mean: '区域ID', example: 1 }
+                id: { type: Number, have_to: true, mean: '区域ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let zone = await sq.models.drop_take_zone.findByPk(body.id);
-                let stuff = await zone.getStuff({ include: [{ model: sq.models.company }] });
-                let company = await rbac_lib.get_company_by_token(token);
-                if (stuff && company && await company.hasStuff(stuff)) {
+                let stuff = zone ? await zone.getStuff({ include: [{ model: sq.models.company }] }) : null;
+                if (await can_operate_stuff(token, stuff, body.stat_context_company_id)) {
                     await zone.destroy();
                     return { result: true };
                 }
@@ -859,7 +959,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'ticket_prefix', body.ticket_prefix, token);
+                return await change_stuff_single_switch(body.stuff_id, 'ticket_prefix', body.ticket_prefix, token, body.stat_context_company_id);
             }
         },
         set_add_base: {
@@ -875,7 +975,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'add_base', body.add_base, token);
+                return await change_stuff_single_switch(body.stuff_id, 'add_base', body.add_base, token, body.stat_context_company_id);
             }
         },
         add_delegate: {
@@ -1173,15 +1273,14 @@ module.exports = {
                 stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
                 name: { type: String, have_to: true, mean: '结构化计量称重项', example: '称重项' },
                 type: { type: String, have_to: false, mean: '称重项类型', example: 'weight' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let stuff = await company.getStuff({ where: { id: body.stuff_id } });
-                if (stuff.length == 1) {
-                    stuff = stuff[0];
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (await can_operate_stuff(token, stuff, body.stat_context_company_id)) {
                     let type = body.type || 'string';
                     let exist = await stuff.getSct_scale_items({ where: { name: body.name } });
                     if (exist.length == 0) {
@@ -1207,13 +1306,13 @@ module.exports = {
                 id: { type: Number, have_to: true, mean: '称重项ID', example: 1 },
                 name: { type: String, have_to: false, mean: '结构化计量称重项', example: '称重项' },
                 type: { type: String, have_to: false, mean: '称重项类型', example: 'weight' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
                 let item = await sq.models.sct_scale_item.findByPk(body.id, {
                     include: [{
                         model: sq.models.stuff,
@@ -1222,7 +1321,7 @@ module.exports = {
                         }]
                     }],
                 });
-                if (item && item.stuff.company.id == company.id) {
+                if (item && await can_operate_stuff(token, item.stuff, body.stat_context_company_id)) {
                     item.name = body.name;
                     item.type = body.type || 'string';
                     await item.save();
@@ -1240,12 +1339,12 @@ module.exports = {
             is_get_api: false,
             params: {
                 id: { type: Number, have_to: true, mean: '称重项ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
                 let item = await sq.models.sct_scale_item.findByPk(body.id, {
                     include: [{
                         model: sq.models.stuff,
@@ -1254,7 +1353,7 @@ module.exports = {
                         }]
                     }],
                 });
-                if (item && item.stuff.company.id == company.id) {
+                if (item && await can_operate_stuff(token, item.stuff, body.stat_context_company_id)) {
                     await item.destroy();
                 }
                 else {
@@ -1516,7 +1615,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await change_stuff_single_switch(body.stuff_id, 'delay_checkout_time', body.delay_checkout_time, token);
+                await change_stuff_single_switch(body.stuff_id, 'delay_checkout_time', body.delay_checkout_time, token, body.stat_context_company_id);
                 if (body.delay_checkout_time != '') {
                     await checkout_delay_config_func({
                         stuff_id: body.stuff_id,
@@ -1539,7 +1638,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                return await change_stuff_single_switch(body.stuff_id, 'need_driver_sign', body.need_driver_sign, token);
+                return await change_stuff_single_switch(body.stuff_id, 'need_driver_sign', body.need_driver_sign, token, body.stat_context_company_id);
             }
         },
         add_extra_info_config: {
