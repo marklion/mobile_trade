@@ -101,7 +101,7 @@ Group Member Candidate List Returns Page
     Should Not Be Empty  ${cands}
 
 Home Stat And Stat Context Respect Can View Only
-    [Documentation]  仅 can_view 出现在首页统计范围；stat_context 接口同样只认 can_view
+    [Documentation]  仅 can_view 出现在首页操作主体；stat_context 接口同样只认 can_view
     [Teardown]  Group Suite Reset
     ${phone}  Set Variable  99887766609
     ${g}  Build Converted Group With One Member  rf_grp_parent_stat  rf_grp_member_stat  ${phone}  rf_grp_stat

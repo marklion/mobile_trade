@@ -10,7 +10,7 @@
             </fui-col>
         </fui-row>
         <fui-divider style="background-color: white;"></fui-divider>
-        <fui-card v-if="stat_scopes.length > 1" title="统计范围" full color="black" size="35">
+        <fui-card v-if="stat_scopes.length > 1" title="操作主体" full color="black" size="35">
             <view class="scope-picker-trigger" @click="open_scope_picker">
                 <view class="scope-picker-label">{{ current_scope_name || '请选择公司' }}</view>
                 <fui-icon name="arrowright" size="32" color="#999"></fui-icon>

@@ -46,7 +46,7 @@
             <fui-button text="恢复默认" @click="reset_order_date" btnSize="mini" type="primary"></fui-button>
         </view>
     </u-cell>
-    <u-cell v-if="show_sale_scope_switch && stat_scopes.length > 1" title="统计范围" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
+    <u-cell v-if="show_sale_scope_switch && stat_scopes.length > 1" title="操作主体" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
     <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
     <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
         <fui-list>

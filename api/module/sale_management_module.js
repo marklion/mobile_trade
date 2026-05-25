@@ -364,8 +364,6 @@ module.exports = {
                 if (!context_company || !home_company) {
                     return { stuff: [], total: 0 };
                 }
-                // 统计范围切换到成员公司时，仅返回该成员公司的物料；
-                // 统计范围是集团公司时，返回集团及其可见成员公司物料。
                 const scope_company = context_company;
                 let company_ids = [scope_company.id];
                 if (scope_company.is_group) {
@@ -1054,6 +1052,7 @@ module.exports = {
             is_get_api: false,
             params: {
                 stuff_id: { type: Number, have_to: true, mean: '货物ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 order_count: { type: Number, mean: '影响订单数', example: 10 }
@@ -1061,9 +1060,18 @@ module.exports = {
             func: async function (body, token) {
                 let ret = { order_count: 0 };
                 let sq = db_opt.get_sq();
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
+                const home_company = await rbac_lib.get_company_by_token(token);
+                const user = await rbac_lib.get_user_by_token(token);
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
-                if (company && stuff && company.id == stuff.companyId) {
+                let can_checkout = !!(company && stuff && company.id == stuff.companyId);
+                if (!can_checkout && company && home_company && user && home_company.is_group === true) {
+                    const stuff_company = await stuff.getCompany();
+                    can_checkout = !!(stuff_company
+                        && stuff_company.parentGroupCompanyId === home_company.id
+                        && await group_lib.user_can_use_group_member_stuff(user.id, home_company, stuff_company.id, true));
+                }
+                if (can_checkout) {
                     let cond = {
                         status: 2,
                         is_buy: false,
