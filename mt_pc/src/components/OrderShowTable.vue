@@ -1,11 +1,12 @@
 <template>
 <div class="order_show">
-    <div v-if="show_sale_scope_selector && stat_scopes.length > 1" class="scope_bar">
-        <span class="scope_label">统计范围</span>
-        <el-radio-group v-model="stat_context_company_id" size="small" @change="refresh_order">
-            <el-radio-button v-for="s in stat_scopes" :key="s.id" :label="s.id">{{ s.name }}</el-radio-button>
-        </el-radio-group>
-    </div>
+    <group-stat-scope-selector
+        v-if="show_sale_scope_selector && stat_scopes.length > 1"
+        v-model="stat_context_company_id"
+        :scopes="stat_scopes"
+        :home-company-id="self_info && self_info.company_id"
+        @change="on_stat_scope_change"
+    />
     <div class="filter_bar">
         <el-tabs v-model="status" @tab-click="refresh_order">
             <el-tab-pane label="全部" name="all"></el-tab-pane>
@@ -53,8 +54,8 @@
             </el-dropdown-menu>
         </el-dropdown>
         <div style="display:flex;">
-            <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" :req_body="contract_req_body" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id" @refresh="refresh_order"></select-search>
-            <select-search body_key="stuff" first_item="所有物料" get_url="/stuff/get_all" item_label="name" item_value="id" :permission_array="['stuff']" v-model="stuff_id" @refresh="refresh_order"></select-search>
+            <select-search ref="company_selector" :key="company_selector_key" filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" :req_body="contract_req_body" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id" @refresh="refresh_order"></select-search>
+            <select-search ref="stuff_selector" :key="stuff_selector_key" body_key="stuff" first_item="所有物料" :get_url="stuff_get_url" :req_body="stuff_req_body" item_label="name" item_value="id" :permission_array="stuff_permission_array" v-model="stuff_id" @refresh="refresh_order"></select-search>
             <el-input placeholder="输入车号过滤" v-model="filter_string" style="width: 250px;">
                 <div slot="suffix">
                     <el-button type="primary" size="small" @click="do_search">搜索</el-button>
@@ -147,12 +148,14 @@ import page_content from './PageContent.vue';
 import moment from 'moment';
 import SelectSearch from './SelectSearch.vue';
 import OrderDetail from './OrderDetail.vue';
+import GroupStatScopeSelector from './GroupStatScopeSelector.vue';
 export default {
     name: 'OrderShowTable',
     components: {
         'page-content': page_content,
         'select-search': SelectSearch,
         'order-detail': OrderDetail,
+        'group-stat-scope-selector': GroupStatScopeSelector,
     },
     computed: {
         show_sale_scope_selector: function () {
@@ -176,6 +179,30 @@ export default {
             } else {
                 return '/sale_management/contract_get';
             }
+        },
+        stuff_get_url: function () {
+            if (this.show_sale_scope_selector) {
+                return '/sale_management/get_stuff_for_contract';
+            }
+            return '/stuff/get_all';
+        },
+        stuff_req_body: function () {
+            if (this.show_sale_scope_selector) {
+                return this.make_context_req({});
+            }
+            return {};
+        },
+        stuff_permission_array: function () {
+            if (this.show_sale_scope_selector) {
+                return ['sale_management', 'stuff'];
+            }
+            return ['stuff'];
+        },
+        company_selector_key: function () {
+            return `company-${this.stat_context_company_id || 'default'}-${this.filter_selector_refresh_seed}`;
+        },
+        stuff_selector_key: function () {
+            return `stuff-${this.stat_context_company_id || 'default'}-${this.filter_selector_refresh_seed}`;
         }
     },
     data: function () {
@@ -216,6 +243,7 @@ export default {
             pickerOptions: this.$quik_date_option,
             stat_scopes: [],
             stat_context_company_id: null,
+            filter_selector_refresh_seed: 0,
             self_info: {
                 company_is_group: false,
                 company_id: null,
@@ -279,7 +307,8 @@ export default {
                 const ret = await this.$send_req('/global/home_stat_scope_list', {});
                 this.stat_scopes = ret.scopes || [];
                 if (this.stat_scopes.length && this.stat_context_company_id == null) {
-                    this.stat_context_company_id = this.stat_scopes[0].id;
+                    const first_member_scope = this.stat_scopes.find((s) => this.self_info && s.id !== this.self_info.company_id);
+                    this.stat_context_company_id = first_member_scope ? first_member_scope.id : this.stat_scopes[0].id;
                 }
             } catch (e) {
                 this.stat_scopes = [];
@@ -420,6 +449,14 @@ export default {
                 hide_manual_close: false,
             }, true)).total;
         },
+        on_stat_scope_change: function () {
+            if (this.show_sale_scope_selector) {
+                this.company_id = 0;
+                this.stuff_id = 0;
+                this.filter_selector_refresh_seed += 1;
+            }
+            this.refresh_order();
+        },
         refresh_order: function () {
             if (this.stuff_id != 0) {
                 this.filter.stuff_id = this.stuff_id;
@@ -510,15 +547,8 @@ export default {
     align-items: center;
 }
 
-.scope_bar {
-    display: flex;
-    align-items: center;
+.group_scope {
     margin-bottom: 8px;
 }
 
-.scope_label {
-    color: #606266;
-    font-size: 14px;
-    margin-right: 10px;
-}
 </style>

@@ -2,10 +2,12 @@
 <div class="dashboard-container">
     <el-row v-if="stat_scopes.length > 1" :gutter="10" class="stat-scope-row">
         <el-col :span="24">
-            <span class="stat-scope-label">统计范围</span>
-            <el-radio-group v-model="stat_context_company_id" size="small" @change="on_stat_scope_change">
-                <el-radio-button v-for="s in stat_scopes" :key="s.id" :label="s.id">{{ s.name }}</el-radio-button>
-            </el-radio-group>
+            <group-stat-scope-selector
+                v-model="stat_context_company_id"
+                :scopes="stat_scopes"
+                :home-company-id="home_scope_company_id"
+                @change="on_stat_scope_change"
+            />
         </el-col>
     </el-row>
     <el-row :gutter="10">
@@ -147,6 +149,7 @@ import {
 } from 'vuex'
 import ChartComponent from '../components/Charts.vue';
 import page_content from '../components/PageContent.vue';
+import GroupStatScopeSelector from '../components/GroupStatScopeSelector.vue';
 import moment from 'moment';
 
 export default {
@@ -154,6 +157,7 @@ export default {
     components: {
         ChartComponent,
         'page-content': page_content,
+        'group-stat-scope-selector': GroupStatScopeSelector,
     },
     computed: {
         ...mapGetters([
@@ -191,6 +195,7 @@ export default {
             ss_url: '/supplier/get_stuff_need_buy',
             stat_scopes: [],
             stat_context_company_id: null,
+            home_scope_company_id: null,
         }
     },
     async mounted() {
@@ -205,6 +210,9 @@ export default {
             try {
                 const ret = await this.$send_req('/global/home_stat_scope_list', {});
                 this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length) {
+                    this.home_scope_company_id = this.stat_scopes[0].id;
+                }
                 if (this.stat_scopes.length && this.stat_context_company_id == null) {
                     this.stat_context_company_id = this.stat_scopes[0].id;
                 }
@@ -472,11 +480,5 @@ export default {
 
 .stat-scope-row {
     margin-bottom: 10px;
-}
-.stat-scope-label {
-    margin-right: 12px;
-    color: #606266;
-    font-size: 14px;
-    vertical-align: middle;
 }
 </style>

@@ -1,14 +1,13 @@
 <template>
 <div>
-    <el-radio-group
+    <group-stat-scope-selector
         v-if="show_stat_scope_selector && stat_scopes.length > 1"
         v-model="stat_context_company_id"
-        size="small"
-        style="margin-right: 10px;"
+        :scopes="stat_scopes"
+        :home-company-id="self_info && self_info.company_id"
+        class="contract_scope_selector"
         @change="on_scope_change"
-    >
-        <el-radio-button v-for="s in stat_scopes" :key="s.id" :label="s.id">{{ s.name }}</el-radio-button>
-    </el-radio-group>
+    />
     <el-button v-if="is_motive" icon="el-icon-circle-plus" type="success" @click="prepare_new_contract">新增合同</el-button>
     <el-button
         v-if="can_manage_discount"
@@ -233,6 +232,7 @@
 <script>
 import page_content from './PageContent.vue';
 import SelectSearch from './SelectSearch.vue';
+import GroupStatScopeSelector from './GroupStatScopeSelector.vue';
 export default {
     name: 'ContractShowTable',
     data: function () {
@@ -293,6 +293,7 @@ export default {
         'page-content': page_content,
         'el-image-viewer': () => import('element-ui/packages/image/src/image-viewer'),
         'select-search': SelectSearch,
+        'group-stat-scope-selector': GroupStatScopeSelector,
     },
     props: {
         req_path: String,
@@ -361,7 +362,8 @@ export default {
                 const ret = await this.$send_req('/global/home_stat_scope_list', {});
                 this.stat_scopes = ret.scopes || [];
                 if (this.stat_scopes.length && this.stat_context_company_id == null) {
-                    this.stat_context_company_id = this.stat_scopes[0].id;
+                    const first_member_scope = this.stat_scopes.find((s) => this.self_info && s.id !== this.self_info.company_id);
+                    this.stat_context_company_id = first_member_scope ? first_member_scope.id : this.stat_scopes[0].id;
                     this.$nextTick(() => {
                         if (this.$refs.contracts) {
                             this.$refs.contracts.refresh(1);
@@ -667,6 +669,8 @@ export default {
 }
 </script>
 
-<style>
-
+<style scoped>
+.contract_scope_selector {
+    margin-right: 10px;
+}
 </style>
