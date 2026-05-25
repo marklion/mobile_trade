@@ -659,12 +659,12 @@ export default {
                     let url = this.plan.is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
                     let req = {};
                     if (this.plan.is_buy) {
-                        req.supplier_id = this.plan.stuff.company.id;
+                        req.supplier_id = this.plan.company.id;
                     } else {
                         req.customer_id = this.plan.company.id;
                         req.supply_company_id = this.plan.stuff.company.id;
                     }
-                    if (this.stat_context_company_id != null) {
+                    if (!this.plan.is_buy && this.stat_context_company_id != null) {
                         req.stat_context_company_id = this.stat_context_company_id;
                     }
                     let resp = await this.$send_req(url, req);
