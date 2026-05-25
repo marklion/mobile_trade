@@ -1428,7 +1428,7 @@ export default {
                     let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
                     let contract_req = {};
                     if (this.cur_is_buy) {
-                        contract_req.supplier_id = item.stuff.company.id;
+                        contract_req.supplier_id = item.company.id;
                     } else {
                         contract_req.customer_id = item.company.id;
                         contract_req.supply_company_id = item.stuff.company.id;
