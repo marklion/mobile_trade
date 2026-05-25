@@ -219,6 +219,17 @@
                 <el-form-item label="影响计划？" v-if="!price_profile.hide_impact_selector">
                     <el-switch v-model="stuff2change_price.to_plan"></el-switch>
                 </el-form-item>
+                <el-alert v-if="stuff2change_price.to_plan" type="warning" :closable="false" show-icon
+                    style="margin-bottom: 12px;">
+                    <template slot="title">
+                        勾选"影响计划"后，未关闭订单的单价将按以下规则重算：
+                    </template>
+                    <div style="font-size: 12px; line-height: 1.6;">
+                        1. 客户合同已设置"合同物料单价（一客一价）"的订单：<b>保持原单价不变</b>，不会被新价格覆盖；<br />
+                        2. 客户合同绑定了"优惠方案"的订单：按 <b>新价格 + 方案 delta</b> 重算后写回；<br />
+                        3. 既无一客一价、也无优惠方案的订单：直接使用<b>新价格</b>。
+                    </div>
+                </el-alert>
                 <el-form-item>
                     <el-button type="primary" @click="change_price">确定</el-button>
                     <el-button @click="show_change_price = false">取消</el-button>

@@ -313,6 +313,13 @@
             <fui-form-item label="影响计划？" asterisk v-if="!price_profile.hide_impact_selector">
                 <u-switch v-model="stuff2change_price.to_plan"></u-switch>
             </fui-form-item>
+            <view v-if="stuff2change_price.to_plan"
+                style="margin: 8px 12px; padding: 10px; background: #FFF7E6; border: 1px solid #FFD591; border-radius: 4px; color: #874D00; font-size: 24rpx; line-height: 1.6;">
+                <view style="font-weight: bold; margin-bottom: 4px;">勾选"影响计划"后，未关闭订单的单价将按以下规则重算：</view>
+                <view>1. 合同已设置"一客一价"的订单：<text style="font-weight: bold;">保持原单价不变</text></view>
+                <view>2. 合同绑定了"优惠方案"的订单：按 <text style="font-weight: bold;">新价格 + 方案 delta</text> 重算</view>
+                <view>3. 其它订单：直接使用<text style="font-weight: bold;">新价格</text></view>
+            </view>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :show="show_next_price" v-if="show_next_price" @click="do_next_price">

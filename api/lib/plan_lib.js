@@ -1656,8 +1656,39 @@ module.exports = {
             const sq = db_opt.get_sq();
             for (let index = 0; index < plans.length; index++) {
                 const element = plans[index];
+                let target_unit_price = _new_price;
+                let should_skip_update = false;
+                // 按合同配置重算计划单价，严格遵循两条规则：
+                // 1) 若存在合同维度物料单价（一客一价 contract_stuff_price），则保持原订单单价不变；
+                // 2) 否则若合同绑定了优惠方案，则按 新物料价 + 方案delta 重算后写回；
+                // 3) 以上都不命中时，沿用新物料价 _new_price。
+                if (element && element.companyId) {
+                    let contracts = await this.get_sale_contracts_for_buyer_and_supply_company(
+                        element.companyId,
+                        stuff.companyId
+                    );
+                    contracts = this.pick_sale_contracts_for_supply(contracts, stuff.companyId);
+                    if (contracts.length > 1) {
+                        contracts.sort((a, b) => (b.id || 0) - (a.id || 0));
+                    }
+                    const picked_contract = contracts.length > 0 ? contracts[0] : null;
+                    if (picked_contract) {
+                        const override_price = await this.get_contract_stuff_price(picked_contract.id, stuff.id);
+                        if (override_price) {
+                            should_skip_update = true;
+                        } else if (picked_contract.discountSchemeId) {
+                            const scheme = await sq.models.contract_discount_scheme.findByPk(picked_contract.discountSchemeId);
+                            if (scheme) {
+                                target_unit_price = Number((Number(_new_price) + Number(scheme.delta_price)).toFixed(2));
+                            }
+                        }
+                    }
+                }
+                if (should_skip_update) {
+                    continue;
+                }
                 const [affected_rows] = await sq.models.plan.update(
-                    { unit_price: _new_price },
+                    { unit_price: target_unit_price },
                     {
                         where: {
                             id: element.id,
@@ -1670,7 +1701,7 @@ module.exports = {
                     continue;
                 }
                 const updated_plan = await util_lib.get_single_plan_by_id(element.id);
-                await this.rp_history_price_change(updated_plan, _operator, _new_price);
+                await this.rp_history_price_change(updated_plan, _operator, target_unit_price);
                 if (updated_plan.companyId && company_ids.indexOf(updated_plan.companyId) == -1) {
                     company_ids.push(updated_plan.companyId);
                 }

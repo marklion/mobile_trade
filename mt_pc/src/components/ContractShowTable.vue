@@ -202,6 +202,13 @@
         </el-table>
     </el-dialog>
     <el-dialog title="设置合同优惠方案" :visible.sync="show_contract_scheme_dialog" width="30%">
+        <el-alert type="info" :closable="false" show-icon style="margin-bottom: 12px;">
+            <template slot="title">单价计算优先级</template>
+            <div style="font-size: 12px; line-height: 1.6;">
+                若该合同同时设置了"合同物料单价（一客一价）"，则<b>一客一价优先</b>，本方案不会生效；<br />
+                仅当未设置一客一价时，下单单价 = <b>物料基价 + 方案 delta</b>。
+            </div>
+        </el-alert>
         <el-select v-model="selected_scheme_id" clearable placeholder="请选择优惠方案" style="width: 100%;">
             <el-option v-for="item in discount_schemes" :key="item.id" :label="`${item.name}（${item.delta_price}）`" :value="item.id"></el-option>
         </el-select>
@@ -211,6 +218,13 @@
         </span>
     </el-dialog>
     <el-dialog title="设置合同物料单价" :visible.sync="show_stuff_price_dialog" width="40%">
+        <el-alert type="warning" :closable="false" show-icon style="margin-bottom: 12px;">
+            <template slot="title">一客一价说明</template>
+            <div style="font-size: 12px; line-height: 1.6;">
+                设置后该合同此物料的下单单价将<b>固定为此处单价</b>，并覆盖优惠方案；<br />
+                后续物料基价被调整且勾选"影响计划"时，该合同对应的未关闭订单单价<b>不会被覆盖</b>。
+            </div>
+        </el-alert>
         <el-table :data="stuff_price_rows" stripe>
             <el-table-column prop="name" label="物料"></el-table-column>
             <el-table-column label="单价">
