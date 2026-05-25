@@ -68,6 +68,7 @@ Setup Group Contract Price Scenario
 
     Set Suite Variable  ${PARENT_TOKEN}  ${parent_token}
     Set Suite Variable  ${BUYER_TOKEN}  ${buyer_token}
+    Set Suite Variable  ${MEMBER_TOKEN}  ${member_token}
     Set Suite Variable  ${MEMBER_COMPANY}  ${member}
     Set Suite Variable  ${MEMBER_STUFF}  ${member_stuff}
     Set Suite Variable  ${CONTRACT}  ${contract}
@@ -124,6 +125,20 @@ Create Buyer Plan With Member Stuff
     ${plan}  Req to Server  /customer/order_buy_create  ${BUYER_TOKEN}  ${create_req}
     RETURN  ${plan}
 
+Get Buyer Plan By Id
+    [Arguments]  ${token}  ${plan_id}
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09  status=${null}
+    ${plans}  Req Get to Server  /customer/order_buy_search  ${token}  plans  ${-1}  &{req}
+    ${found_plan}  Set Variable  ${None}
+    FOR  ${p}  IN  @{plans}
+        IF  ${p}[id] == ${plan_id}
+            ${found_plan}  Set Variable  ${p}
+            Exit For Loop
+        END
+    END
+    Should Not Be Empty  ${found_plan}
+    RETURN  ${found_plan}
+
 *** Test Cases ***
 Group CanOperate User Can Set Scheme And Stuff Override Price
     [Setup]  Setup Group Contract Price Scenario  ${True}
@@ -167,6 +182,84 @@ Group CanOperate User Price Falls Back To Scheme When No Override
 
     ${plan}  Create Buyer Plan With Member Stuff  ${12}
     Should Be Equal As Numbers  ${plan}[unit_price]  98.4
+
+Stuff Change Price ToPlan Keeps Contract Override Unit Price
+    [Setup]  Setup Group Contract Price Scenario  ${True}
+    ${save_scheme_req}  Create Dictionary
+    ...  name=单价-1.6元
+    ...  delta_price=${-1.6}
+    ...  stat_context_company_id=${MEMBER_COMPANY}[id]
+    Req to Server  /sale_management/discount_scheme_upsert  ${PARENT_TOKEN}  ${save_scheme_req}
+    ${scheme_id}  Find Discount Scheme Id By Name  ${PARENT_TOKEN}  ${MEMBER_COMPANY}[id]  单价-1.6元
+
+    ${set_scheme_req}  Create Dictionary
+    ...  contract_id=${CONTRACT}[id]
+    ...  scheme_id=${scheme_id}
+    ...  stat_context_company_id=${MEMBER_COMPANY}[id]
+    Req to Server  /sale_management/contract_set_discount_scheme  ${PARENT_TOKEN}  ${set_scheme_req}
+
+    ${set_override_req}  Create Dictionary
+    ...  contract_id=${CONTRACT}[id]
+    ...  stuff_id=${MEMBER_STUFF}[id]
+    ...  unit_price=${97.5}
+    ...  stat_context_company_id=${MEMBER_COMPANY}[id]
+    Req to Server  /sale_management/contract_set_stuff_price  ${PARENT_TOKEN}  ${set_override_req}
+
+    ${plan}  Create Buyer Plan With Member Stuff  ${21}
+    Should Be Equal As Numbers  ${plan}[unit_price]  97.5
+
+    ${change_req}  Create Dictionary
+    ...  stuff_id=${MEMBER_STUFF}[id]
+    ...  price=${109}
+    ...  to_plan=${True}
+    ...  comment=to_plan_keep_override
+    Req to Server  /stuff/change_price  ${MEMBER_TOKEN}  ${change_req}
+
+    ${plan_after}  Get Buyer Plan By Id  ${BUYER_TOKEN}  ${plan}[id]
+    Should Be Equal As Numbers  ${plan_after}[unit_price]  97.5
+
+Stuff Change Price ToPlan Uses Discount Scheme Unit Price
+    [Setup]  Setup Group Contract Price Scenario  ${True}
+    ${save_scheme_req}  Create Dictionary
+    ...  name=单价-1.6元
+    ...  delta_price=${-1.6}
+    ...  stat_context_company_id=${MEMBER_COMPANY}[id]
+    Req to Server  /sale_management/discount_scheme_upsert  ${PARENT_TOKEN}  ${save_scheme_req}
+    ${scheme_id}  Find Discount Scheme Id By Name  ${PARENT_TOKEN}  ${MEMBER_COMPANY}[id]  单价-1.6元
+
+    ${set_scheme_req}  Create Dictionary
+    ...  contract_id=${CONTRACT}[id]
+    ...  scheme_id=${scheme_id}
+    ...  stat_context_company_id=${MEMBER_COMPANY}[id]
+    Req to Server  /sale_management/contract_set_discount_scheme  ${PARENT_TOKEN}  ${set_scheme_req}
+
+    ${plan}  Create Buyer Plan With Member Stuff  ${22}
+    Should Be Equal As Numbers  ${plan}[unit_price]  98.4
+
+    ${change_req}  Create Dictionary
+    ...  stuff_id=${MEMBER_STUFF}[id]
+    ...  price=${109}
+    ...  to_plan=${True}
+    ...  comment=to_plan_apply_scheme
+    Req to Server  /stuff/change_price  ${MEMBER_TOKEN}  ${change_req}
+
+    ${plan_after}  Get Buyer Plan By Id  ${BUYER_TOKEN}  ${plan}[id]
+    Should Be Equal As Numbers  ${plan_after}[unit_price]  107.4
+
+Stuff Change Price ToPlan Uses New Price Without Contract Strategy
+    [Setup]  Setup Group Contract Price Scenario  ${True}
+    ${plan}  Create Buyer Plan With Member Stuff  ${23}
+    Should Be Equal As Numbers  ${plan}[unit_price]  100
+
+    ${change_req}  Create Dictionary
+    ...  stuff_id=${MEMBER_STUFF}[id]
+    ...  price=${109}
+    ...  to_plan=${True}
+    ...  comment=to_plan_apply_new_price
+    Req to Server  /stuff/change_price  ${MEMBER_TOKEN}  ${change_req}
+
+    ${plan_after}  Get Buyer Plan By Id  ${BUYER_TOKEN}  ${plan}[id]
+    Should Be Equal As Numbers  ${plan_after}[unit_price]  109
 
 Group ViewOnly User Cannot Configure Member Company Price Strategy
     [Setup]  Setup Group Contract Price Scenario  ${False}
