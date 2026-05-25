@@ -31,7 +31,7 @@ export default {
         },
         label: {
             type: String,
-            default: '统计范围',
+            default: '操作主体',
         },
         showLabel: {
             type: Boolean,

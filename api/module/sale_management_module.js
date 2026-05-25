@@ -364,8 +364,6 @@ module.exports = {
                 if (!context_company || !home_company) {
                     return { stuff: [], total: 0 };
                 }
-                // 统计范围切换到成员公司时，仅返回该成员公司的物料；
-                // 统计范围是集团公司时，返回集团及其可见成员公司物料。
                 const scope_company = context_company;
                 let company_ids = [scope_company.id];
                 if (scope_company.is_group) {

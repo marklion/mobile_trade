@@ -1,7 +1,7 @@
 <template>
 <view>
     <u-subsection :list="seg_list" :current="cur_seg" @change="seg_change"></u-subsection>
-    <u-cell v-if="cur_seg == 0 && show_scope_switch && stat_scopes.length > 1" title="统计范围" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
+    <u-cell v-if="cur_seg == 0 && show_scope_switch && stat_scopes.length > 1" title="操作主体" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
     <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
         <fui-list>
             <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
