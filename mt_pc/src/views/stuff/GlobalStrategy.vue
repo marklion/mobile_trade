@@ -557,6 +557,11 @@ export default {
             let ret = await this.$send_req('/global/get_the_order_display_price', {});
             this.is_the_order_display_price = ret.is_the_order_display_price;
         },
+        set_the_order_display_price: async function () {
+            await this.$send_req('/stuff/set_the_order_display_price', {
+                is_the_order_display_price: this.is_the_order_display_price
+            });
+        },
         get_change_finished_order_price_switch: async function () {
             let ret = await this.$send_req('/global/get_change_finished_order_price_switch', {});
             this.change_finished_order_price_switch = ret.change_finished_order_price_switch;
