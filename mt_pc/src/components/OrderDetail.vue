@@ -84,9 +84,6 @@
                 <el-descriptions title="出入信息" border :column="2">
                     <el-descriptions-item label="进厂时间">{{plan.enter_time?plan.enter_time:'未入场'}}</el-descriptions-item>
                     <el-descriptions-item label="排号时间">{{plan.register_time?(plan.register_time +'(' +plan.register_number + '号)'):'未排号'}}</el-descriptions-item>
-                    <template slot="extra">
-                        <el-button v-permission="['scale']" v-if="can_pass_vehicle" type="danger" size="small" @click="pass_vehicle">过号</el-button>
-                    </template>
                 </el-descriptions>
 
                 <el-descriptions title="装卸信息" border :column="2">
