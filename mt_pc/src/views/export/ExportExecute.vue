@@ -5,15 +5,29 @@
         <array-selector-button v-model="columns_defined" :options="export_column_options" @change="save_cd_local"></array-selector-button>
     </div>
     <vue-grid align="stretch">
-        <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
-            <export-date :is_need_pm_time="true" :is_buy="single_module.is_buy" :need_stuff="single_module.has_more_filter" :need_company="single_module.has_more_filter" :export_name="single_module.module_name" @do_export="export_order($event, single_module.module)" concern_finished></export-date>
+        <vue-cell class="cell_show" v-for="(single_module, index) in order_and_ticket_modules" :key="index" width="3of12">
+            <export-date
+                :key="'order-' + single_module.module + '-' + (globalStatContextCompanyId || 0)"
+                :is_need_pm_time="true"
+                :is_buy="single_module.is_buy"
+                :need_stuff="single_module.has_more_filter"
+                :need_company="single_module.has_more_filter"
+                :export_name="single_module.module_name"
+                :external_scope_id="scope_selector_enabled && single_module.module === 'sale_management' ? globalStatContextCompanyId : null"
+                @do_export="export_order($event, single_module.module)"
+                concern_finished></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
     <h2>磅单导出</h2>
     <vue-grid align="stretch">
-        <vue-cell class="cell_show" v-for="(single_module, index) in all_module" :key="index" width="3of12">
-            <export-date :export_name="single_module.module_name" @do_export="export_ticket($event, single_module.module)" :need_company="single_module.has_more_filter"></export-date>
+        <vue-cell class="cell_show" v-for="(single_module, index) in order_and_ticket_modules" :key="index" width="3of12">
+            <export-date
+                :key="'ticket-' + single_module.module + '-' + (globalStatContextCompanyId || 0)"
+                :export_name="single_module.module_name"
+                :need_company="single_module.has_more_filter"
+                :external_scope_id="scope_selector_enabled && single_module.module === 'sale_management' ? globalStatContextCompanyId : null"
+                @do_export="export_ticket($event, single_module.module)"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
@@ -51,6 +65,7 @@ import {
     VueGrid,
     VueCell
 } from 'vue-grd';
+import { mapGetters } from 'vuex';
 import ArraySelectorButton from '../../components/ArraySelectorButton.vue';
 
 const BASE_EXPORT_COLUMNS = [{
@@ -159,7 +174,6 @@ export default {
     data: function () {
         return {
             columns_defined: [...BASE_EXPORT_COLUMNS],
-            company_is_group: false,
             orig_all_module: [{
                     module: 'sale_management',
                     module_name: '销售接单',
@@ -186,9 +200,42 @@ export default {
         };
     },
     computed: {
+        ...mapGetters([
+            'globalStatCompanyIsGroup',
+            'globalStatSelfCompanyId',
+            'globalStatScopes',
+            'globalStatScopeVisible',
+            'globalStatContextCompanyId',
+        ]),
+        company_is_group: function () {
+            return this.globalStatCompanyIsGroup;
+        },
+        self_company_id: function () {
+            return this.globalStatSelfCompanyId;
+        },
+        stat_scopes: function () {
+            return this.globalStatScopes || [];
+        },
+        scope_selector_enabled: function () {
+            return this.globalStatScopeVisible && this.globalStatContextCompanyId != null;
+        },
         all_module: function () {
             return this.orig_all_module.filter((module) => {
                 return this.$hasPermission(module.module);
+            });
+        },
+        has_group_view_grant: function () {
+            if (!this.company_is_group) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((s) => s.id !== this.self_company_id);
+        },
+        order_and_ticket_modules: function () {
+            return this.all_module.filter((module) => {
+                if (module.module === 'sale_management' && this.company_is_group) {
+                    return this.has_group_view_grant;
+                }
+                return true;
             });
         },
         export_column_options: function () {
@@ -198,14 +245,6 @@ export default {
         },
     },
     methods: {
-        load_self_info: async function () {
-            try {
-                const ret = await this.$send_req('/global/self_info', {});
-                this.company_is_group = !!(ret && ret.company_is_group);
-            } catch (e) {
-                this.company_is_group = false;
-            }
-        },
         show_export_success: function () {
             this.$notify({
                 title: '导出成功',
@@ -328,6 +367,7 @@ export default {
         },
     },
     mounted: async function () {
+        await this.$store.dispatch('statScope/initialize');
         const cd_local = localStorage.getItem('export_columns_defined');
         if (cd_local) {
             try {
@@ -336,7 +376,6 @@ export default {
                 console.error('Failed to parse columns_defined from localStorage:', error);
             }
         }
-        await this.load_self_info();
         const opts = this.export_column_options;
         let cols = this.columns_defined.filter((c) => opts.some((o) => o.name === c.name));
         if (this.company_is_group && !cols.some((c) => c.name === 'supply_company')) {
