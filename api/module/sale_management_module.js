@@ -158,7 +158,7 @@ module.exports = {
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan, t) => {
                     await plan_lib.plan_close(plan, (await rbac_lib.get_user_by_token(token)).name, false, false, t);
-                });
+                }, false, undefined, true);
                 return { result: true };
             }
         },
