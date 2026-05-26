@@ -84,6 +84,9 @@
                 <el-descriptions title="出入信息" border :column="2">
                     <el-descriptions-item label="进厂时间">{{plan.enter_time?plan.enter_time:'未入场'}}</el-descriptions-item>
                     <el-descriptions-item label="排号时间">{{plan.register_time?(plan.register_time +'(' +plan.register_number + '号)'):'未排号'}}</el-descriptions-item>
+                    <template slot="extra">
+                        <el-button v-permission="['scale']" v-if="can_pass_vehicle" type="danger" size="small" @click="pass_vehicle">过号</el-button>
+                    </template>
                 </el-descriptions>
 
                 <el-descriptions title="装卸信息" border :column="2">
@@ -229,6 +232,16 @@ export default {
                 index = 2;
             }
             return status_array[index];
+        },
+        can_pass_vehicle: function () {
+            if (!this.plan || !this.plan.register_time) {
+                return false;
+            }
+            if (this.plan.enter_time) {
+                return false;
+            }
+            let expect_status = this.plan.is_buy ? 1 : 2;
+            return this.plan.status === expect_status;
         },
         plan_buyer_and_saler: function () {
             let buyer = {};
@@ -574,6 +587,10 @@ export default {
             } else {
                 await this.opt_plan('/customer/order_buy_cancel');
             }
+        },
+        pass_vehicle: async function () {
+            await this.ask_confirm('过号');
+            await this.opt_plan('/scale/cancel_check_in');
         },
         ask_confirm: async function (req_type) {
             await this.$confirm('确定要' + req_type + '吗？', req_type, {
