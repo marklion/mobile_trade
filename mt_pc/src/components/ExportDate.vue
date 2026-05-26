@@ -13,13 +13,13 @@
             </el-time-picker>
         </div>
         <div v-if="need_company">
-            <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id"></select-search>
+            <select-search :key="'company-' + stat_context_company_id" filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" :req_body="company_req_body" v-model="company_id"></select-search>
         </div>
         <div v-if="need_contract">
             <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" item_label="company.name" item_value="id" :permission_array="['sale_management', 'stuff_management']" v-model="contract_id"></select-search>
         </div>
         <div v-if="need_stuff">
-            <select-search body_key="stuff" first_item="所有物料" get_url="/stuff/get_all" item_label="name" item_value="id" :permission_array="['stuff']" v-model="stuff_id"></select-search>
+            <select-search :key="'stuff-' + stat_context_company_id" body_key="stuff" first_item="所有物料" :get_url="stuff_get_url" item_label="name" item_value="id" :permission_array="['stuff']" :req_body="stuff_req_body" v-model="stuff_id"></select-search>
         </div>
         <div v-if="concern_finished">
             <el-switch v-model="only_finished" active-text="仅完成" inactive-text="所有">
@@ -66,15 +66,44 @@ export default {
             type: Boolean,
             default: false,
         },
+        external_scope_id: {
+            type: Number,
+            default: null,
+        },
     },
     computed: {
+        effective_scope_id: function () {
+            return this.external_scope_id;
+        },
         contract_get_url: function () {
             if (this.is_buy) {
                 return '/buy_management/contract_get';
             } else {
                 return '/sale_management/contract_get';
             }
-        }
+        },
+        company_req_body: function () {
+            if (this.effective_scope_id == null) {
+                return {};
+            }
+            return {
+                stat_context_company_id: this.effective_scope_id,
+            };
+        },
+        stuff_get_url: function () {
+            if (this.effective_scope_id != null) {
+                return '/sale_management/get_stuff_for_contract';
+            }
+            return '/stuff/get_all';
+        },
+        stuff_req_body: function () {
+            if (this.effective_scope_id == null) {
+                return {};
+            }
+            return {
+                stat_context_company_id: this.effective_scope_id,
+            };
+        },
     },
     data: function () {
         const now = new Date();
@@ -92,6 +121,12 @@ export default {
             },
             pickerOptions: this.$quik_date_option,
         };
+    },
+    watch: {
+        external_scope_id: function () {
+            this.company_id = 0;
+            this.stuff_id = 0;
+        },
     },
     methods: {
         reset_filter() {
@@ -124,6 +159,9 @@ export default {
             }
             if (this.need_stuff && this.stuff_id) {
                 filter.stuff_id = this.stuff_id;
+            }
+            if (this.effective_scope_id != null) {
+                filter.stat_context_company_id = this.effective_scope_id;
             }
             if (this.need_contract && this.contract_id) {
                 filter.contract_id = this.contract_id;

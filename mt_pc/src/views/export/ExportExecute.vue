@@ -1,19 +1,41 @@
 <template>
 <div class="export_execute_show">
+    <div v-if="show_scope_selector" class="scope_top_wrap">
+        <group-stat-scope-selector
+            v-model="stat_context_company_id"
+            :scopes="stat_scopes"
+            :home-company-id="self_company_id"
+            label="操作主体"></group-stat-scope-selector>
+    </div>
     <div class="export_execute_header">
         <h2>订单明细导出</h2>
         <array-selector-button v-model="columns_defined" :options="export_column_options" @change="save_cd_local"></array-selector-button>
     </div>
+    
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in order_and_ticket_modules" :key="index" width="3of12">
-            <export-date :is_need_pm_time="true" :is_buy="single_module.is_buy" :need_stuff="single_module.has_more_filter" :need_company="single_module.has_more_filter" :export_name="single_module.module_name" @do_export="export_order($event, single_module.module)" concern_finished></export-date>
+            <export-date
+                :key="'order-' + single_module.module + '-' + (stat_context_company_id || 0)"
+                :is_need_pm_time="true"
+                :is_buy="single_module.is_buy"
+                :need_stuff="single_module.has_more_filter"
+                :need_company="single_module.has_more_filter"
+                :export_name="single_module.module_name"
+                :external_scope_id="show_scope_selector && single_module.module === 'sale_management' ? stat_context_company_id : null"
+                @do_export="export_order($event, single_module.module)"
+                concern_finished></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
     <h2>磅单导出</h2>
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in order_and_ticket_modules" :key="index" width="3of12">
-            <export-date :export_name="single_module.module_name" @do_export="export_ticket($event, single_module.module)" :need_company="single_module.has_more_filter"></export-date>
+            <export-date
+                :key="'ticket-' + single_module.module + '-' + (stat_context_company_id || 0)"
+                :export_name="single_module.module_name"
+                :need_company="single_module.has_more_filter"
+                :external_scope_id="show_scope_selector && single_module.module === 'sale_management' ? stat_context_company_id : null"
+                @do_export="export_ticket($event, single_module.module)"></export-date>
         </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
@@ -52,6 +74,7 @@ import {
     VueCell
 } from 'vue-grd';
 import ArraySelectorButton from '../../components/ArraySelectorButton.vue';
+import GroupStatScopeSelector from '../../components/GroupStatScopeSelector.vue';
 
 const BASE_EXPORT_COLUMNS = [{
     label: '下单公司',
@@ -153,6 +176,7 @@ export default {
     components: {
         "array-selector-button": ArraySelectorButton,
         "export-date": ExportDate,
+        "group-stat-scope-selector": GroupStatScopeSelector,
         VueGrid,
         VueCell,
     },
@@ -161,6 +185,7 @@ export default {
             columns_defined: [...BASE_EXPORT_COLUMNS],
             company_is_group: false,
             self_company_id: null,
+            stat_context_company_id: null,
             stat_scopes: [],
             orig_all_module: [{
                     module: 'sale_management',
@@ -198,6 +223,9 @@ export default {
                 return false;
             }
             return (this.stat_scopes || []).some((s) => s.id !== this.self_company_id);
+        },
+        show_scope_selector: function () {
+            return this.company_is_group && this.has_group_view_grant && (this.stat_scopes || []).length > 1;
         },
         order_and_ticket_modules: function () {
             return this.all_module.filter((module) => {
@@ -262,6 +290,7 @@ export default {
                     m_start_time: filter.m_start_time,
                     m_end_time: filter.m_end_time,
                     only_finished: filter.only_finished,
+                    stat_context_company_id: filter.stat_context_company_id,
                     columns:this.columns_defined,
                 });
                 this.show_export_success();
@@ -277,6 +306,7 @@ export default {
                     end_time: filter.end_time,
                     ticket_type: module,
                     company_id: filter.company_id,
+                    stat_context_company_id: filter.stat_context_company_id,
                     only_finished: true,
                 });
                 this.show_export_success();
@@ -370,6 +400,18 @@ export default {
         }
         await this.load_self_info();
         await this.load_stat_scopes();
+        if (this.show_scope_selector) {
+            const first_member_scope = (this.stat_scopes || []).find((s) => s.id !== this.self_company_id);
+            if (first_member_scope) {
+                this.stat_context_company_id = first_member_scope.id;
+            } else if (this.self_company_id != null) {
+                this.stat_context_company_id = this.self_company_id;
+            } else if ((this.stat_scopes || []).length > 0) {
+                this.stat_context_company_id = this.stat_scopes[0].id;
+            }
+        } else {
+            this.stat_context_company_id = null;
+        }
         const opts = this.export_column_options;
         let cols = this.columns_defined.filter((c) => opts.some((o) => o.name === c.name));
         if (this.company_is_group && !cols.some((c) => c.name === 'supply_company')) {
@@ -389,6 +431,10 @@ export default {
     display: flex;
     align-items: center;
     gap: 12px;
+}
+
+.scope_top_wrap {
+    margin: 4px 0 16px;
 }
 
 .cell_show {

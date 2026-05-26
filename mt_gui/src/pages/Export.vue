@@ -2,6 +2,17 @@
 <view>
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
+        <u-cell v-if="show_sale_scope_switch && stat_scopes.length > 1" title="操作主体" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
+        <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
+            <fui-list>
+                <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
+                    <view style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                        <view style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ s.name }}</view>
+                        <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#1E9FFF"></fui-icon>
+                    </view>
+                </fui-list-cell>
+            </fui-list>
+        </fui-bottom-popup>
         <u-cell-group title="时间段">
             <u-cell :title="begin_date + '~' + end_date">
                 <fui-button slot="right-icon" text="选择日期" @click="show_plan_date = true" btnSize="mini" type="warning"></fui-button>
@@ -27,8 +38,8 @@
                         <fui-date-picker type="7" :show="show_end_time" :hour="end_hour" :minute="end_minute" :second="end_second" @change="handleEndTimeChange" @cancel="show_end_time = false" />
                     </view>
                     <view style="display:flex; justify-content: start;">
-                        <data-filter filter_name="公司" :get_func="get_customers" search_key="name" tag_color="success" v-model="company_filter"></data-filter>
-                        <data-filter filter_name="物料" :get_func="get_stuff" search_key="name" tag_color="purple" v-model="stuff_filter"></data-filter>
+                        <data-filter :key="'export-company-' + (show_sale_scope_switch ? (stat_context_company_id || 0) : 'default')" filter_name="公司" :get_func="get_customers" search_key="name" tag_color="success" v-model="company_filter"></data-filter>
+                        <data-filter :key="'export-stuff-' + (show_sale_scope_switch ? (stat_context_company_id || 0) : 'default')" filter_name="物料" :get_func="get_stuff" search_key="name" tag_color="purple" v-model="stuff_filter"></data-filter>
                     </view>
                 </module-filter>
                 <module-filter v-for="(item, index) in order_and_ticket_modules" :key="index" :require_module="item.module">
@@ -131,6 +142,7 @@ export default {
             begin_date: '',
             cur_page: 0,
             end_date: '',
+            show_scope_picker: false,
             sub_pages: ['执行导出', '导出记录'],
             records: [],
             all_module: [
@@ -145,6 +157,7 @@ export default {
             company_is_group: false,
             self_company_id: null,
             stat_scopes: [],
+            stat_context_company_id: null,
         };
     },
     computed: {
@@ -153,6 +166,13 @@ export default {
                 return false;
             }
             return (this.stat_scopes || []).some((s) => s.id !== this.self_company_id);
+        },
+        show_sale_scope_switch: function () {
+            return this.company_is_group && this.has_group_view_grant;
+        },
+        current_scope_name: function () {
+            const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
+            return current ? current.name : '';
         },
         order_and_ticket_modules: function () {
             let ret = [];
@@ -175,6 +195,25 @@ export default {
             this.end_second = '';
             this.show_start_time = false;
             this.show_end_time = false;
+        },
+        open_scope_picker: function () {
+            this.show_scope_picker = true;
+        },
+        choose_stat_scope: function (company_id) {
+            if (this.stat_context_company_id === company_id) {
+                this.show_scope_picker = false;
+                return;
+            }
+            this.stat_context_company_id = company_id;
+            this.show_scope_picker = false;
+            this.company_filter = {
+                id: undefined,
+                name: '',
+            };
+            this.stuff_filter = {
+                id: undefined,
+                name: '',
+            };
         },
         download_file: function (url) {
             uni.downloadFile({
@@ -227,14 +266,23 @@ export default {
                 export_params.m_start_time = this.begin_date + ' ' + this.begin_hour + ':' + this.begin_minute + ':' + this.begin_second;
                 export_params.m_end_time = this.end_date + ' ' + this.end_hour + ':' + this.end_minute + ':' + this.end_second;
             }
+            if (prefix === '/sale_management' && this.show_sale_scope_switch && this.stat_context_company_id != null) {
+                export_params.stat_context_company_id = this.stat_context_company_id;
+            }
             await this.$send_req(prefix + '/export_plans', export_params);
             this.cur_page = 1;
         },
         get_stuff: async function (pageNo) {
             if (this.$has_module('stuff')) {
-                let ret = await this.$send_req('/stuff/get_all', {
+                let req_url = '/stuff/get_all';
+                let req_body = {
                     pageNo: pageNo
-                });
+                };
+                if (this.show_sale_scope_switch && this.stat_context_company_id != null) {
+                    req_url = '/sale_management/get_stuff_for_contract';
+                    req_body.stat_context_company_id = this.stat_context_company_id;
+                }
+                let ret = await this.$send_req(req_url, req_body);
                 return ret.stuff;
             } else {
                 return [];
@@ -257,11 +305,17 @@ export default {
         },
         export_weight_ticket: async function (ticket_type) {
             try {
-                await this.$send_req('/global/download_ticket_zip', {
+                const req_body = {
                     start_time: this.begin_date,
                     end_time: this.end_date,
                     ticket_type: ticket_type,
                     only_finished: true,
+                };
+                if (ticket_type === 'sale_management' && this.show_sale_scope_switch && this.stat_context_company_id != null) {
+                    req_body.stat_context_company_id = this.stat_context_company_id;
+                }
+                await this.$send_req('/global/download_ticket_zip', {
+                    ...req_body,
                 });
                 this.cur_page = 1;
             } catch (error) {
@@ -318,9 +372,13 @@ export default {
         get_customers: async function (pageNo) {
             let companies = [];
             if (this.$has_module('sale_management')) {
-                let ret = await this.$send_req('/sale_management/contract_get', {
+                let req = {
                     pageNo: pageNo
-                });
+                };
+                if (this.show_sale_scope_switch && this.stat_context_company_id != null) {
+                    req.stat_context_company_id = this.stat_context_company_id;
+                }
+                let ret = await this.$send_req('/sale_management/contract_get', req);
                 companies = companies.concat(ret.contracts);
             }
             if (this.$has_module('buy_management')) {
@@ -367,6 +425,14 @@ export default {
             try {
                 let ret = await this.$send_req('/global/home_stat_scope_list', {});
                 this.stat_scopes = (ret && ret.scopes) || [];
+                const first_member_scope = (this.stat_scopes || []).find((s) => s.id !== this.self_company_id);
+                if (first_member_scope) {
+                    this.stat_context_company_id = first_member_scope.id;
+                } else if (this.self_company_id != null) {
+                    this.stat_context_company_id = this.self_company_id;
+                } else if ((this.stat_scopes || []).length > 0) {
+                    this.stat_context_company_id = this.stat_scopes[0].id;
+                }
             } catch (e) {
                 console.warn('获取 home_stat_scope_list 失败，使用默认值:', e);
                 this.stat_scopes = [];
@@ -374,7 +440,9 @@ export default {
         }
     },
     onPullDownRefresh() {
-        this.$refs.dr.refresh();
+        if (this.cur_page == 1 && this.$refs.dr && this.$refs.dr.refresh) {
+            this.$refs.dr.refresh();
+        }
         uni.stopPullDownRefresh();
     },
 
