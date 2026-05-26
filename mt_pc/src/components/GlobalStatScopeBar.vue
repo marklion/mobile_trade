@@ -3,8 +3,8 @@
     v-if="showSelector"
     :class="['global-scope-wrap', { 'is-home-selected': isHomeSelected, 'is-member-selected': isMemberSelected }]"
   >
-    <i class="el-icon-office-building scope-icon"></i>
-    <span class="scope-label">主体</span>
+    <i class="el-icon-office-building scope-icon" />
+    <span class="scope-label">操作主体</span>
     <el-select
       :value="globalStatContextCompanyId"
       :title="currentScopeLabel"
