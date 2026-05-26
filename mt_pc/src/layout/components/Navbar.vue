@@ -194,14 +194,11 @@ export default {
                     display: inline-flex;
                     flex-direction: column;
                     justify-content: center;
-                    max-width: 180px;
                     min-width: 0;
                     margin-right: 8px;
                 }
 
                 .user-meta-line {
-                    overflow: hidden;
-                    text-overflow: ellipsis;
                     white-space: nowrap;
                 }
 
