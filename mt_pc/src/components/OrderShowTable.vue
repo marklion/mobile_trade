@@ -101,7 +101,7 @@
                             <div>
                                 {{status_string(scope.row.status)}}
                             </div>
-                            <div v-if="scope.row.register_time">
+                            <div v-if="scope.row.register_time && scope.row.status != 3">
                                 <el-tag size="mini" type="danger">
                                     已排号
                                 </el-tag>
