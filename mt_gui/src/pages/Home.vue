@@ -166,8 +166,8 @@ export default {
                 width: '400'
             }, {
                 prop: 'confirm_count',
-                label: '总车数',
-                width: '160'
+                label: '总车数(取消)',
+                width: '200'
             }, {
                 prop: 'finish_count',
                 label: '完成数',
@@ -214,17 +214,21 @@ export default {
                 base_day: this.base_day,
                 stat_context_company_id: this.stat_context_company_id,
             });
+            let format_confirm_count = (confirm_count, cancel_count) => {
+                let cc = cancel_count || 0;
+                return cc > 0 ? `${confirm_count}(${cc})` : `${confirm_count}`;
+            };
             this.tableData = [];
             this.tableData.push({
                 company_name: '合计',
-                confirm_count: resp.total_confirm_count,
+                confirm_count: format_confirm_count(resp.total_confirm_count, resp.total_cancel_count),
                 finish_count: resp.total_finish_count,
             });
             for (let index = 0; index < resp.statistic.length; index++) {
                 const element = resp.statistic[index];
                 this.tableData.push({
                     company_name: element.company.name,
-                    confirm_count: element.confirm_count,
+                    confirm_count: format_confirm_count(element.confirm_count, element.cancel_count),
                     finish_count: element.finish_count,
                 })
             }

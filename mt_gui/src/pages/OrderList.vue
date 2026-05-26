@@ -70,6 +70,7 @@
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
                         <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
+                        <fui-tag v-if="item.register_time && item.status != 3" theme="plain" text="已排号" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
                         <fui-tag v-if="item.count && item.count != 0" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
                         <fui-tag v-if="item.status == 1 && item.arrears > 0" theme="plain" :text="'欠款额:' + item.arrears + '需付'+ item.outstanding_vehicles + '车'" :scaleRatio="0.8" type="warning"></fui-tag>
@@ -172,6 +173,7 @@
                     </u-cell>
                     <u-cell :title="'当前状态：' + plan_status">
                         <view slot="value" style="display:flex;">
+                            <fui-tag v-if="focus_plan.register_time && focus_plan.status != 3" theme="plain" text="已排号" :scaleRatio="0.8" type="primary"></fui-tag>
                             <module-filter :rm_array="['customer', 'supplier']"></module-filter>
                             <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
                             <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
@@ -181,6 +183,7 @@
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
                             </module-filter>
                             <module-filter require_module="scale">
+                                <fui-button v-if="can_pass_vehicle" btnSize="mini" type="danger" text="过号" @click="prepare_xxx_confirm('/scale/cancel_check_in', '过号')"></fui-button>
                                 <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
                             </module-filter>
                         </view>
@@ -763,6 +766,16 @@ export default {
             }
 
             return ret;
+        },
+        can_pass_vehicle: function () {
+            if (!this.focus_plan || !this.focus_plan.register_time) {
+                return false;
+            }
+            if (this.focus_plan.enter_time) {
+                return false;
+            }
+            const expect_status = this.focus_plan.is_buy ? 1 : 2;
+            return this.focus_plan.status === expect_status;
         },
 
     },

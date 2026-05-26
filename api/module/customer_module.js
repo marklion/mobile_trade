@@ -269,7 +269,18 @@ module.exports = {
                 let opt_company = await rbac_lib.get_company_by_token(token);
                 let user = await rbac_lib.get_user_by_token(token);
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
-                if (user && plan && opt_company && await opt_company.hasPlan(plan)) {
+                let has_permission = user && plan && opt_company && await opt_company.hasPlan(plan);
+                if (!has_permission && user && plan && opt_company && opt_company.is_group === true) {
+                    const candidate_companies = [plan.company, plan.stuff && plan.stuff.company].filter(Boolean);
+                    for (const target_company of candidate_companies) {
+                        if (target_company.parentGroupCompanyId === opt_company.id
+                            && await group_lib.user_has_member_data_access(user.id, target_company.id, true)) {
+                            has_permission = true;
+                            break;
+                        }
+                    }
+                }
+                if (has_permission) {
                     await plan_lib.plan_close(plan, user.name, true);
                 }
                 else {
