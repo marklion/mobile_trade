@@ -1,12 +1,5 @@
 <template>
 <div class="export_execute_show">
-    <div v-if="show_scope_selector" class="scope_top_wrap">
-        <group-stat-scope-selector
-            v-model="stat_context_company_id"
-            :scopes="stat_scopes"
-            :home-company-id="self_company_id"
-            label="操作主体"></group-stat-scope-selector>
-    </div>
     <div class="export_execute_header">
         <h2>订单明细导出</h2>
         <array-selector-button v-model="columns_defined" :options="export_column_options" @change="save_cd_local"></array-selector-button>
@@ -15,13 +8,13 @@
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in order_and_ticket_modules" :key="index" width="3of12">
             <export-date
-                :key="'order-' + single_module.module + '-' + (stat_context_company_id || 0)"
+                :key="'order-' + single_module.module + '-' + (globalStatContextCompanyId || 0)"
                 :is_need_pm_time="true"
                 :is_buy="single_module.is_buy"
                 :need_stuff="single_module.has_more_filter"
                 :need_company="single_module.has_more_filter"
                 :export_name="single_module.module_name"
-                :external_scope_id="show_scope_selector && single_module.module === 'sale_management' ? stat_context_company_id : null"
+                :external_scope_id="scope_selector_enabled && single_module.module === 'sale_management' ? globalStatContextCompanyId : null"
                 @do_export="export_order($event, single_module.module)"
                 concern_finished></export-date>
         </vue-cell>
@@ -31,10 +24,10 @@
     <vue-grid align="stretch">
         <vue-cell class="cell_show" v-for="(single_module, index) in order_and_ticket_modules" :key="index" width="3of12">
             <export-date
-                :key="'ticket-' + single_module.module + '-' + (stat_context_company_id || 0)"
+                :key="'ticket-' + single_module.module + '-' + (globalStatContextCompanyId || 0)"
                 :export_name="single_module.module_name"
                 :need_company="single_module.has_more_filter"
-                :external_scope_id="show_scope_selector && single_module.module === 'sale_management' ? stat_context_company_id : null"
+                :external_scope_id="scope_selector_enabled && single_module.module === 'sale_management' ? globalStatContextCompanyId : null"
                 @do_export="export_ticket($event, single_module.module)"></export-date>
         </vue-cell>
     </vue-grid>
@@ -73,8 +66,8 @@ import {
     VueGrid,
     VueCell
 } from 'vue-grd';
+import { mapGetters } from 'vuex';
 import ArraySelectorButton from '../../components/ArraySelectorButton.vue';
-import GroupStatScopeSelector from '../../components/GroupStatScopeSelector.vue';
 
 const BASE_EXPORT_COLUMNS = [{
     label: '下单公司',
@@ -176,17 +169,12 @@ export default {
     components: {
         "array-selector-button": ArraySelectorButton,
         "export-date": ExportDate,
-        "group-stat-scope-selector": GroupStatScopeSelector,
         VueGrid,
         VueCell,
     },
     data: function () {
         return {
             columns_defined: [...BASE_EXPORT_COLUMNS],
-            company_is_group: false,
-            self_company_id: null,
-            stat_context_company_id: null,
-            stat_scopes: [],
             orig_all_module: [{
                     module: 'sale_management',
                     module_name: '销售接单',
@@ -213,6 +201,25 @@ export default {
         };
     },
     computed: {
+        ...mapGetters([
+            'globalStatCompanyIsGroup',
+            'globalStatSelfCompanyId',
+            'globalStatScopes',
+            'globalStatScopeVisible',
+            'globalStatContextCompanyId',
+        ]),
+        company_is_group: function () {
+            return this.globalStatCompanyIsGroup;
+        },
+        self_company_id: function () {
+            return this.globalStatSelfCompanyId;
+        },
+        stat_scopes: function () {
+            return this.globalStatScopes || [];
+        },
+        scope_selector_enabled: function () {
+            return this.globalStatScopeVisible && this.globalStatContextCompanyId != null;
+        },
         all_module: function () {
             return this.orig_all_module.filter((module) => {
                 return this.$hasPermission(module.module);
@@ -223,9 +230,6 @@ export default {
                 return false;
             }
             return (this.stat_scopes || []).some((s) => s.id !== this.self_company_id);
-        },
-        show_scope_selector: function () {
-            return this.company_is_group && this.has_group_view_grant && (this.stat_scopes || []).length > 1;
         },
         order_and_ticket_modules: function () {
             return this.all_module.filter((module) => {
@@ -242,30 +246,6 @@ export default {
         },
     },
     methods: {
-        load_self_info: async function () {
-            try {
-                const ret = await this.$send_req('/global/self_info', {});
-                this.company_is_group = !!(ret && ret.company_is_group);
-                this.self_company_id = ret && ret.company_id != null ? ret.company_id : null;
-            } catch (e) {
-                console.warn('获取 self_info 失败，使用默认值:', e);
-                this.company_is_group = false;
-                this.self_company_id = null;
-            }
-        },
-        load_stat_scopes: async function () {
-            if (!this.company_is_group) {
-                this.stat_scopes = [];
-                return;
-            }
-            try {
-                const ret = await this.$send_req('/global/home_stat_scope_list', {});
-                this.stat_scopes = (ret && ret.scopes) || [];
-            } catch (e) {
-                console.warn('获取 home_stat_scope_list 失败，使用默认值:', e);
-                this.stat_scopes = [];
-            }
-        },
         show_export_success: function () {
             this.$notify({
                 title: '导出成功',
@@ -390,6 +370,7 @@ export default {
         },
     },
     mounted: async function () {
+        await this.$store.dispatch('statScope/initialize');
         const cd_local = localStorage.getItem('export_columns_defined');
         if (cd_local) {
             try {
@@ -397,20 +378,6 @@ export default {
             } catch (error) {
                 console.error('Failed to parse columns_defined from localStorage:', error);
             }
-        }
-        await this.load_self_info();
-        await this.load_stat_scopes();
-        if (this.show_scope_selector) {
-            const first_member_scope = (this.stat_scopes || []).find((s) => s.id !== this.self_company_id);
-            if (first_member_scope) {
-                this.stat_context_company_id = first_member_scope.id;
-            } else if (this.self_company_id != null) {
-                this.stat_context_company_id = this.self_company_id;
-            } else if ((this.stat_scopes || []).length > 0) {
-                this.stat_context_company_id = this.stat_scopes[0].id;
-            }
-        } else {
-            this.stat_context_company_id = null;
         }
         const opts = this.export_column_options;
         let cols = this.columns_defined.filter((c) => opts.some((o) => o.name === c.name));
@@ -431,10 +398,6 @@ export default {
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.scope_top_wrap {
-    margin: 4px 0 16px;
 }
 
 .cell_show {

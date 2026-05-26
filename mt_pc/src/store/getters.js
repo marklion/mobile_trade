@@ -11,5 +11,17 @@ const getters = {
   permission_routes: state => state.permission.routes,
   visitedViews: state => state.tagsView.visitedViews,
   cachedViews: state => state.tagsView.cachedViews,
+  globalStatScopeReady: state => state.statScope.initialized,
+  globalStatScopeLoading: state => state.statScope.loading,
+  globalStatCompanyIsGroup: state => state.statScope.companyIsGroup,
+  globalStatSelfCompanyId: state => state.statScope.selfCompanyId,
+  globalStatScopes: state => state.statScope.scopes,
+  globalStatContextCompanyId: state => state.statScope.selectedCompanyId,
+  globalStatScopeVisible: state => {
+    if (!state.statScope.companyIsGroup || state.statScope.selfCompanyId == null) {
+      return false
+    }
+    return (state.statScope.scopes || []).some((s) => s.id !== state.statScope.selfCompanyId)
+  },
 }
 export default getters
