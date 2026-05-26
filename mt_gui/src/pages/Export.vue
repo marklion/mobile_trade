@@ -31,8 +31,8 @@
                         <data-filter filter_name="物料" :get_func="get_stuff" search_key="name" tag_color="purple" v-model="stuff_filter"></data-filter>
                     </view>
                 </module-filter>
-                <module-filter v-for="(single_module, index) in all_module" :key="index" :require_module="single_module">
-                    <u-cell :title="button_name[index]" isLink @click="export_plan('/' + single_module)"></u-cell>
+                <module-filter v-for="(item, index) in order_and_ticket_modules" :key="index" :require_module="item.module">
+                    <u-cell :title="item.name" isLink @click="export_plan('/' + item.module)"></u-cell>
                 </module-filter>
             </u-cell-group>
         </module-filter>
@@ -54,8 +54,8 @@
         <u-divider lineColor="blue"></u-divider>
         <module-filter :rm_array="['sale_management', 'buy_management', 'supplier', 'customer']">
             <u-cell-group title="磅单导出">
-                <module-filter v-for="(single_module, index) in all_module" :key="index" :require_module="single_module">
-                    <u-cell :title="'导出' + button_name[index] + '磅单'" isLink @click="export_weight_ticket(single_module)"></u-cell>
+                <module-filter v-for="(item, index) in order_and_ticket_modules" :key="index" :require_module="item.module">
+                    <u-cell :title="'导出' + item.name + '磅单'" isLink @click="export_weight_ticket(item.module)"></u-cell>
                 </module-filter>
             </u-cell-group>
         </module-filter>
@@ -142,7 +142,28 @@ export default {
             button_name: [
                 '销售接单', '采购接单', '采购下单', '销售下单'
             ],
+            company_is_group: false,
+            self_company_id: null,
+            stat_scopes: [],
         };
+    },
+    computed: {
+        has_group_view_grant: function () {
+            if (!this.company_is_group) {
+                return false;
+            }
+            return (this.stat_scopes || []).some((s) => s.id !== this.self_company_id);
+        },
+        order_and_ticket_modules: function () {
+            let ret = [];
+            this.all_module.forEach((m, i) => {
+                if (m === 'sale_management' && this.company_is_group && !this.has_group_view_grant) {
+                    return;
+                }
+                ret.push({ module: m, name: this.button_name[i] });
+            });
+            return ret;
+        },
     },
     methods: {
         clearTime() {
@@ -319,7 +340,7 @@ export default {
             return ret;
         },
     },
-    onLoad() {
+    async onLoad() {
         let today = new Date();
         let five_days_before = new Date(today.getTime() - 5 * 24 * 60 * 60 * 1000);
         this.begin_date = utils.dateFormatter(five_days_before, 'y-m-d', 4, false);
@@ -332,6 +353,23 @@ export default {
         this.end_hour = today.getHours().toString().padStart(2, '0');
         this.end_minute = today.getMinutes().toString().padStart(2, '0');
         this.end_second = today.getSeconds().toString().padStart(2, '0');
+
+        try {
+            let self_info = uni.getStorageSync('self_info');
+            this.company_is_group = !!(self_info && self_info.company_is_group);
+            this.self_company_id = self_info && self_info.company_id != null ? self_info.company_id : null;
+        } catch (e) {
+            this.company_is_group = false;
+            this.self_company_id = null;
+        }
+        if (this.company_is_group) {
+            try {
+                let ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = (ret && ret.scopes) || [];
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        }
     },
     onPullDownRefresh() {
         this.$refs.dr.refresh();
