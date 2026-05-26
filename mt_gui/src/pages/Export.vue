@@ -359,6 +359,7 @@ export default {
             this.company_is_group = !!(self_info && self_info.company_is_group);
             this.self_company_id = self_info && self_info.company_id != null ? self_info.company_id : null;
         } catch (e) {
+            console.warn('读取 self_info 失败，使用默认值:', e);
             this.company_is_group = false;
             this.self_company_id = null;
         }
@@ -367,6 +368,7 @@ export default {
                 let ret = await this.$send_req('/global/home_stat_scope_list', {});
                 this.stat_scopes = (ret && ret.scopes) || [];
             } catch (e) {
+                console.warn('获取 home_stat_scope_list 失败，使用默认值:', e);
                 this.stat_scopes = [];
             }
         }
