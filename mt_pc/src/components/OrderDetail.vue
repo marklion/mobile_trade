@@ -230,16 +230,6 @@ export default {
             }
             return status_array[index];
         },
-        can_pass_vehicle: function () {
-            if (!this.plan || !this.plan.register_time) {
-                return false;
-            }
-            if (this.plan.enter_time) {
-                return false;
-            }
-            let expect_status = this.plan.is_buy ? 1 : 2;
-            return this.plan.status === expect_status;
-        },
         plan_buyer_and_saler: function () {
             let buyer = {};
             let saler = {};
@@ -584,10 +574,6 @@ export default {
             } else {
                 await this.opt_plan('/customer/order_buy_cancel');
             }
-        },
-        pass_vehicle: async function () {
-            await this.ask_confirm('过号');
-            await this.opt_plan('/scale/cancel_check_in');
         },
         ask_confirm: async function (req_type) {
             await this.$confirm('确定要' + req_type + '吗？', req_type, {
