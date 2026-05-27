@@ -86,11 +86,11 @@ module.exports = {
 
         return ret;
     },
-    export_cash_history: async function (token, contract_id, begin_time, end_time) {
+    export_cash_history: async function (token, contract_id, begin_time, end_time, scope_company) {
         if (!end_time.includes(':')) {
             end_time += ' 23:59:59';
         }
-        let company = await rbac_lib.get_company_by_token(token);
+        let company = scope_company || await rbac_lib.get_company_by_token(token);
         let contract = await db_opt.get_sq().models.contract.findByPk(contract_id);
         if (company && contract && (await company.hasSale_contract(contract) || await company.hasBuy_contract(contract))) {
             let resp = await this.getBalanceHistoryWithAfterValue(contract_id, begin_time, end_time);
@@ -136,6 +136,7 @@ module.exports = {
             await workbook.xlsx.writeFile('/database' + file_name);
             return file_name;
         }
+        throw { err_msg: '无权限' };
     },
     req2u8c: async function (u8c_config, url, req) {
         let ret = {};

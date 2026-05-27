@@ -72,8 +72,11 @@ export default {
         },
     },
     computed: {
+        show_scope_selector: function () {
+            return this.external_scope_id != null;
+        },
         show_sale_scope_selector: function () {
-            return !this.is_buy && this.external_scope_id != null;
+            return !this.is_buy && this.show_scope_selector;
         },
         contract_get_url: function () {
             if (this.is_buy) {
@@ -125,7 +128,7 @@ export default {
         make_context_req: function (body = {}) {
             const ret = { ...body };
             delete ret.stat_context_company_id;
-            if (this.show_sale_scope_selector) {
+            if (this.show_scope_selector) {
                 ret.stat_context_company_id = this.external_scope_id;
             }
             return ret;
@@ -167,7 +170,7 @@ export default {
             if (this.concern_finished && this.only_finished) {
                 filter.only_finished = this.only_finished;
             }
-            if (this.show_sale_scope_selector) {
+            if (this.show_scope_selector) {
                 filter.stat_context_company_id = this.external_scope_id;
             }
             this.$emit('do_export', filter);

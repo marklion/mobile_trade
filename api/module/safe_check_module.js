@@ -475,6 +475,7 @@ module.exports = {
             params: {
                 start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }

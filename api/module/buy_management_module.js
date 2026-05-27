@@ -89,6 +89,7 @@ module.exports = {
             is_write: false,
             is_get_api: true,
             params: {
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 contracts: {
@@ -126,7 +127,7 @@ module.exports = {
             },
 
             func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
                 let found_ret = await plan_lib.get_all_buy_contracts(company, body.pageNo, body.stuff_id);
                 return {
                     contracts: found_ret.rows,
