@@ -183,6 +183,7 @@
                                 <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
                             </module-filter>
                             <module-filter require_module="scale">
+                                <fui-button v-if="can_pass_vehicle" btnSize="mini" type="danger" text="过号" @click="prepare_xxx_confirm('/scale/cancel_check_in', '过号')"></fui-button>
                                 <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
                             </module-filter>
                         </view>
@@ -765,6 +766,16 @@ export default {
             }
 
             return ret;
+        },
+        can_pass_vehicle: function () {
+            if (!this.focus_plan || !this.focus_plan.register_time) {
+                return false;
+            }
+            if (this.focus_plan.enter_time) {
+                return false;
+            }
+            const expect_status = this.focus_plan.is_buy ? 1 : 2;
+            return this.focus_plan.status === expect_status;
         },
 
     },

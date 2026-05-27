@@ -912,7 +912,23 @@ module.exports = {
             throw { err_msg: '更新计划失败，司机或车辆已被列入黑名单' };
         }
         let opt_company = await rbac_lib.get_company_by_token(_token);
-        if ((company && opt_company && company.id == opt_company.id) || (owner_company && opt_company && owner_company.id == opt_company.id)) {
+        let opt_user = await rbac_lib.get_user_by_token(_token);
+        let has_permission = false;
+        if (company && opt_company && company.id == opt_company.id) {
+            has_permission = true;
+        }
+        if (!has_permission && owner_company && opt_company && owner_company.id == opt_company.id) {
+            has_permission = true;
+        }
+        if (!has_permission && plan && plan.is_buy === false && opt_company && opt_company.is_group === true && opt_user) {
+            if (company && company.parentGroupCompanyId === opt_company.id) {
+                has_permission = await group_lib.user_has_member_data_access(opt_user.id, company.id, true);
+            }
+            if (!has_permission && owner_company && owner_company.parentGroupCompanyId === opt_company.id) {
+                has_permission = await group_lib.user_has_member_data_access(opt_user.id, owner_company.id, true);
+            }
+        }
+        if (has_permission) {
             let change_comment = '';
             if (_update_data.plan_time != undefined) {
                 change_comment += '计划时间由' + plan.plan_time + '改为' + _update_data.plan_time + ';\n';

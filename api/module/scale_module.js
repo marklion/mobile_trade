@@ -79,7 +79,7 @@ module.exports = {
                     await field_lib.handle_cancel_check_in(plan);
                     let user = await rbac_lib.get_user_by_token(token);
                     await plan_lib.rp_history_cancel_checkin(plan, user.name);
-                });
+                }, false, null, true);
                 return { result: true };
             },
         },
