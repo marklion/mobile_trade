@@ -334,7 +334,11 @@ export default {
                 return;
             }
             if (this.$refs.contracts) {
-                this.$refs.contracts.refresh(1);
+                this.$nextTick(() => {
+                    if (this.$refs.contracts) {
+                        this.$refs.contracts.refresh(1);
+                    }
+                });
             }
             if (this.can_manage_discount) {
                 this.load_discount_schemes();
