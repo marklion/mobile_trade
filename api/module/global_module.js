@@ -240,6 +240,23 @@ async function checkif_plan_checkinable(plan, driver, lat, lon) {
     }
     return ret;
 }
+function hasStatContextCompanyId(body) {
+    return body
+        && body.stat_context_company_id !== undefined
+        && body.stat_context_company_id !== null
+        && body.stat_context_company_id !== '';
+}
+async function shouldUseManagerFilterByStatContext(body, token) {
+    if (!hasStatContextCompanyId(body)) {
+        return false;
+    }
+    const home_company = await rbac_lib.get_company_by_token(token);
+    if (!home_company || !home_company.is_group) {
+        return false;
+    }
+    const scope_company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+    return !!(scope_company && Number(scope_company.id) !== Number(home_company.id));
+}
 async function getPlansByTicketType(body, token) {
     switch (body.ticket_type) {
         case 'sale_management':
@@ -247,12 +264,12 @@ async function getPlansByTicketType(body, token) {
         case 'buy_management':
             return await plan_lib.filter_plan4manager(body, token, true);
         case 'customer':
-            if (body.stat_context_company_id !== undefined && body.stat_context_company_id !== null && body.stat_context_company_id !== '') {
+            if (await shouldUseManagerFilterByStatContext(body, token)) {
                 return await plan_lib.filter_plan4manager(body, token, false);
             }
             return await plan_lib.filter_plan4user(body, token);
         case 'supplier':
-            if (body.stat_context_company_id !== undefined && body.stat_context_company_id !== null && body.stat_context_company_id !== '') {
+            if (await shouldUseManagerFilterByStatContext(body, token)) {
                 return await plan_lib.filter_plan4manager(body, token, true);
             }
             return await plan_lib.filter_plan4user(body, token, true);
@@ -1556,14 +1573,14 @@ module.exports = {
                                 plans = await plan_lib.filter_plan4manager(body, token, true);
                                 break;
                             case 'customer':
-                                if (body.stat_context_company_id !== undefined && body.stat_context_company_id !== null && body.stat_context_company_id !== '') {
+                                if (await shouldUseManagerFilterByStatContext(body, token)) {
                                     plans = await plan_lib.filter_plan4manager(body, token, false);
                                 } else {
                                     plans = await plan_lib.filter_plan4user(body, token);
                                 }
                                 break;
                             case 'supplier':
-                                if (body.stat_context_company_id !== undefined && body.stat_context_company_id !== null && body.stat_context_company_id !== '') {
+                                if (await shouldUseManagerFilterByStatContext(body, token)) {
                                     plans = await plan_lib.filter_plan4manager(body, token, true);
                                 } else {
                                     plans = await plan_lib.filter_plan4user(body, token, true);
