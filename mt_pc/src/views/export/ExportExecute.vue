@@ -384,11 +384,12 @@ export default {
         export_sc: async function (filter, module) {
             try {
 
-                await this.$send_req('/global/download_sc_contents_zip', {
+                await this.$send_req('/global/download_sc_contents_zip', this.with_stat_context({
                     start_time: filter.start_time,
                     end_time: filter.end_time,
                     export_type: module,
-                });
+                    stat_context_company_id: filter.stat_context_company_id,
+                }, this.globalStatContextCompanyId));
                 this.show_export_success();
             } catch (error) {
                 this.show_export_fail(error);

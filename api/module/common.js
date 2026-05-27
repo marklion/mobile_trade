@@ -187,6 +187,7 @@ module.exports = {
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
                 stuff_id: { type: Number, have_to: false, mean: '物料ID', example: 12 },
                 company_id: { type: Number, have_to: false, mean: '公司ID', example: 22 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
                 m_start_time: { type: String, have_to: false, mean: '开始时间（时：分：秒）', example: '2020-01-01 22:22:22' },
                 m_end_time: { type: String, have_to: false, mean: '结束时间（时：分：秒）', example: '2020-01-01 22:22:22' },
                 columns:{type:Array, have_to:false, mean:'列定义', explain:{

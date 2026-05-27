@@ -3,6 +3,7 @@ const common = require('./common');
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const group_lib = require('../lib/group_lib');
 module.exports = {
     name: 'cash',
     description: '余额管理',
@@ -64,20 +65,26 @@ module.exports = {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '统计主体公司ID', example: 2 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id,{
-                    include:[{
-                        model:db_opt.get_sq().models.company,
-                        as:'buy_company',
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                let contract = await db_opt.get_sq().models.contract.findByPk(body.contract_id, {
+                    include: [{
+                        model: db_opt.get_sq().models.company,
+                        as: 'buy_company',
                     }],
                 });
-                let company = contract.buy_company;
-                return await common.do_export_later(token, company.name + '的余额明细', async () => {
-                    return await cash_lib.export_cash_history(token, body.contract_id, body.begin_time, body.end_time);
+                if (!company || !contract || (!(await company.hasSale_contract(contract)) && !(await company.hasBuy_contract(contract)))) {
+                    throw { err_msg: '无权限' };
+                }
+                const buy_company = contract.buy_company || await contract.getBuy_company();
+                const export_name = `${buy_company ? buy_company.name : '余额'}的余额明细`;
+                return await common.do_export_later(token, export_name, async () => {
+                    return await cash_lib.export_cash_history(token, body.contract_id, body.begin_time, body.end_time, company);
                 });
             },
         },

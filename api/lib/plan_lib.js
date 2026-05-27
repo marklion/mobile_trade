@@ -2107,46 +2107,24 @@ module.exports = {
             [db_opt.Op.and]: this.buildTimeCondition(body, sq),
         };
         let order = this.default_export_sort(sq);
-        const home_company = await rbac_lib.get_company_by_token(token);
-        if (!home_company || !home_company.is_group) {
-            if (body.stuff_id) {
-                cond.stuffId = body.stuff_id;
-            } else {
-                let stuff = await home_company.getStuff();
-                let stuff_array = [];
-                for (let index = 0; index < stuff.length; index++) {
-                    stuff_array.push(stuff[index].id);
-                }
-                cond.stuffId = {
-                    [db_opt.Op.or]: stuff_array,
-                };
+        const scope_company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+        if (!scope_company) {
+            return [];
+        }
+        let stuff_ids = [];
+        if (body.stuff_id) {
+            const stuff = await sq.models.stuff.findByPk(body.stuff_id, { attributes: ['id', 'companyId'] });
+            if (stuff && stuff.companyId === scope_company.id) {
+                stuff_ids = [stuff.id];
             }
         } else {
-            const user = await rbac_lib.get_user_by_token(token);
-            let allowed_company_ids = [home_company.id];
-            if (user) {
-                const member_ids = await group_lib.list_member_company_ids_for_stuff(user.id, home_company);
-                allowed_company_ids.push(...member_ids);
-            }
-            allowed_company_ids = [...new Set(allowed_company_ids)];
-            let stuff_ids = [];
-            if (body.stuff_id) {
-                const stuff = await sq.models.stuff.findByPk(body.stuff_id, { attributes: ['id', 'companyId'] });
-                if (stuff && allowed_company_ids.includes(stuff.companyId)) {
-                    stuff_ids = [stuff.id];
-                }
-            } else if (allowed_company_ids.length > 0) {
-                const stuff_rows = await sq.models.stuff.findAll({
-                    where: { companyId: { [db_opt.Op.in]: allowed_company_ids } },
-                    attributes: ['id'],
-                });
-                stuff_ids = stuff_rows.map((s) => s.id);
-            }
-            if (stuff_ids.length === 0) {
-                return [];
-            }
-            cond.stuffId = stuff_ids.length === 1 ? stuff_ids[0] : { [db_opt.Op.in]: stuff_ids };
+            const stuff_rows = await scope_company.getStuff({ attributes: ['id'] });
+            stuff_ids = stuff_rows.map((s) => s.id);
         }
+        if (stuff_ids.length === 0) {
+            return [];
+        }
+        cond.stuffId = stuff_ids.length === 1 ? stuff_ids[0] : { [db_opt.Op.in]: stuff_ids };
         if (body.company_id) {
             cond.companyId = body.company_id
         }
@@ -2487,17 +2465,9 @@ module.exports = {
         }
 
         const year_start = report_start.clone().startOf('year');
-        const home_company = await rbac_lib.get_company_by_token(token);
-        if (!home_company) {
+        const owner_company = await this.resolve_sale_contract_context_company(token, body.stat_context_company_id, false);
+        if (!owner_company) {
             throw { err_msg: '无权限' };
-        }
-
-        let owner_company = home_company;
-        if (home_company.parentGroupCompanyId) {
-            const parent_company = await sq.models.company.findByPk(home_company.parentGroupCompanyId);
-            if (parent_company) {
-                owner_company = parent_company;
-            }
         }
 
         const contracts = await owner_company.getSale_contracts({
@@ -2778,16 +2748,9 @@ module.exports = {
             throw { err_msg: '请选择客户' };
         }
 
-        const home_company = await rbac_lib.get_company_by_token(token);
-        if (!home_company) {
+        const owner_company = await this.resolve_sale_contract_context_company(token, body.stat_context_company_id, false);
+        if (!owner_company) {
             throw { err_msg: '无权限' };
-        }
-        let owner_company = home_company;
-        if (home_company.parentGroupCompanyId) {
-            const parent_company = await sq.models.company.findByPk(home_company.parentGroupCompanyId);
-            if (parent_company) {
-                owner_company = parent_company;
-            }
         }
 
         const contracts = await this.get_sale_contracts_for_buyer_and_supply_company(customer_id, owner_company.id);
@@ -2800,7 +2763,7 @@ module.exports = {
         }
 
         const contract_ids = contracts.map((item) => item.id);
-        const stuff_rows = await owner_company.getStuff({ attributes: ['id'] });
+        const stuff_rows = await owner_company.getStuff({ attributes: ['id'], where: { use_for_buy: false } });
         const stuff_ids = stuff_rows.map((item) => item.id);
         const history_rows = await sq.models.balance_history.findAll({
             where: {
