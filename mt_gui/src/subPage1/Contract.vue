@@ -89,7 +89,7 @@
     </fui-modal>
     <fui-bottom-popup :show="show_customers" @close="show_customers= false">
         <fui-list>
-            <list-show v-model="customers_data2show" :fetch_function="get_customers" search_key="name" height="40vh">
+            <list-show v-if="show_customers" v-model="customers_data2show" :fetch_function="get_customers" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in customers_data2show" :key="item.id" @click="select_company(item)">
                     {{item.name}}
                 </fui-list-cell>
@@ -99,7 +99,7 @@
     <fui-date-picker range :show="show_date_range" type="3" :value="new_contract.begin_time" :valueEnd="new_contract.end_time" @change="set_date_range" @cancel="show_date_range =false"></fui-date-picker>
     <fui-bottom-popup :show="show_add_stuff" @close="show_add_stuff = false">
         <fui-list>
-            <list-show ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="name" height="40vh">
+            <list-show v-if="show_add_stuff" ref="stuff_got" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="(item, index) in (stuff_data2show || [])" :key="item.id" :index="index" @click="add_stuff2contract_by_index">
                     {{item.name}}
                 </fui-list-cell>
@@ -126,7 +126,7 @@
     </fui-modal>
     <fui-bottom-popup :show="show_charge_history" @close="show_charge_history = false">
         <fui-list>
-            <list-show v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id, cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="search_cond" height="40vh">
+            <list-show v-if="show_charge_history" v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id, cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="search_cond" height="40vh">
                 <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased.toFixed(2)">
                     <view slot="label">
                         {{item.time}}:{{item.comment}}
