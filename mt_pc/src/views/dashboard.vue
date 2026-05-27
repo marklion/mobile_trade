@@ -1,5 +1,13 @@
 <template>
 <div class="dashboard-container">
+    <el-alert
+        v-if="!can_view_dashboard"
+        title="当前操作主体暂无查看权限，无法查看首页统计数据。"
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 10px;" />
+    <template v-else>
     <el-row :gutter="10">
         <el-col :span="12">
             <el-card class="box-card" :body-style="{padding : 10}">
@@ -132,6 +140,7 @@
             </div>
         </el-col>
     </el-row>
+    </template>
 </div>
 </template>
 
@@ -143,6 +152,10 @@ import ChartComponent from '../components/Charts.vue';
 import page_content from '../components/PageContent.vue';
 import moment from 'moment';
 
+function hasCanViewPermission(scope) {
+    return !!scope;
+}
+
 export default {
     name: 'Dashboard',
     components: {
@@ -153,8 +166,26 @@ export default {
         ...mapGetters([
             'name',
             'roles',
+            'globalStatCompanyIsGroup',
+            'globalStatSelfCompanyId',
+            'globalStatScopes',
             'globalStatContextCompanyId',
         ]),
+        can_view_dashboard() {
+            if (!this.globalStatCompanyIsGroup) {
+                return true;
+            }
+            if (this.globalStatContextCompanyId == null) {
+                return false;
+            }
+            if (String(this.globalStatContextCompanyId) === String(this.globalStatSelfCompanyId)) {
+                return true;
+            }
+            const selectedScope = (this.globalStatScopes || []).find(
+                (s) => s && String(s.id) === String(this.globalStatContextCompanyId)
+            );
+            return hasCanViewPermission(selectedScope);
+        },
         statistic_table_body() {
             return {
                 day_offset: +this.day_offset,
@@ -187,7 +218,7 @@ export default {
         }
     },
     async mounted() {
-        await this.$store.dispatch('statScope/initialize');
+        await this.$store.dispatch('statScope/initialize', { force: true });
         this.init_brief_info();
         this.init_statistic();
         this.show_today_yesterday();
@@ -203,6 +234,9 @@ export default {
 
     methods: {
         on_stat_scope_change: function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             this.init_brief_info();
             this.init_statistic();
             this.show_today_yesterday();
@@ -217,6 +251,9 @@ export default {
             }
         },
         show_today_yesterday: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             if (!this.$hasPermission('stuff')) {
                 return;
             }
@@ -327,6 +364,9 @@ export default {
             };
         },
         init_statistic: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             if (!this.$hasPermission('sale_management')) {
                 return
             }
@@ -335,6 +375,9 @@ export default {
         },
 
         init_data_brief: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             // 生成查询条件的函数
             let cond = (day_offset, status) => {
                 let date = moment();
@@ -423,6 +466,9 @@ export default {
             this.init_statistic();
         },
         init_notice: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             if (!this.$hasPermission('stuff')) {
                 return
             }
@@ -430,6 +476,9 @@ export default {
             this.notice = res;
         },
         init_brief_info: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             this.init_data_brief();
             this.init_notice();
             if (this.$refs.sb_page)
@@ -438,7 +487,7 @@ export default {
                 this.$refs.ss_page.refresh();
         },
         module_filter: function (role) {
-            return this.$hasPermission(role);
+            return this.can_view_dashboard && this.$hasPermission(role);
         }
     }
 }
