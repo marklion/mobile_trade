@@ -1,12 +1,5 @@
 <template>
 <div class="order_show">
-    <group-stat-scope-selector
-        v-if="show_sale_scope_selector && stat_scopes.length > 1"
-        v-model="stat_context_company_id"
-        :scopes="stat_scopes"
-        :home-company-id="self_info && self_info.company_id"
-        @change="on_stat_scope_change"
-    />
     <div class="filter_bar">
         <el-tabs v-model="status" @tab-click="refresh_order">
             <el-tab-pane label="全部" name="all"></el-tab-pane>
@@ -136,7 +129,7 @@
         </template>
     </page-content>
     <el-drawer destroy-on-close title="计划详情" :visible.sync="show_plan_detail" direction="rtl" size="70%">
-        <order-detail :motived="motived" :plan="focus_plan" :stat_context_company_id="stat_context_company_id" @refresh="show_plan_detail= false; refresh_order()"></order-detail>
+        <order-detail :motived="motived" :plan="focus_plan" :stat_context_company_id="globalStatContextCompanyId" @refresh="show_plan_detail= false; refresh_order()"></order-detail>
     </el-drawer>
     <el-dialog append-to-body title="设置代理" :visible.sync="delegate_show" width="30%">
         <select-search body_key="delegates" get_url="/stuff/get_delegates" item_label="name" item_value="id" :permission_array="['sale_management', 'buy_management']" v-model="delegate_id"></select-search>
@@ -153,27 +146,22 @@ import page_content from './PageContent.vue';
 import moment from 'moment';
 import SelectSearch from './SelectSearch.vue';
 import OrderDetail from './OrderDetail.vue';
-import GroupStatScopeSelector from './GroupStatScopeSelector.vue';
+import { mapGetters } from 'vuex';
 export default {
     name: 'OrderShowTable',
     components: {
         'page-content': page_content,
         'select-search': SelectSearch,
         'order-detail': OrderDetail,
-        'group-stat-scope-selector': GroupStatScopeSelector,
     },
     computed: {
+        ...mapGetters([
+            'globalStatScopeVisible',
+            'globalStatContextCompanyId',
+        ]),
         show_sale_scope_selector: function () {
             return this.req_url === '/sale_management/order_search'
-                && this.self_info
-                && this.self_info.company_is_group === true
-                && this.has_group_member_scope;
-        },
-        has_group_member_scope: function () {
-            if (!this.self_info || this.self_info.company_id == null) {
-                return false;
-            }
-            return (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
+                && this.globalStatScopeVisible;
         },
         contract_req_body: function () {
             return this.make_context_req({});
@@ -204,10 +192,10 @@ export default {
             return ['stuff'];
         },
         company_selector_key: function () {
-            return `company-${this.stat_context_company_id || 'default'}-${this.filter_selector_refresh_seed}`;
+            return `company-${this.globalStatContextCompanyId || 'default'}-${this.filter_selector_refresh_seed}`;
         },
         stuff_selector_key: function () {
-            return `stuff-${this.stat_context_company_id || 'default'}-${this.filter_selector_refresh_seed}`;
+            return `stuff-${this.globalStatContextCompanyId || 'default'}-${this.filter_selector_refresh_seed}`;
         }
     },
     data: function () {
@@ -246,13 +234,7 @@ export default {
             },
             filter_ready: false,
             pickerOptions: this.$quik_date_option,
-            stat_scopes: [],
-            stat_context_company_id: null,
             filter_selector_refresh_seed: 0,
-            self_info: {
-                company_is_group: false,
-                company_id: null,
-            },
             auto_refresh_timer: null,
             auto_refresh_interval_ms: 2 * 60 * 1000,
             batch_operate_array: [{
@@ -297,35 +279,23 @@ export default {
         motived: Boolean,
         is_buy: Boolean,
     },
-    methods: {
-        load_self_info: async function () {
-            try {
-                const ret = await this.$send_req('/global/self_info', {});
-                this.self_info = ret || { company_is_group: false, company_id: null };
-            } catch (e) {
-                this.self_info = { company_is_group: false, company_id: null };
-            }
-        },
-        load_stat_scopes: async function () {
-            if (this.req_url !== '/sale_management/order_search') {
+    watch: {
+        globalStatContextCompanyId: function (newVal, oldVal) {
+            if (!this.show_sale_scope_selector || newVal === oldVal) {
                 return;
             }
-            try {
-                const ret = await this.$send_req('/global/home_stat_scope_list', {});
-                this.stat_scopes = ret.scopes || [];
-                if (this.stat_scopes.length && this.stat_context_company_id == null) {
-                    const first_member_scope = this.stat_scopes.find((s) => this.self_info && s.id !== this.self_info.company_id);
-                    this.stat_context_company_id = first_member_scope ? first_member_scope.id : this.stat_scopes[0].id;
-                }
-            } catch (e) {
-                this.stat_scopes = [];
-            }
+            this.company_id = 0;
+            this.stuff_id = 0;
+            this.filter_selector_refresh_seed += 1;
+            this.refresh_order();
         },
+    },
+    methods: {
         make_context_req: function (body = {}) {
             const ret = { ...body };
             delete ret.stat_context_company_id;
-            if (this.show_sale_scope_selector && this.stat_context_company_id != null) {
-                ret.stat_context_company_id = this.stat_context_company_id;
+            if (this.show_sale_scope_selector && this.globalStatContextCompanyId != null) {
+                ret.stat_context_company_id = this.globalStatContextCompanyId;
             }
             return ret;
         },
@@ -456,14 +426,6 @@ export default {
                 hide_manual_close: false,
             }, true)).total;
         },
-        on_stat_scope_change: function () {
-            if (this.show_sale_scope_selector) {
-                this.company_id = 0;
-                this.stuff_id = 0;
-                this.filter_selector_refresh_seed += 1;
-            }
-            this.refresh_order();
-        },
         refresh_order: function () {
             if (this.stuff_id != 0) {
                 this.filter.stuff_id = this.stuff_id;
@@ -545,8 +507,7 @@ export default {
         },
     },
     mounted: async function () {
-        await this.load_self_info();
-        await this.load_stat_scopes();
+        await this.$store.dispatch('statScope/initialize');
         this.reset_filter();
         this.get_price_display_config();
         this.start_auto_refresh_timer();

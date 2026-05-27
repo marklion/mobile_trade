@@ -5,13 +5,14 @@
     <breadcrumb class="breadcrumb-container" />
 
     <div class="right-menu">
+        <global-stat-scope-bar />
         <el-dropdown class="avatar-container" trigger="click">
             <div class="avatar-wrapper">
-                <div style="height: 100%; line-height: 25px; display:inline-block; ">
-                    <div>
+                <div class="user-meta">
+                    <div class="user-meta-line">
                         {{ company_name }}
                     </div>
-                    <div style="text-align: right">
+                    <div class="user-meta-line user-meta-line-right">
                         {{ name }}
                     </div>
                 </div>
@@ -51,11 +52,13 @@ import {
 } from 'vuex'
 import Breadcrumb from '@/components/Breadcrumb'
 import Hamburger from '@/components/Hamburger'
+import GlobalStatScopeBar from '@/components/GlobalStatScopeBar.vue'
 
 export default {
     components: {
         Breadcrumb,
-        Hamburger
+        Hamburger,
+        'global-stat-scope-bar': GlobalStatScopeBar
     },
     data() {
         return {
@@ -140,6 +143,8 @@ export default {
 
     .right-menu {
         float: right;
+        display: flex;
+        align-items: center;
         height: 100%;
         line-height: 50px;
 
@@ -167,6 +172,7 @@ export default {
 
         .avatar-container {
             margin-right: 30px;
+            line-height: normal;
 
             .contact-text {
                 display: block;
@@ -176,19 +182,29 @@ export default {
                 color: #303133;
             }
 
-            .company-name {
-                font-weight: bold;
-                /* 可以根据需要调整样式 */
-            }
-
-            .user-name {
-                /* 可以根据需要调整样式 */
-                color: black;
-            }
-
             .avatar-wrapper {
-                margin-top: 5px;
+                margin-top: 0;
                 position: relative;
+                display: flex;
+                align-items: center;
+
+                .user-meta {
+                    height: 100%;
+                    line-height: 25px;
+                    display: inline-flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    min-width: 0;
+                    margin-right: 8px;
+                }
+
+                .user-meta-line {
+                    white-space: nowrap;
+                }
+
+                .user-meta-line-right {
+                    text-align: right;
+                }
 
                 .user-avatar {
                     cursor: pointer;

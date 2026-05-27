@@ -1,15 +1,13 @@
 <template>
 <div class="dashboard-container">
-    <el-row v-if="stat_scopes.length > 1" :gutter="10" class="stat-scope-row">
-        <el-col :span="24">
-            <group-stat-scope-selector
-                v-model="stat_context_company_id"
-                :scopes="stat_scopes"
-                :home-company-id="home_scope_company_id"
-                @change="on_stat_scope_change"
-            />
-        </el-col>
-    </el-row>
+    <el-alert
+        v-if="!can_view_dashboard"
+        title="当前操作主体暂无查看权限，无法查看首页统计数据。"
+        type="warning"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 10px;" />
+    <template v-else>
     <el-row :gutter="10">
         <el-col :span="12">
             <el-card class="box-card" :body-style="{padding : 10}">
@@ -142,6 +140,7 @@
             </div>
         </el-col>
     </el-row>
+    </template>
 </div>
 </template>
 
@@ -151,31 +150,52 @@ import {
 } from 'vuex'
 import ChartComponent from '../components/Charts.vue';
 import page_content from '../components/PageContent.vue';
-import GroupStatScopeSelector from '../components/GroupStatScopeSelector.vue';
 import moment from 'moment';
+
+function hasCanViewPermission(scope) {
+    return !!scope;
+}
 
 export default {
     name: 'Dashboard',
     components: {
         ChartComponent,
         'page-content': page_content,
-        'group-stat-scope-selector': GroupStatScopeSelector,
     },
     computed: {
         ...mapGetters([
             'name',
-            'roles'
+            'roles',
+            'globalStatCompanyIsGroup',
+            'globalStatSelfCompanyId',
+            'globalStatScopes',
+            'globalStatContextCompanyId',
         ]),
+        can_view_dashboard() {
+            if (!this.globalStatCompanyIsGroup) {
+                return true;
+            }
+            if (this.globalStatContextCompanyId == null) {
+                return false;
+            }
+            if (String(this.globalStatContextCompanyId) === String(this.globalStatSelfCompanyId)) {
+                return true;
+            }
+            const selectedScope = (this.globalStatScopes || []).find(
+                (s) => s && String(s.id) === String(this.globalStatContextCompanyId)
+            );
+            return hasCanViewPermission(selectedScope);
+        },
         statistic_table_body() {
             return {
                 day_offset: +this.day_offset,
                 base_day: this.statistic_day,
-                stat_context_company_id: this.stat_context_company_id,
+                stat_context_company_id: this.globalStatContextCompanyId,
             };
         },
         stuff_list_req_body() {
             return {
-                stat_context_company_id: this.stat_context_company_id,
+                stat_context_company_id: this.globalStatContextCompanyId,
             };
         },
     },
@@ -195,34 +215,28 @@ export default {
             req_url: '/sale_management/get_count_by_customer',
             sb_url: '/customer/get_stuff_on_sale',
             ss_url: '/supplier/get_stuff_need_buy',
-            stat_scopes: [],
-            stat_context_company_id: null,
-            home_scope_company_id: null,
         }
     },
     async mounted() {
-        await this.load_stat_scopes();
+        await this.$store.dispatch('statScope/initialize', { force: true });
         this.init_brief_info();
         this.init_statistic();
         this.show_today_yesterday();
     },
+    watch: {
+        globalStatContextCompanyId: function (newVal, oldVal) {
+            if (newVal === oldVal) {
+                return;
+            }
+            this.on_stat_scope_change();
+        },
+    },
 
     methods: {
-        load_stat_scopes: async function () {
-            try {
-                const ret = await this.$send_req('/global/home_stat_scope_list', {});
-                this.stat_scopes = ret.scopes || [];
-                if (this.stat_scopes.length) {
-                    this.home_scope_company_id = this.stat_scopes[0].id;
-                }
-                if (this.stat_scopes.length && this.stat_context_company_id == null) {
-                    this.stat_context_company_id = this.stat_scopes[0].id;
-                }
-            } catch (e) {
-                this.stat_scopes = [];
-            }
-        },
         on_stat_scope_change: function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             this.init_brief_info();
             this.init_statistic();
             this.show_today_yesterday();
@@ -237,12 +251,15 @@ export default {
             }
         },
         show_today_yesterday: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             if (!this.$hasPermission('stuff')) {
                 return;
             }
             this.stat_loading = true;
             let resp = await this.$send_req('/stuff/get_count_by_today_yesterday', {
-                stat_context_company_id: this.stat_context_company_id,
+                stat_context_company_id: this.globalStatContextCompanyId,
             });
             this.tableData = resp.statistic;
             this.tableData.forEach(item => {
@@ -347,6 +364,9 @@ export default {
             };
         },
         init_statistic: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             if (!this.$hasPermission('sale_management')) {
                 return
             }
@@ -355,6 +375,9 @@ export default {
         },
 
         init_data_brief: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             // 生成查询条件的函数
             let cond = (day_offset, status) => {
                 let date = moment();
@@ -365,7 +388,7 @@ export default {
                     status: status,
                     hide_manual_close: true,
                     only_count: true,
-                    stat_context_company_id: this.stat_context_company_id,
+                    stat_context_company_id: this.globalStatContextCompanyId,
                 };
             };
 
@@ -443,6 +466,9 @@ export default {
             this.init_statistic();
         },
         init_notice: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             if (!this.$hasPermission('stuff')) {
                 return
             }
@@ -450,6 +476,9 @@ export default {
             this.notice = res;
         },
         init_brief_info: async function () {
+            if (!this.can_view_dashboard) {
+                return;
+            }
             this.init_data_brief();
             this.init_notice();
             if (this.$refs.sb_page)
@@ -458,7 +487,7 @@ export default {
                 this.$refs.ss_page.refresh();
         },
         module_filter: function (role) {
-            return this.$hasPermission(role);
+            return this.can_view_dashboard && this.$hasPermission(role);
         }
     }
 }
@@ -478,9 +507,5 @@ export default {
 
 .box-card {
     margin-bottom: 10px
-}
-
-.stat-scope-row {
-    margin-bottom: 10px;
 }
 </style>

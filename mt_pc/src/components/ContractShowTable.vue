@@ -1,13 +1,5 @@
 <template>
 <div>
-    <group-stat-scope-selector
-        v-if="show_stat_scope_selector && stat_scopes.length > 1"
-        v-model="stat_context_company_id"
-        :scopes="stat_scopes"
-        :home-company-id="self_info && self_info.company_id"
-        class="contract_scope_selector"
-        @change="on_scope_change"
-    />
     <el-button v-if="is_motive" icon="el-icon-circle-plus" type="success" @click="prepare_new_contract">新增合同</el-button>
     <el-button
         v-if="can_manage_discount"
@@ -246,7 +238,7 @@
 <script>
 import page_content from './PageContent.vue';
 import SelectSearch from './SelectSearch.vue';
-import GroupStatScopeSelector from './GroupStatScopeSelector.vue';
+import { mapGetters } from 'vuex';
 export default {
     name: 'ContractShowTable',
     data: function () {
@@ -284,8 +276,6 @@ export default {
                     trigger: 'blur'
                 }],
             },
-            stat_scopes: [],
-            stat_context_company_id: null,
             show_scheme_dialog: false,
             discount_schemes: [],
             scheme_form: {
@@ -297,17 +287,12 @@ export default {
             selected_scheme_id: null,
             show_stuff_price_dialog: false,
             stuff_price_rows: [],
-            self_info: {
-                company_is_group: false,
-                company_id: null,
-            },
         }
     },
     components: {
         'page-content': page_content,
         'el-image-viewer': () => import('element-ui/packages/image/src/image-viewer'),
         'select-search': SelectSearch,
-        'group-stat-scope-selector': GroupStatScopeSelector,
     },
     props: {
         req_path: String,
@@ -316,19 +301,16 @@ export default {
 
     },
     computed: {
+        ...mapGetters([
+            'globalStatScopeVisible',
+            'globalStatContextCompanyId',
+        ]),
         can_manage_discount() {
-            return this.show_stat_scope_selector && this.has_group_member_scope && this.is_motive && !this.is_buy;
-        },
-        has_group_member_scope() {
-            if (!this.self_info || this.self_info.company_id == null) {
-                return false;
-            }
-            return (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
+            return this.show_stat_scope_selector && this.is_motive && !this.is_buy;
         },
         show_stat_scope_selector() {
             return this.req_path === '/sale_management/contract_get'
-                && this.self_info
-                && this.self_info.company_is_group === true;
+                && this.globalStatScopeVisible;
         },
         contract_req_body() {
             return this.make_context_req();
@@ -343,56 +325,33 @@ export default {
             return '/stuff/get_all';
         }
     },
-    mounted() {
-        this.load_self_info().then(() => {
-            this.load_stat_scopes();
-        });
+    mounted: async function () {
+        await this.$store.dispatch('statScope/initialize');
     },
-    methods: {
-        load_self_info: async function () {
-            try {
-                const ret = await this.$send_req('/global/self_info', {});
-                this.self_info = ret || { company_is_group: false, company_id: null };
-            } catch (e) {
-                this.self_info = { company_is_group: false, company_id: null };
-            }
-        },
-        make_context_req: function (body = {}) {
-            let ret = { ...body };
-            if (this.show_stat_scope_selector && this.stat_context_company_id != null) {
-                ret.stat_context_company_id = this.stat_context_company_id;
-            }
-            return ret;
-        },
-        load_stat_scopes: async function () {
-            if (
-                this.req_path !== '/sale_management/contract_get'
-                || !this.self_info
-                || this.self_info.company_is_group !== true
-            ) {
+    watch: {
+        globalStatContextCompanyId: function (newVal, oldVal) {
+            if (!this.show_stat_scope_selector || newVal === oldVal) {
                 return;
             }
-            try {
-                const ret = await this.$send_req('/global/home_stat_scope_list', {});
-                this.stat_scopes = ret.scopes || [];
-                if (this.stat_scopes.length && this.stat_context_company_id == null) {
-                    const first_member_scope = this.stat_scopes.find((s) => this.self_info && s.id !== this.self_info.company_id);
-                    this.stat_context_company_id = first_member_scope ? first_member_scope.id : this.stat_scopes[0].id;
-                    this.$nextTick(() => {
-                        if (this.$refs.contracts) {
-                            this.$refs.contracts.refresh(1);
-                        }
-                    });
-                }
-            } catch (e) {
-                this.stat_scopes = [];
+            if (this.$refs.contracts) {
+                this.$nextTick(() => {
+                    if (this.$refs.contracts) {
+                        this.$refs.contracts.refresh(1);
+                    }
+                });
             }
-        },
-        on_scope_change: function () {
-            this.$refs.contracts.refresh(1);
             if (this.can_manage_discount) {
                 this.load_discount_schemes();
             }
+        },
+    },
+    methods: {
+        make_context_req: function (body = {}) {
+            let ret = { ...body };
+            if (this.show_stat_scope_selector && this.globalStatContextCompanyId != null) {
+                ret.stat_context_company_id = this.globalStatContextCompanyId;
+            }
+            return ret;
         },
         open_scheme_dialog: async function () {
             this.show_scheme_dialog = true;
@@ -683,8 +642,3 @@ export default {
 }
 </script>
 
-<style scoped>
-.contract_scope_selector {
-    margin-right: 10px;
-}
-</style>

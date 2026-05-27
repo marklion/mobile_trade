@@ -118,13 +118,14 @@ const actions = {
 
   // user logout
   logout({ commit, state }) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       if (state.token) {
         sessionStorage.removeItem(`approval_notify_once_${state.token}`)
       }
       removeToken() // must remove  token  first
       resetRouter()
       commit('RESET_STATE')
+      commit('statScope/RESET_STATE', null, { root: true })
       resolve()
     })
   },
@@ -134,6 +135,7 @@ const actions = {
     return new Promise(resolve => {
       removeToken() // must remove  token  first
       commit('RESET_STATE')
+      commit('statScope/RESET_STATE', null, { root: true })
       resolve()
     })
   }
