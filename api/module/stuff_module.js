@@ -1582,6 +1582,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_hide_order_detail_price: {
+            name: '设置订单详情是否隐藏价格',
+            description: '设置订单详情是否隐藏价格',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                hide_order_detail_price: { type: Boolean, have_to: true, mean: '是否隐藏订单详情价格', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.hide_order_detail_price = body.hide_order_detail_price;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_is_allowed_order_return: {
             name: '设置是否允许订单回退',
             description: '设置是否允许订单回退',

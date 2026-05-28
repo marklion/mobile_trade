@@ -274,6 +274,9 @@
         <u-cell title="订单列表是否显示价格">
             <u-switch slot="value" v-model="is_the_order_display_price" @change="set_the_order_display_price"></u-switch>
         </u-cell>
+        <u-cell title="订单详情是否隐藏价格">
+            <u-switch slot="value" v-model="hide_order_detail_price" @change="set_hide_order_detail_price"></u-switch>
+        </u-cell>
         <u-cell title="是否允许已完成订单调价">
             <u-switch slot="value" v-model="change_finished_order_price_switch" @change="set_change_finished_order_price_switch"></u-switch>
         </u-cell>
@@ -456,6 +459,7 @@ export default {
             support_location_detail: false,
             is_allowed_order_return: false,
             is_the_order_display_price: false,
+            hide_order_detail_price: false,
             change_finished_order_price_switch: false,
             need_driver_confirm:false,
             dup_not_permit: false,
@@ -505,6 +509,11 @@ export default {
                     getUrl: '/global/get_the_order_display_price',
                     setUrl: '/stuff/set_the_order_display_price',
                     key: 'is_the_order_display_price'
+                },
+                hide_order_detail_price: {
+                    getUrl: '/global/get_hide_order_detail_price',
+                    setUrl: '/stuff/set_hide_order_detail_price',
+                    key: 'hide_order_detail_price'
                 },
                 change_finished_order_price_switch: {
                     getUrl: '/global/get_change_finished_order_price_switch',
@@ -1085,6 +1094,12 @@ export default {
         },
         set_the_order_display_price: function () {
             return this.setGlobalConfig('is_the_order_display_price');
+        },
+        get_hide_order_detail_price: function () {
+            return this.getGlobalConfig('hide_order_detail_price');
+        },
+        set_hide_order_detail_price: function () {
+            return this.setGlobalConfig('hide_order_detail_price');
         },
         get_change_finished_order_price_switch: function () {
             return this.getGlobalConfig('change_finished_order_price_switch');

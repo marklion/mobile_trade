@@ -56,6 +56,10 @@
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
+                    <el-switch v-model="hide_order_detail_price" active-text="订单详情是否隐藏价格" @change="set_hide_order_detail_price">
+                    </el-switch>
+                </vue-cell>
+                <vue-cell width="3of12">
                     <el-switch v-model="change_finished_order_price_switch" active-text="是否允许已完成订单调价" @change="set_change_finished_order_price_switch">
                     </el-switch>
                 </vue-cell>
@@ -269,6 +273,7 @@ export default {
             create_delegate: false,
             verify_pay_by_cash: false,
             buy_config_hard: false,
+            hide_order_detail_price: false,
             replace_form: {
                 replace_weighingSheet: '',
                 replace_count: '',
@@ -296,6 +301,7 @@ export default {
         this.get_barriergate_control_permission();
         this.get_is_allowed_order_return();
         this.get_the_order_display_price();
+        this.get_hide_order_detail_price();
         this.get_change_finished_order_price_switch();
         this.get_dup_not_permit();
         this.get_need_driver_confirm();
@@ -561,6 +567,19 @@ export default {
             await this.$send_req('/stuff/set_the_order_display_price', {
                 is_the_order_display_price: this.is_the_order_display_price
             });
+        },
+        get_hide_order_detail_price: async function () {
+            let ret = await this.$send_req('/global/get_hide_order_detail_price', {});
+            this.hide_order_detail_price = ret.hide_order_detail_price;
+        },
+        set_hide_order_detail_price: async function () {
+            try {
+                await this.$send_req('/stuff/set_hide_order_detail_price', {
+                    hide_order_detail_price: this.hide_order_detail_price
+                });
+            } finally {
+                await this.get_hide_order_detail_price();
+            }
         },
         get_change_finished_order_price_switch: async function () {
             let ret = await this.$send_req('/global/get_change_finished_order_price_switch', {});
