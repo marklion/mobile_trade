@@ -190,6 +190,7 @@ module.exports = {
                 stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
                 m_start_time: { type: String, have_to: false, mean: '开始时间（时：分：秒）', example: '2020-01-01 22:22:22' },
                 m_end_time: { type: String, have_to: false, mean: '结束时间（时：分：秒）', example: '2020-01-01 22:22:22' },
+                weight_time_type: { type: String, have_to: false, mean: '称重时间筛选类型(first:一次称重/second:二次称重)', example: 'first' },
                 columns:{type:Array, have_to:false, mean:'列定义', explain:{
                     name:{type:String,have_to:true, mean:'列名', example:'plan_time'},
                     label:{type:String,have_to:true, mean:'列标签', example:'计划时间'},
