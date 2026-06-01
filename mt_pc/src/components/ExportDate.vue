@@ -11,6 +11,12 @@
         <div v-if="is_need_pm_time">
             <el-time-picker is-range v-model="selected_time" range-separator="至" start-placeholder="开始时间" end-placeholder="结束时间" placeholder="选择时间范围">
             </el-time-picker>
+            <div style="margin-top: 8px;">
+                <el-radio-group v-model="weight_time_type" size="mini">
+                    <el-radio-button label="first">一次称重</el-radio-button>
+                    <el-radio-button label="second">二次称重</el-radio-button>
+                </el-radio-group>
+            </div>
         </div>
         <div v-if="need_company">
             <select-search filterable body_key="contracts" first_item="所有公司" :get_url="contract_get_url" :req_body="contract_req_body" item_label="company.name" item_value="company.id" :permission_array="['sale_management', 'stuff_management']" v-model="company_id"></select-search>
@@ -117,6 +123,7 @@ export default {
             stuff_id: 0,
             date_range: '',
             selected_time: [now, oneSecondLater],
+            weight_time_type: 'first',
             filter: {
                 start_time: '',
                 end_time: '',
@@ -157,6 +164,7 @@ export default {
             if (selected_time) {
                 filter.m_start_time = this.filter.start_time + " " + selected_time[0];
                 filter.m_end_time = this.filter.end_time + " " + selected_time[1];
+                filter.weight_time_type = this.weight_time_type;
             }
             if (this.need_company && this.company_id) {
                 filter.company_id = this.company_id;

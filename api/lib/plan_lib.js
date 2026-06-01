@@ -2043,30 +2043,31 @@ module.exports = {
         let conditions = [];
 
         if (body.m_start_time && body.m_end_time) {
-            conditions = [{
-                [db_opt.Op.or]: [
-                    {
-                        [db_opt.Op.and]: [
-                            sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
-                                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
-                            }),
-                            sq.where(sq.fn('TIMESTAMP', sq.col('m_time')), {
-                                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
-                            }),
-                        ]
-                    },
-                    {
-                        [db_opt.Op.and]: [
-                            sq.where(sq.fn('TIMESTAMP', sq.col('p_time')), {
-                                [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
-                            }),
-                            sq.where(sq.fn('TIMESTAMP', sq.col('p_time')), {
-                                [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
-                            })
-                        ]
-                    }
-                ]
-            }];
+            const build_single_weight_time_cond = (field_name) => {
+                return {
+                    [db_opt.Op.and]: [
+                        sq.where(sq.fn('TIMESTAMP', sq.col(field_name)), {
+                            [db_opt.Op.gte]: sq.fn('TIMESTAMP', body.m_start_time)
+                        }),
+                        sq.where(sq.fn('TIMESTAMP', sq.col(field_name)), {
+                            [db_opt.Op.lte]: sq.fn('TIMESTAMP', body.m_end_time)
+                        }),
+                    ]
+                };
+            };
+
+            const m_time_cond = build_single_weight_time_cond('m_time');
+            const p_time_cond = build_single_weight_time_cond('p_time');
+
+            if (body.weight_time_type === 'first') {
+                conditions = [p_time_cond];
+            } else if (body.weight_time_type === 'second') {
+                conditions = [m_time_cond];
+            } else {
+                conditions = [{
+                    [db_opt.Op.or]: [m_time_cond, p_time_cond]
+                }];
+            }
         } else {
             conditions = [
                 sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {

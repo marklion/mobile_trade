@@ -328,6 +328,7 @@ export default {
                     company_id: filter.company_id,
                     m_start_time: filter.m_start_time,
                     m_end_time: filter.m_end_time,
+                    weight_time_type: filter.weight_time_type,
                     only_finished: filter.only_finished,
                     columns:this.columns_defined,
                     stat_context_company_id: filter.stat_context_company_id,

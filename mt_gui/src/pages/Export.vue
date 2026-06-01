@@ -19,6 +19,13 @@
                             <text class="time-text">{{ end_hour }}:{{ end_minute }}:{{ end_second }}</text>
                             <fui-button btnSize="mini" type="gray" text="清除时间" @click="clearTime" style="margin-left: 10px;" />
                         </view>
+                        <view class="weight-type-switch">
+                            <text style="margin-right: 10px;">称重时间类型</text>
+                            <u-radio-group v-model="weight_time_type" placement="row">
+                                <u-radio name="first" label="一次"></u-radio>
+                                <u-radio name="second" label="二次"></u-radio>
+                            </u-radio-group>
+                        </view>
                         <view style="display: flex;justify-content: center; gap: 10px;">
                             <fui-button btnSize="mini" type="warning" @click="show_start_time = true">开始时间</fui-button>
                             <fui-button btnSize="mini" type="warning" @click="show_end_time = true">结束时间</fui-button>
@@ -104,6 +111,7 @@ export default {
             end_hour: '',
             end_minute: '',
             end_second: '',
+            weight_time_type: 'first',
             status_string: function (url) {
                 let ret = '正在导出';
                 if (url == 'no') {
@@ -226,6 +234,7 @@ export default {
             if (this.begin_hour || this.end_hour) {
                 export_params.m_start_time = this.begin_date + ' ' + this.begin_hour + ':' + this.begin_minute + ':' + this.begin_second;
                 export_params.m_end_time = this.end_date + ' ' + this.end_hour + ':' + this.end_minute + ':' + this.end_second;
+                export_params.weight_time_type = this.weight_time_type;
             }
             await this.$send_req(prefix + '/export_plans', export_params);
             this.cur_page = 1;
