@@ -8,8 +8,8 @@
                     <el-descriptions-item label="物料">{{plan.stuff.name}}</el-descriptions-item>
                     <el-descriptions-item label="计划时间">{{plan.plan_time}}</el-descriptions-item>
                     <el-descriptions-item label="单价">
-                        {{plan.unit_price}}
-                        <span v-if="plan.subsidy_price">(折后价{{plan.subsidy_price}})</span>
+                        {{can_show_order_detail_price ? plan.unit_price : '***'}}
+                        <span v-if="can_show_order_detail_price && plan.subsidy_price">(折后价{{plan.subsidy_price}})</span>
                         <el-button type="text" v-if="has_plan_reciever_permission" @click="change_price">调价</el-button>
                     </el-descriptions-item>
                     <el-descriptions-item :label="plan_buyer_and_saler.saler.label">{{plan_buyer_and_saler.saler.company}}</el-descriptions-item>
@@ -217,6 +217,9 @@ export default {
             }
             return ret;
         },
+        can_show_order_detail_price: function () {
+            return !this.hide_order_detail_price;
+        },
         plan_creator: function () {
             let cur_user_id = this.$store.state.user.id;
             let ret = false;
@@ -311,6 +314,7 @@ export default {
             },
             approver_pick_options: [],
             approver_pick_resolve: null,
+            hide_order_detail_price: true,
         }
     },
     props: {
@@ -656,6 +660,15 @@ export default {
                 }
             }
         },
+        get_hide_order_detail_price_config: async function () {
+            try {
+                let ret = await this.$send_req('/global/get_hide_order_detail_price', {});
+                this.hide_order_detail_price = ret.hide_order_detail_price;
+            } catch (error) {
+                // 配置获取失败时默认隐藏，避免价格泄露
+                this.hide_order_detail_price = true;
+            }
+        },
         preview_company_attach: function () {
             this.pics = [];
             if (this.plan.company.attachment) {
@@ -710,6 +723,7 @@ export default {
     mounted: function () {
         this.init_contract();
         this.get_order_refunds_config();
+        this.get_hide_order_detail_price_config();
         this.refresh_approval_projects();
     },
 }

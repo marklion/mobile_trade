@@ -61,7 +61,7 @@
     <u-checkbox-group v-model="plan_selected" placement="column">
         <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion, make_context_req, show_sale_scope_switch, stat_context_company_id]">
             <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="prepare_plan_detail(item, make_context_req, show_sale_scope_switch, stat_context_company_id)">
+                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && !hide_order_detail_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="prepare_plan_detail(item, make_context_req, show_sale_scope_switch, stat_context_company_id)">
                     <view slot="icon" style="display:flex;">
                         <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
                         </u-checkbox>
@@ -137,7 +137,7 @@
                     <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name">
                         <view slot="label">
                             <view style="display:flex;align-items: center">
-                                <view style="font-size: 25rpx;">{{ focus_plan.stuff.name + '-单价-' + focus_plan.unit_price }}</view>
+                                <view style="font-size: 25rpx;">{{ focus_plan.stuff.name + '-单价-' + (hide_order_detail_price ? '***' : focus_plan.unit_price) }}</view>
                                 <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
                                     <fui-button btnSize="mini" @click="new_stuff_price.show=true">调价</fui-button>
                                 </module-filter>
@@ -658,6 +658,7 @@ export default {
             show_batch_copy: false,
             gallery_index: 0,
             is_the_order_display_price: false,
+            hide_order_detail_price: true,
             is_allowed_order_return: false,
             stat_scopes: [],
             stat_context_company_id: null,
@@ -1787,6 +1788,15 @@ export default {
                 console.error('获取价格显示配置失败:', error);
                 this.is_the_order_display_price = false;
             }
+        },
+        get_hide_order_detail_price_config: async function () {
+            try {
+                const result = await this.$send_req('/global/get_hide_order_detail_price', {});
+                this.hide_order_detail_price = result.hide_order_detail_price;
+            } catch (error) {
+                console.error('获取订单详情隐藏价格配置失败:', error);
+                this.hide_order_detail_price = true;
+            }
         }
     },
     onPullDownRefresh() {
@@ -1804,6 +1814,7 @@ export default {
         this.init_number_of_sold_plan();
         this.get_is_allowed_order_return();
         this.get_price_display_config();
+        this.get_hide_order_detail_price_config();
     },
 }
 </script>

@@ -132,6 +132,7 @@ let db_opt = {
             support_location_detail: { type: DataTypes.BOOLEAN, defaultValue: false },
             barriergate_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_the_order_display_price: { type: DataTypes.BOOLEAN, defaultValue: false },
+            hide_order_detail_price: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_allowed_order_return: { type: DataTypes.BOOLEAN, defaultValue: false },
             change_finished_order_price_switch: { type: DataTypes.BOOLEAN, defaultValue: false },
             dup_not_permit: { type: DataTypes.BOOLEAN, defaultValue: false },

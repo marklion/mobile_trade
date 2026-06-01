@@ -2377,6 +2377,36 @@ module.exports = {
                 return { is_the_order_display_price: company.is_the_order_display_price };
             }
         },
+        get_module_write_permission: {
+            name: '获取模块写权限',
+            description: '获取当前用户对指定模块是否有写权限',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                module: { type: String, have_to: true, mean: '模块名', example: 'sale_management' }
+            },
+            result: {
+                has_write_permission: { type: Boolean, mean: '是否有写权限', example: true }
+            },
+            func: async function (body, token) {
+                const permission_err = await rbac_lib.rbac_check(token, body.module, true);
+                return { has_write_permission: permission_err.length === 0 };
+            }
+        },
+        get_hide_order_detail_price: {
+            name: '获取订单详情是否隐藏价格',
+            description: '获取订单详情是否隐藏价格',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                hide_order_detail_price: { type: Boolean, mean: '是否隐藏订单详情价格', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { hide_order_detail_price: company.hide_order_detail_price };
+            }
+        },
         update_user_signature: {
             name: '更新司机签名',
             description: '更新司机签名图片',

@@ -79,7 +79,7 @@
                     <el-table-column min-width="50" prop="stuff.name" label="物料" width="220">
                         <template slot-scope="scope">
                             {{scope.row.stuff.name}}
-                            <el-tag v-if="is_the_order_display_price && scope.row.unit_price" size="mini" type="warning">
+                            <el-tag v-if="is_the_order_display_price && !hide_order_detail_price && scope.row.unit_price" size="mini" type="warning">
                                 单价:{{scope.row.unit_price}}
                                 <span v-if="scope.row.count != 0">(总价:{{(scope.row.unit_price * scope.row.count).toFixed(2)}})</span>
                             </el-tag>
@@ -209,6 +209,7 @@ export default {
             company_id: 0,
             company_search_input: '',
             is_the_order_display_price: false,
+            hide_order_detail_price: true,
             status_string: function (status) {
                 let status_array = ['未确认', '未付款', '未发车', '已关闭'];
                 let index = status;
@@ -493,6 +494,14 @@ export default {
                 this.is_the_order_display_price = false;
             }
         },
+        get_hide_order_detail_price_config: async function () {
+            try {
+                const result = await this.$send_req('/global/get_hide_order_detail_price', {});
+                this.hide_order_detail_price = result.hide_order_detail_price;
+            } catch (error) {
+                this.hide_order_detail_price = true;
+            }
+        },
         start_auto_refresh_timer: function () {
             this.stop_auto_refresh_timer();
             this.auto_refresh_timer = setInterval(() => {
@@ -510,6 +519,7 @@ export default {
         await this.$store.dispatch('statScope/initialize');
         this.reset_filter();
         this.get_price_display_config();
+        this.get_hide_order_detail_price_config();
         this.start_auto_refresh_timer();
     },
     activated: function () {
