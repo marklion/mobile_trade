@@ -31,11 +31,11 @@ module.exports = {
         }
 
     },
-    charge: async function (_token, _contract_id, _cash_increased, _comment) {
+    charge: async function (_token, _contract_id, _cash_increased, _comment, stat_context_company_id) {
         let user = await rbac_lib.get_user_by_token(_token);
         let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);
         if (user && contract) {
-            let sale_company = await user.getCompany();
+            let sale_company = await plan_lib.resolve_sale_contract_context_company(_token, stat_context_company_id, true);
             if (sale_company && await sale_company.hasSale_contract(contract)) {
                 await this.charge_by_username_and_contract(user.name, contract, _cash_increased, _comment);
             }
