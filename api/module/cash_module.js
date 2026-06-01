@@ -18,12 +18,13 @@ module.exports = {
                 contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },
                 cash_increased: { type: Number, have_to: false, mean: '增加金额', example: 100 },
                 comment: { type: String, have_to: false, mean: '备注', example: '充值100元' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await cash_lib.charge(token, body.contract_id, body.cash_increased, body.comment);
+                await cash_lib.charge(token, body.contract_id, body.cash_increased, body.comment, body.stat_context_company_id);
                 return { result: true };
             },
         },
