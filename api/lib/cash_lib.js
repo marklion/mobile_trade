@@ -47,8 +47,8 @@ module.exports = {
             throw { err_msg: '无权限' }
         }
     },
-    get_history_by_company: async function (_token, _contract_id, pageNo, begin_time, end_time) {
-        let company = await rbac_lib.get_company_by_token(_token);
+    get_history_by_company: async function (_token, _contract_id, pageNo, begin_time, end_time, stat_context_company_id) {
+        let company = await plan_lib.resolve_sale_contract_context_company(_token, stat_context_company_id, false);
         let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);
         let ret = { count: 0, rows: [] };
         let where_condition = {
@@ -74,7 +74,7 @@ module.exports = {
                 }
             })
         }
-        if (company && contract && (await company.hasSale_contract(contract) || await company.hasBuy_contract(contract))) {
+        if (company && contract && ((await plan_lib.has_sale_contract_operate_permission(company, contract)) || await company.hasBuy_contract(contract))) {
             ret.rows = await contract.getBalance_histories({
                 offset: pageNo * 20,
                 limit: 20,

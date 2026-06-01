@@ -4,6 +4,10 @@ const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const group_lib = require('../lib/group_lib');
+
+const stat_context_company_id_param = { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 };
+const export_stat_context_company_id_param = { type: Number, have_to: false, mean: '统计主体公司ID', example: 2 };
+
 module.exports = {
     name: 'cash',
     description: '余额管理',
@@ -18,7 +22,7 @@ module.exports = {
                 contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },
                 cash_increased: { type: Number, have_to: false, mean: '增加金额', example: 100 },
                 comment: { type: String, have_to: false, mean: '备注', example: '充值100元' },
-                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+                stat_context_company_id: stat_context_company_id_param,
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -38,6 +42,7 @@ module.exports = {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 begin_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01' },
                 end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01' },
+                stat_context_company_id: stat_context_company_id_param,
             },
             result: {
                 histories: {
@@ -50,7 +55,7 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, body.begin_time, body.end_time);
+                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, body.begin_time, body.end_time, body.stat_context_company_id);
                 return {
                     histories: get_ret.rows,
                     total: get_ret.count,
@@ -66,7 +71,7 @@ module.exports = {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 begin_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
-                stat_context_company_id: { type: Number, have_to: false, mean: '统计主体公司ID', example: 2 },
+                stat_context_company_id: export_stat_context_company_id_param,
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }

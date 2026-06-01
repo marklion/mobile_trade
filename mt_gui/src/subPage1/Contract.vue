@@ -125,15 +125,15 @@
         </fui-form>
     </fui-modal>
     <fui-bottom-popup :show="show_charge_history" @close="show_charge_history = false">
-        <fui-list>
+        <view>
             <list-show v-if="show_charge_history" v-model="histories_data2show" ref="history" :fetch_function="get_history" :fetch_params="[focus_item.id, cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" search_key="search_cond" height="40vh">
-                <u-cell v-for="item in histories_data2show" :key="item.id" :title="item.operator" :value="'￥' + item.cash_increased.toFixed(2)">
-                    <view slot="label">
+                <u-cell v-for="(item, index) in histories_data2show" :key="item.id || index" size="large" :title="item.operator || '-'" :value="'￥' + format_cash(item.cash_increased)">
+                    <template #label>
                         {{item.time}}:{{item.comment}}
-                    </view>
+                    </template>
                 </u-cell>
             </list-show>
-        </fui-list>
+        </view>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
         <fui-list>
@@ -306,10 +306,10 @@ export default {
                 this.self_info = { company_is_group: false, company_id: null };
             }
         },
-        make_context_req: function (body = {}, url = '', show_scope_switch = false, company_is_group = false, stat_context_company_id = null) {
+        make_context_req: function (body = {}, _url = '', show_scope_switch = false, company_is_group = false, stat_context_company_id = null) {
             const ret = { ...body };
-            const hit_sale_api = url.startsWith('/sale_management/') && company_is_group === true;
-            if ((show_scope_switch || hit_sale_api) && stat_context_company_id != null) {
+            // 集团账号在查询充值历史等跨模块接口时，也需要携带统计主体上下文。
+            if ((show_scope_switch || company_is_group === true) && stat_context_company_id != null) {
                 ret.stat_context_company_id = stat_context_company_id;
             }
             return ret;
@@ -569,10 +569,18 @@ export default {
                 contract_id: id,
                 pageNo: _pageNo
             }, history_url, show_scope_switch, company_is_group, stat_context_company_id));
-            ret.histories.forEach(item => {
+            const histories = (ret && ret.histories) || [];
+            histories.forEach(item => {
                 item.search_cond = item.operator + item.cash_increased + item.comment;
             });
-            return ret.histories;
+            return histories;
+        },
+        format_cash: function (val) {
+            const num = Number(val);
+            if (Number.isNaN(num)) {
+                return '0.00';
+            }
+            return num.toFixed(2);
         },
         prepare_charge_history: function (item) {
             this.show_charge_history = true;

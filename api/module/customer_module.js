@@ -8,6 +8,26 @@ const cash_lib = require('../lib/cash_lib');
 const wx_api_util = require('../lib/wx_api_util');
 const util_lib = require('../lib/util_lib');
 const group_lib = require('../lib/group_lib');
+
+const stat_context_company_id_param = { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 };
+const cash_history_result = {
+    histories: {
+        type: Array, mean: '历史记录', explain: {
+            time: { type: String, mean: '时间', example: '2020-03-01 12:00:00' },
+            operator: { type: String, mean: '操作人', example: '张三' },
+            comment: { type: String, mean: '备注', example: '充值100元' },
+            cash_increased: { type: Number, mean: '增加金额', example: 100 },
+        }
+    }
+};
+const query_cash_history = async function (body, token, begin_time, end_time) {
+    let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, begin_time, end_time, body.stat_context_company_id);
+    return {
+        histories: get_ret.rows,
+        total: get_ret.count,
+    };
+};
+
 module.exports = {
     name: 'customer',
     description: '客户',
@@ -62,23 +82,11 @@ module.exports = {
             is_get_api: true,
             params: {
                 contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },
+                stat_context_company_id: stat_context_company_id_param,
             },
-            result: {
-                histories: {
-                    type: Array, mean: '历史记录', explain: {
-                        time: { type: String, mean: '时间', example: '2020-03-01 12:00:00' },
-                        operator: { type: String, mean: '操作人', example: '张三' },
-                        comment: { type: String, mean: '备注', example: '充值100元' },
-                        cash_increased: { type: Number, mean: '增加金额', example: 100 },
-                    }
-                }
-            },
+            result: cash_history_result,
             func: async function (body, token) {
-                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo);
-                return {
-                    histories: get_ret.rows,
-                    total: get_ret.count,
-                }
+                return await query_cash_history(body, token, undefined, undefined);
             },
         },
         history: {
@@ -91,23 +99,11 @@ module.exports = {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 begin_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01' },
                 end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01' },
+                stat_context_company_id: stat_context_company_id_param,
             },
-            result: {
-                histories: {
-                    type: Array, mean: '历史记录', explain: {
-                        time: { type: String, mean: '时间', example: '2020-03-01 12:00:00' },
-                        operator: { type: String, mean: '操作人', example: '张三' },
-                        comment: { type: String, mean: '备注', example: '充值100元' },
-                        cash_increased: { type: Number, mean: '增加金额', example: 100 },
-                    }
-                }
-            },
+            result: cash_history_result,
             func: async function (body, token) {
-                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, body.begin_time, body.end_time);
-                return {
-                    histories: get_ret.rows,
-                    total: get_ret.count,
-                }
+                return await query_cash_history(body, token, body.begin_time, body.end_time);
             },
         },
 
