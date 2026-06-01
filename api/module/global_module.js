@@ -277,6 +277,99 @@ async function getPlansByTicketType(body, token) {
             throw { err_msg: '磅单类型错误' };
     }
 }
+
+function normalize_copy_type(copy_type) {
+    const type = (copy_type || '').toString().trim();
+    if (type === 'field_check') {
+        return 'field_check';
+    }
+    if (type === 'sc_req') {
+        return 'sc_req';
+    }
+    return '';
+}
+
+function parse_stuff_id(value) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n <= 0) {
+        return 0;
+    }
+    return n;
+}
+
+async function get_source_and_destination_stuff(source_stuff_id, destination_stuff_id) {
+    const sq = db_opt.get_sq();
+    const source_stuff = await sq.models.stuff.findByPk(source_stuff_id);
+    const destination_stuff = await sq.models.stuff.findByPk(destination_stuff_id);
+    if (!source_stuff) {
+        throw { err_msg: '来源物料不存在' };
+    }
+    if (!destination_stuff) {
+        throw { err_msg: '目标物料不存在' };
+    }
+    if (source_stuff.id === destination_stuff.id) {
+        throw { err_msg: '来源物料和目标物料不能相同' };
+    }
+    return { sq, source_stuff, destination_stuff };
+}
+
+async function copy_sc_req_config(source_stuff, destination_stuff, transaction) {
+    const old_reqs = await destination_stuff.getSc_reqs({ transaction });
+    for (const old_req of old_reqs) {
+        await old_req.destroy({ transaction });
+    }
+    const source_reqs = await source_stuff.getSc_reqs({
+        order: [['id', 'ASC']],
+        transaction,
+    });
+    for (const req of source_reqs) {
+        await destination_stuff.createSc_req({
+            name: req.name,
+            need_attach: req.need_attach,
+            need_input: req.need_input,
+            need_expired: req.need_expired,
+            belong_type: req.belong_type,
+            prompt: req.prompt,
+            add_to_export: req.add_to_export,
+        }, { transaction });
+    }
+    destination_stuff.need_sc = source_stuff.need_sc;
+    await destination_stuff.save({ transaction });
+}
+
+async function copy_field_check_config(source_stuff, destination_stuff, transaction) {
+    const sq = db_opt.get_sq();
+    const old_tables = await destination_stuff.getField_check_tables({ transaction });
+    for (const old_table of old_tables) {
+        await old_table.destroy({ transaction });
+    }
+    const source_tables = await source_stuff.getField_check_tables({
+        include: [{
+            model: sq.models.field_check_item,
+        }],
+        order: [
+            ['id', 'ASC'],
+            [sq.models.field_check_item, 'id', 'ASC'],
+        ],
+        transaction,
+    });
+    for (const table of source_tables) {
+        const new_table = await destination_stuff.createField_check_table({
+            name: table.name,
+            template_path: table.template_path,
+            require_before_call: table.require_before_call,
+            require_before_confirm: table.require_before_confirm,
+            rbacRoleId: table.rbacRoleId || null,
+        }, { transaction });
+        const fc_items = table.field_check_items || [];
+        for (const item of fc_items) {
+            await new_table.createField_check_item({
+                name: item.name,
+                need_input: item.need_input,
+            }, { transaction });
+        }
+    }
+}
 function generateTicketFilename(plan) {
     const companyName = plan.company.name.replace(/[\\/:*?"<>|]/g, '_'); // 清理特殊字符
     const mainPlate = plan.main_vehicle.plate || '无主车';
@@ -2375,6 +2468,46 @@ module.exports = {
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
                 return { is_the_order_display_price: company.is_the_order_display_price };
+            }
+        },
+        copy_stuff_safe_check_config: {
+            name: '复制物料安检配置',
+            description: '复制物料现场检查或证件要求配置',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                source_stuff_id: { type: Number, have_to: false, mean: '来源物料ID', example: 1 },
+                destination_stuff_id: { type: Number, have_to: false, mean: '目标物料ID', example: 2 },
+                source: { type: Number, have_to: false, mean: '来源物料ID(兼容字段)', example: 1 },
+                destination: { type: Number, have_to: false, mean: '目标物料ID(兼容字段)', example: 2 },
+                copy_type: { type: String, have_to: true, mean: '复制类型: 现场检查/证件要求', example: '现场检查' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                const login_company = await rbac_lib.get_company_by_token(token);
+                if (!login_company) {
+                    throw { err_msg: '登录状态无效' };
+                }
+                const source_stuff_id = parse_stuff_id(body.source_stuff_id || body.source);
+                const destination_stuff_id = parse_stuff_id(body.destination_stuff_id || body.destination);
+                if (!source_stuff_id || !destination_stuff_id) {
+                    throw { err_msg: '请提供有效的来源和目标物料ID' };
+                }
+                const normalized_type = normalize_copy_type(body.copy_type);
+                if (!normalized_type) {
+                    throw { err_msg: 'copy_type 仅支持: field_check 或 sc_req' };
+                }
+                const { sq, source_stuff, destination_stuff } = await get_source_and_destination_stuff(source_stuff_id, destination_stuff_id);
+                await sq.transaction({ savepoint: true }, async (transaction) => {
+                    if (normalized_type === 'field_check') {
+                        await copy_field_check_config(source_stuff, destination_stuff, transaction);
+                    } else {
+                        await copy_sc_req_config(source_stuff, destination_stuff, transaction);
+                    }
+                });
+                return { result: true };
             }
         },
         get_module_write_permission: {
