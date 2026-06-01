@@ -62,6 +62,7 @@ module.exports = {
             is_get_api: true,
             params: {
                 contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 histories: {
@@ -74,7 +75,7 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo);
+                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, undefined, undefined, body.stat_context_company_id);
                 return {
                     histories: get_ret.rows,
                     total: get_ret.count,
@@ -91,6 +92,7 @@ module.exports = {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
                 begin_time: { type: String, have_to: false, mean: '开始时间', example: '2020-01-01' },
                 end_time: { type: String, have_to: false, mean: '结束时间', example: '2020-01-01' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
                 histories: {
@@ -103,7 +105,7 @@ module.exports = {
                 }
             },
             func: async function (body, token) {
-                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, body.begin_time, body.end_time);
+                let get_ret = await cash_lib.get_history_by_company(token, body.contract_id, body.pageNo, body.begin_time, body.end_time, body.stat_context_company_id);
                 return {
                     histories: get_ret.rows,
                     total: get_ret.count,

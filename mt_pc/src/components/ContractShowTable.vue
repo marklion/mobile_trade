@@ -147,7 +147,7 @@
     </el-dialog>
 
     <el-drawer destroy-on-close title="充值历史" :visible.sync="show_history_drawer" direction="rtl" size="70%">
-        <page-content ref="charge_history" body_key="histories" enable :req_body="{contract_id:focus_contract.id}" :req_url="charge_history_url">
+        <page-content ref="charge_history" body_key="histories" enable :req_body="charge_history_req_body" :req_url="charge_history_url">
             <template v-slot:default="slotProps">
                 <el-table :data="slotProps.content">
                     <el-table-column prop="cash_increased" label="充值金额"></el-table-column>
@@ -317,6 +317,11 @@ export default {
         },
         charge_history_url() {
             return this.req_path === '/customer/contract_get' ? '/customer/history' : '/cash/history';
+        },
+        charge_history_req_body() {
+            return this.make_context_req({
+                contract_id: this.focus_contract && this.focus_contract.id,
+            });
         },
         stuff_select_url() {
             if (!this.is_buy && this.is_motive) {
