@@ -22,7 +22,8 @@
                     <div>
                         <el-button @click="login_zyzl(scope.row, false)" type="primary">掌易助理-PC</el-button>
                         <el-button @click="login_zyzl(scope.row, true)" type="warning">掌易助理-手机</el-button>
-                        <el-button @click="login_zczh(scope.row)" type="success">卓创智汇-过磅系统</el-button>
+                        <el-button :disabled="!scope.row.zczh_domain" @click="login_zczh(scope.row)"
+                            type="success">卓创智汇-过磅系统</el-button>
                     </div>
                 </template>
             </el-table-column>
@@ -47,6 +48,11 @@
                     { name: '兴圣', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'xstrq', phone: '15847098680' },
                     { name: '山西信联', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'xlsp', phone: '13283028818' },
                     { name: '水发', zyzl_url: 'https://sfrq.d8sis.cn:39913', zczh_domain: 'sfgb', phone: '18911992582' },
+                    { name: '中能', zyzl_url: 'https://console.d8sis.cn', zczh_domain: '', phone: '15924514664' },
+                    { name: '盈通销售', zyzl_url: 'https://console.d8sis.cn', zczh_domain: '', phone: '18686129123' },
+                    { name: '盈通阿拉善', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'ytals', phone: '15847264726' },
+                    { name: '盈通通辽', zyzl_url: 'https://console.d8sis.cn', zczh_domain: 'yttl', phone: '13224704000' },
+                    { name: '包头路通', zyzl_url: 'https://console.d8sis.cn', zczh_domain: '', phone: '15044971391' },
                 ]);
                 onMounted(() => {
                     const params = new URLSearchParams(window.location.search);
