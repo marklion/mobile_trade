@@ -118,57 +118,6 @@
         </fui-bottom-popup>
     </module-filter>
 
-    <fui-backdrop :zIndex="8888" :show="show_sc" @click="show_sc = false">
-        <view class="sc-image-viewer" @click.stop>
-            <swiper class="sc-swiper" :current="sc_current_index" @change="on_sc_swiper_change" :indicator-dots="sc_attach_urls.length > 1" :indicator-color="'rgba(255,255,255,0.5)'" :indicator-active-color="'#ffffff'">
-                <swiper-item v-for="(item, index) in sc_attach_urls" :key="index">
-                    <movable-area scale-area class="sc-movable-area">
-                        <movable-view class="sc-movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
-                            <image class="sc-lookimg" :src="item.src" mode="aspectFit"></image>
-                        </movable-view>
-                    </movable-area>
-                </swiper-item>
-            </swiper>
-            <view class="sc-close-button-container">
-                <fui-icon @click="show_sc = false" name="close" size="80" color="white"></fui-icon>
-            </view>
-            <view class="sc-index-wrap" v-if="sc_attach_urls.length > 1">
-                <text class="sc-index">{{sc_current_index + 1}}/{{sc_attach_urls.length}}</text>
-            </view>
-        </view>
-    </fui-backdrop>
-
-    <fui-bottom-popup :show="choose_company_show" @close="choose_company_show= false" z-index="1002">
-        <fui-list>
-            <list-show v-model="supplier_list" :fetch_function="get_buy_contracts" search_key="cond" height="40vh">
-                <fui-list-cell v-for="item in supplier_list" :key="item.id" arrow @click="assign_supplier(item.company.id)">
-                    {{item.company.name}}
-                </fui-list-cell>
-            </list-show>
-        </fui-list>
-    </fui-bottom-popup>
-    <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
-        <sc-execute ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
-    </fui-bottom-popup>
-    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
-        <fui-form ref="rollback_form" top="100">
-            <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
-        <fui-form ref="deliver" top="100">
-            <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
-            <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
-            <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
-            <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
-            <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
-                <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
-            </fui-input>
-        </fui-form>
-    </fui-modal>
-
     <fui-modal :zIndex="80" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
         <fui-form ref="plan_form" :model="dup_plan">
             <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
@@ -202,19 +151,6 @@
             </fui-list>
         </fui-bottom-popup>
     </fui-modal>
-    <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
-    <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
-    </fui-modal>
-    <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
-        <fui-form ref="plan_update" :model="update_req">
-            <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
-            <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
-            <fui-input label="司机姓名" v-model="update_req.driver_name"></fui-input>
-            <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
-            <fui-input label="承运公司" v-model="update_req.trans_company_name"></fui-input>
-            <fui-input label="备注" v-model="update_req.comment"></fui-input>
-        </fui-form>
-    </fui-modal>
     <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
         <fui-form ref="new_stuff_price_form" top="100">
             <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
@@ -223,10 +159,6 @@
     </fui-modal>
     <fui-message ref="po_msg"></fui-message>
     <fui-toast ref="toast"></fui-toast>
-    <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
-    <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
-    <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
-    <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
     <fui-bottom-popup :show="show_approver_pick" v-if="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
         <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
         <fui-list>
@@ -240,38 +172,22 @@
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilterVue from '../components/ModuleFilter.vue';
-import $fui from '@/components/firstui/fui-clipboard';
 import pickRegions from '@/components/pick-regions/pick-regions.vue'
-import moment from 'moment';
-import Measurement from '../components/Measurement.vue';
-import ScExecute from '../components/ScExecute.vue';
 export default {
     name: 'OrderList',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilterVue,
         "pick-regions": pickRegions,
-        "measurement": Measurement,
-        "sc-execute": ScExecute,
     },
     data: function () {
         return {
-            show_blackList_confirm: false,
-            focus_blackList: {
-                type: '',
-                id: 0,
-            },
             tab_current: 0,
-            show_attach: false,
             new_stuff_price: {
                 show: false,
                 price: 0,
                 comment: '',
                 isMuti: false
-            },
-            cur_contract: {
-                balance: 0,
-                rbac_users: [],
             },
             action_show: false,
             action_list: () => {
@@ -291,15 +207,6 @@ export default {
             },
             select_active: false,
             plan_selected: [],
-            show_update: false,
-            update_req: {
-                main_vehicle_plate: '',
-                behind_vehicle_plate: '',
-                driver_name: '',
-                driver_phone: '',
-                trans_company_name: '',
-            },
-            rollback_msg: '',
             use_for_array: [
                 '气化', '气站', '其他'
             ],
@@ -315,22 +222,6 @@ export default {
             },
             show_plan_time: false,
             show_use_for: false,
-            show_reassign_prompt: false,
-            supplier_list: [],
-            choose_company_show: false,
-            comp_title: function (is_buy) {
-                let ret = {
-                    a_title: '买方',
-                    b_title: '卖方'
-                }
-                if (is_buy) {
-                    ret = {
-                        a_title: '卖方',
-                        b_title: '买方',
-                    }
-                }
-                return ret;
-            },
             cur_get_url: '',
             cur_is_motion: false,
             cur_is_buy: false,
@@ -341,118 +232,14 @@ export default {
             cur_cancel_url: '',
             cur_dup_url: '',
             cur_close_url: '',
-            sc_data2show: [],
             customer_data2show: [],
             stuff_data2show: [],
             sp_data2show: [],
-            show_delete_sc_content: false,
-            upload_sc: {
-                plan_id: 0,
-                open_id: '',
-                req_id: 0,
-                content_id: 0,
-                need_attach: false,
-                need_expired: false,
-                need_input: false,
-                name: '',
-                prompt: '',
-            },
-            one_att: [''],
-            sc_passed: false,
-            show_sc_confirm: false,
-            show_deliver_date: false,
-            show_scale_input: false,
-            deliver_req: {
-                count: "",
-                m_time: '',
-                m_weight: '',
-                p_time: '',
-                p_weight: '',
-            },
-            xxx_url: '',
-            confirm_info: '',
-            show_xxx_confirm: false,
             pay_pending_approval_auditer: '',
             approval_projects: [],
             show_approver_pick: false,
             approver_pick_names: [],
             approver_pick_resolve: null,
-            show_rollback_confirm: false,
-            show_sc: false,
-            sc_current_index: 0,
-            focus_plan: {
-                "behind_vehicle": {
-                    "id": 1,
-                    "plate": "车牌"
-                },
-                "comment": "备注",
-                "company": {
-                    "id": 1,
-                    "name": "公司名称"
-                },
-                "count": 1,
-                "driver": {
-                    "id": 1,
-                    "id_card": "司机身份证",
-                    "name": "司机名称",
-                    "phone": "司机电话"
-                },
-                "drop_address": "卸货地址",
-                "enter_time": "2020-01-01 12:00:00",
-                "from_bidding": true,
-                "id": 0,
-                "m_time": "2020-01-01 12:00:00",
-                "m_weight": 1,
-                "main_vehicle": {
-                    "id": 1,
-                    "plate": "车牌"
-                },
-                "p_time": "2020-01-01 12:00:00",
-                "p_weight": 1,
-                "plan_histories": [{
-                    "action_type": "操作",
-                    "id": 1,
-                    "operator": "操作人",
-                    "time": "2020-01-01 12:00:00"
-                }],
-                "plan_time": "2020-01-01 12:00:00",
-                "rbac_user": {
-                    "id": 1,
-                    "name": "用户姓名",
-                    "phone": "用户电话"
-                },
-                "register_number": 1,
-                "register_time": "2020-01-01 12:00:00",
-                "sc_info": [{
-                    "belong_type": 0,
-                    "id": 1,
-                    "name": "安检需求",
-                    "need_attach": true,
-                    "need_expired": true,
-                    "need_input": true,
-                    "sc_content": {
-                        "attachment": "http://www.baidu.com",
-                        "checker": "张三",
-                        "expired_time": "2020-01-01 00:00:00",
-                        "id": 1,
-                        "input": "请输入",
-                        "passed": true
-                    }
-                }],
-                "status": 1,
-                "stuff": {
-                    "company": {
-                        "id": 1,
-                        "name": "公司名称"
-                    },
-                    "id": 1,
-                    "name": "货物名称",
-                    concern_fapiao: false,
-                },
-                "unit_price": 1,
-                "use_for": "用途"
-            },
-            show_plan_detail: false,
             seg: [],
             company_filter: {
                 name: '全部公司',
@@ -468,15 +255,10 @@ export default {
             focus_status: undefined,
             begin_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
             end_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
-            deliver_time: utils.dateFormatter(new Date(), 'y-m-d h:i:s', 4, false),
-
-            deliver_time_type: '',
             tabs: [],
             show_batch_copy: false,
-            gallery_index: 0,
             is_the_order_display_price: false,
             hide_order_detail_price: true,
-            is_allowed_order_return: false,
             stat_scopes: [],
             stat_context_company_id: null,
             show_scope_picker: false,
@@ -503,65 +285,6 @@ export default {
             const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
             return current ? current.name : '';
         },
-        get_both_attach: function () {
-            let ret = [];
-            let func = (path) => {
-                let pic_ret = '';
-                if (path) {
-                    pic_ret = this.$convert_attach_url(path);
-                } else {
-                    pic_ret = '/static/no_att.jpg';
-                }
-                return pic_ret;
-            };
-            ret.push({
-                src: func(this.focus_plan.company.attachment),
-                descr: '下单方资质'
-            });
-            ret.push({
-                src: func(this.focus_plan.stuff.company.attachment),
-                descr: '接单方资质'
-            });
-
-            return ret;
-        },
-        user_authorize: function () {
-            let ret = '未授权';
-            this.cur_contract.rbac_users.forEach(ele => {
-                if (ele.id == this.focus_plan.rbac_user.id) {
-                    ret = '已授权';
-                }
-            });
-
-            return ret;
-        },
-        plan_status: function () {
-            let ret = '';
-            if (this.focus_plan.status == 0) {
-                ret = '未确认';
-            } else if (this.focus_plan.status == 1) {
-                ret = '未付款';
-            } else if (this.focus_plan.status == 2) {
-                ret = '未发车';
-            } else if (this.focus_plan.status == 3) {
-                ret = '已关闭';
-            }
-            return ret;
-        },
-        sc_attach_urls: function () {
-            let ret = [];
-            if (this.focus_plan.sc_info) {
-                this.focus_plan.sc_info.forEach(ele => {
-                    if (ele.sc_content && ele.sc_content.attachment) {
-                        ret.push({
-                            src: this.$convert_attach_url(ele.sc_content.attachment),
-                            descr: ele.name
-                        });
-                    }
-                });
-            }
-            return ret;
-        },
         plan_filter: function () {
             const ret = {
                 start_time: this.begin_time,
@@ -575,25 +298,6 @@ export default {
                 ret.stat_context_company_id = this.stat_context_company_id;
             }
             return ret;
-        },
-        plan_owner: function () {
-            let ret = false;
-            let self = uni.getStorageSync('self_info');
-            if (self.id == this.focus_plan.rbac_user.id) {
-                ret = true;
-            }
-
-            return ret;
-        },
-        can_pass_vehicle: function () {
-            if (!this.focus_plan || !this.focus_plan.register_time) {
-                return false;
-            }
-            if (this.focus_plan.enter_time) {
-                return false;
-            }
-            const expect_status = this.focus_plan.is_buy ? 1 : 2;
-            return this.focus_plan.status === expect_status;
         },
 
     },
@@ -684,29 +388,6 @@ export default {
             else {
                 return urls.split('|').map(url => this.$convert_attach_url(url));;
             }
-        },
-        nav_to_fc: function () {
-            uni.navigateTo({
-                url: '/subPage1/FcExecute?plan_id=' + this.focus_plan.id
-            })
-        },
-        change_index: function (e) {
-            this.gallery_index = e.index
-        },
-        download_img: function () {
-            const imgs = [this.focus_plan.company.attachment, this.focus_plan.stuff.company.attachment]
-            this.$download_file(this.$convert_attach_url(imgs[this.gallery_index]))
-        },
-        open_attach_pics: function () {
-            this.show_attach = true;
-        },
-        mark_fapiao_deliver: async function () {
-            await this.$send_req('/sale_management/set_fapiao_delivered', {
-                plan_id: this.focus_plan.id,
-                delivered: !this.focus_plan.fapiao_delivered
-            });
-            this.refresh_plans();
-            this.show_plan_detail = false;
         },
         refresh_approval_projects: async function () {
             try {
@@ -821,61 +502,6 @@ export default {
                 }
             });
         },
-        update_plan: async function (e) {
-            if (e.index == 1) {
-                let rules = [{
-                        name: 'main_vehicle_plate',
-                        rule: ['isCarNo'],
-                        msg: ['请填写正确的车牌号']
-                    },
-                    {
-                        name: 'behind_vehicle_plate',
-                        rule: ['isCarNo'],
-                        msg: ['请填写正确的车牌号']
-                    }, {
-                        name: 'driver_phone',
-                        rule: ['isMobile'],
-                        msg: ['请填写正确的手机号']
-                    }
-                ];
-                let val_ret = await this.$refs.plan_update.validator(this.update_req, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                if (this.update_req.main_vehicle_plate == this.focus_plan.main_vehicle.plate) {
-                    delete this.update_req.main_vehicle_plate;
-                }
-                if (this.update_req.behind_vehicle_plate == this.focus_plan.behind_vehicle.plate) {
-                    delete this.update_req.behind_vehicle_plate;
-                }
-                if (this.update_req.driver_name == this.focus_plan.driver.name) {
-                    delete this.update_req.driver_name;
-                }
-                if (this.update_req.driver_phone == this.focus_plan.driver.phone) {
-                    delete this.update_req.driver_phone;
-                }
-                if (this.update_req.trans_company_name == (this.focus_plan.trans_company_name || '')) {
-                    delete this.update_req.trans_company_name;
-                }
-                if (this.update_req.comment == this.focus_plan.comment) {
-                    delete this.update_req.comment;
-                }
-                this.update_req.plan_id = this.focus_plan.id;
-                await this.$send_req(this.cur_update_url, this.update_req);
-                this.refresh_plans();
-                this.show_plan_detail = false;
-            }
-            this.show_update = false;
-        },
-        prepare_update: function () {
-            this.show_update = true;
-            this.update_req.main_vehicle_plate = this.focus_plan.main_vehicle.plate;
-            this.update_req.behind_vehicle_plate = this.focus_plan.behind_vehicle.plate;
-            this.update_req.driver_name = this.focus_plan.driver.name;
-            this.update_req.driver_phone = this.focus_plan.driver.phone;
-            this.update_req.trans_company_name = this.focus_plan.trans_company_name || '';
-            this.update_req.comment = this.focus_plan.comment;
-        },
         choose_use_for: function (_name) {
             this.dup_plan.use_for = _name;
             this.show_use_for = false;
@@ -921,52 +547,8 @@ export default {
             }
             this.show_batch_copy = false;
         },
-        get_is_allowed_order_return: async function () {
-            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
-            this.is_allowed_order_return = ret.is_allowed_order_return;
-        },
         pick_address: function (e) {
             this.dup_plan.drop_address = e.map(item => item.name).join('-')
-        },
-        reassign_supplier: async function (e) {
-            if (e.index == 1) {
-                await this.$send_req('/buy_management/assign_supplier', {
-                    plan_id: this.focus_plan.id,
-                    supplier_id: 0
-                });
-                this.show_plan_detail = false;
-            }
-            this.show_reassign_prompt = false;
-            this.refresh_plans();
-        },
-        assign_supplier: async function (id) {
-            await this.$send_req('/buy_management/assign_supplier', {
-                plan_id: this.focus_plan.id,
-                supplier_id: id
-            });
-            this.choose_company_show = false;
-            this.show_plan_detail = false;
-            this.refresh_plans();
-        },
-        get_buy_contracts: async function (pageNo) {
-            if (!this.$has_module('buy_management')) {
-                return [];
-            }
-            let res = await this.$send_req('/buy_management/contract_get', {
-                pageNo: pageNo
-            })
-            res.contracts.forEach(ele => {
-                ele.cond = ele.company.name
-            });
-            return res.contracts;
-        },
-        prepare_choose_company: function () {
-            this.choose_company_show = true;
-        },
-        go_to_ticket: function (is_internal) {
-            uni.navigateTo({
-                url: '/subPage1/Ticket?id=' + this.focus_plan.id + '&is_internal=' + is_internal
-            });
         },
         batch_confirm: async function () {
             await this.$send_req(this.cur_batch_confirm_url, this.plan_filter);
@@ -999,123 +581,9 @@ export default {
 
             return ret;
         },
-        prepare_delete_sc: function (item) {
-            this.upload_sc.content_id = item.sc_content.id;
-            this.show_delete_sc_content = true;
-        },
-        prepare_upload_sc: function (item) {
-            this.upload_sc.req_id = item.id;
-            this.upload_sc.plan_id = this.focus_plan.id;
-            this.upload_sc.open_id = this.focus_plan.driver.open_id;
-            if (item.sc_content) {
-                this.upload_sc.content_id = item.sc_content.id;
-            }
-            this.upload_sc.need_attach = item.need_attach;
-            this.upload_sc.need_expired = item.need_expired;
-            this.upload_sc.need_input = item.need_input;
-            this.upload_sc.name = item.name;
-            this.upload_sc.prompt = item.prompt;
-            this.$refs.sc_up.show_modal();
-        },
-
         fill_plan_time: function (e) {
             this.dup_plan.plan_time = e.result;
             this.show_plan_time = false;
-        },
-
-        get_plan_sc: async function (pageNo, [id]) {
-            if (!id) {
-                return [];
-            }
-            let res = await this.$send_req('/sc/plan_status', {
-                pageNo: pageNo,
-                plan_id: id
-            });
-            if (res.reqs.length > 0) {
-                res.reqs[0].passed_total = res.passed;
-            }
-            return res.reqs;
-        },
-        prepare_sc_confirm: function () {
-            this.show_sc_confirm = true;
-            this.$nextTick(() => {
-                this.$refs.sc_confirm.refresh();
-            });
-        },
-        copy_text: function (e) {
-            $fui.getClipboardData(e, res => {
-                if (res) {
-                    uni.showToast({
-                        title: '复制成功',
-                        icon: 'success',
-                        duration: 2000
-                    });
-                }
-            });
-        },
-        calc_count: function () {
-            this.deliver_req.count = Math.abs(this.deliver_req.p_weight - this.deliver_req.m_weight);
-            this.deliver_req.count = utils.moneyFormatter(this.deliver_req.count)
-        },
-        deliver: async function (e) {
-            if (e.index == 1) {
-
-                let rules = [{
-                    name: 'count',
-                    rule: ['required'],
-                    msg: ['请输入装载量']
-                }, {
-                    name: 'p_weight',
-                    rule: ['isAmount'],
-                    msg: ['重量需要是数字']
-                }, {
-                    name: 'm_weight',
-                    rule: ['isAmount'],
-                    msg: ['重量需要是数字']
-                }, ];
-                let val_ret = await this.$refs.deliver.validator(this.deliver_req, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                this.deliver_req.plan_id = this.focus_plan.id;
-                this.deliver_req.count = parseFloat(this.deliver_req.count);
-                this.deliver_req.p_weight = parseFloat(this.deliver_req.p_weight);
-                this.deliver_req.m_weight = parseFloat(this.deliver_req.m_weight);
-                await this.$send_req('/scale/deliver', this.deliver_req);
-                this.show_plan_detail = false;
-                this.deliver_req = {
-                    count: "",
-                    m_time: '',
-                    m_weight: '',
-                    p_time: '',
-                    p_weight: '',
-                };
-                uni.startPullDownRefresh();
-            }
-            this.show_scale_input = false;
-        },
-        prepare_deliver_date_pick: function (time_type) {
-            this.deliver_time_type = time_type;
-            this.show_deliver_date = true;
-        },
-        choose_deliver_date: function (e) {
-            this.deliver_req[this.deliver_time_type] = e.result;
-            this.show_deliver_date = false;
-        },
-        do_xxx: async function (e) {
-            if (e.index == 1) {
-                let body = {
-                    plan_id: this.focus_plan.id
-                };
-                if (this.pay_pending_approval_auditer && this.xxx_url && this.xxx_url.indexOf('order_sale_pay') >= 0) {
-                    body.approval_auditer = this.pay_pending_approval_auditer;
-                }
-                await this.$send_req(this.xxx_url, body);
-                this.show_plan_detail = false;
-                uni.startPullDownRefresh();
-            }
-            this.pay_pending_approval_auditer = '';
-            this.show_xxx_confirm = false;
         },
         validate_new_stuff_price_form: async function () {
             const rules = [{
@@ -1158,7 +626,7 @@ export default {
             }
             const price_req = {
                 unit_price: Number(this.new_stuff_price.price),
-                plan_id: this.new_stuff_price.isMuti ? this.plan_selected.toString() : this.focus_plan.id + '',
+                plan_id: this.plan_selected.toString(),
                 comment: this.new_stuff_price.comment
             };
             if (auditerRes.auditer) {
@@ -1170,8 +638,7 @@ export default {
                 });
             }).finally(() => {
                 this.cancel_new_stuff_price();
-                this.show_plan_detail = false;
-                uni.startPullDownRefresh();
+                this.refresh_plans();
             });
         },
         cancel_new_stuff_price: function (e) {
@@ -1182,75 +649,6 @@ export default {
             this.action_show = false;
             this.select_active = false;
             this.plan_selected = [];
-        },
-        show_sc_image: function (index) {
-            // 找到当前点击的图片在所有图片中的索引
-            let currentIndex = 0;
-            let count = 0;
-            if (this.focus_plan.sc_info) {
-                for (let i = 0; i < this.focus_plan.sc_info.length; i++) {
-                    if (this.focus_plan.sc_info[i].sc_content && this.focus_plan.sc_info[i].sc_content.attachment) {
-                        if (i === index) {
-                            currentIndex = count;
-                            break;
-                        }
-                        count++;
-                    }
-                }
-            }
-            this.sc_current_index = currentIndex;
-            this.show_sc = true;
-        },
-        on_sc_swiper_change: function (e) {
-            this.sc_current_index = e.detail.current;
-        },
-        do_rollback: async function (e) {
-            if (e.index == 1) {
-                let rules = [{
-                    name: 'rollback_msg',
-                    rule: ['required'],
-                    msg: ['请输入原因']
-                }];
-                let val_ret = await this.$refs.rollback_form.validator({
-                    rollback_msg: this.rollback_msg
-                }, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                await this.$send_req(this.cur_rollback_url, {
-                    plan_id: this.focus_plan.id,
-                    msg: this.rollback_msg
-                });
-                this.show_plan_detail = false;
-                uni.startPullDownRefresh();
-            }
-            this.show_rollback_confirm = false;
-        },
-        prepare_pay_confirm: async function (info) {
-            this.pay_pending_approval_auditer = '';
-            await this.refresh_approval_projects();
-            const p = this.approval_item('manual_verify_pay');
-            if (p && p.enabled && p.approver_mode === 'submit_specify') {
-                const name = await this.pick_submit_specify_auditer();
-                if (!name) {
-                    return;
-                }
-                this.pay_pending_approval_auditer = name;
-            }
-            this.prepare_xxx_confirm(await this.get_pay_url(), info);
-        },
-        prepare_xxx_confirm: function (url, info) {
-            this.show_xxx_confirm = true;
-            this.confirm_info = info;
-            this.xxx_url = url;
-        },
-        authorize_user: async function () {
-            await this.$send_req('/sale_management/authorize_user', {
-                contract_id: this.cur_contract.id,
-                phone: this.focus_plan.rbac_user.phone,
-            })
-            this.show_plan_detail = false;
-            this.refresh_plans();
         },
         go_to_order_detail: function (item) {
             let role = 'customer';
@@ -1266,35 +664,6 @@ export default {
                 url += '&stat_context_company_id=' + this.stat_context_company_id;
             }
             uni.navigateTo({ url: url });
-        },
-        prepare_plan_detail: async function (item, make_context_req, ssss_bool, scci) {
-            // 获取销售或采购合同信息
-            if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && item.company.id) {
-                try {
-                    let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                    let contract_req = {};
-                    if (this.cur_is_buy) {
-                        contract_req.supplier_id = item.company.id;
-                    } else {
-                        contract_req.customer_id = item.company.id;
-                        contract_req.supply_company_id = item.stuff.company.id;
-                    }
-                    let resp = await this.$send_req(url, make_context_req(contract_req, url, ssss_bool, scci))
-                    // 标注合同是否一个月内即将到期
-                    const oneMonthFromNow = moment().add(1, 'month');
-                    const contractEndDate = moment(resp.end_time);
-                    const monthsDifference = contractEndDate.diff(moment(), 'months', true);
-                    const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
-                    if (diffOneMonth) {
-                        resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
-                    }
-                    this.cur_contract = resp;
-                } catch (error) {
-                    console.log(error);
-                }
-            }
-            this.focus_plan = item;
-            this.show_plan_detail = true;
         },
         init_tabs: function () {
             this.tabs = [{
@@ -1584,34 +953,6 @@ export default {
                 this.refresh_plans();
             }
         },
-        add_to_blacklist: async function (id, type) {
-            this.focus_blackList = {
-                type: type,
-                id: id,
-            }
-            this.show_blackList_confirm = true;
-
-        },
-        confirm_add_to_blacklist: async function (e) {
-            if (e.index == 1) {
-                await this.$send_req('/stuff/add_to_blacklist', {
-                    type: this.focus_blackList.type,
-                    ids: this.focus_blackList.id.toString(),
-                    reason: `违规${this.focus_blackList.type === 'vehicle' ? '车辆' : '司机'}`
-                });
-                this.$refs.toast.show({
-                    text: '添加成功'
-                });
-            }
-            this.show_blackList_confirm = false;
-        },
-        show_manual_weight: function () {
-            this.$refs.measurement.show();
-        },
-        measurement_refresh: function () {
-            this.refresh_plans();
-            this.show_plan_detail = false;
-        },
         get_price_display_config: async function () {
             try {
                 const result = await this.$send_req('/global/get_the_order_display_price', {});
@@ -1644,7 +985,6 @@ export default {
         tom.setDate(tom.getDate() + 1);
         this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
-        this.get_is_allowed_order_return();
         this.get_price_display_config();
         this.get_hide_order_detail_price_config();
     },
@@ -1693,64 +1033,5 @@ export default {
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-right: 20rpx;
-}
-
-.sc-image-viewer {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    padding-bottom: 200rpx;
-    box-sizing: border-box;
-}
-
-.sc-swiper {
-    width: 100%;
-    height: 100%;
-}
-
-.sc-movable-area {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-}
-
-.sc-movable-view {
-    height: 100%;
-    width: 100%;
-}
-
-.sc-lookimg {
-    width: 100%;
-    height: 100%;
-}
-
-.sc-close-button-container {
-    position: absolute;
-    bottom: 40rpx;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 8889;
-}
-
-.sc-index-wrap {
-    position: absolute;
-    top: 40rpx;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 8889;
-}
-
-.sc-index {
-    color: white;
-    font-size: 32rpx;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 10rpx 20rpx;
-    border-radius: 20rpx;
 }
 </style>
