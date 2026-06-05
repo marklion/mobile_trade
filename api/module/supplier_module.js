@@ -150,6 +150,7 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        get_order_by_id: common.get_order_by_id('supplier'),
         order_sale_cancel: {
             name: '取消销售单',
             description: '取消销售单',

@@ -13,6 +13,9 @@
 			"path": "pages/Ticket"
 		},
 		{
+			"path": "pages/order_detail"
+		},
+		{
 			"path": "pages/Export",
 			"style": {
 				"enablePullDownRefresh": true
@@ -46,6 +49,12 @@
 			"pages": [
 				{
 					"path": "Ticket"
+				},
+				{
+					"path": "order_detail",
+					"style": {
+						"navigationBarTitleText": "订单详情"
+					}
 				},
 				{
 					"path": "Driver",

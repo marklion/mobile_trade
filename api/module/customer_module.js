@@ -308,6 +308,7 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        get_order_by_id: common.get_order_by_id('customer'),
         bidding_search: {
             name: '查询竞标单',
             description: '查询竞标单',

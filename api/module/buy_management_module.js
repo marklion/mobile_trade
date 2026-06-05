@@ -152,6 +152,7 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        get_order_by_id: common.get_order_by_id('buy_management'),
         order_buy_confirm: {
             name: '采购订单确认',
             description: '采购订单确认',

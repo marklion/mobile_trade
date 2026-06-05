@@ -809,6 +809,99 @@ module.exports = {
             element.company = { name: '(司机选择)' };
         }
     },
+    can_user_view_plan_as_customer_or_supplier: async function (token, plan, is_buy) {
+        let user = await rbac_lib.get_user_by_token(token);
+        let opt_company = await rbac_lib.get_company_by_token(token);
+        if (!user || !plan || !opt_company) {
+            return false;
+        }
+        if (plan.rbac_user && plan.rbac_user.id === user.id) {
+            return true;
+        }
+        if (plan.companyId === opt_company.id) {
+            return true;
+        }
+        const authorized_ids = await this.get_authorized_counterparty_company_ids_for_user(user.id, opt_company.id, is_buy);
+        if (plan.companyId && authorized_ids.includes(plan.companyId)) {
+            return true;
+        }
+        if (plan.stuff && plan.stuff.company && authorized_ids.includes(plan.stuff.company.id)) {
+            return true;
+        }
+        if (opt_company.is_group) {
+            const candidates = [plan.company, plan.stuff && plan.stuff.company].filter(Boolean);
+            for (const target_company of candidates) {
+                if (target_company.parentGroupCompanyId === opt_company.id
+                    && await group_lib.user_has_member_data_access(user.id, target_company.id, true)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+    can_user_view_plan_as_management: async function (token, plan, is_buy, stat_context_company_id) {
+        let company = await group_lib.resolve_stat_company(token, stat_context_company_id);
+        let user = await rbac_lib.get_user_by_token(token);
+        let opt_company = await rbac_lib.get_company_by_token(token);
+        if (!company || !plan) {
+            return false;
+        }
+        if (plan.is_buy !== is_buy) {
+            return false;
+        }
+        const stuff_list = await company.getStuff({ paranoid: false });
+        const stuff_ids = stuff_list.map((item) => item.id);
+        if (stuff_ids.includes(plan.stuffId)) {
+            return true;
+        }
+        if (opt_company && opt_company.is_group && user) {
+            const candidates = [plan.company, plan.stuff && plan.stuff.company].filter(Boolean);
+            for (const target_company of candidates) {
+                if (target_company.parentGroupCompanyId === opt_company.id
+                    && await group_lib.user_has_member_data_access(user.id, target_company.id, true)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+    get_order_detail: async function (plan_id, token, view_role, stat_context_company_id) {
+        let plan = await util_lib.get_single_plan_by_id(plan_id);
+        if (!plan) {
+            throw { err_msg: '订单不存在' };
+        }
+        let has_permission = false;
+        switch (view_role) {
+            case 'sale_management':
+                has_permission = await this.can_user_view_plan_as_management(token, plan, false, stat_context_company_id);
+                break;
+            case 'buy_management':
+                has_permission = await this.can_user_view_plan_as_management(token, plan, true, stat_context_company_id);
+                break;
+            case 'customer':
+                has_permission = await this.can_user_view_plan_as_customer_or_supplier(token, plan, false);
+                break;
+            case 'supplier':
+                has_permission = await this.can_user_view_plan_as_customer_or_supplier(token, plan, true);
+                break;
+            default:
+                break;
+        }
+        if (!has_permission) {
+            throw { err_msg: '无权限' };
+        }
+        let result = await this.processPlan(plan, this.replace_plan2archive.bind(this));
+        if (result && typeof result.toJSON === 'function') {
+            result = result.toJSON();
+        }
+        if (!result.sc_info) {
+            const sc_status = await sc_lib.get_sc_status_by_plan(plan);
+            if (sc_status && sc_status.reqs) {
+                result.sc_info = sc_status.reqs;
+            }
+        }
+        return result;
+    },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
