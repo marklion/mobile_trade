@@ -52,14 +52,25 @@
                         </div>
                     </template>
                 </el-table-column>
-                <el-table-column label="关联物料">
-                    <template slot-scope="scope">
-                        <div v-if="scope.row.stuff">
-                            <el-tag v-for="single_stuff in scope.row.stuff" :key="single_stuff.id" :closable="is_motive" type="primary" @close="handle_stuff_close(scope.row, single_stuff)">
-                                {{ single_stuff.name }}
-                            </el-tag>
-                        </div>
-                    </template>
+                <el-table-column label="关联物料" min-width="220">
+                        <template slot-scope="scope">
+                            <div v-if="scope.row.stuff" class="contract-stuff-list">
+                                <div v-for="single_stuff in format_linked_stuff_list(scope.row.stuff)"
+                                    :key="single_stuff.id" class="contract-stuff-item">
+                                    <template v-if="single_stuff.company_name">
+                                        <div class="contract-stuff-company">{{ single_stuff.company_name }}</div>
+                                        <el-tag :closable="is_motive" type="primary" class="contract-stuff-tag"
+                                            @close="handle_stuff_close(scope.row, single_stuff)">
+                                            {{ single_stuff.stuff_name }}
+                                        </el-tag>
+                                    </template>
+                                    <el-tag v-else :closable="is_motive" type="primary" class="contract-stuff-tag"
+                                        @close="handle_stuff_close(scope.row, single_stuff)">
+                                        {{ single_stuff.display_name }}
+                                    </el-tag>
+                                </div>
+                            </div>
+                        </template>
                 </el-table-column>
                 <el-table-column v-if="can_manage_discount" label="优惠策略" min-width="180">
                     <template slot-scope="scope">
@@ -641,6 +652,32 @@ export default {
 
             this.show_pics = true;
         },
+        get_linked_stuff_parts: function (single_stuff) {
+            const stuff = single_stuff || {};
+            const company_name = stuff.company && stuff.company.name;
+            const full_name = stuff.name || '';
+            if (company_name && full_name.startsWith(`${company_name}-`)) {
+                return {
+                    company_name,
+                    stuff_name: full_name.slice(company_name.length + 1),
+                };
+            }
+            return {
+                company_name: '',
+                stuff_name: full_name,
+            };
+        },
+        format_linked_stuff_list: function (stuff_list) {
+            return (stuff_list || []).map((single_stuff) => {
+                const parts = this.get_linked_stuff_parts(single_stuff);
+                return {
+                    ...single_stuff,
+                    company_name: parts.company_name,
+                    stuff_name: parts.stuff_name,
+                    display_name: single_stuff.name,
+                };
+            });
+        },
         handle_stuff_close: function (contract, stuff) {
             this.$confirm('确定删除该物料吗?', '提示', {
                 confirmButtonText: '确定',
@@ -661,4 +698,34 @@ export default {
     },
 }
 </script>
+
+<style scoped>
+.contract-stuff-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.contract-stuff-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    max-width: 100%;
+}
+
+.contract-stuff-company {
+    font-size: 12px;
+    color: #909399;
+    line-height: 1.5;
+    word-break: break-all;
+}
+
+.contract-stuff-tag {
+    white-space: normal;
+    height: auto;
+    line-height: 1.5;
+    max-width: 100%;
+}
+</style>
 

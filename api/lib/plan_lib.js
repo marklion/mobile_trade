@@ -440,7 +440,7 @@ module.exports = {
             limit: 20,
             include: [
                 { model: sq.models.company, as: 'buy_company' },
-                { model: sq.models.stuff, },
+                { model: sq.models.stuff, include: [{ model: sq.models.company }] },
                 { model: sq.models.rbac_user, },
                 { model: sq.models.contract_discount_scheme, as: 'discount_scheme' },
             ],
