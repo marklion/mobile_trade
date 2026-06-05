@@ -22,6 +22,7 @@ output.xml
 **/yarn.lock
 **/last-build-time*.txt
 mt_gui/dist
+extern/**/dist
 **/cmake_tmp_dir/
 doc_site/public/
 doc_site/resources/

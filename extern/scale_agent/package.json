@@ -6,7 +6,7 @@
   "bin": "index.js",
   "scripts": {
     "start": "node index.js",
-    "build:win": "pkg index.js --targets node18-win-x64 --output dist/scale_agent.exe"
+    "build:win": "rm -rf dist && pkg index.js --targets node18-win-x64 --output dist/scale_agent.exe && mkdir -p dist/prebuilds/win32-x64 && cp node_modules/@serialport/bindings-cpp/prebuilds/win32-x64/node.napi.node dist/prebuilds/win32-x64/node.napi.node"
   },
   "dependencies": {
     "js-yaml": "^4.1.0",

@@ -7,7 +7,8 @@ const yaml = require('js-yaml');
 const { SerialPort } = require('serialport');
 
 const PORT = 39109;
-const DEFAULT_CONFIG_PATH = path.join(__dirname, 'scale_agent.config.json');
+const APP_BASE_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
+const DEFAULT_CONFIG_PATH = path.join(APP_BASE_DIR, 'scale_agent.config.json');
 const SCRIPT_MAX_LENGTH = 8000;
 const SCRIPT_RUN_TIMEOUT_MS = 50;
 const SCRIPT_FORBIDDEN_PATTERNS = [
