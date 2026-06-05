@@ -32,6 +32,22 @@ function prefix_contract_stuff_names(rows, home_company) {
     });
 }
 
+function prefix_contract_stuff_in_contracts(contracts, home_company) {
+    if (!home_company || !home_company.is_group || !Array.isArray(contracts)) {
+        return;
+    }
+    contracts.forEach((contract) => {
+        if (contract.stuff && contract.stuff.length) {
+            prefix_contract_stuff_names(contract.stuff, home_company);
+        }
+        (contract.contract_stuff_prices || []).forEach((price) => {
+            if (price.stuff) {
+                prefix_contract_stuff_names([price.stuff], home_company);
+            }
+        });
+    });
+}
+
 async function list_contract_selectable_stuff_company_ids(home_company, context_company, user) {
     const company_ids = [context_company.id];
     const group_company = home_company.is_group ? home_company : (context_company.is_group ? context_company : null);
@@ -559,7 +575,9 @@ module.exports = {
 
             func: async function (body, token) {
                 let company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
+                const home_company = await rbac_lib.get_company_by_token(token);
                 let found_ret = await plan_lib.get_all_sale_contracts(company, body.pageNo, body.stuff_id);
+                prefix_contract_stuff_in_contracts(found_ret.rows, home_company);
                 return {
                     contracts: found_ret.rows,
                     total: found_ret.count
