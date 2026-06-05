@@ -19,6 +19,46 @@ async function resolve_contract_context_company(token, stat_context_company_id, 
     return await plan_lib.resolve_sale_contract_context_company(token, stat_context_company_id, need_write);
 }
 
+const STUFF_FOR_CONTRACT_PAGE_SIZE = 20;
+
+function prefix_contract_stuff_names(rows, home_company) {
+    rows.forEach((item) => {
+        const should_prefix_member_company_name = home_company.is_group
+            && item.company
+            && item.company.id !== home_company.id;
+        if (should_prefix_member_company_name) {
+            item.name = `${item.company.name}-${item.name}`;
+        }
+    });
+}
+
+async function list_contract_selectable_stuff_company_ids(home_company, context_company, user) {
+    const company_ids = [context_company.id];
+    const group_company = home_company.is_group ? home_company : (context_company.is_group ? context_company : null);
+    if (!group_company || !user) {
+        return { company_ids: [...new Set(company_ids)], group_company: null };
+    }
+    company_ids.push(group_company.id);
+    const all_members = await group_company.getGroup_member_companies({ attributes: ['id'] });
+    company_ids.push(...all_members.map((m) => m.id));
+    return { company_ids: [...new Set(company_ids)], group_company };
+}
+
+function build_contract_stuff_order(sq, priority_company_id, group_company_id) {
+    const priority_id = Number(priority_company_id);
+    const group_id = group_company_id != null ? Number(group_company_id) : null;
+    if (!Number.isFinite(priority_id)) {
+        return [['companyId', 'ASC'], ['id', 'ASC']];
+    }
+    if (group_id != null && Number.isFinite(group_id)) {
+        return [
+            [sq.literal(`CASE WHEN \`stuff\`.\`companyId\` = ${priority_id} THEN 0 WHEN \`stuff\`.\`companyId\` = ${group_id} THEN 1 ELSE 2 END`), 'ASC'],
+            ['id', 'ASC'],
+        ];
+    }
+    return [['companyId', 'ASC'], ['id', 'ASC']];
+}
+
 async function resolve_contract_stuff_operate_context(token, body) {
     const home_company = await rbac_lib.get_company_by_token(token);
     const company = await resolve_contract_context_company(token, body.stat_context_company_id, true);
@@ -365,36 +405,90 @@ module.exports = {
                     return { stuff: [], total: 0 };
                 }
                 const scope_company = context_company;
-                let company_ids = [scope_company.id];
-                if (scope_company.is_group) {
-                    const user = await rbac_lib.get_user_by_token(token);
-                    if (user) {
-                        const member_ids = await group_lib.list_member_company_ids_for_stuff(user.id, scope_company);
-                        company_ids.push(...member_ids);
+                const user = await rbac_lib.get_user_by_token(token);
+                const { company_ids, group_company } = await list_contract_selectable_stuff_company_ids(
+                    home_company,
+                    scope_company,
+                    user
+                );
+                const page_no = Number(body.pageNo) || 0;
+                const stuff_include = [{ model: sq.models.company }];
+                const scope_company_id = Number(scope_company.id);
+                let rows = [];
+                let total = 0;
+
+                if (!scope_company.is_group && page_no === 0) {
+                    const scope_rows = await sq.models.stuff.findAll({
+                        where: { companyId: scope_company_id },
+                        include: stuff_include,
+                        order: [['id', 'ASC']],
+                    });
+                    const normalized_company_ids = company_ids
+                        .map((id) => Number(id))
+                        .filter((id) => Number.isFinite(id));
+                    const group_company_id = group_company ? Number(group_company.id) : null;
+                    const other_company_ids = normalized_company_ids
+                        .filter((id) => id !== scope_company_id);
+                    const member_other_ids = other_company_ids
+                        .filter((id) => group_company_id == null || id !== group_company_id);
+                    const group_other_ids = group_company_id != null && other_company_ids.includes(group_company_id)
+                        ? [group_company_id]
+                        : [];
+
+                    let remain = Math.max(0, STUFF_FOR_CONTRACT_PAGE_SIZE - scope_rows.length);
+                    let other_rows = [];
+                    let member_total = 0;
+                    let group_total = 0;
+
+                    if (remain > 0 && member_other_ids.length > 0) {
+                        const member_ret = await sq.models.stuff.findAndCountAll({
+                            where: { companyId: { [db_opt.Op.in]: member_other_ids } },
+                            include: stuff_include,
+                            order: [['companyId', 'ASC'], ['id', 'ASC']],
+                            limit: remain,
+                            offset: 0,
+                        });
+                        other_rows = other_rows.concat(member_ret.rows);
+                        member_total = member_ret.count;
+                        remain = Math.max(0, remain - member_ret.rows.length);
                     }
+                    if (remain > 0 && group_other_ids.length > 0) {
+                        const group_ret = await sq.models.stuff.findAndCountAll({
+                            where: { companyId: { [db_opt.Op.in]: group_other_ids } },
+                            include: stuff_include,
+                            order: [['id', 'ASC']],
+                            limit: remain,
+                            offset: 0,
+                        });
+                        other_rows = other_rows.concat(group_ret.rows);
+                        group_total = group_ret.count;
+                    }
+
+                    const scope_total = await sq.models.stuff.count({
+                        where: { companyId: scope_company_id },
+                    });
+                    rows = scope_rows.concat(other_rows);
+                    total = scope_total + member_total + group_total;
+                } else {
+                    const ret = await sq.models.stuff.findAndCountAll({
+                        where: {
+                            companyId: { [db_opt.Op.in]: company_ids.map((id) => Number(id)) },
+                        },
+                        include: stuff_include,
+                        order: build_contract_stuff_order(
+                            sq,
+                            scope_company_id,
+                            group_company && group_company.id
+                        ),
+                        offset: page_no * STUFF_FOR_CONTRACT_PAGE_SIZE,
+                        limit: STUFF_FOR_CONTRACT_PAGE_SIZE,
+                    });
+                    rows = ret.rows;
+                    total = ret.count;
                 }
-                company_ids = [...new Set(company_ids)];
-                const ret = await sq.models.stuff.findAndCountAll({
-                    where: {
-                        use_for_buy: false,
-                        companyId: {
-                            [db_opt.Op.in]: company_ids
-                        }
-                    },
-                    include: [{ model: sq.models.company }],
-                    order: [['companyId', 'ASC'], ['id', 'ASC']],
-                    offset: body.pageNo * 20,
-                    limit: 20,
-                });
-                ret.rows.forEach((item) => {
-                    const should_prefix_member_company_name = home_company.is_group
-                        && item.company
-                        && item.company.id !== home_company.id;
-                    if (should_prefix_member_company_name) {
-                        item.name = `${item.company.name}-${item.name}`;
-                    }
-                });
-                return { stuff: ret.rows, total: ret.count };
+
+                prefix_contract_stuff_names(rows, home_company);
+                return { stuff: rows, total };
             }
         },
         contract_get: {

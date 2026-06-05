@@ -77,6 +77,7 @@ Setup Group Contract Scenario
     Set Suite Variable  ${PARENT_TOKEN}  ${parent_token}
     Set Suite Variable  ${BUYER_TOKEN}  ${buyer_token}
     Set Suite Variable  ${BUYER_COMPANY}  ${buyer}
+    Set Suite Variable  ${MEMBER_COMPANY}  ${member}
     Set Suite Variable  ${MEMBER_STUFF}  ${member_stuff}
 
 Find Stuff Id In List
@@ -112,6 +113,11 @@ Group Contract Can Select Member Stuff
     ${opt_resp}  Req to Server  /sale_management/get_stuff_for_contract  ${PARENT_TOKEN}  ${opt_req}
     ${hit1}  Find Stuff Id In List  @{opt_resp}[stuff]
     Should Be True  ${hit1}
+    ${member_opt_req}  Create Dictionary  pageNo=${0}  stat_context_company_id=${MEMBER_COMPANY}[id]
+    ${member_opt_resp}  Req to Server  /sale_management/get_stuff_for_contract  ${PARENT_TOKEN}  ${member_opt_req}
+    ${hit_member_scope}  Find Stuff Id In List  @{member_opt_resp}[stuff]
+    Should Be True  ${hit_member_scope}
+    Should Be True  ${member_opt_resp}[stuff][0][id] == ${MEMBER_STUFF}[id]
     ${on_sale_req}  Create Dictionary  pageNo=${0}
     ${on_sale_resp}  Req to Server  /customer/get_stuff_on_sale  ${BUYER_TOKEN}  ${on_sale_req}
     ${hit2}  Find Stuff Id In List  @{on_sale_resp}[stuff]
