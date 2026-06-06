@@ -92,7 +92,7 @@ module.exports = {
         }
         let company = scope_company || await rbac_lib.get_company_by_token(token);
         let contract = await db_opt.get_sq().models.contract.findByPk(contract_id);
-        if (company && contract && (await company.hasSale_contract(contract) || await company.hasBuy_contract(contract))) {
+        if (company && contract && await plan_lib.has_contract_operate_permission(company, contract)) {
             let resp = await this.getBalanceHistoryWithAfterValue(contract_id, begin_time, end_time);
             let json = [];
             if (resp && resp.length > 0) {
