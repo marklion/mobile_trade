@@ -62,6 +62,21 @@ Stuff For Buy
     @{stuffs_found}  Req Get to Server  /supplier/get_stuff_need_buy  ${bc1_user_token}  stuff
     Length Should Be  ${stuffs_found}  1
 
+Buy Stuff Auto Confirm Order Config
+    [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset
+    Add A Company As Supplier  ${buy_company1}[id]
+    ${buy_stuff}  Add A Stuff To Buy  aco1  aco1_comment
+    Should Be Equal  ${buy_stuff}[use_for_buy]  ${True}
+    Should Be Equal  ${buy_stuff}[auto_confirm_order]  ${False}
+    ${stuff}  Get Stuff By Id  ${buy_stuff}[id]
+    Should Be Equal  ${stuff}[auto_confirm_order]  ${False}
+    Set Stuff Auto Confirm Order  ${buy_stuff}[id]  ${True}
+    ${stuff}  Get Stuff By Id  ${buy_stuff}[id]
+    Should Be Equal  ${stuff}[auto_confirm_order]  ${True}
+    Set Stuff Auto Confirm Order  ${buy_stuff}[id]  ${False}
+    ${stuff}  Get Stuff By Id  ${buy_stuff}[id]
+    Should Be Equal  ${stuff}[auto_confirm_order]  ${False}
+
 
 Stuff via Contract Maintain
     [Teardown]  Run Keywords  Contract Reset  AND  Stuff Reset

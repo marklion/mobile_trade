@@ -638,6 +638,12 @@ Set Auto Confirm Goods
     [Arguments]  ${stuff_id}=${test_stuff}[id]  ${token}=${sc_admin_token}  ${auto_confirm_goods}=${True}
     ${req}  Create Dictionary  stuff_id=${stuff_id}  auto_confirm_goods=${auto_confirm_goods}
     Req to Server  /stuff/auto_confirm_goods  ${token}  ${req}
+Set Stuff Auto Confirm Order
+    [Arguments]  ${stuff_id}  ${auto_confirm_order}=${True}  ${token}=${sc_admin_token}
+    ${stuff}  Get Stuff By Id  ${stuff_id}  ${token}
+    Set To Dictionary  ${stuff}  auto_confirm_order=${auto_confirm_order}
+    ${resp}  Req to Server  /stuff/fetch  ${token}  ${stuff}
+    RETURN  ${resp}
 Input Plan Sct Info
     [Arguments]  ${plan_id}  ${psi_id}  ${value}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  plan_id=${plan_id}  psi_id=${psi_id}  value=${value}

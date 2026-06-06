@@ -28,6 +28,30 @@ Order Confirm
     Confirm A Order  ${plan}
     Search And Verify Order  ${mv}  ${bv}  ${dv}  ${plan}[id]  1
     Search By Plate Or Id    ${sc_admin_token}    ${mv}[plate]    ${dv}[id_card]    ${True}
+
+Order Auto Confirm With Config
+    [Teardown]  Run Keywords  Set Stuff Auto Confirm Order  ${order_stuff}[id]  ${False}  AND  Plan Reset
+    Set Stuff Auto Confirm Order  ${order_stuff}[id]  ${True}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${order}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Should Not Be Equal As Integers  ${order}[status]  0
+    Set Stuff Auto Confirm Order  ${order_stuff}[id]  ${False}
+    ${order2}  Create A Order  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Should Be Equal As Integers  ${order2}[status]  0
+
+Plan Auto Confirm With Buy Stuff Config
+    [Teardown]  Run Keywords  Set Stuff Auto Confirm Order  ${order_stuff}[id]  ${False}  AND  Plan Reset
+    Set Stuff Auto Confirm Order  ${order_stuff}[id]  ${True}
+    ${mv}  Search Main Vehicle by Index  0
+    ${bv}  Search behind Vehicle by Index  0
+    ${dv}  Search Driver by Index  0
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  stuff_id=${order_stuff}[id]
+    Should Not Be Equal As Integers  ${plan}[status]  0
+    Set Stuff Auto Confirm Order  ${order_stuff}[id]  ${False}
+    ${plan2}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]  stuff_id=${order_stuff}[id]
+    Should Be Equal As Integers  ${plan2}[status]  0
 Plan Confirm with No Cash and Check
     [Teardown]  Plan Reset
     ${mv}  Search Main Vehicle by Index  0

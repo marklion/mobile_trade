@@ -120,6 +120,7 @@ module.exports = {
                 comment: { type: String, have_to: false, mean: '备注', example: '备注' },
                 expect_count: { type: Number, have_to: false, mean: '预期数量', example: 1 },
                 use_for_buy: { type: Boolean, have_to: false, mean: '用于采购', example: false },
+                auto_confirm_order: { type: Boolean, have_to: false, mean: '自动确认订单', example: false },
                 close_time: { type: String, have_to: false, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, have_to: false, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, have_to: false, mean: '关注发票', example: false },
@@ -135,6 +136,7 @@ module.exports = {
                 change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
                 expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
                 use_for_buy: { type: Boolean, mean: '用于采购', example: false },
+                auto_confirm_order: { type: Boolean, mean: '自动确认订单', example: false },
                 close_time: { type: String, mean: '关闭时间', example: '12:00:00' },
                 delay_days: { type: Number, mean: '延迟天数', example: 1 },
                 concern_fapiao: { type: Boolean, mean: '关注发票', example: false },
@@ -143,7 +145,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await resolve_stuff_scope_company(token, body.stat_context_company_id, true);
-                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao, body.stuff_code, body.close_today);
+                return await plan_lib.fetch_stuff(body.name, body.comment, company, body.expect_count, body.use_for_buy, body.close_time, body.delay_days, body.concern_fapiao, body.stuff_code, body.close_today, body.auto_confirm_order);
             }
         },
         get_all: {
@@ -165,6 +167,7 @@ module.exports = {
                         change_last_minutes: { type: Number, mean: '调价所剩分钟', example: 23 },
                         expect_count: { type: Number, mean: '期望单车装载量', example: 1 },
                         use_for_buy: { type: Boolean, mean: '用于采购', example: false },
+                        auto_confirm_order: { type: Boolean, mean: '自动确认订单', example: false },
                         need_sc: { type: Boolean, mean: '是否需要安检', example: false },
                         need_enter_weight: { type: Boolean, mean: '是否需要入场前重量', example: false },
                         no_need_register: { type: Boolean, mean: '是否不需要登记', example: false },

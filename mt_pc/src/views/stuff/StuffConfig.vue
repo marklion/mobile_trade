@@ -190,7 +190,8 @@
                     <el-switch v-model="stuff_ready_fetch.close_today" active-text="关闭当日" inactive-text="关闭前日"></el-switch>
                 </el-form-item>
                 <el-form-item label="用于采购" prop="use_for_buy">
-                    <el-switch v-model="stuff_ready_fetch.use_for_buy"></el-switch>
+                    <el-switch v-model="stuff_ready_fetch.use_for_buy" @change="on_use_for_buy_change"></el-switch>
+                    <el-switch v-if="stuff_ready_fetch.use_for_buy" v-model="stuff_ready_fetch.auto_confirm_order" active-text="自动确认订单" style="margin-left: 20px;"></el-switch>
                 </el-form-item>
                 <el-form-item label="关注发票" prop="concern_fapiao">
                     <el-switch v-model="stuff_ready_fetch.concern_fapiao"></el-switch>
@@ -339,6 +340,7 @@ export default {
                 comment: undefined,
                 expect_count: undefined,
                 use_for_buy: false,
+                auto_confirm_order: false,
                 close_time: '',
                 delay_days: 0,
                 concern_fapiao: false,
@@ -786,6 +788,11 @@ export default {
                 this.$refs.form.resetFields();
             }
         },
+        on_use_for_buy_change: function (val) {
+            if (!val) {
+                this.stuff_ready_fetch.auto_confirm_order = false;
+            }
+        },
         prepare_update: function (item) {
             if (item.delay_days == null) {
                 item.delay_days = 0;
@@ -795,6 +802,7 @@ export default {
                 comment: item.comment,
                 expect_count: item.expect_count,
                 use_for_buy: item.use_for_buy,
+                auto_confirm_order: item.auto_confirm_order || false,
                 close_time: item.close_time ? new Date(`2000-01-01T${item.close_time}`) : null,
                 delay_days: item.delay_days,
                 concern_fapiao: item.concern_fapiao,
