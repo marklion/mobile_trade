@@ -426,14 +426,55 @@ module.exports = {
         }
         return ret
     },
+    get_stat_scope_stuff_company_ids: async function (scope_company, home_company, user) {
+        if (!scope_company) {
+            return [];
+        }
+        if (scope_company.is_group && home_company && home_company.is_group && scope_company.id === home_company.id) {
+            const ids = [scope_company.id];
+            const member_ids = await group_lib.list_member_company_ids_for_stuff(user.id, home_company);
+            ids.push(...member_ids);
+            return [...new Set(ids)];
+        }
+        return [scope_company.id];
+    },
+    get_stuff_ids_for_stat_scope: async function (scope_company, home_company, user, stuff_id) {
+        const sq = db_opt.get_sq();
+        const company_ids = await this.get_stat_scope_stuff_company_ids(scope_company, home_company, user);
+        if (company_ids.length === 0) {
+            return [];
+        }
+        if (stuff_id) {
+            const stuff = await sq.models.stuff.findByPk(stuff_id, { attributes: ['id', 'companyId'] });
+            if (!stuff || !company_ids.includes(stuff.companyId)) {
+                return [];
+            }
+            return [stuff.id];
+        }
+        const stuff_rows = await sq.models.stuff.findAll({
+            where: { companyId: { [db_opt.Op.in]: company_ids } },
+            attributes: ['id'],
+        });
+        return stuff_rows.map((s) => s.id);
+    },
     get_all_sale_contracts: async function (_compnay, _pageNo, stuff_id) {
         let sq = db_opt.get_sq();
         if (!_compnay) {
             return { rows: [], count: 0 };
         }
+        const owner_company_id = await this.get_sale_contract_owner_company_id(_compnay.id);
+        const sale_company_ids = [];
+        if (owner_company_id) {
+            sale_company_ids.push(owner_company_id);
+        }
+        if (!sale_company_ids.includes(_compnay.id)) {
+            sale_company_ids.push(_compnay.id);
+        }
         let conditions = {
             where: {
-                saleCompanyId: _compnay.id
+                saleCompanyId: sale_company_ids.length === 1
+                    ? sale_company_ids[0]
+                    : { [db_opt.Op.in]: sale_company_ids },
             },
             order: [['updatedAt', 'DESC'], ['id', 'DESC']],
             offset: _pageNo * 20,
@@ -2158,16 +2199,9 @@ module.exports = {
         if (!scope_company) {
             return [];
         }
-        let stuff_ids = [];
-        if (body.stuff_id) {
-            const stuff = await sq.models.stuff.findByPk(body.stuff_id, { attributes: ['id', 'companyId'] });
-            if (stuff && stuff.companyId === scope_company.id) {
-                stuff_ids = [stuff.id];
-            }
-        } else {
-            const stuff_rows = await scope_company.getStuff({ attributes: ['id'] });
-            stuff_ids = stuff_rows.map((s) => s.id);
-        }
+        const home_company = await rbac_lib.get_company_by_token(token);
+        const user = await rbac_lib.get_user_by_token(token);
+        const stuff_ids = await this.get_stuff_ids_for_stat_scope(scope_company, home_company, user, body.stuff_id);
         if (stuff_ids.length === 0) {
             return [];
         }
@@ -2512,12 +2546,19 @@ module.exports = {
         }
 
         const year_start = report_start.clone().startOf('year');
-        const owner_company = await this.resolve_sale_contract_context_company(token, body.stat_context_company_id, false);
-        if (!owner_company) {
+        const context_company = await this.resolve_sale_contract_context_company(token, body.stat_context_company_id, false);
+        if (!context_company) {
+            throw { err_msg: '无权限' };
+        }
+        const contract_owner_id = await this.get_sale_contract_owner_company_id(context_company.id);
+        const contract_owner = contract_owner_id
+            ? await sq.models.company.findByPk(contract_owner_id)
+            : context_company;
+        if (!contract_owner) {
             throw { err_msg: '无权限' };
         }
 
-        const contracts = await owner_company.getSale_contracts({
+        const contracts = await contract_owner.getSale_contracts({
             include: [{ model: sq.models.company, as: 'buy_company' }],
             order: [['id', 'ASC']],
         });
@@ -2615,8 +2656,12 @@ module.exports = {
             });
         }
 
-        const stuff_rows = await owner_company.getStuff({ attributes: ['id'] });
-        const stuff_ids = stuff_rows.map((item) => item.id);
+        const stuff_ids = await this.get_stuff_ids_for_stat_scope(
+            context_company,
+            await rbac_lib.get_company_by_token(token),
+            await rbac_lib.get_user_by_token(token),
+            null
+        );
         if (stuff_ids.length > 0) {
             const plan_where = {
                 is_buy: false,
@@ -2677,7 +2722,7 @@ module.exports = {
         const worksheet = workbook.addWorksheet('客户总销售汇总表');
         const total_columns = 14;
 
-        worksheet.addRow([owner_company.name || '']);
+        worksheet.addRow([context_company.name || '']);
         worksheet.addRow([`${body.start_time} ~ ${body.end_time}客户总销售汇总表`]);
         worksheet.addRow([
             '客户编码', '客户名称', '期初预收款余额', '本月预收款', '本月销售', '', '', '月末预收款余额',
@@ -2846,8 +2891,19 @@ module.exports = {
             opening_balance += (Number(contract.balance) || 0) - sum_after_start;
         });
 
-        const stuff_rows = await owner_company.getStuff({ attributes: ['id'], where: { use_for_buy: false } });
-        const stuff_ids = stuff_rows.map((item) => item.id);
+        const home_company = await rbac_lib.get_company_by_token(token);
+        const user = await rbac_lib.get_user_by_token(token);
+        let stuff_ids = await this.get_stuff_ids_for_stat_scope(owner_company, home_company, user, null);
+        if (stuff_ids.length > 0) {
+            const filtered_stuff_rows = await sq.models.stuff.findAll({
+                where: {
+                    id: { [db_opt.Op.in]: stuff_ids },
+                    use_for_buy: false,
+                },
+                attributes: ['id'],
+            });
+            stuff_ids = filtered_stuff_rows.map((item) => item.id);
+        }
         const plan_events = [];
         if (stuff_ids.length > 0) {
             const plans = await sq.models.plan.findAll({

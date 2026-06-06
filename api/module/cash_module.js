@@ -84,7 +84,7 @@ module.exports = {
                         as: 'buy_company',
                     }],
                 });
-                if (!company || !contract || (!(await company.hasSale_contract(contract)) && !(await company.hasBuy_contract(contract)))) {
+                if (!company || !contract || !(await plan_lib.has_contract_operate_permission(company, contract))) {
                     throw { err_msg: '无权限' };
                 }
                 const buy_company = contract.buy_company || await contract.getBuy_company();
