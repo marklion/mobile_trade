@@ -964,24 +964,25 @@ module.exports = {
                 for (let index = 0; index < plans.length; index++) {
                     const element = plans[index];
                     let customer = await db_opt.get_sq().models.company.findByPk(element.companyId);
+                    const confirmHistoryInclude = [{
+                        model: db_opt.get_sq().models.plan_history,
+                        where: { action_type: '确认' }
+                    }];
+                    const buildConfirmBaseCond = (overrides = {}) => {
+                        let total_cond = {
+                            ...condition,
+                            status: { [db_opt.Op.ne]: 0 },
+                            '$plan_histories.action_type$': '确认',
+                            ...overrides,
+                        };
+                        if (body.day_offset == 0 && body.base_day == moment().format('YYYY-MM-DD') && overrides.manual_close === undefined) {
+                            total_cond.manual_close = false;
+                        }
+                        return total_cond;
+                    };
                     let confirm_count = await customer.countPlans({
-                        where: function () {
-                            let total_cond = {
-                                ...condition,
-                                status: {
-                                    [db_opt.Op.ne]: 0
-                                },
-                                '$plan_histories.action_type$': '确认'
-                            }
-                            if (body.day_offset == 0 && body.base_day == moment().format('YYYY-MM-DD')) {
-                                total_cond.manual_close = false;
-                            }
-                            return total_cond;
-                        }(),
-                        include: [{
-                            model: db_opt.get_sq().models.plan_history,
-                            where: { action_type: '确认' }
-                        }]
+                        where: buildConfirmBaseCond(),
+                        include: confirmHistoryInclude
                     });
                     let tmp_cond = {
                         ...condition,
@@ -999,11 +1000,11 @@ module.exports = {
                         where: tmp_cond
                     });
                     let cancel_count = await customer.countPlans({
-                        where: {
-                            ...condition,
+                        where: buildConfirmBaseCond({
                             status: 3,
                             manual_close: true,
-                        }
+                        }),
+                        include: confirmHistoryInclude
                     });
                     ret.push({
                         company: customer,
