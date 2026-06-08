@@ -695,6 +695,8 @@ void device_management_handler::walk_zombie_process()
         if (isZombieProcess(itr->second.pid))
         {
             dids.push_back(itr->second.device_id);
+            std::string mq_name = "/timer_" + std::to_string(itr->second.pid);
+            mq_unlink(mq_name.c_str());
         }
     }
     pthread_mutex_unlock(&g_runing_lock);
