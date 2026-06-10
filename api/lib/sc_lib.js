@@ -298,7 +298,7 @@ module.exports = {
         }
     },
     can_access_plan_sc: async function (token, plan) {
-        if (!plan || !plan.stuff) {
+        if (!plan?.stuff) {
             return false;
         }
         const company = await rbac_lib.get_company_by_token(token);
@@ -309,7 +309,7 @@ module.exports = {
         if (await company.hasStuff(plan.stuff)) {
             return true;
         }
-        if (plan.rbac_user && plan.rbac_user.id === user.id) {
+        if (plan.rbac_user?.id === user.id) {
             return true;
         }
         if (plan.companyId === company.id) {
