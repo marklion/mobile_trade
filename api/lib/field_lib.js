@@ -75,9 +75,19 @@ module.exports = {
         }
 
     },
+    clear_first_weight_on_plan: function (plan) {
+        if (plan.is_buy) {
+            plan.m_weight = 0;
+            plan.m_time = '';
+        } else {
+            plan.p_weight = 0;
+            plan.p_time = '';
+        }
+    },
     handle_cancel_enter: async function (_plan) {
-        await hook_plan('cancel_enter', _plan);
+        this.clear_first_weight_on_plan(_plan);
         _plan.enter_time = '';
+        await hook_plan('cancel_enter', _plan);
         await _plan.save();
     },
     handle_driver_check_in: async function (_plan) {

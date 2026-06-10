@@ -28,6 +28,7 @@ async function save_first_scale(plan_id, token, context) {
     await plan_lib.action_in_plan(plan_id, token, context.expect_status, async (latest_plan, t) => {
         latest_plan[context.first_weight_key] = context.one_weight;
         latest_plan[context.first_time_key] = context.now_time;
+        latest_plan.enter_time = context.now_time;
         await latest_plan.save({ transaction: t });
     });
 }
