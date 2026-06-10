@@ -45,6 +45,11 @@ function prefix_contract_stuff_in_contracts(contracts, home_company) {
                 prefix_contract_stuff_names([price.stuff], home_company);
             }
         });
+        (contract.contract_stuff_schemes || []).forEach((scheme_row) => {
+            if (scheme_row.stuff) {
+                prefix_contract_stuff_names([scheme_row.stuff], home_company);
+            }
+        });
     });
 }
 
@@ -569,6 +574,27 @@ module.exports = {
                                 },
                             }
                         },
+                        contract_stuff_schemes: {
+                            type: Array, mean: '合同物料优惠方案', explain: {
+                                id: { type: Number, mean: 'ID', example: 1 },
+                                contractId: { type: Number, mean: '合同ID', example: 1 },
+                                stuffId: { type: Number, mean: '物料ID', example: 1 },
+                                discountSchemeId: { type: Number, mean: '优惠方案ID', example: 1 },
+                                stuff: {
+                                    type: Object, mean: '物料信息', explain: {
+                                        id: { type: Number, mean: '物料ID', example: 1 },
+                                        name: { type: String, mean: '物料名', example: 'LNG' },
+                                    }
+                                },
+                                discount_scheme: {
+                                    type: Object, mean: '优惠方案', explain: {
+                                        id: { type: Number, mean: '方案ID', example: 1 },
+                                        name: { type: String, mean: '方案名', example: '单价-1元' },
+                                        delta_price: { type: Number, mean: '单价调整值', example: -1 },
+                                    }
+                                },
+                            }
+                        },
                     }
                 }
             },
@@ -753,6 +779,7 @@ module.exports = {
                     throw { err_msg: '无权限' };
                 }
                 await sq.models.contract.update({ discountSchemeId: null }, { where: { discountSchemeId: item.id } });
+                await sq.models.contract_stuff_scheme.destroy({ where: { discountSchemeId: item.id } });
                 await item.destroy();
                 return { result: true };
             },
@@ -764,6 +791,7 @@ module.exports = {
             is_get_api: false,
             params: {
                 contract_id: { type: Number, have_to: true, mean: '合同ID', example: 1 },
+                stuff_id: { type: Number, have_to: false, mean: '优惠物料ID，不传则应用于合同全部关联物料', example: 1 },
                 scheme_id: { type: Number, have_to: false, mean: '优惠方案ID，空表示取消', example: 1 },
                 stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
@@ -778,16 +806,50 @@ module.exports = {
                 if (!contract || !(await plan_lib.has_sale_contract_operate_permission(company, contract))) {
                     throw { err_msg: '无权限' };
                 }
-                if (body.scheme_id) {
-                    const scheme = await sq.models.contract_discount_scheme.findByPk(body.scheme_id);
+                const upsert_stuff_scheme = async function (stuff_id, scheme_id) {
+                    const where = { contractId: contract.id, stuffId: stuff_id };
+                    const exist_row = await sq.models.contract_stuff_scheme.findOne({ where });
+                    if (!scheme_id) {
+                        if (exist_row) {
+                            await exist_row.destroy();
+                        }
+                        return;
+                    }
+                    const scheme = await sq.models.contract_discount_scheme.findByPk(scheme_id);
                     if (!scheme || scheme.companyId !== owner_company_id) {
                         throw { err_msg: '优惠方案不存在' };
                     }
-                    contract.discountSchemeId = scheme.id;
+                    if (exist_row) {
+                        exist_row.discountSchemeId = scheme.id;
+                        await exist_row.save();
+                    } else {
+                        await sq.models.contract_stuff_scheme.create({
+                            ...where,
+                            discountSchemeId: scheme.id,
+                        });
+                    }
+                };
+                if (body.stuff_id) {
+                    const { stuff, can_operate } = await resolve_contract_stuff_operate_context(token, body);
+                    if (!can_operate || !stuff) {
+                        throw { err_msg: '无权限' };
+                    }
+                    if (!(await contract.hasStuff(stuff))) {
+                        throw { err_msg: '该合同未关联此物料' };
+                    }
+                    await upsert_stuff_scheme(stuff.id, body.scheme_id || null);
                 } else {
+                    const stuff_list = await contract.getStuff();
+                    if (!body.scheme_id) {
+                        await sq.models.contract_stuff_scheme.destroy({ where: { contractId: contract.id } });
+                    } else {
+                        for (let i = 0; i < stuff_list.length; i++) {
+                            await upsert_stuff_scheme(stuff_list[i].id, body.scheme_id);
+                        }
+                    }
                     contract.discountSchemeId = null;
+                    await contract.save();
                 }
-                await contract.save();
                 return { result: true };
             },
         },

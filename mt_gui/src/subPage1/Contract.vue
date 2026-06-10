@@ -39,8 +39,20 @@
                     <view v-if="item.begin_time && item.end_time" style="color: blue;">
                         {{item.begin_time}}至{{item.end_time}}
                     </view>
-                    <view v-if="show_scope_switch" style="color: #8a2be2;">
-                        优惠方案: {{item.discount_scheme ? item.discount_scheme.name : '无'}}
+                    <view v-if="show_scope_switch" style="display:flex; flex-wrap: wrap; gap: 8rpx;">
+                        <template v-if="item.contract_stuff_schemes && item.contract_stuff_schemes.length > 0">
+                            <fui-tag
+                                v-for="scheme_row in item.contract_stuff_schemes"
+                                :key="scheme_row.id || (scheme_row.stuffId + '-' + scheme_row.discountSchemeId)"
+                                :scaleRatio="0.8"
+                                originLeft
+                                type="primary"
+                                :text="format_scheme_tag_text(scheme_row)"
+                            ></fui-tag>
+                        </template>
+                        <view v-else style="color: #8a2be2;">
+                            优惠方案: {{item.discount_scheme ? item.discount_scheme.name : '无'}}
+                        </view>
                     </view>
                     <view v-if="item.number" style="color: green;">
                         合同编号: {{item.number}}
@@ -169,6 +181,16 @@
     </fui-modal>
     <fui-modal width="600" :descr="'确定删除优惠方案' + focus_scheme.name + '吗？'" :show="show_delete_scheme" v-if="show_delete_scheme" @click="delete_scheme">
     </fui-modal>
+    <fui-bottom-popup :show="show_contract_scheme_stuff_popup" @close="show_contract_scheme_stuff_popup = false">
+        <fui-list>
+            <fui-list-cell arrow @click="prepare_scheme_for_all_stuff">
+                全部关联物料（默认）（当前: {{get_all_stuff_scheme_text()}}）
+            </fui-list-cell>
+            <fui-list-cell v-for="(single_stuff, index) in (focus_item.stuff || [])" :key="single_stuff.id" :index="index" arrow @click="prepare_scheme_for_stuff_by_index">
+                {{single_stuff.name}}（当前: {{get_scheme_text_for_stuff(single_stuff.id)}}）
+            </fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
     <fui-bottom-popup :show="show_contract_scheme_picker" @close="show_contract_scheme_picker = false">
         <fui-list>
             <fui-list-cell arrow @click="set_contract_scheme(null)">清空方案</fui-list-cell>
@@ -265,6 +287,8 @@ export default {
             },
             show_delete_scheme: false,
             show_contract_scheme_picker: false,
+            show_contract_scheme_stuff_popup: false,
+            focus_scheme_stuff: {},
             show_stuff_price_popup: false,
             show_stuff_price_modal: false,
             stuff_price_input: '',
@@ -397,13 +421,62 @@ export default {
         prepare_set_contract_scheme: async function (item) {
             this.focus_item = item;
             await this.load_discount_schemes();
+            this.show_contract_scheme_stuff_popup = true;
+        },
+        prepare_scheme_for_all_stuff: function () {
+            this.focus_scheme_stuff = null;
+            this.show_contract_scheme_stuff_popup = false;
             this.show_contract_scheme_picker = true;
         },
+        prepare_scheme_for_stuff_by_index: function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const single_stuff = ((this.focus_item && this.focus_item.stuff) || [])[index];
+            if (!single_stuff || !single_stuff.id) {
+                uni.showToast({ title: '未找到物料，请重试', icon: 'none' });
+                return;
+            }
+            this.focus_scheme_stuff = single_stuff;
+            this.show_contract_scheme_stuff_popup = false;
+            this.show_contract_scheme_picker = true;
+        },
+        get_all_stuff_scheme_text: function () {
+            const rows = (this.focus_item && this.focus_item.contract_stuff_schemes) || [];
+            if (rows.length > 0) {
+                const firstSchemeId = rows[0].discountSchemeId;
+                const allSame = rows.every((row) => row.discountSchemeId === firstSchemeId);
+                if (allSame && rows[0].discount_scheme) {
+                    return rows[0].discount_scheme.name;
+                }
+                if (allSame && !rows[0].discount_scheme) {
+                    return '无';
+                }
+                return '各物料不同';
+            }
+            return this.focus_item && this.focus_item.discount_scheme
+                ? this.focus_item.discount_scheme.name
+                : '无';
+        },
+        get_scheme_text_for_stuff: function (stuff_id) {
+            const rows = (this.focus_item && this.focus_item.contract_stuff_schemes) || [];
+            const found = rows.find((row) => row.stuffId === stuff_id);
+            return found && found.discount_scheme ? found.discount_scheme.name : '无';
+        },
+        format_scheme_tag_text: function (scheme_row) {
+            const stuff_name = scheme_row.stuff && scheme_row.stuff.name ? scheme_row.stuff.name : `物料#${scheme_row.stuffId}`;
+            const scheme_name = scheme_row.discount_scheme && scheme_row.discount_scheme.name
+                ? scheme_row.discount_scheme.name
+                : '无';
+            return `${stuff_name}: ${scheme_name}`;
+        },
         set_contract_scheme: async function (scheme_id) {
-            const req = this.make_context_req({
+            const req_body = {
                 contract_id: this.focus_item.id,
                 scheme_id: scheme_id,
-            }, '/sale_management/contract_set_discount_scheme', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id);
+            };
+            if (this.focus_scheme_stuff && this.focus_scheme_stuff.id) {
+                req_body.stuff_id = this.focus_scheme_stuff.id;
+            }
+            const req = this.make_context_req(req_body, '/sale_management/contract_set_discount_scheme', this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id);
             await this.$send_req('/sale_management/contract_set_discount_scheme', req);
             this.show_contract_scheme_picker = false;
             uni.startPullDownRefresh();
