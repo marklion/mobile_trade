@@ -154,10 +154,15 @@ module.exports = {
         let driver_found = await sq.models.driver.findOrCreate({ where: { phone: _phone }, defaults: { name: _name, id_card: _id_card } });
         return driver_found[0];
     },
-    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days, concern_fapiao, stuff_code, close_today) {
+    fetch_stuff: async function (_name, _comment, _company, _expect_count, use_for_buy, close_time, delay_days, concern_fapiao, stuff_code, close_today, auto_confirm_order) {
         let sq = db_opt.get_sq();
         if (use_for_buy == undefined) {
             use_for_buy = false;
+        }
+        if (!use_for_buy) {
+            auto_confirm_order = false;
+        } else if (auto_confirm_order == undefined) {
+            auto_confirm_order = false;
         }
         let stuff_found = await _company.getStuff({ where: { name: _name, use_for_buy: use_for_buy } });
         if (stuff_found.length != 1) {
@@ -175,6 +180,7 @@ module.exports = {
             stuff_found[0].concern_fapiao = concern_fapiao;
             stuff_found[0].stuff_code = stuff_code;
             stuff_found[0].close_today = close_today;
+            stuff_found[0].auto_confirm_order = auto_confirm_order;
             await stuff_found[0].save();
             ret = stuff_found[0].toJSON();
         }

@@ -242,6 +242,9 @@ module.exports = {
                     await new_plan.save();
                     plan_lib.mark_dup_info(new_plan.id);
                     wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
+                    if (stuff.use_for_buy && stuff.auto_confirm_order) {
+                        await plan_lib.confirm_single_plan(new_plan.id, token, true);
+                    }
                 }
                 else {
                     throw { err_msg: '创建计划失败' };

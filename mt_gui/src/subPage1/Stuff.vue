@@ -308,7 +308,13 @@
             </fui-input>
             <fui-date-picker :show="show_close_time" type="6" @change="choose_time" @cancel="show_close_time = false"></fui-date-picker>
             <fui-form-item label="用于采购">
-                <u-switch v-model="stuff_ready_fetch.use_for_buy"></u-switch>
+                <view style="display: flex; align-items: center; gap: 20rpx;">
+                    <u-switch v-model="stuff_ready_fetch.use_for_buy" @change="on_use_for_buy_change"></u-switch>
+                    <view v-if="stuff_ready_fetch.use_for_buy" style="display: flex; align-items: center; gap: 10rpx;">
+                        <fui-text size="28" text="自动确认订单"></fui-text>
+                        <u-switch v-model="stuff_ready_fetch.auto_confirm_order"></u-switch>
+                    </view>
+                </view>
             </fui-form-item>
             <fui-form-item label="关注发票">
                 <u-switch v-model="stuff_ready_fetch.concern_fapiao"></u-switch>
@@ -415,6 +421,7 @@ export default {
                 comment: undefined,
                 expect_count: undefined,
                 use_for_buy: false,
+                auto_confirm_order: false,
                 close_time: '',
                 delay_days: 0,
                 concern_fapiao: false,
@@ -939,6 +946,11 @@ export default {
             this.item_for_delete = item;
             this.show_delete = true;
         },
+        on_use_for_buy_change: function (event) {
+            if (!event.detail.value) {
+                this.stuff_ready_fetch.auto_confirm_order = false;
+            }
+        },
         prepare_update: function (item) {
             if (item.delay_days == null) {
                 item.delay_days = 0;
@@ -948,6 +960,7 @@ export default {
                 comment: item.comment,
                 expect_count: item.expect_count,
                 use_for_buy: item.use_for_buy,
+                auto_confirm_order: item.auto_confirm_order || false,
                 close_time: item.close_time,
                 delay_days: item.delay_days,
                 concern_fapiao: item.concern_fapiao,
@@ -1128,6 +1141,7 @@ export default {
             comment: undefined,
             expect_count: undefined,
             use_for_buy: false,
+            auto_confirm_order: false,
             close_time: '',
             delay_days: 0,
             concern_fapiao: false,
