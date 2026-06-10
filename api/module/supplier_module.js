@@ -210,37 +210,6 @@ module.exports = {
                 return { stuff: ret.rows, total: ret.count };
             },
         },
-        batch_copy: {
-            name: '批量复制',
-            description: '批量复制',
-            is_write: true,
-            is_get_api: false,
-            params: {
-                plan_time: { type: String, have_to: true, mean: '计划时间', example: '2020-01-01 12:00:00' },
-                comment: { type: String, have_to: false, mean: '备注', example: '备注' },
-                price: { type: Number, have_to: false, mean: '单价', example: 102 },
-                trans_company_name: { type: String, have_to: false, mean: '运输公司名称', example: 1 },
-                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
-                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
-                status: { type: Number, have_to: false, mean: '状态码, 不填就是不过滤', example: 1 },
-            },
-            result: {
-                result: { type: Boolean, mean: '结果', example: true }
-            },
-            func: async function (body, token) {
-                await plan_lib.batch_copy({
-                    start_time: body.start_time,
-                    end_time: body.end_time,
-                    status: body.status,
-                }, token, true, {
-                    plan_time: body.plan_time,
-                    comment: body.comment,
-                    trans_company_name: body.trans_company_name,
-                    unit_price: body.price,
-                });
-                return { result: true };
-            },
-        },
         get_company4proxy: {
             name: '获取可代理的公司列表',
             description: '获取可代理的公司列表',

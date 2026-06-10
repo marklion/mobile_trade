@@ -33,11 +33,6 @@
                 </view>
             </fui-col>
         </fui-row>
-
-        <module-filter :rm_array="['customer', 'supplier']">
-            <fui-tag type="primary" text="全部复制" @click="show_batch_copy = true" marginLeft="20">
-            </fui-tag>
-        </module-filter>
     </view>
     <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
@@ -118,39 +113,6 @@
         </fui-bottom-popup>
     </module-filter>
 
-    <fui-modal :zIndex="80" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
-        <fui-form ref="plan_form" :model="dup_plan">
-            <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
-                <fui-input placeholder="请输入计划日期" disabled v-model="dup_plan.plan_time"></fui-input>
-            </fui-form-item>
-            <view v-if="!cur_is_buy">
-                <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
-                    <fui-input placeholder="请输入用途" disabled v-model="dup_plan.use_for"></fui-input>
-                </fui-form-item>
-                <pick-regions @getRegion="pick_address">
-                    <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
-                        <fui-input placeholder="请输入卸车地点" disabled v-model="dup_plan.drop_address"></fui-input>
-                    </fui-form-item>
-                </pick-regions>
-            </view>
-            <view v-else>
-                <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
-                    <fui-input placeholder="请输入单价" v-model="dup_plan.price"></fui-input>
-                </fui-form-item>
-            </view>
-            <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
-                <fui-input placeholder="请输入承运公司" v-model="dup_plan.trans_company_name"></fui-input>
-            </fui-form-item>
-        </fui-form>
-        <fui-date-picker :show="show_plan_time" type="3" :value="default_time" @change="fill_plan_time" @cancel="show_plan_time = false"></fui-date-picker>
-        <fui-bottom-popup :show="show_use_for" @close="show_use_for = false">
-            <fui-list>
-                <fui-list-cell v-for="(single_uf, index) in use_for_array" :key="index" arrow @click="choose_use_for(single_uf)">
-                    {{single_uf}}
-                </fui-list-cell>
-            </fui-list>
-        </fui-bottom-popup>
-    </fui-modal>
     <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
         <fui-form ref="new_stuff_price_form" top="100">
             <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
@@ -172,13 +134,11 @@
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilterVue from '../components/ModuleFilter.vue';
-import pickRegions from '@/components/pick-regions/pick-regions.vue'
 export default {
     name: 'OrderList',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilterVue,
-        "pick-regions": pickRegions,
     },
     data: function () {
         return {
@@ -207,21 +167,6 @@ export default {
             },
             select_active: false,
             plan_selected: [],
-            use_for_array: [
-                '气化', '气站', '其他'
-            ],
-            default_time: '',
-            dup_plan: {
-                comment: "",
-                drop_address: "",
-                plan_time: "",
-                stuff_id: 0,
-                use_for: "",
-                trans_company_name: '',
-                price: 0,
-            },
-            show_plan_time: false,
-            show_use_for: false,
             cur_get_url: '',
             cur_is_motion: false,
             cur_is_buy: false,
@@ -230,7 +175,6 @@ export default {
             cur_rollback_url: '',
             cur_update_url: '',
             cur_cancel_url: '',
-            cur_dup_url: '',
             cur_close_url: '',
             customer_data2show: [],
             stuff_data2show: [],
@@ -256,7 +200,6 @@ export default {
             begin_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
             end_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
             tabs: [],
-            show_batch_copy: false,
             is_the_order_display_price: false,
             hide_order_detail_price: true,
             stat_scopes: [],
@@ -502,54 +445,6 @@ export default {
                 }
             });
         },
-        choose_use_for: function (_name) {
-            this.dup_plan.use_for = _name;
-            this.show_use_for = false;
-        },
-        batch_copy: async function (e) {
-            if (e.index == 1) {
-
-                let rules = [{
-                    name: 'plan_time',
-                    rule: ['required'],
-                    msg: ['请选择填写计划日期']
-                }];
-                if (!this.cur_is_buy) {
-                    rules.push({
-                        name: 'drop_address',
-                        rule: ['required'],
-                        msg: ['请选择填写卸车地点']
-                    })
-                    rules.push({
-                        name: 'use_for',
-                        rule: ['required'],
-                        msg: ['请选择填写用途']
-                    });
-                } else {
-                    rules.push({
-                        name: 'price',
-                        rule: ['isAmount'],
-                        msg: ['请填写正确的单价']
-                    });
-                }
-                let val_ret = await this.$refs.plan_form.validator(this.dup_plan, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                if (this.dup_plan.price) {
-                    this.dup_plan.price = parseFloat(this.dup_plan.price);
-                }
-                Object.keys(this.plan_filter).forEach(key => {
-                    this.dup_plan[key] = this.plan_filter[key];
-                });
-                await this.$send_req(this.cur_dup_url, this.dup_plan);
-                this.refresh_plans();
-            }
-            this.show_batch_copy = false;
-        },
-        pick_address: function (e) {
-            this.dup_plan.drop_address = e.map(item => item.name).join('-')
-        },
         batch_confirm: async function () {
             await this.$send_req(this.cur_batch_confirm_url, this.plan_filter);
             this.refresh_plans();
@@ -580,10 +475,6 @@ export default {
             }
 
             return ret;
-        },
-        fill_plan_time: function (e) {
-            this.dup_plan.plan_time = e.result;
-            this.show_plan_time = false;
         },
         validate_new_stuff_price_form: async function () {
             const rules = [{
@@ -742,7 +633,6 @@ export default {
             this.cur_update_url = e.update_url;
             this.cur_close_url = e.close_url;
             this.cur_cancel_url = e.cancel_url;
-            this.cur_dup_url = e.dup_url;
             this.init_tabs();
             this.refresh_plans();
         },
@@ -880,7 +770,6 @@ export default {
                     name: '采购下单',
                     url: '/customer/order_buy_search',
                     cancel_url: '/customer/order_buy_cancel',
-                    dup_url: '/customer/batch_copy',
                     update_url: '/customer/order_buy_update',
                     motion: true,
                     is_buy: false,
@@ -904,7 +793,6 @@ export default {
                     name: '销售下单',
                     url: '/supplier/order_sale_search',
                     cancel_url: '/supplier/order_sale_cancel',
-                    dup_url: '/supplier/batch_copy',
                     update_url: '/supplier/order_sale_update',
                     motion: true,
                     is_buy: true,
@@ -929,7 +817,6 @@ export default {
                 this.cur_is_buy = this.seg[0].is_buy;
                 this.cur_batch_confirm_url = this.seg[0].batch_url;
                 this.cur_cancel_url = this.seg[0].cancel_url;
-                this.cur_dup_url = this.seg[0].dup_url;
                 this.cur_confirm_url = this.seg[0].confirm_url;
                 this.cur_rollback_url = this.seg[0].rollback_url;
                 this.cur_update_url = this.seg[0].update_url;
@@ -981,9 +868,6 @@ export default {
         await this.load_stat_scopes();
         this.reset_order_date(false);
         this.init_top_seg();
-        let tom = new Date();
-        tom.setDate(tom.getDate() + 1);
-        this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
         this.get_price_display_config();
         this.get_hide_order_detail_price_config();

@@ -2079,47 +2079,6 @@ module.exports = {
         });
         return err_msg;
     },
-    batch_copy: async function (body, token, is_buy, new_plan_req) {
-        let err_msg = '';
-        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
-            let user = await rbac_lib.get_user_by_token(token);
-            let all_plans = [];
-            let pageNo = 0;
-            while (true) {
-                let tmp = await this.search_bought_plans(user, pageNo, body, is_buy);
-                all_plans = all_plans.concat(tmp.rows);
-                pageNo++;
-                if (tmp.rows.length <= 0) {
-                    break;
-                }
-            }
-            for (let index = 0; index < all_plans.length; index++) {
-                const element = all_plans[index];
-                try {
-                    let new_plan = await db_opt.get_sq().models.plan.create(new_plan_req);
-                    await new_plan.setCompany(await db_opt.get_sq().models.company.findByPk(element.company.id));
-                    await new_plan.setStuff(await db_opt.get_sq().models.stuff.findByPk(element.stuff.id));
-                    await new_plan.setDriver(await db_opt.get_sq().models.driver.findByPk(element.driver.id));
-                    await new_plan.setMain_vehicle(await db_opt.get_sq().models.vehicle.findByPk(element.main_vehicle.id));
-                    await new_plan.setBehind_vehicle(await db_opt.get_sq().models.vehicle.findByPk(element.behind_vehicle.id));
-                    await new_plan.setRbac_user(user);
-                    await this.rp_history_create(new_plan, user.name);
-                    new_plan.status = 0;
-                    if (!is_buy) {
-                        new_plan.unit_price = element.unit_price;
-                    }
-                    new_plan.is_buy = is_buy;
-                    new_plan.trans_company_name = element.trans_company_name;
-                    await new_plan.save();
-                    await wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
-                } catch (error) {
-                    err_msg += (error?.err_msg ?? error?.message ?? String(error)) + '\n';
-                    throw error instanceof Error ? error : create_api_error(error?.err_msg ?? String(error));
-                }
-            }
-        });
-        return err_msg;
-    },
     plan_call_vehicle: async function (plan_id, token) {
         await this.action_in_plan(plan_id, token, -1, async (plan, t) => {
             let expect_status = 2;

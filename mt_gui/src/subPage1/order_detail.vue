@@ -67,7 +67,6 @@ export default {
                         this.role = role;
                         this.focus_plan = resp.plan;
                         this.loaded = true;
-                        uni.setNavigationBarTitle({ title: '订单' + resp.plan.id });
                         return;
                     }
                 } catch (e) {
@@ -103,6 +102,12 @@ export default {
         this.get_is_allowed_order_return();
         this.get_hide_order_detail_price_config();
         await this.load_plan();
+    },
+    async onPullDownRefresh() {
+        this.get_is_allowed_order_return();
+        this.get_hide_order_detail_price_config();
+        await this.reload_plan();
+        uni.stopPullDownRefresh();
     },
 }
 </script>
