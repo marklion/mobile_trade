@@ -56,8 +56,7 @@ export default {
         },
         load_plan: async function () {
             const roles = this.role ? [this.role] : this.detect_roles();
-            for (let i = 0; i < roles.length; i++) {
-                const role = roles[i];
+            for (const role of roles) {
                 try {
                     const body = { plan_id: this.plan_id };
                     if (role === 'sale_management' && this.stat_context_company_id != null) {
@@ -72,7 +71,7 @@ export default {
                         return;
                     }
                 } catch (e) {
-                    console.log(e);
+                    console.warn('load_plan failed for role', role, e);
                 }
             }
             uni.showToast({ title: '无法加载订单', icon: 'none' });
@@ -86,19 +85,20 @@ export default {
                 const result = await this.$send_req('/global/get_hide_order_detail_price', {});
                 this.hide_order_detail_price = result.hide_order_detail_price;
             } catch (error) {
+                console.warn('get_hide_order_detail_price_config failed', error);
                 this.hide_order_detail_price = true;
             }
         },
     },
     async onLoad(option) {
         if (option.id) {
-            this.plan_id = parseInt(option.id);
+            this.plan_id = Number.parseInt(option.id, 10);
         }
         if (option.role) {
             this.role = option.role;
         }
         if (option.stat_context_company_id) {
-            this.stat_context_company_id = parseInt(option.stat_context_company_id);
+            this.stat_context_company_id = Number.parseInt(option.stat_context_company_id, 10);
         }
         this.get_is_allowed_order_return();
         this.get_hide_order_detail_price_config();

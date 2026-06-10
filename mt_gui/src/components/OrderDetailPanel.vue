@@ -403,16 +403,16 @@ export default {
             return this.statContextCompanyId;
         },
         get_both_attach: function () {
-            let ret = [];
-            let func = (path) => {
+            const func = (path) => {
                 if (path) {
                     return this.$convert_attach_url(path);
                 }
                 return '/static/no_att.jpg';
             };
-            ret.push({ src: func(this.focus_plan.company.attachment), descr: '下单方资质' });
-            ret.push({ src: func(this.focus_plan.stuff.company.attachment), descr: '接单方资质' });
-            return ret;
+            return [
+                { src: func(this.focus_plan.company.attachment), descr: '下单方资质' },
+                { src: func(this.focus_plan.stuff.company.attachment), descr: '接单方资质' },
+            ];
         },
         user_authorize: function () {
             let ret = '未授权';
@@ -537,6 +537,7 @@ export default {
                 const ret = await this.$send_req('/approval/get_approval_projects', {});
                 this.approval_projects = ret.projects || [];
             } catch (err) {
+                console.warn('refresh_approval_projects failed', err);
                 this.approval_projects = [];
             }
         },
@@ -557,6 +558,7 @@ export default {
                     this.show_approver_pick = true;
                 });
             } catch (err) {
+                console.warn('pick_submit_specify_auditer failed', err);
                 return '';
             }
         },
@@ -637,9 +639,9 @@ export default {
                     return;
                 }
                 this.deliver_req.plan_id = this.focus_plan.id;
-                this.deliver_req.count = parseFloat(this.deliver_req.count);
-                this.deliver_req.p_weight = parseFloat(this.deliver_req.p_weight);
-                this.deliver_req.m_weight = parseFloat(this.deliver_req.m_weight);
+                this.deliver_req.count = Number.parseFloat(this.deliver_req.count);
+                this.deliver_req.p_weight = Number.parseFloat(this.deliver_req.p_weight);
+                this.deliver_req.m_weight = Number.parseFloat(this.deliver_req.m_weight);
                 await this.$send_req('/scale/deliver', this.deliver_req);
                 this.deliver_req = { count: "", m_time: '', m_weight: '', p_time: '', p_weight: '' };
                 this.refresh_detail();
@@ -657,7 +659,7 @@ export default {
         do_xxx: async function (e) {
             if (e.index == 1) {
                 let body = { plan_id: this.focus_plan.id };
-                if (this.pay_pending_approval_auditer && this.xxx_url && this.xxx_url.indexOf('order_sale_pay') >= 0) {
+                if (this.pay_pending_approval_auditer && this.xxx_url?.includes('order_sale_pay')) {
                     body.approval_auditer = this.pay_pending_approval_auditer;
                 }
                 await this.$send_req(this.xxx_url, body);

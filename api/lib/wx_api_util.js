@@ -213,7 +213,7 @@ function make_plan_status_msg(plan) {
 
 function writeStringToFile(filePath, content) {
     fs.appendFile(filePath, content, () => {
-        console.log('write file:', filePath, content);
+        console.log('write file:', filePath);
     });
 }
 
