@@ -507,6 +507,7 @@ module.exports = {
             item.expired = this.contractOutOfDate(item.end_time);
         });
         let price_map = new Map();
+        let scheme_map = new Map();
         if (rows.length > 0) {
             const contract_ids = rows.map(item => item.id);
             const price_rows = await sq.models.contract_stuff_price.findAll({
@@ -515,7 +516,7 @@ module.exports = {
                         [db_opt.Op.in]: contract_ids
                     }
                 },
-                include: [{ model: sq.models.stuff, attributes: ['id', 'name'] }],
+                include: [{ model: sq.models.stuff, attributes: ['id', 'name'], include: [{ model: sq.models.company, attributes: ['id', 'name'] }] }],
                 order: [['id', 'ASC']],
             });
             price_rows.forEach((row) => {
@@ -525,12 +526,32 @@ module.exports = {
                 }
                 price_map.get(cid).push(typeof row.toJSON === 'function' ? row.toJSON() : row);
             });
+            const scheme_rows = await sq.models.contract_stuff_scheme.findAll({
+                where: {
+                    contractId: {
+                        [db_opt.Op.in]: contract_ids
+                    }
+                },
+                include: [
+                    { model: sq.models.stuff, attributes: ['id', 'name'], include: [{ model: sq.models.company, attributes: ['id', 'name'] }] },
+                    { model: sq.models.contract_discount_scheme, as: 'discount_scheme' },
+                ],
+                order: [['id', 'ASC']],
+            });
+            scheme_rows.forEach((row) => {
+                const cid = row.contractId;
+                if (!scheme_map.has(cid)) {
+                    scheme_map.set(cid, []);
+                }
+                scheme_map.get(cid).push(typeof row.toJSON === 'function' ? row.toJSON() : row);
+            });
         }
         const plain_rows = rows.map((item) => {
             const one = typeof item.toJSON === 'function' ? item.toJSON() : { ...item };
             one.company = one.buy_company || one.company;
             one.expired = this.contractOutOfDate(one.end_time);
             one.contract_stuff_prices = price_map.get(one.id) || [];
+            one.contract_stuff_schemes = scheme_map.get(one.id) || [];
             return one;
         });
         return { rows: plain_rows, count: count };
@@ -544,14 +565,41 @@ module.exports = {
             }
         });
     },
+    get_contract_stuff_scheme: async function (contract_id, stuff_id) {
+        const sq = db_opt.get_sq();
+        return await sq.models.contract_stuff_scheme.findOne({
+            where: {
+                contractId: contract_id,
+                stuffId: stuff_id,
+            },
+            include: [{ model: sq.models.contract_discount_scheme, as: 'discount_scheme' }],
+        });
+    },
+    get_contract_discount_scheme_for_stuff: async function (contract, stuff_id) {
+        const stuff_scheme = await this.get_contract_stuff_scheme(contract.id, stuff_id);
+        if (stuff_scheme) {
+            let scheme = stuff_scheme.discount_scheme;
+            if (!scheme && stuff_scheme.discountSchemeId) {
+                const sq = db_opt.get_sq();
+                scheme = await sq.models.contract_discount_scheme.findByPk(stuff_scheme.discountSchemeId);
+            }
+            if (scheme) {
+                return scheme;
+            }
+        }
+        if (contract.discountSchemeId) {
+            const sq = db_opt.get_sq();
+            return await sq.models.contract_discount_scheme.findByPk(contract.discountSchemeId);
+        }
+        return null;
+    },
     get_contract_effective_unit_price: async function (contract, stuff, default_price) {
         let final_price = default_price;
         const override_price = await this.get_contract_stuff_price(contract.id, stuff.id);
         if (override_price) {
             final_price = override_price.unit_price;
-        } else if (contract.discountSchemeId) {
-            const sq = db_opt.get_sq();
-            const scheme = await sq.models.contract_discount_scheme.findByPk(contract.discountSchemeId);
+        } else {
+            const scheme = await this.get_contract_discount_scheme_for_stuff(contract, stuff.id);
             if (scheme) {
                 final_price = Number(default_price) + Number(scheme.delta_price);
             }
@@ -1785,8 +1833,8 @@ module.exports = {
                         const override_price = await this.get_contract_stuff_price(picked_contract.id, stuff.id);
                         if (override_price) {
                             should_skip_update = true;
-                        } else if (picked_contract.discountSchemeId) {
-                            const scheme = await sq.models.contract_discount_scheme.findByPk(picked_contract.discountSchemeId);
+                        } else {
+                            const scheme = await this.get_contract_discount_scheme_for_stuff(picked_contract, stuff.id);
                             if (scheme) {
                                 target_unit_price = Number((Number(_new_price) + Number(scheme.delta_price)).toFixed(2));
                             }

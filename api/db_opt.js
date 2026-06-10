@@ -155,6 +155,9 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             unit_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('unit_price') },
         },
+        contract_stuff_scheme: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+        },
         plan: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             plan_time: { type: DataTypes.STRING },
@@ -551,6 +554,19 @@ let db_opt = {
         _sq.models.contract.hasMany(_sq.models.contract_stuff_price);
         _sq.models.contract_stuff_price.belongsTo(_sq.models.stuff);
         _sq.models.stuff.hasMany(_sq.models.contract_stuff_price);
+        _sq.models.contract_stuff_scheme.belongsTo(_sq.models.contract);
+        _sq.models.contract.hasMany(_sq.models.contract_stuff_scheme);
+        _sq.models.contract_stuff_scheme.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.contract_stuff_scheme);
+        _sq.models.contract_stuff_scheme.belongsTo(_sq.models.contract_discount_scheme, {
+            as: 'discount_scheme',
+            foreignKey: 'discountSchemeId',
+            constraints: false,
+        });
+        _sq.models.contract_discount_scheme.hasMany(_sq.models.contract_stuff_scheme, {
+            foreignKey: 'discountSchemeId',
+            constraints: false,
+        });
         _sq.models.balance_history.belongsTo(_sq.models.contract);
         _sq.models.contract.hasMany(_sq.models.balance_history);
         _sq.models.price_history.belongsTo(_sq.models.stuff);

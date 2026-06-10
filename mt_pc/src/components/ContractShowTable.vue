@@ -72,10 +72,24 @@
                             </div>
                         </template>
                 </el-table-column>
-                <el-table-column v-if="can_manage_discount" label="优惠策略" min-width="180">
+                <el-table-column v-if="can_manage_discount" label="优惠策略" min-width="220">
                     <template slot-scope="scope">
-                        <div>
-                            方案: {{ scope.row.discount_scheme ? scope.row.discount_scheme.name : '无' }}
+                        <div v-if="scope.row.contract_stuff_schemes && scope.row.contract_stuff_schemes.length > 0" class="contract-scheme-list">
+                            <el-tag
+                                v-for="scheme_row in scope.row.contract_stuff_schemes"
+                                :key="scheme_row.id || (scheme_row.stuffId + '-' + scheme_row.discountSchemeId)"
+                                size="mini"
+                                type="primary"
+                                class="contract-scheme-tag"
+                            >
+                                {{ format_scheme_tag_text(scheme_row) }}
+                            </el-tag>
+                        </div>
+                        <div v-else-if="scope.row.discount_scheme">
+                            方案: {{ scope.row.discount_scheme.name }}
+                        </div>
+                        <div v-else>
+                            方案: 无
                         </div>
                         <div v-if="scope.row.contract_stuff_prices && scope.row.contract_stuff_prices.length > 0">
                             <div>物料特价:</div>
@@ -214,17 +228,32 @@
             </el-table-column>
         </el-table>
     </el-dialog>
-    <el-dialog title="设置合同优惠方案" :visible.sync="show_contract_scheme_dialog" width="30%">
+    <el-dialog title="设置合同优惠方案" :visible.sync="show_contract_scheme_dialog" width="36%">
         <el-alert type="info" :closable="false" show-icon style="margin-bottom: 12px;">
             <template slot="title">单价计算优先级</template>
             <div style="font-size: 12px; line-height: 1.6;">
                 若该合同同时设置了"合同物料单价（一客一价）"，则<b>一客一价优先</b>，本方案不会生效；<br />
-                仅当未设置一客一价时，下单单价 = <b>物料基价 + 方案 delta</b>。
+                仅当未设置一客一价时，下单单价 = <b>物料基价 + 方案 delta</b>；<br />
+                计算优惠时<b>优先匹配合同-物料</b>专属方案，未设置时再使用合同默认方案。
             </div>
         </el-alert>
-        <el-select v-model="selected_scheme_id" clearable placeholder="请选择优惠方案" style="width: 100%;">
-            <el-option v-for="item in discount_schemes" :key="item.id" :label="`${item.name}（${item.delta_price}）`" :value="item.id"></el-option>
-        </el-select>
+        <el-form label-width="80px">
+            <el-form-item label="优惠物料">
+                <el-select v-model="scheme_selected_stuff_id" clearable placeholder="全部关联物料（默认）" style="width: 100%;" @change="sync_scheme_for_selected_stuff">
+                    <el-option
+                        v-for="item in contract_scheme_stuff_options"
+                        :key="item.id"
+                        :label="item.display_name"
+                        :value="item.id"
+                    ></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="优惠方案">
+                <el-select v-model="selected_scheme_id" clearable placeholder="请选择优惠方案" style="width: 100%;">
+                    <el-option v-for="item in discount_schemes" :key="item.id" :label="`${item.name}（${item.delta_price}）`" :value="item.id"></el-option>
+                </el-select>
+            </el-form-item>
+        </el-form>
         <span slot="footer">
             <el-button @click="show_contract_scheme_dialog = false">取 消</el-button>
             <el-button type="primary" @click="save_contract_scheme">确 定</el-button>
@@ -306,6 +335,8 @@ export default {
             },
             show_contract_scheme_dialog: false,
             selected_scheme_id: null,
+            scheme_selected_stuff_id: null,
+            contract_scheme_stuff_options: [],
             show_stuff_price_dialog: false,
             stuff_price_rows: [],
         }
@@ -435,15 +466,43 @@ export default {
         },
         prepare_contract_scheme: async function (contract) {
             this.focus_contract = contract;
-            this.selected_scheme_id = contract.discountSchemeId || null;
+            this.contract_scheme_stuff_options = this.format_linked_stuff_list(contract.stuff || []);
+            this.scheme_selected_stuff_id = null;
             await this.load_discount_schemes();
+            this.sync_scheme_for_selected_stuff();
             this.show_contract_scheme_dialog = true;
         },
+        sync_scheme_for_selected_stuff: function () {
+            const rows = (this.focus_contract && this.focus_contract.contract_stuff_schemes) || [];
+            if (this.scheme_selected_stuff_id) {
+                const found = rows.find((row) => row.stuffId === this.scheme_selected_stuff_id);
+                this.selected_scheme_id = found ? found.discountSchemeId : null;
+                return;
+            }
+            if (rows.length > 0) {
+                const firstSchemeId = rows[0].discountSchemeId;
+                const allSame = rows.every((row) => row.discountSchemeId === firstSchemeId);
+                this.selected_scheme_id = allSame ? firstSchemeId : null;
+                return;
+            }
+            this.selected_scheme_id = (this.focus_contract && this.focus_contract.discountSchemeId) || null;
+        },
+        format_scheme_tag_text: function (scheme_row) {
+            const stuff_name = scheme_row.stuff && scheme_row.stuff.name ? scheme_row.stuff.name : `物料#${scheme_row.stuffId}`;
+            const scheme_name = scheme_row.discount_scheme && scheme_row.discount_scheme.name
+                ? scheme_row.discount_scheme.name
+                : '无';
+            return `${stuff_name}: ${scheme_name}`;
+        },
         save_contract_scheme: async function () {
-            await this.$send_req('/sale_management/contract_set_discount_scheme', this.make_context_req({
+            const req = {
                 contract_id: this.focus_contract.id,
                 scheme_id: this.selected_scheme_id || null,
-            }));
+            };
+            if (this.scheme_selected_stuff_id) {
+                req.stuff_id = this.scheme_selected_stuff_id;
+            }
+            await this.$send_req('/sale_management/contract_set_discount_scheme', this.make_context_req(req));
             this.show_contract_scheme_dialog = false;
             this.$message.success('设置成功');
             this.$refs.contracts.refresh(this.$refs.contracts.cur_page || 1);
@@ -722,6 +781,19 @@ export default {
 }
 
 .contract-stuff-tag {
+    white-space: normal;
+    height: auto;
+    line-height: 1.5;
+    max-width: 100%;
+}
+
+.contract-scheme-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.contract-scheme-tag {
     white-space: normal;
     height: auto;
     line-height: 1.5;
