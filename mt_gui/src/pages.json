@@ -13,9 +13,6 @@
 			"path": "pages/Ticket"
 		},
 		{
-			"path": "pages/order_detail"
-		},
-		{
 			"path": "pages/Export",
 			"style": {
 				"enablePullDownRefresh": true

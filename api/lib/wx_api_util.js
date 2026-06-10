@@ -401,7 +401,7 @@ module.exports = {
                     template_id: await this.get_template_id('plan_status'),
                     miniprogram: {
                         appid: appid,
-                        pagepath: 'pages/order_detail?id=' + plan.id
+                        pagepath: 'subPage1/order_detail?id=' + plan.id
                     },
                     data: make_plan_status_msg(plan),
                 }
