@@ -26,6 +26,11 @@ function clean_plan_str(value, upperCase = false) {
     return upperCase ? cleaned.toUpperCase() : cleaned;
 }
 
+function plan_matches_authorized_counterparty(plan, authorized_ids) {
+    return (plan.companyId && authorized_ids.includes(plan.companyId))
+        || (plan.stuff && plan.stuff.company && authorized_ids.includes(plan.stuff.company.id));
+}
+
 const orderUpdateStrFields = [
     ['main_vehicle_plate', true],
     ['behind_vehicle_plate', true],
@@ -822,10 +827,7 @@ module.exports = {
             return true;
         }
         const authorized_ids = await this.get_authorized_counterparty_company_ids_for_user(user.id, opt_company.id, is_buy);
-        if (plan.companyId && authorized_ids.includes(plan.companyId)) {
-            return true;
-        }
-        if (plan.stuff && plan.stuff.company && authorized_ids.includes(plan.stuff.company.id)) {
+        if (plan_matches_authorized_counterparty(plan, authorized_ids)) {
             return true;
         }
         if (opt_company.is_group) {
