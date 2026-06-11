@@ -377,6 +377,37 @@ function generateTicketFilename(plan) {
 
     return `磅单_${companyName}_${mainPlate}-${behindPlate}_${plan.id}.png`;
 }
+
+function getUrlHost(urlStr) {
+    if (!urlStr || typeof urlStr !== 'string') {
+        return null;
+    }
+    const withoutHash = urlStr.trim().split('#')[0];
+    try {
+        return new URL(withoutHash).hostname.toLowerCase();
+    } catch (e) {
+        return null;
+    }
+}
+
+function verifyTicketQrContent(qr_content) {
+    const scannedHost = getUrlHost(qr_content);
+    const officialHost = getUrlHost(process.env.REMOTE_MOBILE_HOST || '');
+    const valid = !!(scannedHost && officialHost && scannedHost === officialHost);
+    console.log('========== 磅单验真 ==========');
+    console.log('二维码内容:', qr_content);
+    console.log('识别域名:', scannedHost || '(无法解析)');
+    console.log('官方域名:', officialHost || '(未配置)', '| REMOTE_MOBILE_HOST=', process.env.REMOTE_MOBILE_HOST || '');
+    console.log('校验结果:', valid ? '域名一致 → 真' : '域名不一致 → 假');
+    console.log('==============================');
+    return {
+        valid,
+        qr_content,
+        scanned_host: scannedHost || '',
+        official_host: officialHost || '',
+    };
+}
+
 module.exports = {
     name: 'global',
     description: '全局',
@@ -2585,6 +2616,23 @@ module.exports = {
                 } else {
                     throw { err_msg: '司机未找到' };
                 }
+            }
+        },
+        verify_ticket_qr: {
+            name: '验证磅单二维码',
+            description: '验证扫码得到的字符串是否为官方磅单链接',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                qr_content: { type: String, have_to: true, mean: '扫码得到的字符串', example: 'https://console.d8sis.cn/mobile/#/subPage1/Ticket?id=1' }
+            },
+            result: {
+                valid: { type: Boolean, mean: '是否为官方磅单', example: true },
+                qr_content: { type: String, mean: '二维码内容', example: 'https://console.d8sis.cn/mobile/#/subPage1/Ticket?id=1' }
+            },
+            func: async function (body, token) {
+                return verifyTicketQrContent(body.qr_content);
             }
         },
     },
