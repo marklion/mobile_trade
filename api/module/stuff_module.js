@@ -201,6 +201,8 @@ module.exports = {
                         },
                         delay_checkout_time: { type: String, mean: '延迟结算时间', example: '2025' },
                         need_driver_sign: { type: Boolean, mean: '是否需要司机签字', example: false },
+                        protocol_doc_path: { type: String, mean: '协议文本docx路径', example: '/uploads/protocol.docx' },
+                        protocol_signers: { type: String, mean: '协议签名人（逗号分隔）', example: '司机,供方' },
                     }
                 },
             },
@@ -1662,6 +1664,56 @@ module.exports = {
             },
             func: async function (body, token) {
                 return await change_stuff_single_switch(body.stuff_id, 'need_driver_sign', body.need_driver_sign, token, body.stat_context_company_id);
+            }
+        },
+        set_protocol_doc: {
+            name: '设置物料协议文本',
+            description: '基于物料设置协议文本docx文件路径',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                protocol_doc_path: { type: String, have_to: true, mean: '协议文本docx路径', example: '/uploads/protocol.docx' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'protocol_doc_path', body.protocol_doc_path, token, body.stat_context_company_id);
+            }
+        },
+        clear_protocol_doc: {
+            name: '取消物料协议文本',
+            description: '基于物料取消已配置的协议文本docx文件',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'protocol_doc_path', '', token, body.stat_context_company_id);
+            }
+        },
+        set_protocol_signers: {
+            name: '设置物料协议签名人',
+            description: '基于物料配置协议文本需要签名的角色（逗号分隔）',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                protocol_signers: { type: String, have_to: false, mean: '协议签名人（逗号分隔）', example: '司机,供方' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                return await change_stuff_single_switch(body.stuff_id, 'protocol_signers', body.protocol_signers || '', token, body.stat_context_company_id);
             }
         },
         add_extra_info_config: {

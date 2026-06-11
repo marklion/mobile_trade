@@ -17,6 +17,26 @@
                     <div>
                         <el-table :data="slotProps.content" style="width: 100%" stripe :default-sort="{ prop: 'name', order: 'ascending' }">
                             <el-table-column prop="name" label="物料名称" width="120" align="center" sortable></el-table-column>
+                            <el-table-column label="协议文本" width="300" align="center">
+                                <template slot-scope="scope">
+                                    <div class="protocol-cell">
+                                        <div class="protocol-file-row">
+                                            <el-tag v-if="scope.row.protocol_doc_path" size="mini" type="success" effect="plain">已上传</el-tag>
+                                            <el-tag v-else size="mini" type="info" effect="plain">未上传</el-tag>
+                                            <div class="protocol-btns">
+                                                <el-upload :file-list="always_empty" :ref="'protocol_uploader' + scope.row.id" :show-file-list="false" :action="$make_file_url()" accept=".docx" :limit="1" :on-success="make_upload_protocol_func(scope.row)">
+                                                    <el-button size="mini" type="primary" plain icon="el-icon-upload2">{{ scope.row.protocol_doc_path ? '重传' : '上传' }}</el-button>
+                                                </el-upload>
+                                                <el-button v-if="scope.row.protocol_doc_path" size="mini" type="danger" plain icon="el-icon-delete" @click="clear_protocol_doc(scope.row)">清除</el-button>
+                                            </div>
+                                        </div>
+                                        <el-input v-model="scope.row.protocol_signers" size="mini" class="protocol-signers-input" placeholder="逗号分隔，如：司机,供方">
+                                            <template slot="prepend">签名要求</template>
+                                            <el-button slot="append" size="mini" type="primary" @click="save_protocol_signers(scope.row)">保存</el-button>
+                                        </el-input>
+                                    </div>
+                                </template>
+                            </el-table-column>
                             <el-table-column label="配置" width="100" align="center">
                                 <template slot-scope="scope">
                                     <el-popover placement="right" trigger="hover" width="300">
@@ -313,6 +333,7 @@ export default {
     },
     data: function () {
         return {
+            always_empty: [],
             history_filter_string: '',
             filter_string: '',
             price_profile: {
@@ -644,6 +665,60 @@ export default {
                 need_driver_sign: event
             });
         },
+        make_upload_protocol_func: function (stuff) {
+            let self = this;
+            return async function (res) {
+                const req = {
+                    stuff_id: stuff.id,
+                    protocol_doc_path: res,
+                };
+                if (self.show_stat_scope_selector && self.globalStatContextCompanyId != null) {
+                    req.stat_context_company_id = self.globalStatContextCompanyId;
+                }
+                await self.$send_req('/stuff/set_protocol_doc', req);
+                self.always_empty = [];
+                const uploader = self.$refs['protocol_uploader' + stuff.id];
+                if (uploader) {
+                    uploader.clearFiles();
+                }
+                self.$message.success('协议文本上传成功');
+                self.refresh_stuff();
+            };
+        },
+        clear_protocol_doc: async function (stuff) {
+            try {
+                await this.$confirm('确定要取消该物料的协议文本吗？', '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+                const req = { stuff_id: stuff.id };
+                if (this.show_stat_scope_selector && this.globalStatContextCompanyId != null) {
+                    req.stat_context_company_id = this.globalStatContextCompanyId;
+                }
+                await this.$send_req('/stuff/clear_protocol_doc', req);
+                stuff.protocol_doc_path = '';
+                this.$message.success('已取消协议文本');
+                this.refresh_stuff();
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        save_protocol_signers: async function (stuff) {
+            try {
+                const req = {
+                    stuff_id: stuff.id,
+                    protocol_signers: stuff.protocol_signers || '',
+                };
+                if (this.show_stat_scope_selector && this.globalStatContextCompanyId != null) {
+                    req.stat_context_company_id = this.globalStatContextCompanyId;
+                }
+                await this.$send_req('/stuff/set_protocol_signers', req);
+                this.$message.success('签名人配置已保存');
+            } catch (error) {
+                this.$message.error('保存失败：' + (error.message || error));
+            }
+        },
         change_manual_weight: async function (event, item) {
             await this.$send_req('/stuff/manual_weight_config', {
                 stuff_id: item.id,
@@ -886,5 +961,41 @@ export default {
 
 .el-button {
     margin-left: auto;
+}
+
+.protocol-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.protocol-cell .el-button {
+    margin-left: 0;
+}
+
+.protocol-file-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.protocol-btns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.protocol-signers-input {
+    width: 100%;
+}
+
+.protocol-signers-input >>> .el-input-group__prepend {
+    padding: 0 10px;
+    font-size: 12px;
+    color: #909399;
+    background: #f5f7fa;
 }
 </style>
