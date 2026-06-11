@@ -135,19 +135,17 @@
             </u-cell-group>
         </view>
         <view class="group_sep">
-            <u-cell-group v-if="focus_plan.sc_info" title="安检信息">
-                <view v-if="focus_plan.status == 3 ">
-                    <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
-                        <view slot="value">
-                            <view v-if="sc_node.sc_content">
-                                <view>
-                                    {{sc_node.sc_content.input}}
-                                </view>
-                                <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc_image(index)"></fui-avatar>
+            <u-cell-group v-if="focus_plan.status == 3" title="安检信息">
+                <u-cell v-for="(sc_node, index) in (focus_plan.sc_info || [])" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
+                    <view slot="value">
+                        <view v-if="sc_node.sc_content">
+                            <view>
+                                {{sc_node.sc_content.input}}
                             </view>
+                            <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc_image(index)"></fui-avatar>
                         </view>
-                    </u-cell>
-                </view>
+                    </view>
+                </u-cell>
             </u-cell-group>
             <module-filter v-else require_module="sc">
                 <u-cell title="安检执行">
