@@ -997,12 +997,6 @@ module.exports = {
         if (typeof result?.toJSON === 'function') {
             result = result.toJSON();
         }
-        if (!result.sc_info) {
-            const sc_status = await sc_lib.get_sc_status_by_plan(plan);
-            if (sc_status?.reqs) {
-                result.sc_info = sc_status.reqs;
-            }
-        }
         return result;
     },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
