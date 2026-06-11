@@ -26,6 +26,17 @@ function clean_plan_str(value, upperCase = false) {
     return upperCase ? cleaned.toUpperCase() : cleaned;
 }
 
+function plan_matches_authorized_counterparty(plan, authorized_ids) {
+    return (plan.companyId && authorized_ids.includes(plan.companyId))
+        || authorized_ids.includes(plan.stuff?.company?.id);
+}
+
+function create_api_error(message) {
+    const error = new Error(message);
+    error.err_msg = message;
+    return error;
+}
+
 const orderUpdateStrFields = [
     ['main_vehicle_plate', true],
     ['behind_vehicle_plate', true],
@@ -903,6 +914,96 @@ module.exports = {
         if (!element.company) {
             element.company = { name: '(司机选择)' };
         }
+    },
+    can_user_view_plan_as_customer_or_supplier: async function (token, plan, is_buy) {
+        let user = await rbac_lib.get_user_by_token(token);
+        let opt_company = await rbac_lib.get_company_by_token(token);
+        if (!user || !plan || !opt_company) {
+            return false;
+        }
+        if (plan.rbac_user?.id === user.id) {
+            return true;
+        }
+        if (plan.companyId === opt_company.id) {
+            return true;
+        }
+        const authorized_ids = await this.get_authorized_counterparty_company_ids_for_user(user.id, opt_company.id, is_buy);
+        if (plan_matches_authorized_counterparty(plan, authorized_ids)) {
+            return true;
+        }
+        if (opt_company.is_group) {
+            const candidates = [plan.company, plan.stuff?.company].filter(Boolean);
+            for (const target_company of candidates) {
+                if (target_company.parentGroupCompanyId === opt_company.id
+                    && await group_lib.user_has_member_data_access(user.id, target_company.id, true)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+    can_user_view_plan_as_management: async function (token, plan, is_buy, stat_context_company_id) {
+        let company = await group_lib.resolve_stat_company(token, stat_context_company_id);
+        let user = await rbac_lib.get_user_by_token(token);
+        let opt_company = await rbac_lib.get_company_by_token(token);
+        if (!company || !plan) {
+            return false;
+        }
+        if (plan.is_buy !== is_buy) {
+            return false;
+        }
+        const stuff_list = await company.getStuff({ paranoid: false });
+        const stuff_ids = stuff_list.map((item) => item.id);
+        if (stuff_ids.includes(plan.stuffId)) {
+            return true;
+        }
+        if (opt_company?.is_group && user) {
+            const candidates = [plan.company, plan.stuff?.company].filter(Boolean);
+            for (const target_company of candidates) {
+                if (target_company.parentGroupCompanyId === opt_company.id
+                    && await group_lib.user_has_member_data_access(user.id, target_company.id, true)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
+    get_order_detail: async function (plan_id, token, view_role, stat_context_company_id) {
+        let plan = await util_lib.get_single_plan_by_id(plan_id);
+        if (!plan) {
+            throw create_api_error('订单不存在');
+        }
+        let has_permission = false;
+        switch (view_role) {
+            case 'sale_management':
+                has_permission = await this.can_user_view_plan_as_management(token, plan, false, stat_context_company_id);
+                break;
+            case 'buy_management':
+                has_permission = await this.can_user_view_plan_as_management(token, plan, true, stat_context_company_id);
+                break;
+            case 'customer':
+                has_permission = await this.can_user_view_plan_as_customer_or_supplier(token, plan, false);
+                break;
+            case 'supplier':
+                has_permission = await this.can_user_view_plan_as_customer_or_supplier(token, plan, true);
+                break;
+            default:
+                break;
+        }
+        if (!has_permission) {
+            throw create_api_error('无权限');
+        }
+        let result = await this.processPlan(plan, this.replace_plan2archive.bind(this));
+        if (typeof result?.toJSON === 'function') {
+            result = result.toJSON();
+        }
+        if (!result.sc_info) {
+            const sc_status = await sc_lib.get_sc_status_by_plan(plan);
+            if (sc_status?.reqs) {
+                result.sc_info = sc_status.reqs;
+            }
+        }
+        return result;
     },
     search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -2066,49 +2167,8 @@ module.exports = {
                 try {
                     await this.confirm_single_plan(element.id, token);
                 } catch (error) {
-                    err_msg += error.err_msg + '\n';
-                    throw error;
-                }
-            }
-        });
-        return err_msg;
-    },
-    batch_copy: async function (body, token, is_buy, new_plan_req) {
-        let err_msg = '';
-        await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
-            let user = await rbac_lib.get_user_by_token(token);
-            let all_plans = [];
-            let pageNo = 0;
-            while (true) {
-                let tmp = await this.search_bought_plans(user, pageNo, body, is_buy);
-                all_plans = all_plans.concat(tmp.rows);
-                pageNo++;
-                if (tmp.rows.length <= 0) {
-                    break;
-                }
-            }
-            for (let index = 0; index < all_plans.length; index++) {
-                const element = all_plans[index];
-                try {
-                    let new_plan = await db_opt.get_sq().models.plan.create(new_plan_req);
-                    await new_plan.setCompany(await db_opt.get_sq().models.company.findByPk(element.company.id));
-                    await new_plan.setStuff(await db_opt.get_sq().models.stuff.findByPk(element.stuff.id));
-                    await new_plan.setDriver(await db_opt.get_sq().models.driver.findByPk(element.driver.id));
-                    await new_plan.setMain_vehicle(await db_opt.get_sq().models.vehicle.findByPk(element.main_vehicle.id));
-                    await new_plan.setBehind_vehicle(await db_opt.get_sq().models.vehicle.findByPk(element.behind_vehicle.id));
-                    await new_plan.setRbac_user(user);
-                    await this.rp_history_create(new_plan, user.name);
-                    new_plan.status = 0;
-                    if (!is_buy) {
-                        new_plan.unit_price = element.unit_price;
-                    }
-                    new_plan.is_buy = is_buy;
-                    new_plan.trans_company_name = element.trans_company_name;
-                    await new_plan.save();
-                    await wx_api_util.send_plan_status_msg(await util_lib.get_single_plan_by_id(new_plan.id));
-                } catch (error) {
-                    err_msg += error.err_msg + '\n';
-                    throw error;
+                    err_msg += (error?.err_msg ?? error?.message ?? String(error)) + '\n';
+                    throw error instanceof Error ? error : create_api_error(error?.err_msg ?? String(error));
                 }
             }
         });
@@ -2896,7 +2956,7 @@ module.exports = {
 
         const owner_company = await this.resolve_sale_contract_context_company(token, body.stat_context_company_id, false);
         if (!owner_company) {
-            throw { err_msg: '无权限' };
+            throw create_api_error('无权限');
         }
 
         const contracts = await this.get_sale_contracts_for_buyer_and_supply_company(customer_id, owner_company.id);

@@ -3,6 +3,7 @@ const moment = require('moment');
 const rbac_lib = require('./rbac_lib');
 const util_lib = require('./util_lib');
 const wx_api_util = require('./wx_api_util');
+const group_lib = require('./group_lib');
 module.exports = {
     sc_req_detail: {
         id: { type: Number, have_to: true, mean: 'ID', example: 1 },
@@ -296,11 +297,39 @@ module.exports = {
             throw { err_msg: '无权限' };
         }
     },
+    can_access_plan_sc: async function (token, plan) {
+        if (!plan?.stuff) {
+            return false;
+        }
+        const company = await rbac_lib.get_company_by_token(token);
+        const user = await rbac_lib.get_user_by_token(token);
+        if (!company || !user) {
+            return false;
+        }
+        if (await company.hasStuff(plan.stuff)) {
+            return true;
+        }
+        if (plan.rbac_user?.id === user.id) {
+            return true;
+        }
+        if (plan.companyId === company.id) {
+            return true;
+        }
+        if (company.is_group) {
+            const candidates = [plan.company, plan.stuff.company].filter(Boolean);
+            for (const target_company of candidates) {
+                if (target_company.parentGroupCompanyId === company.id
+                    && await group_lib.user_has_member_data_access(user.id, target_company.id, false)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    },
     get_plan_sc_status: async function (_plan_id, _token, pageNo) {
         let ret = { reqs: [], total: 0, passed: false };
         let plan = await util_lib.get_single_plan_by_id(_plan_id);
-        let company = await rbac_lib.get_company_by_token(_token);
-        if (company && plan && plan.stuff && await company.hasStuff(plan.stuff)) {
+        if (plan && await this.can_access_plan_sc(_token, plan)) {
             ret = await this.get_sc_status_by_plan(plan, pageNo);
         }
         else {

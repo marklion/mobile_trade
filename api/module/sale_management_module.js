@@ -187,6 +187,7 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        get_order_by_id: common.get_order_by_id('sale_management'),
         order_rollback: {
             name: '销售订单回滚',
             description: '销售订单回滚',

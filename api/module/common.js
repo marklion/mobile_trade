@@ -3,6 +3,7 @@ const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const moment = require('moment');
 const util_lib = require('../lib/util_lib');
+const api_param_result_define = require('../api_param_result_define');
 async function do_export_later(token, name, func) {
     let user = await rbac_lib.get_user_by_token(token);
     await user.addExport_record(await db_opt.get_sq().models.export_record.create({
@@ -173,6 +174,29 @@ module.exports = {
                 total: ret.count
             }
         }
+    },
+    get_order_by_id: function (view_role) {
+        const params = {
+            plan_id: { type: Number, have_to: true, mean: '订单ID', example: 1 },
+        };
+        if (view_role === 'sale_management') {
+            params.stat_context_company_id = { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 };
+        }
+        return {
+            name: '获取订单详情',
+            description: '获取订单详情',
+            is_write: false,
+            is_get_api: true,
+            params: params,
+            result: {
+                plan: { type: Object, mean: '订单', explain: api_param_result_define.plan_detail_define },
+            },
+            func: async function (body, token) {
+                return {
+                    plan: await plan_lib.get_order_detail(body.plan_id, token, view_role, body.stat_context_company_id),
+                };
+            },
+        };
     },
     do_export_later: do_export_later,
     export_plans: function (func) {

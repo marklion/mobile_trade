@@ -213,7 +213,7 @@ function make_plan_status_msg(plan) {
 
 function writeStringToFile(filePath, content) {
     fs.appendFile(filePath, content, () => {
-        console.log('write file:', filePath, content);
+        console.log('write file:', filePath);
     });
 }
 
@@ -399,10 +399,10 @@ module.exports = {
             await db_opt.get_sq().transaction({ savepoint: true }, async (t) => {
                 let req = {
                     template_id: await this.get_template_id('plan_status'),
-                    // miniprogram: {
-                    //     appid: appid,
-                    //     pagepath: 'pages/OrderList'
-                    // },
+                    miniprogram: {
+                        appid: appid,
+                        pagepath: 'subPage1/order_detail?id=' + plan.id
+                    },
                     data: make_plan_status_msg(plan),
                 }
                 let tar_array = [plan.rbac_user.open_id];

@@ -33,11 +33,6 @@
                 </view>
             </fui-col>
         </fui-row>
-
-        <module-filter :rm_array="['customer', 'supplier']">
-            <fui-tag type="primary" text="全部复制" @click="show_batch_copy = true" marginLeft="20">
-            </fui-tag>
-        </module-filter>
     </view>
     <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
     <u-cell title="计划时间" :value="begin_time + '~' + end_time">
@@ -61,7 +56,7 @@
     <u-checkbox-group v-model="plan_selected" placement="column">
         <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion, make_context_req, show_sale_scope_switch, stat_context_company_id]">
             <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && !hide_order_detail_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="prepare_plan_detail(item, make_context_req, show_sale_scope_switch, stat_context_company_id)">
+                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && !hide_order_detail_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="go_to_order_detail(item)">
                     <view slot="icon" style="display:flex;">
                         <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
                         </u-checkbox>
@@ -118,286 +113,6 @@
         </fui-bottom-popup>
     </module-filter>
 
-    <fui-bottom-popup :show="show_plan_detail" @close="show_plan_detail = false" z-index="1001">
-        <scroll-view style="height: 80vh;" show-scrollbar scroll-y>
-            <view class="group_sep">
-                <u-cell-group title="计划信息">
-                    <u-cell :title="comp_title(focus_plan.is_buy).a_title" :value="focus_plan.company.name">
-                        <view slot="label">
-                            <fui-text :text="focus_plan.rbac_user.name" size="24"></fui-text>
-                            <fui-text type="primary" :text="focus_plan.rbac_user.phone" size="24" textType="mobile" @click="copy_text(focus_plan.rbac_user.phone)"></fui-text>
-                        </view>
-                        <view slot="right-icon">
-                            <module-filter v-if="focus_plan.is_buy" require_module="buy_management">
-                                <fui-button v-if="focus_plan.company.id == undefined" type="primary" btnSize="mini" text="指定" @click="prepare_choose_company"></fui-button>
-                                <fui-button v-else type="warning" btnSize="mini" text="重新指定" @click="show_reassign_prompt = true"></fui-button>
-                            </module-filter>
-                        </view>
-                    </u-cell>
-                    <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name">
-                        <view slot="label">
-                            <view style="display:flex;align-items: center">
-                                <view style="font-size: 25rpx;">{{ focus_plan.stuff.name + '-单价-' + (hide_order_detail_price ? '***' : focus_plan.unit_price) }}</view>
-                                <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
-                                    <fui-button btnSize="mini" @click="new_stuff_price.show=true">调价</fui-button>
-                                </module-filter>
-                            </view>
-                        </view>
-                    </u-cell>
-                    <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
-                    <module-filter :rm_array="['sale_management', 'buy_management']">
-                        <u-cell title="合同有效期">
-                            <view slot="value">
-                                <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="26" :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
-                            </view>
-                        </u-cell>
-                    </module-filter>
-                    <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
-                    <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
-                        <u-cell title="余额" :label="user_authorize">
-                            <view slot="value">
-                                <module-filter require_module="cash">
-                                    {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}
-                                </module-filter>
-                                <fui-tag v-if="focus_plan.status == 1 && focus_plan.arrears > 0" theme="plain" :text="'欠款额:' + focus_plan.arrears + '需付' + focus_plan.outstanding_vehicles + '车'" :scaleRatio="0.8" type="warning"></fui-tag>
-                            </view>
-                            <view slot="right-icon">
-                                <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
-                            </view>
-                        </u-cell>
-                    </module-filter>
-                    <u-cell title="计划时间" :value="focus_plan.plan_time">
-                        <view slot="label">
-                            <fui-text v-if="focus_plan.bidding_item" type="primary" :text="focus_plan.bidding_item.time + '出价' + focus_plan.bidding_item.price.toFixed(2) + '中标'" size="24"></fui-text>
-                        </view>
-                    </u-cell>
-                    <u-cell :title="'当前状态：' + plan_status">
-                        <view slot="value" style="display:flex;">
-                            <fui-tag v-if="focus_plan.register_time && focus_plan.status != 3" theme="plain" text="已排号" :scaleRatio="0.8" type="primary"></fui-tag>
-                            <module-filter :rm_array="['customer', 'supplier']"></module-filter>
-                            <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
-                            <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
-                                <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
-                                <fui-button v-if="focus_plan.status != 0 && is_allowed_order_return" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
-                                <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
-                                <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
-                            </module-filter>
-                            <module-filter require_module="scale">
-                                <fui-button v-if="can_pass_vehicle" btnSize="mini" type="danger" text="过号" @click="prepare_xxx_confirm('/scale/cancel_check_in', '过号')"></fui-button>
-                                <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
-                            </module-filter>
-                        </view>
-                        <view slot="label">
-                            <div v-if="(focus_plan.status == 3 || (focus_plan.checkout_delay && focus_plan.status == 2)) && !focus_plan.manual_close">
-                                <fui-text type="primary" text="查看磅单" :size="28" decoration="underline" @click="go_to_ticket(false)"></fui-text>
-                                <fui-text v-if="focus_plan.delegate" type="primary" text="内部磅单" :size="28" decoration="underline" @click="go_to_ticket(true)"></fui-text>
-                            </div>
-                        </view>
-                    </u-cell>
-                </u-cell-group>
-            </view>
-            <view class="group_sep" v-if="focus_plan.stuff.concern_fapiao">
-                <u-cell title="发票信息" :value="(focus_plan.fapiao_delivered?'已开':'未开')">
-                    <view slot="right-icon">
-                        <module-filter :require_module="'sale_management'">
-                            <fui-button v-if="focus_plan.status != -1" btnSize="mini" type="primary" :text="'标记' + (focus_plan.fapiao_delivered?'未开':'已开')" @click="mark_fapiao_deliver"></fui-button>
-                        </module-filter>
-                    </view>
-                </u-cell>
-            </view>
-            <view class="group_sep">
-                <u-cell title="车辆信息">
-                    <view slot="right-icon">
-                        <fui-button v-if="focus_plan.status != 3" type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
-                    </view>
-                </u-cell>
-                <u-cell title="主车">
-                    <view slot="value">
-                        <view style="display:flex;justify-content: space-between;">
-                            <fui-text size="26" :text="focus_plan.main_vehicle.plate"></fui-text>
-                            <module-filter require_module="stuff">
-                                <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.main_vehicle.id, 'vehicle')"></fui-button>
-                            </module-filter>
-                        </view>
-                    </view>
-                </u-cell>
-                <u-cell title="挂车">
-                    <view slot="value">
-                        <view style="display:flex;justify-content: space-between;">
-                            <fui-text size="26" :text="focus_plan.behind_vehicle.plate"></fui-text>
-                            <module-filter require_module="stuff">
-                                <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.behind_vehicle.id, 'vehicle')"></fui-button>
-                            </module-filter>
-                        </view>
-                    </view>
-                </u-cell>
-                <u-cell :title="'司机:' + focus_plan.driver.name" clickable @click="copy_text(focus_plan.driver.phone)">
-                    <view slot="value">
-                        <view style="display:flex;justify-content: space-between;">
-                            <fui-text size="26" :text="focus_plan.driver.phone"></fui-text>
-                            <module-filter require_module="stuff">
-                                <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.driver.id, 'driver')"></fui-button>
-                            </module-filter>
-                        </view>
-                    </view>
-                </u-cell>
-                <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
-            </view>
-            <view class="group_sep">
-                <u-cell-group title="出入信息">
-                    <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
-                    <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time">
-                    </u-cell>
-                    <module-filter require_module="scale">
-                        <u-cell title="代替司机操作" isLink :url="'/subPage1/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
-                    </module-filter>
-                </u-cell-group>
-            </view>
-            <view class="group_sep">
-                <u-cell-group v-if="focus_plan.sc_info" title="安检信息">
-                    <view v-if="focus_plan.status == 3 ">
-                        <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
-                            <view slot="value">
-                                <view v-if="sc_node.sc_content">
-                                    <view>
-                                        {{sc_node.sc_content.input}}
-                                    </view>
-                                    <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc_image(index)"></fui-avatar>
-                                </view>
-                            </view>
-                        </u-cell>
-                    </view>
-                </u-cell-group>
-                <module-filter v-else require_module="sc">
-                    <u-cell title="安检执行">
-                        <view slot="right-icon">
-                            <fui-button btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
-                            <fui-button btnSize="mini" type="warning" text="检查" @click="nav_to_fc"></fui-button>
-                        </view>
-                    </u-cell>
-                </module-filter>
-                <module-filter require_module="exam">
-                    <u-cell title="查看考试结果" isLink :url="'/subPage1/PlanExam?plan_id=' + focus_plan.id"></u-cell>
-                </module-filter>
-            </view>
-            <view class="group_sep">
-                <u-cell-group title="装卸信息">
-                    <u-cell title="计量信息">
-                        <view slot="right-icon">
-                            <fui-button v-if="focus_plan.stuff.manual_weight" btnSize="mini" type="primary" text="查看" @click="show_manual_weight"></fui-button>
-                        </view>
-                    </u-cell>
-                    <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
-                    <u-cell title="装卸量" :value="focus_plan.count"></u-cell>
-                    <u-cell v-if="focus_plan.p_time" title="皮重" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
-                    <u-cell v-if="focus_plan.m_time" title="毛重" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
-                </u-cell-group>
-            </view>
-            <view class="group_sep">
-                <u-cell-group title="操作历史">
-                    <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
-                </u-cell-group>
-            </view>
-
-        </scroll-view>
-    </fui-bottom-popup>
-    <fui-backdrop :zIndex="8888" :show="show_sc" @click="show_sc = false">
-        <view class="sc-image-viewer" @click.stop>
-            <swiper class="sc-swiper" :current="sc_current_index" @change="on_sc_swiper_change" :indicator-dots="sc_attach_urls.length > 1" :indicator-color="'rgba(255,255,255,0.5)'" :indicator-active-color="'#ffffff'">
-                <swiper-item v-for="(item, index) in sc_attach_urls" :key="index">
-                    <movable-area scale-area class="sc-movable-area">
-                        <movable-view class="sc-movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
-                            <image class="sc-lookimg" :src="item.src" mode="aspectFit"></image>
-                        </movable-view>
-                    </movable-area>
-                </swiper-item>
-            </swiper>
-            <view class="sc-close-button-container">
-                <fui-icon @click="show_sc = false" name="close" size="80" color="white"></fui-icon>
-            </view>
-            <view class="sc-index-wrap" v-if="sc_attach_urls.length > 1">
-                <text class="sc-index">{{sc_current_index + 1}}/{{sc_attach_urls.length}}</text>
-            </view>
-        </view>
-    </fui-backdrop>
-
-    <fui-bottom-popup :show="choose_company_show" @close="choose_company_show= false" z-index="1002">
-        <fui-list>
-            <list-show v-model="supplier_list" :fetch_function="get_buy_contracts" search_key="cond" height="40vh">
-                <fui-list-cell v-for="item in supplier_list" :key="item.id" arrow @click="assign_supplier(item.company.id)">
-                    {{item.company.name}}
-                </fui-list-cell>
-            </list-show>
-        </fui-list>
-    </fui-bottom-popup>
-    <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
-        <sc-execute ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
-    </fui-bottom-popup>
-    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
-        <fui-form ref="rollback_form" top="100">
-            <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
-        <fui-form ref="deliver" top="100">
-            <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
-            <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
-            <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
-            <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
-            <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
-                <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
-            </fui-input>
-        </fui-form>
-    </fui-modal>
-
-    <fui-modal :zIndex="80" width="600" v-if="show_batch_copy" :show="show_batch_copy" @click="batch_copy">
-        <fui-form ref="plan_form" :model="dup_plan">
-            <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
-                <fui-input placeholder="请输入计划日期" disabled v-model="dup_plan.plan_time"></fui-input>
-            </fui-form-item>
-            <view v-if="!cur_is_buy">
-                <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
-                    <fui-input placeholder="请输入用途" disabled v-model="dup_plan.use_for"></fui-input>
-                </fui-form-item>
-                <pick-regions @getRegion="pick_address">
-                    <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
-                        <fui-input placeholder="请输入卸车地点" disabled v-model="dup_plan.drop_address"></fui-input>
-                    </fui-form-item>
-                </pick-regions>
-            </view>
-            <view v-else>
-                <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
-                    <fui-input placeholder="请输入单价" v-model="dup_plan.price"></fui-input>
-                </fui-form-item>
-            </view>
-            <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
-                <fui-input placeholder="请输入承运公司" v-model="dup_plan.trans_company_name"></fui-input>
-            </fui-form-item>
-        </fui-form>
-        <fui-date-picker :show="show_plan_time" type="3" :value="default_time" @change="fill_plan_time" @cancel="show_plan_time = false"></fui-date-picker>
-        <fui-bottom-popup :show="show_use_for" @close="show_use_for = false">
-            <fui-list>
-                <fui-list-cell v-for="(single_uf, index) in use_for_array" :key="index" arrow @click="choose_use_for(single_uf)">
-                    {{single_uf}}
-                </fui-list-cell>
-            </fui-list>
-        </fui-bottom-popup>
-    </fui-modal>
-    <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
-    <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
-    </fui-modal>
-    <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
-        <fui-form ref="plan_update" :model="update_req">
-            <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
-            <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
-            <fui-input label="司机姓名" v-model="update_req.driver_name"></fui-input>
-            <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
-            <fui-input label="承运公司" v-model="update_req.trans_company_name"></fui-input>
-            <fui-input label="备注" v-model="update_req.comment"></fui-input>
-        </fui-form>
-    </fui-modal>
     <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
         <fui-form ref="new_stuff_price_form" top="100">
             <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
@@ -406,10 +121,6 @@
     </fui-modal>
     <fui-message ref="po_msg"></fui-message>
     <fui-toast ref="toast"></fui-toast>
-    <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
-    <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
-    <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
-    <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
     <fui-bottom-popup :show="show_approver_pick" v-if="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
         <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
         <fui-list>
@@ -423,38 +134,20 @@
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilterVue from '../components/ModuleFilter.vue';
-import $fui from '@/components/firstui/fui-clipboard';
-import pickRegions from '@/components/pick-regions/pick-regions.vue'
-import moment from 'moment';
-import Measurement from '../components/Measurement.vue';
-import ScExecute from '../components/ScExecute.vue';
 export default {
     name: 'OrderList',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilterVue,
-        "pick-regions": pickRegions,
-        "measurement": Measurement,
-        "sc-execute": ScExecute,
     },
     data: function () {
         return {
-            show_blackList_confirm: false,
-            focus_blackList: {
-                type: '',
-                id: 0,
-            },
             tab_current: 0,
-            show_attach: false,
             new_stuff_price: {
                 show: false,
                 price: 0,
                 comment: '',
                 isMuti: false
-            },
-            cur_contract: {
-                balance: 0,
-                rbac_users: [],
             },
             action_show: false,
             action_list: () => {
@@ -474,46 +167,6 @@ export default {
             },
             select_active: false,
             plan_selected: [],
-            show_update: false,
-            update_req: {
-                main_vehicle_plate: '',
-                behind_vehicle_plate: '',
-                driver_name: '',
-                driver_phone: '',
-                trans_company_name: '',
-            },
-            rollback_msg: '',
-            use_for_array: [
-                '气化', '气站', '其他'
-            ],
-            default_time: '',
-            dup_plan: {
-                comment: "",
-                drop_address: "",
-                plan_time: "",
-                stuff_id: 0,
-                use_for: "",
-                trans_company_name: '',
-                price: 0,
-            },
-            show_plan_time: false,
-            show_use_for: false,
-            show_reassign_prompt: false,
-            supplier_list: [],
-            choose_company_show: false,
-            comp_title: function (is_buy) {
-                let ret = {
-                    a_title: '买方',
-                    b_title: '卖方'
-                }
-                if (is_buy) {
-                    ret = {
-                        a_title: '卖方',
-                        b_title: '买方',
-                    }
-                }
-                return ret;
-            },
             cur_get_url: '',
             cur_is_motion: false,
             cur_is_buy: false,
@@ -522,120 +175,15 @@ export default {
             cur_rollback_url: '',
             cur_update_url: '',
             cur_cancel_url: '',
-            cur_dup_url: '',
             cur_close_url: '',
-            sc_data2show: [],
             customer_data2show: [],
             stuff_data2show: [],
             sp_data2show: [],
-            show_delete_sc_content: false,
-            upload_sc: {
-                plan_id: 0,
-                open_id: '',
-                req_id: 0,
-                content_id: 0,
-                need_attach: false,
-                need_expired: false,
-                need_input: false,
-                name: '',
-                prompt: '',
-            },
-            one_att: [''],
-            sc_passed: false,
-            show_sc_confirm: false,
-            show_deliver_date: false,
-            show_scale_input: false,
-            deliver_req: {
-                count: "",
-                m_time: '',
-                m_weight: '',
-                p_time: '',
-                p_weight: '',
-            },
-            xxx_url: '',
-            confirm_info: '',
-            show_xxx_confirm: false,
             pay_pending_approval_auditer: '',
             approval_projects: [],
             show_approver_pick: false,
             approver_pick_names: [],
             approver_pick_resolve: null,
-            show_rollback_confirm: false,
-            show_sc: false,
-            sc_current_index: 0,
-            focus_plan: {
-                "behind_vehicle": {
-                    "id": 1,
-                    "plate": "车牌"
-                },
-                "comment": "备注",
-                "company": {
-                    "id": 1,
-                    "name": "公司名称"
-                },
-                "count": 1,
-                "driver": {
-                    "id": 1,
-                    "id_card": "司机身份证",
-                    "name": "司机名称",
-                    "phone": "司机电话"
-                },
-                "drop_address": "卸货地址",
-                "enter_time": "2020-01-01 12:00:00",
-                "from_bidding": true,
-                "id": 0,
-                "m_time": "2020-01-01 12:00:00",
-                "m_weight": 1,
-                "main_vehicle": {
-                    "id": 1,
-                    "plate": "车牌"
-                },
-                "p_time": "2020-01-01 12:00:00",
-                "p_weight": 1,
-                "plan_histories": [{
-                    "action_type": "操作",
-                    "id": 1,
-                    "operator": "操作人",
-                    "time": "2020-01-01 12:00:00"
-                }],
-                "plan_time": "2020-01-01 12:00:00",
-                "rbac_user": {
-                    "id": 1,
-                    "name": "用户姓名",
-                    "phone": "用户电话"
-                },
-                "register_number": 1,
-                "register_time": "2020-01-01 12:00:00",
-                "sc_info": [{
-                    "belong_type": 0,
-                    "id": 1,
-                    "name": "安检需求",
-                    "need_attach": true,
-                    "need_expired": true,
-                    "need_input": true,
-                    "sc_content": {
-                        "attachment": "http://www.baidu.com",
-                        "checker": "张三",
-                        "expired_time": "2020-01-01 00:00:00",
-                        "id": 1,
-                        "input": "请输入",
-                        "passed": true
-                    }
-                }],
-                "status": 1,
-                "stuff": {
-                    "company": {
-                        "id": 1,
-                        "name": "公司名称"
-                    },
-                    "id": 1,
-                    "name": "货物名称",
-                    concern_fapiao: false,
-                },
-                "unit_price": 1,
-                "use_for": "用途"
-            },
-            show_plan_detail: false,
             seg: [],
             company_filter: {
                 name: '全部公司',
@@ -651,15 +199,9 @@ export default {
             focus_status: undefined,
             begin_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
             end_time: utils.dateFormatter(new Date(), 'y-m-d', 4, false),
-            deliver_time: utils.dateFormatter(new Date(), 'y-m-d h:i:s', 4, false),
-
-            deliver_time_type: '',
             tabs: [],
-            show_batch_copy: false,
-            gallery_index: 0,
             is_the_order_display_price: false,
             hide_order_detail_price: true,
-            is_allowed_order_return: false,
             stat_scopes: [],
             stat_context_company_id: null,
             show_scope_picker: false,
@@ -686,65 +228,6 @@ export default {
             const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
             return current ? current.name : '';
         },
-        get_both_attach: function () {
-            let ret = [];
-            let func = (path) => {
-                let pic_ret = '';
-                if (path) {
-                    pic_ret = this.$convert_attach_url(path);
-                } else {
-                    pic_ret = '/static/no_att.jpg';
-                }
-                return pic_ret;
-            };
-            ret.push({
-                src: func(this.focus_plan.company.attachment),
-                descr: '下单方资质'
-            });
-            ret.push({
-                src: func(this.focus_plan.stuff.company.attachment),
-                descr: '接单方资质'
-            });
-
-            return ret;
-        },
-        user_authorize: function () {
-            let ret = '未授权';
-            this.cur_contract.rbac_users.forEach(ele => {
-                if (ele.id == this.focus_plan.rbac_user.id) {
-                    ret = '已授权';
-                }
-            });
-
-            return ret;
-        },
-        plan_status: function () {
-            let ret = '';
-            if (this.focus_plan.status == 0) {
-                ret = '未确认';
-            } else if (this.focus_plan.status == 1) {
-                ret = '未付款';
-            } else if (this.focus_plan.status == 2) {
-                ret = '未发车';
-            } else if (this.focus_plan.status == 3) {
-                ret = '已关闭';
-            }
-            return ret;
-        },
-        sc_attach_urls: function () {
-            let ret = [];
-            if (this.focus_plan.sc_info) {
-                this.focus_plan.sc_info.forEach(ele => {
-                    if (ele.sc_content && ele.sc_content.attachment) {
-                        ret.push({
-                            src: this.$convert_attach_url(ele.sc_content.attachment),
-                            descr: ele.name
-                        });
-                    }
-                });
-            }
-            return ret;
-        },
         plan_filter: function () {
             const ret = {
                 start_time: this.begin_time,
@@ -758,25 +241,6 @@ export default {
                 ret.stat_context_company_id = this.stat_context_company_id;
             }
             return ret;
-        },
-        plan_owner: function () {
-            let ret = false;
-            let self = uni.getStorageSync('self_info');
-            if (self.id == this.focus_plan.rbac_user.id) {
-                ret = true;
-            }
-
-            return ret;
-        },
-        can_pass_vehicle: function () {
-            if (!this.focus_plan || !this.focus_plan.register_time) {
-                return false;
-            }
-            if (this.focus_plan.enter_time) {
-                return false;
-            }
-            const expect_status = this.focus_plan.is_buy ? 1 : 2;
-            return this.focus_plan.status === expect_status;
         },
 
     },
@@ -867,29 +331,6 @@ export default {
             else {
                 return urls.split('|').map(url => this.$convert_attach_url(url));;
             }
-        },
-        nav_to_fc: function () {
-            uni.navigateTo({
-                url: '/subPage1/FcExecute?plan_id=' + this.focus_plan.id
-            })
-        },
-        change_index: function (e) {
-            this.gallery_index = e.index
-        },
-        download_img: function () {
-            const imgs = [this.focus_plan.company.attachment, this.focus_plan.stuff.company.attachment]
-            this.$download_file(this.$convert_attach_url(imgs[this.gallery_index]))
-        },
-        open_attach_pics: function () {
-            this.show_attach = true;
-        },
-        mark_fapiao_deliver: async function () {
-            await this.$send_req('/sale_management/set_fapiao_delivered', {
-                plan_id: this.focus_plan.id,
-                delivered: !this.focus_plan.fapiao_delivered
-            });
-            this.refresh_plans();
-            this.show_plan_detail = false;
         },
         refresh_approval_projects: async function () {
             try {
@@ -1004,153 +445,6 @@ export default {
                 }
             });
         },
-        update_plan: async function (e) {
-            if (e.index == 1) {
-                let rules = [{
-                        name: 'main_vehicle_plate',
-                        rule: ['isCarNo'],
-                        msg: ['请填写正确的车牌号']
-                    },
-                    {
-                        name: 'behind_vehicle_plate',
-                        rule: ['isCarNo'],
-                        msg: ['请填写正确的车牌号']
-                    }, {
-                        name: 'driver_phone',
-                        rule: ['isMobile'],
-                        msg: ['请填写正确的手机号']
-                    }
-                ];
-                let val_ret = await this.$refs.plan_update.validator(this.update_req, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                if (this.update_req.main_vehicle_plate == this.focus_plan.main_vehicle.plate) {
-                    delete this.update_req.main_vehicle_plate;
-                }
-                if (this.update_req.behind_vehicle_plate == this.focus_plan.behind_vehicle.plate) {
-                    delete this.update_req.behind_vehicle_plate;
-                }
-                if (this.update_req.driver_name == this.focus_plan.driver.name) {
-                    delete this.update_req.driver_name;
-                }
-                if (this.update_req.driver_phone == this.focus_plan.driver.phone) {
-                    delete this.update_req.driver_phone;
-                }
-                if (this.update_req.trans_company_name == (this.focus_plan.trans_company_name || '')) {
-                    delete this.update_req.trans_company_name;
-                }
-                if (this.update_req.comment == this.focus_plan.comment) {
-                    delete this.update_req.comment;
-                }
-                this.update_req.plan_id = this.focus_plan.id;
-                await this.$send_req(this.cur_update_url, this.update_req);
-                this.refresh_plans();
-                this.show_plan_detail = false;
-            }
-            this.show_update = false;
-        },
-        prepare_update: function () {
-            this.show_update = true;
-            this.update_req.main_vehicle_plate = this.focus_plan.main_vehicle.plate;
-            this.update_req.behind_vehicle_plate = this.focus_plan.behind_vehicle.plate;
-            this.update_req.driver_name = this.focus_plan.driver.name;
-            this.update_req.driver_phone = this.focus_plan.driver.phone;
-            this.update_req.trans_company_name = this.focus_plan.trans_company_name || '';
-            this.update_req.comment = this.focus_plan.comment;
-        },
-        choose_use_for: function (_name) {
-            this.dup_plan.use_for = _name;
-            this.show_use_for = false;
-        },
-        batch_copy: async function (e) {
-            if (e.index == 1) {
-
-                let rules = [{
-                    name: 'plan_time',
-                    rule: ['required'],
-                    msg: ['请选择填写计划日期']
-                }];
-                if (!this.cur_is_buy) {
-                    rules.push({
-                        name: 'drop_address',
-                        rule: ['required'],
-                        msg: ['请选择填写卸车地点']
-                    })
-                    rules.push({
-                        name: 'use_for',
-                        rule: ['required'],
-                        msg: ['请选择填写用途']
-                    });
-                } else {
-                    rules.push({
-                        name: 'price',
-                        rule: ['isAmount'],
-                        msg: ['请填写正确的单价']
-                    });
-                }
-                let val_ret = await this.$refs.plan_form.validator(this.dup_plan, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                if (this.dup_plan.price) {
-                    this.dup_plan.price = parseFloat(this.dup_plan.price);
-                }
-                Object.keys(this.plan_filter).forEach(key => {
-                    this.dup_plan[key] = this.plan_filter[key];
-                });
-                await this.$send_req(this.cur_dup_url, this.dup_plan);
-                this.refresh_plans();
-            }
-            this.show_batch_copy = false;
-        },
-        get_is_allowed_order_return: async function () {
-            let ret = await this.$send_req('/global/get_is_allowed_order_return', {});
-            this.is_allowed_order_return = ret.is_allowed_order_return;
-        },
-        pick_address: function (e) {
-            this.dup_plan.drop_address = e.map(item => item.name).join('-')
-        },
-        reassign_supplier: async function (e) {
-            if (e.index == 1) {
-                await this.$send_req('/buy_management/assign_supplier', {
-                    plan_id: this.focus_plan.id,
-                    supplier_id: 0
-                });
-                this.show_plan_detail = false;
-            }
-            this.show_reassign_prompt = false;
-            this.refresh_plans();
-        },
-        assign_supplier: async function (id) {
-            await this.$send_req('/buy_management/assign_supplier', {
-                plan_id: this.focus_plan.id,
-                supplier_id: id
-            });
-            this.choose_company_show = false;
-            this.show_plan_detail = false;
-            this.refresh_plans();
-        },
-        get_buy_contracts: async function (pageNo) {
-            if (!this.$has_module('buy_management')) {
-                return [];
-            }
-            let res = await this.$send_req('/buy_management/contract_get', {
-                pageNo: pageNo
-            })
-            res.contracts.forEach(ele => {
-                ele.cond = ele.company.name
-            });
-            return res.contracts;
-        },
-        prepare_choose_company: function () {
-            this.choose_company_show = true;
-        },
-        go_to_ticket: function (is_internal) {
-            uni.navigateTo({
-                url: '/subPage1/Ticket?id=' + this.focus_plan.id + '&is_internal=' + is_internal
-            });
-        },
         batch_confirm: async function () {
             await this.$send_req(this.cur_batch_confirm_url, this.plan_filter);
             this.refresh_plans();
@@ -1181,124 +475,6 @@ export default {
             }
 
             return ret;
-        },
-        prepare_delete_sc: function (item) {
-            this.upload_sc.content_id = item.sc_content.id;
-            this.show_delete_sc_content = true;
-        },
-        prepare_upload_sc: function (item) {
-            this.upload_sc.req_id = item.id;
-            this.upload_sc.plan_id = this.focus_plan.id;
-            this.upload_sc.open_id = this.focus_plan.driver.open_id;
-            if (item.sc_content) {
-                this.upload_sc.content_id = item.sc_content.id;
-            }
-            this.upload_sc.need_attach = item.need_attach;
-            this.upload_sc.need_expired = item.need_expired;
-            this.upload_sc.need_input = item.need_input;
-            this.upload_sc.name = item.name;
-            this.upload_sc.prompt = item.prompt;
-            this.$refs.sc_up.show_modal();
-        },
-
-        fill_plan_time: function (e) {
-            this.dup_plan.plan_time = e.result;
-            this.show_plan_time = false;
-        },
-
-        get_plan_sc: async function (pageNo, [id]) {
-            if (!id) {
-                return [];
-            }
-            let res = await this.$send_req('/sc/plan_status', {
-                pageNo: pageNo,
-                plan_id: id
-            });
-            if (res.reqs.length > 0) {
-                res.reqs[0].passed_total = res.passed;
-            }
-            return res.reqs;
-        },
-        prepare_sc_confirm: function () {
-            this.show_sc_confirm = true;
-            this.$nextTick(() => {
-                this.$refs.sc_confirm.refresh();
-            });
-        },
-        copy_text: function (e) {
-            $fui.getClipboardData(e, res => {
-                if (res) {
-                    uni.showToast({
-                        title: '复制成功',
-                        icon: 'success',
-                        duration: 2000
-                    });
-                }
-            });
-        },
-        calc_count: function () {
-            this.deliver_req.count = Math.abs(this.deliver_req.p_weight - this.deliver_req.m_weight);
-            this.deliver_req.count = utils.moneyFormatter(this.deliver_req.count)
-        },
-        deliver: async function (e) {
-            if (e.index == 1) {
-
-                let rules = [{
-                    name: 'count',
-                    rule: ['required'],
-                    msg: ['请输入装载量']
-                }, {
-                    name: 'p_weight',
-                    rule: ['isAmount'],
-                    msg: ['重量需要是数字']
-                }, {
-                    name: 'm_weight',
-                    rule: ['isAmount'],
-                    msg: ['重量需要是数字']
-                }, ];
-                let val_ret = await this.$refs.deliver.validator(this.deliver_req, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                this.deliver_req.plan_id = this.focus_plan.id;
-                this.deliver_req.count = parseFloat(this.deliver_req.count);
-                this.deliver_req.p_weight = parseFloat(this.deliver_req.p_weight);
-                this.deliver_req.m_weight = parseFloat(this.deliver_req.m_weight);
-                await this.$send_req('/scale/deliver', this.deliver_req);
-                this.show_plan_detail = false;
-                this.deliver_req = {
-                    count: "",
-                    m_time: '',
-                    m_weight: '',
-                    p_time: '',
-                    p_weight: '',
-                };
-                uni.startPullDownRefresh();
-            }
-            this.show_scale_input = false;
-        },
-        prepare_deliver_date_pick: function (time_type) {
-            this.deliver_time_type = time_type;
-            this.show_deliver_date = true;
-        },
-        choose_deliver_date: function (e) {
-            this.deliver_req[this.deliver_time_type] = e.result;
-            this.show_deliver_date = false;
-        },
-        do_xxx: async function (e) {
-            if (e.index == 1) {
-                let body = {
-                    plan_id: this.focus_plan.id
-                };
-                if (this.pay_pending_approval_auditer && this.xxx_url && this.xxx_url.indexOf('order_sale_pay') >= 0) {
-                    body.approval_auditer = this.pay_pending_approval_auditer;
-                }
-                await this.$send_req(this.xxx_url, body);
-                this.show_plan_detail = false;
-                uni.startPullDownRefresh();
-            }
-            this.pay_pending_approval_auditer = '';
-            this.show_xxx_confirm = false;
         },
         validate_new_stuff_price_form: async function () {
             const rules = [{
@@ -1341,7 +517,7 @@ export default {
             }
             const price_req = {
                 unit_price: Number(this.new_stuff_price.price),
-                plan_id: this.new_stuff_price.isMuti ? this.plan_selected.toString() : this.focus_plan.id + '',
+                plan_id: this.plan_selected.toString(),
                 comment: this.new_stuff_price.comment
             };
             if (auditerRes.auditer) {
@@ -1353,8 +529,7 @@ export default {
                 });
             }).finally(() => {
                 this.cancel_new_stuff_price();
-                this.show_plan_detail = false;
-                uni.startPullDownRefresh();
+                this.refresh_plans();
             });
         },
         cancel_new_stuff_price: function (e) {
@@ -1366,103 +541,20 @@ export default {
             this.select_active = false;
             this.plan_selected = [];
         },
-        show_sc_image: function (index) {
-            // 找到当前点击的图片在所有图片中的索引
-            let currentIndex = 0;
-            let count = 0;
-            if (this.focus_plan.sc_info) {
-                for (let i = 0; i < this.focus_plan.sc_info.length; i++) {
-                    if (this.focus_plan.sc_info[i].sc_content && this.focus_plan.sc_info[i].sc_content.attachment) {
-                        if (i === index) {
-                            currentIndex = count;
-                            break;
-                        }
-                        count++;
-                    }
-                }
+        go_to_order_detail: function (item) {
+            let role = 'customer';
+            if (this.cur_get_url === '/sale_management/order_search') {
+                role = 'sale_management';
+            } else if (this.cur_get_url === '/buy_management/order_search') {
+                role = 'buy_management';
+            } else if (this.cur_get_url === '/supplier/order_sale_search') {
+                role = 'supplier';
             }
-            this.sc_current_index = currentIndex;
-            this.show_sc = true;
-        },
-        on_sc_swiper_change: function (e) {
-            this.sc_current_index = e.detail.current;
-        },
-        do_rollback: async function (e) {
-            if (e.index == 1) {
-                let rules = [{
-                    name: 'rollback_msg',
-                    rule: ['required'],
-                    msg: ['请输入原因']
-                }];
-                let val_ret = await this.$refs.rollback_form.validator({
-                    rollback_msg: this.rollback_msg
-                }, rules);
-                if (!val_ret.isPassed) {
-                    return;
-                }
-                await this.$send_req(this.cur_rollback_url, {
-                    plan_id: this.focus_plan.id,
-                    msg: this.rollback_msg
-                });
-                this.show_plan_detail = false;
-                uni.startPullDownRefresh();
+            let url = '/subPage1/order_detail?id=' + item.id + '&role=' + role;
+            if (this.show_sale_scope_switch && this.stat_context_company_id != null) {
+                url += '&stat_context_company_id=' + this.stat_context_company_id;
             }
-            this.show_rollback_confirm = false;
-        },
-        prepare_pay_confirm: async function (info) {
-            this.pay_pending_approval_auditer = '';
-            await this.refresh_approval_projects();
-            const p = this.approval_item('manual_verify_pay');
-            if (p && p.enabled && p.approver_mode === 'submit_specify') {
-                const name = await this.pick_submit_specify_auditer();
-                if (!name) {
-                    return;
-                }
-                this.pay_pending_approval_auditer = name;
-            }
-            this.prepare_xxx_confirm(await this.get_pay_url(), info);
-        },
-        prepare_xxx_confirm: function (url, info) {
-            this.show_xxx_confirm = true;
-            this.confirm_info = info;
-            this.xxx_url = url;
-        },
-        authorize_user: async function () {
-            await this.$send_req('/sale_management/authorize_user', {
-                contract_id: this.cur_contract.id,
-                phone: this.focus_plan.rbac_user.phone,
-            })
-            this.show_plan_detail = false;
-            this.refresh_plans();
-        },
-        prepare_plan_detail: async function (item, make_context_req, ssss_bool, scci) {
-            // 获取销售或采购合同信息
-            if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && item.company.id) {
-                try {
-                    let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                    let contract_req = {};
-                    if (this.cur_is_buy) {
-                        contract_req.supplier_id = item.company.id;
-                    } else {
-                        contract_req.customer_id = item.company.id;
-                        contract_req.supply_company_id = item.stuff.company.id;
-                    }
-                    let resp = await this.$send_req(url, make_context_req(contract_req, url, ssss_bool, scci))
-                    // 标注合同是否一个月内即将到期
-                    const oneMonthFromNow = moment().add(1, 'month');
-                    const contractEndDate = moment(resp.end_time);
-                    const monthsDifference = contractEndDate.diff(moment(), 'months', true);
-                    const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
-                    if (diffOneMonth) {
-                        resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
-                    }
-                    this.cur_contract = resp;
-                } catch (error) {
-                    console.log(error);
-                }
-            }
-            this.focus_plan = item;
-            this.show_plan_detail = true;
+            uni.navigateTo({ url: url });
         },
         init_tabs: function () {
             this.tabs = [{
@@ -1541,7 +633,6 @@ export default {
             this.cur_update_url = e.update_url;
             this.cur_close_url = e.close_url;
             this.cur_cancel_url = e.cancel_url;
-            this.cur_dup_url = e.dup_url;
             this.init_tabs();
             this.refresh_plans();
         },
@@ -1679,7 +770,6 @@ export default {
                     name: '采购下单',
                     url: '/customer/order_buy_search',
                     cancel_url: '/customer/order_buy_cancel',
-                    dup_url: '/customer/batch_copy',
                     update_url: '/customer/order_buy_update',
                     motion: true,
                     is_buy: false,
@@ -1703,7 +793,6 @@ export default {
                     name: '销售下单',
                     url: '/supplier/order_sale_search',
                     cancel_url: '/supplier/order_sale_cancel',
-                    dup_url: '/supplier/batch_copy',
                     update_url: '/supplier/order_sale_update',
                     motion: true,
                     is_buy: true,
@@ -1728,7 +817,6 @@ export default {
                 this.cur_is_buy = this.seg[0].is_buy;
                 this.cur_batch_confirm_url = this.seg[0].batch_url;
                 this.cur_cancel_url = this.seg[0].cancel_url;
-                this.cur_dup_url = this.seg[0].dup_url;
                 this.cur_confirm_url = this.seg[0].confirm_url;
                 this.cur_rollback_url = this.seg[0].rollback_url;
                 this.cur_update_url = this.seg[0].update_url;
@@ -1751,34 +839,6 @@ export default {
             if (need_refresh) {
                 this.refresh_plans();
             }
-        },
-        add_to_blacklist: async function (id, type) {
-            this.focus_blackList = {
-                type: type,
-                id: id,
-            }
-            this.show_blackList_confirm = true;
-
-        },
-        confirm_add_to_blacklist: async function (e) {
-            if (e.index == 1) {
-                await this.$send_req('/stuff/add_to_blacklist', {
-                    type: this.focus_blackList.type,
-                    ids: this.focus_blackList.id.toString(),
-                    reason: `违规${this.focus_blackList.type === 'vehicle' ? '车辆' : '司机'}`
-                });
-                this.$refs.toast.show({
-                    text: '添加成功'
-                });
-            }
-            this.show_blackList_confirm = false;
-        },
-        show_manual_weight: function () {
-            this.$refs.measurement.show();
-        },
-        measurement_refresh: function () {
-            this.refresh_plans();
-            this.show_plan_detail = false;
         },
         get_price_display_config: async function () {
             try {
@@ -1808,11 +868,7 @@ export default {
         await this.load_stat_scopes();
         this.reset_order_date(false);
         this.init_top_seg();
-        let tom = new Date();
-        tom.setDate(tom.getDate() + 1);
-        this.default_time = utils.dateFormatter(tom, 'y-m-d', 4, false);
         this.init_number_of_sold_plan();
-        this.get_is_allowed_order_return();
         this.get_price_display_config();
         this.get_hide_order_detail_price_config();
     },
@@ -1861,64 +917,5 @@ export default {
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-right: 20rpx;
-}
-
-.sc-image-viewer {
-    width: 100%;
-    height: 100%;
-    position: relative;
-    padding-bottom: 200rpx;
-    box-sizing: border-box;
-}
-
-.sc-swiper {
-    width: 100%;
-    height: 100%;
-}
-
-.sc-movable-area {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-}
-
-.sc-movable-view {
-    height: 100%;
-    width: 100%;
-}
-
-.sc-lookimg {
-    width: 100%;
-    height: 100%;
-}
-
-.sc-close-button-container {
-    position: absolute;
-    bottom: 40rpx;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 8889;
-}
-
-.sc-index-wrap {
-    position: absolute;
-    top: 40rpx;
-    left: 0;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 8889;
-}
-
-.sc-index {
-    color: white;
-    font-size: 32rpx;
-    background-color: rgba(0, 0, 0, 0.5);
-    padding: 10rpx 20rpx;
-    border-radius: 20rpx;
 }
 </style>
