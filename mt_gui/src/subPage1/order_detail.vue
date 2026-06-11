@@ -14,7 +14,7 @@
 </template>
 
 <script>
-import OrderDetailPanel from '../components/OrderDetailPanel.vue';
+import OrderDetailPanel from './OrderDetailPanel.vue';
 
 export default {
     name: 'OrderDetail',
