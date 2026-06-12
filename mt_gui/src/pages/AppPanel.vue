@@ -77,6 +77,13 @@ export default {
                     sub_page_name: 'subPage1'
                 },
                 {
+                    name: '磅单验证',
+                    icon: 'scan',
+                    require_module: undefined,
+                    path: 'TicketVerify',
+                    sub_page_name: 'subPage1'
+                },
+                {
                     name: '集团成员',
                     icon: 'menu',
                     rm_array: ['group', 'global'],

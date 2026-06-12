@@ -48,6 +48,12 @@
 					"path": "Ticket"
 				},
 				{
+					"path": "TicketVerify",
+					"style": {
+						"navigationBarTitleText": "磅单验证"
+					}
+				},
+				{
 					"path": "order_detail",
 					"style": {
 						"navigationBarTitleText": "订单详情",
