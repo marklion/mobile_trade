@@ -68,5 +68,5 @@ module.exports = {
         ret = await sq.models.plan.findByPk(_plan_id, options);
 
         return ret;
-    }
+    },
 }

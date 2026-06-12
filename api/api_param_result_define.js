@@ -311,6 +311,8 @@ module.exports = {
                 need_expect_weight: { type: Boolean, mean: '是否需要预计重量', example: false },
                 close_today: { type: Boolean, mean: '是否需要今日关闭', example: false },
                 need_driver_sign:{ type: Boolean, mean: '是否需要司机签字', example: false },
+                protocol_doc_path: { type: String, mean: '协议文本docx路径', example: '/uploads/protocol.docx' },
+                protocol_signers: { type: String, mean: '协议签名人（逗号分隔）', example: '司机,供方' },
             }
         },
         company: {

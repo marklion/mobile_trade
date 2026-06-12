@@ -248,6 +248,8 @@ let db_opt = {
             delay_checkout_time: { type: DataTypes.STRING },
             last_delay_checkout: { type: DataTypes.STRING },
             need_driver_sign: { type: DataTypes.BOOLEAN, defaultValue: false },
+            protocol_doc_path: { type: DataTypes.TEXT },
+            protocol_signers: { type: DataTypes.TEXT },
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
