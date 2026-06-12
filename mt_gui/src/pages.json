@@ -54,12 +54,6 @@
 					}
 				},
 				{
-					"path": "TicketVerifyResult",
-					"style": {
-						"navigationBarTitleText": "官方磅单"
-					}
-				},
-				{
 					"path": "order_detail",
 					"style": {
 						"navigationBarTitleText": "订单详情",

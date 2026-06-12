@@ -54,12 +54,24 @@ export default {
             this.ticketUrl = '';
             this.popupVisible = false;
         },
+        parsePlanIdFromTicketUrl: function (url) {
+            if (!url) {
+                return 0;
+            }
+            const match = url.match(/[?&]id=(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+        },
         openOfficialTicket: function () {
-            if (!this.ticketUrl) {
+            const planId = this.parsePlanIdFromTicketUrl(this.ticketUrl);
+            if (!planId) {
+                uni.showToast({
+                    title: '无法识别磅单',
+                    icon: 'none',
+                });
                 return;
             }
             uni.navigateTo({
-                url: '/subPage1/TicketVerifyResult?url=' + encodeURIComponent(this.ticketUrl) + '&open=1'
+                url: '/subPage1/Ticket?id=' + planId
             });
         },
         startScan: function () {
@@ -68,7 +80,6 @@ export default {
             }
             this.scanning = true;
             uni.scanCode({
-                onlyFromCamera: true,
                 scanType: ['qrCode'],
                 success: (res) => {
                     this.scanning = false;
