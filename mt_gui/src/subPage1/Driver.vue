@@ -369,7 +369,21 @@ export default {
                         item: item,
                     });
                 }
-                if (item.stuff.need_driver_sign) {
+                if (item.need_protocol || item.stuff.protocol_doc_path) {
+                    if (item.protocol_signed) {
+                        ret.list.push({
+                            label: '协议签署',
+                            value: '已完成',
+                            valueColor: 'green',
+                        });
+                    } else {
+                        ret.buttons.unshift({
+                            text: '签署协议',
+                            color: 'red',
+                            item: item,
+                        });
+                    }
+                } else if (item.stuff.need_driver_sign) {
                     ret.buttons.push({
                         text: '签名',
                         color: 'black',
@@ -549,6 +563,13 @@ export default {
         handle_button: async function (e) {
             let vue_this = this;
             console.log(e);
+            const need_protocol = e.item.need_protocol || !!(e.item.stuff && e.item.stuff.protocol_doc_path);
+            if (e.text != '签署协议' && need_protocol && !e.item.protocol_signed) {
+                uni.navigateTo({
+                    url: '/subPage1/ProtocolSign?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id,
+                });
+                return;
+            }
             if (e.text == '安检') {
                 this.focus_plan = e.item;
                 // 每次进入安检前都重置图片预览，避免还没选择图片时就自动弹出旧图片
@@ -604,6 +625,10 @@ export default {
             } else if (e.text == '期望重量') {
                 vue_this.focus_plan = e.item;
                 vue_this.show_expect_weight = true;
+            } else if (e.text == '签署协议') {
+                uni.navigateTo({
+                    url: '/subPage1/ProtocolSign?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id,
+                });
             } else if (e.text == '签名') {
                 uni.navigateTo({
                     url: '/subPage1/DriverSign?open_id=' + this.driver_self.open_id,

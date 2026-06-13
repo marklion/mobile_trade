@@ -162,8 +162,17 @@
 				{
 					"path": "SignatureConfig"
 				},
-				{
-					"path": "DriverSign"
+                {
+                    "path": "DriverSign"
+                },
+                {
+                    "path": "ProtocolSignPad"
+                },
+                {
+                    "path": "ProtocolSign",
+					"style": {
+						"navigationBarTitleText": "协议签署"
+					}
 				},
 				{
 					"path": "Audit",

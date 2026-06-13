@@ -7,6 +7,7 @@ const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
 const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
+const protocol_lib = require('../lib/protocol_lib');
 const util_lib = require('../lib/util_lib');
 const clean_driver = require('../lib/clean_driver');
 const common = require('./common');
@@ -540,6 +541,10 @@ module.exports = {
                         if (!element.company) {
                             element.company = { name: '(未指定)' }
                         }
+                        element.need_protocol = protocol_lib.need_protocol(element.stuff);
+                        element.protocol_signed = element.need_protocol
+                            ? await protocol_lib.plan_protocol_signed(element)
+                            : true;
                     }
                     ret.total = await driver.countPlans({ where: { status: 2 } });
                     return ret;
@@ -2616,6 +2621,70 @@ module.exports = {
                 } else {
                     throw { err_msg: '司机未找到' };
                 }
+            }
+        },
+        driver_get_protocol: {
+            name: '司机获取计划协议',
+            description: '获取计划协议内容及签署状态',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {
+                open_id: { type: String, have_to: true, mean: '司机open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
+            },
+            result: {
+                need_protocol: { type: Boolean, mean: '是否需要签署协议', example: true },
+                doc_title: { type: String, mean: '协议标题', example: '运输协议' },
+                doc_content: { type: String, mean: '协议正文', example: '协议内容...' },
+                signers: {
+                    type: Array, mean: '签名人列表', explain: {
+                        name: { type: String, mean: '签名人', example: '司机' },
+                        signed: { type: Boolean, mean: '是否已签', example: false },
+                        sign_pic: { type: String, mean: '签名图片', example: '' },
+                        sign_time: { type: String, mean: '签名时间', example: '' },
+                    }
+                },
+                all_signed: { type: Boolean, mean: '是否全部签署', example: false },
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan || plan.status == 3) {
+                    throw { err_msg: '计划不存在' };
+                }
+                if (plan.driver.open_id != body.open_id) {
+                    throw { err_msg: '无权操作该计划' };
+                }
+                return await protocol_lib.get_plan_protocol_info(plan);
+            }
+        },
+        driver_sign_protocol: {
+            name: '司机签署计划协议',
+            description: '提交计划协议某一签名人的手写签名',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '司机open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                signer_name: { type: String, have_to: true, mean: '签名人', example: '司机' },
+                sign_pic: { type: String, have_to: true, mean: '签名图片路径', example: '/uploads/sign.png' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
+                all_signed: { type: Boolean, mean: '是否全部签署完成', example: false },
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan || plan.status == 3) {
+                    throw { err_msg: '计划不存在' };
+                }
+                if (plan.driver.open_id != body.open_id) {
+                    throw { err_msg: '无权操作该计划' };
+                }
+                await protocol_lib.save_sign(plan, body.signer_name, body.sign_pic);
+                const all_signed = await protocol_lib.plan_protocol_signed(plan);
+                return { result: true, all_signed };
             }
         },
         verify_ticket_qr: {
