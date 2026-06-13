@@ -7,15 +7,12 @@ Vue.use(uView)
 import './uni.promisify.adaptor'
 Vue.config.productionTip = false
 Vue.prototype.$remote_url = function () {
-  // #ifdef MP-WEIXIN
-  return process.env.REMOTE_HOST || 'http://127.0.0.1:8080';
-  // #endif
-  // #ifndef MP-WEIXIN
   if (process.env.NODE_ENV === 'development') {
     return '';
   }
-  return process.env.REMOTE_HOST;
-  // #endif
+  else {
+    return process.env.REMOTE_HOST;
+  }
 };
 Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
   return new Promise((resolve, reject) => {
