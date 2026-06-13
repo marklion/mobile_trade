@@ -97,7 +97,7 @@ export default {
         },
     },
     onLoad(option) {
-        this.plan_id = parseInt(option.plan_id) || 0;
+        this.plan_id = Number.parseInt(option.plan_id, 10) || 0;
         this.open_id = option.open_id || '';
         this.loadProtocol();
     },

@@ -19,6 +19,27 @@ const path = require('path');
 const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
 
+function create_api_error(message) {
+    const error = new Error(message);
+    error.err_msg = message;
+    return error;
+}
+
+async function enrich_driver_plan(element) {
+    const wc = await plan_lib.get_wait_count(element);
+    if (!element.register_comment) {
+        element.register_comment = '';
+    }
+    element.register_comment += wc > 0 ? ' 还需要等待' + wc + '辆车' : ' 下一个就是你';
+    if (!element.company) {
+        element.company = { name: '(未指定)' };
+    }
+    element.need_protocol = protocol_lib.need_protocol(element.stuff);
+    element.protocol_signed = element.need_protocol
+        ? await protocol_lib.plan_protocol_signed(element)
+        : true;
+}
+
 // 浏览器实例池
 let browserInstance = null;
 let browserUsageCount = 0;
@@ -527,24 +548,7 @@ module.exports = {
                     let ret = { plans: [], total: 0 };
                     ret.plans = await driver.getPlans({ where: plan_get_where, limit: 20, offset: body.pageNo * 20, include: util_lib.plan_detail_include() });
                     for (let index = 0; index < ret.plans.length; index++) {
-                        const element = ret.plans[index];
-                        let wc = await plan_lib.get_wait_count(element);
-                        if (!element.register_comment) {
-                            element.register_comment = '';
-                        }
-                        if (wc > 0) {
-                            element.register_comment += ' 还需要等待' + wc + '辆车';
-                        }
-                        else {
-                            element.register_comment += ' 下一个就是你';
-                        }
-                        if (!element.company) {
-                            element.company = { name: '(未指定)' }
-                        }
-                        element.need_protocol = protocol_lib.need_protocol(element.stuff);
-                        element.protocol_signed = element.need_protocol
-                            ? await protocol_lib.plan_protocol_signed(element)
-                            : true;
+                        await enrich_driver_plan(ret.plans[index]);
                     }
                     ret.total = await driver.countPlans({ where: { status: 2 } });
                     return ret;
@@ -2650,10 +2654,10 @@ module.exports = {
             func: async function (body, token) {
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (!plan || plan.status == 3) {
-                    throw { err_msg: '计划不存在' };
+                    throw create_api_error('计划不存在');
                 }
                 if (plan.driver.open_id != body.open_id) {
-                    throw { err_msg: '无权操作该计划' };
+                    throw create_api_error('无权操作该计划');
                 }
                 return await protocol_lib.get_plan_protocol_info(plan);
             }
@@ -2677,10 +2681,10 @@ module.exports = {
             func: async function (body, token) {
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (!plan || plan.status == 3) {
-                    throw { err_msg: '计划不存在' };
+                    throw create_api_error('计划不存在');
                 }
                 if (plan.driver.open_id != body.open_id) {
-                    throw { err_msg: '无权操作该计划' };
+                    throw create_api_error('无权操作该计划');
                 }
                 await protocol_lib.save_sign(plan, body.signer_name, body.sign_pic);
                 const all_signed = await protocol_lib.plan_protocol_signed(plan);

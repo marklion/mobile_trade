@@ -1,18 +1,24 @@
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 const PizZip = require('pizzip');
 const moment = require('moment');
 const db_opt = require('../db_opt');
 
+function create_api_error(message) {
+    const error = new Error(message);
+    error.err_msg = message;
+    return error;
+}
+
 function need_protocol(stuff) {
-    return !!(stuff && stuff.protocol_doc_path);
+    return Boolean(stuff?.protocol_doc_path);
 }
 
 function get_signers(stuff) {
-    if (!stuff || !stuff.protocol_signers) {
+    if (!stuff?.protocol_signers) {
         return ['司机'];
     }
-    const signers = stuff.protocol_signers.split(/[,，]/).map((s) => s.trim()).filter((s) => s);
+    const signers = stuff.protocol_signers.split(/[,，]/).map((s) => s.trim()).filter(Boolean);
     return signers.length > 0 ? signers : ['司机'];
 }
 
@@ -59,7 +65,7 @@ function get_doc_title(doc_path, doc_content) {
     if (base && !is_uuid_filename(base)) {
         return base;
     }
-    const firstLine = (doc_content || '').split('\n').map((s) => s.trim()).find((s) => s);
+    const firstLine = (doc_content || '').split('\n').map((s) => s.trim()).find(Boolean);
     if (firstLine && firstLine.length <= 40) {
         return firstLine;
     }
@@ -115,14 +121,14 @@ module.exports = {
     },
     save_sign: async function (plan, signer_name, sign_pic) {
         if (!need_protocol(plan.stuff)) {
-            throw { err_msg: '该计划无需签署协议' };
+            throw create_api_error('该计划无需签署协议');
         }
         const required = get_signers(plan.stuff);
         if (!required.includes(signer_name)) {
-            throw { err_msg: '无效的签名人' };
+            throw create_api_error('无效的签名人');
         }
         if (!sign_pic) {
-            throw { err_msg: '签名不能为空' };
+            throw create_api_error('签名不能为空');
         }
         const signs = await plan.getPlan_protocol_signs({ where: { signer_name } });
         const now = moment().format('YYYY-MM-DD HH:mm:ss');

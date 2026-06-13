@@ -75,6 +75,24 @@ export default {
                 }
             });
         },
+        parseUploadFilePath(data) {
+            if (typeof data === 'object' && data) {
+                return data.file_path || data.url || '';
+            }
+            if (typeof data !== 'string') {
+                return '';
+            }
+            if (data.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(data);
+                    return parsed.file_path || parsed.url || '';
+                } catch (parseError) {
+                    console.warn('upload response JSON parse failed', parseError);
+                    return data;
+                }
+            }
+            return data;
+        },
         uploadSignatureImage(imgPath) {
             return new Promise((resolve, reject) => {
                 uni.uploadFile({
@@ -85,25 +103,11 @@ export default {
                         token: uni.getStorageSync('token'),
                     },
                     success: (res) => {
-                        try {
-                            let filePath;
-                            if (typeof res.data === 'string') {
-                                try {
-                                    const data = JSON.parse(res.data);
-                                    filePath = data.file_path || data.url;
-                                } catch (e) {
-                                    filePath = res.data;
-                                }
-                            } else if (typeof res.data === 'object') {
-                                filePath = res.data.file_path || res.data.url;
-                            }
-                            if (filePath) {
-                                resolve(filePath);
-                            } else {
-                                reject(new Error('上传失败，未获取到文件路径'));
-                            }
-                        } catch (e) {
-                            reject(new Error('上传响应解析失败'));
+                        const filePath = this.parseUploadFilePath(res.data);
+                        if (filePath) {
+                            resolve(filePath);
+                        } else {
+                            reject(new Error('上传失败，未获取到文件路径'));
                         }
                     },
                     fail: reject,
@@ -112,7 +116,7 @@ export default {
         },
     },
     onLoad(option) {
-        this.plan_id = parseInt(option.plan_id) || 0;
+        this.plan_id = Number.parseInt(option.plan_id, 10) || 0;
         this.open_id = option.open_id || '';
         this.signer_name = option.signer_name || '';
         if (this.signer_name) {
