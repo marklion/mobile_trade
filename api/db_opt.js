@@ -382,6 +382,12 @@ let db_opt = {
         exam_answer: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
         },
+        plan_protocol_sign: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            signer_name: { type: DataTypes.STRING },
+            sign_pic: { type: DataTypes.STRING },
+            sign_time: { type: DataTypes.STRING },
+        },
         blacklist: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             reason: { type: DataTypes.STRING, allowNull: true },
@@ -649,6 +655,8 @@ let db_opt = {
         _sq.models.option_answer.hasMany(_sq.models.exam_answer);
         _sq.models.exam_answer.belongsTo(_sq.models.exam);
         _sq.models.exam.hasMany(_sq.models.exam_answer);
+        _sq.models.plan_protocol_sign.belongsTo(_sq.models.plan);
+        _sq.models.plan.hasMany(_sq.models.plan_protocol_sign);
         _sq.models.blacklist.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.blacklist);
         _sq.models.blacklist.belongsTo(_sq.models.vehicle);

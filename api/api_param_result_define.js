@@ -263,6 +263,7 @@ module.exports = {
         fapiao_delivered: { type: Boolean, mean: '是否发票已开具', example: true },
         drop_take_zone_name: { type: String, mean: '卸货取货区域', example: '卸货取货区域' },
         driver_confirm_time:{type: String, mean: '司机确认时间', example: '2020-01-01 12:00:00' },
+        protocol_signed: { type: Boolean, mean: '协议是否已签署', example: false },
         rbac_user: {
             type: Object, mean: '创建人', explain: {
                 id: { type: Number, mean: '用户ID', example: 1 },

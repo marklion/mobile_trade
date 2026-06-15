@@ -7,6 +7,7 @@ const wx_api_util = require('../lib/wx_api_util');
 const hook_lib = require('../lib/hook_lib');
 const moment = require('moment');
 const exam_lib = require('../lib/exam_lib');
+const protocol_lib = require('../lib/protocol_lib');
 const util_lib = require('../lib/util_lib');
 const clean_driver = require('../lib/clean_driver');
 const common = require('./common');
@@ -17,6 +18,26 @@ const uuid = require('uuid');
 const path = require('path');
 const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
+
+function create_api_error(message) {
+    const error = new Error(message);
+    error.err_msg = message;
+    return error;
+}
+
+async function enrich_driver_plan(element) {
+    const wc = await plan_lib.get_wait_count(element);
+    if (!element.register_comment) {
+        element.register_comment = '';
+    }
+    element.register_comment += wc > 0 ? ' 还需要等待' + wc + '辆车' : ' 下一个就是你';
+    if (!element.company) {
+        element.company = { name: '(未指定)' };
+    }
+    element.protocol_signed = protocol_lib.need_protocol(element.stuff)
+        ? await protocol_lib.plan_protocol_signed(element)
+        : true;
+}
 
 // 浏览器实例池
 let browserInstance = null;
@@ -526,20 +547,7 @@ module.exports = {
                     let ret = { plans: [], total: 0 };
                     ret.plans = await driver.getPlans({ where: plan_get_where, limit: 20, offset: body.pageNo * 20, include: util_lib.plan_detail_include() });
                     for (let index = 0; index < ret.plans.length; index++) {
-                        const element = ret.plans[index];
-                        let wc = await plan_lib.get_wait_count(element);
-                        if (!element.register_comment) {
-                            element.register_comment = '';
-                        }
-                        if (wc > 0) {
-                            element.register_comment += ' 还需要等待' + wc + '辆车';
-                        }
-                        else {
-                            element.register_comment += ' 下一个就是你';
-                        }
-                        if (!element.company) {
-                            element.company = { name: '(未指定)' }
-                        }
+                        await enrich_driver_plan(ret.plans[index]);
                     }
                     ret.total = await driver.countPlans({ where: { status: 2 } });
                     return ret;
@@ -2616,6 +2624,69 @@ module.exports = {
                 } else {
                     throw { err_msg: '司机未找到' };
                 }
+            }
+        },
+        driver_get_protocol: {
+            name: '司机获取计划协议',
+            description: '获取计划协议内容及签署状态',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {
+                open_id: { type: String, have_to: true, mean: '司机open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
+            },
+            result: {
+                doc_title: { type: String, mean: '协议标题', example: '运输协议' },
+                doc_content: { type: String, mean: '协议正文', example: '协议内容...' },
+                signers: {
+                    type: Array, mean: '签名人列表', explain: {
+                        name: { type: String, mean: '签名人', example: '司机' },
+                        signed: { type: Boolean, mean: '是否已签', example: false },
+                        sign_pic: { type: String, mean: '签名图片', example: '' },
+                        sign_time: { type: String, mean: '签名时间', example: '' },
+                    }
+                },
+                all_signed: { type: Boolean, mean: '是否全部签署', example: false },
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan || plan.status == 3) {
+                    throw create_api_error('计划不存在');
+                }
+                if (plan.driver.open_id != body.open_id) {
+                    throw create_api_error('无权操作该计划');
+                }
+                return await protocol_lib.get_plan_protocol_info(plan);
+            }
+        },
+        driver_sign_protocol: {
+            name: '司机签署计划协议',
+            description: '提交计划协议某一签名人的手写签名',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                open_id: { type: String, have_to: true, mean: '司机open_id', example: 'open_id' },
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                signer_name: { type: String, have_to: true, mean: '签名人', example: '司机' },
+                sign_pic: { type: String, have_to: true, mean: '签名图片路径', example: '/uploads/sign.png' },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
+                all_signed: { type: Boolean, mean: '是否全部签署完成', example: false },
+            },
+            func: async function (body, token) {
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan || plan.status == 3) {
+                    throw create_api_error('计划不存在');
+                }
+                if (plan.driver.open_id != body.open_id) {
+                    throw create_api_error('无权操作该计划');
+                }
+                await protocol_lib.save_sign(plan, body.signer_name, body.sign_pic);
+                const all_signed = await protocol_lib.plan_protocol_signed(plan);
+                return { result: true, all_signed };
             }
         },
         verify_ticket_qr: {
