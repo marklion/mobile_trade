@@ -68,7 +68,7 @@ export default {
                 plan_id: this.plan_id,
                 open_id: this.open_id,
             });
-            if (!resp.need_protocol) {
+            if (!resp.signers || resp.signers.length === 0) {
                 uni.navigateBack();
                 return;
             }

@@ -90,7 +90,6 @@ module.exports = {
         const stuff = plan.stuff;
         if (!need_protocol(stuff)) {
             return {
-                need_protocol: false,
                 doc_title: '',
                 doc_content: '',
                 signers: [],
@@ -107,7 +106,6 @@ module.exports = {
         });
         const doc_content = extract_docx_text(stuff.protocol_doc_path);
         return {
-            need_protocol: true,
             doc_title: get_doc_title(stuff.protocol_doc_path, doc_content),
             doc_content: doc_content,
             signers: required.map((name) => ({

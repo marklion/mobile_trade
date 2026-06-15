@@ -34,8 +34,7 @@ async function enrich_driver_plan(element) {
     if (!element.company) {
         element.company = { name: '(未指定)' };
     }
-    element.need_protocol = protocol_lib.need_protocol(element.stuff);
-    element.protocol_signed = element.need_protocol
+    element.protocol_signed = protocol_lib.need_protocol(element.stuff)
         ? await protocol_lib.plan_protocol_signed(element)
         : true;
 }
@@ -2638,7 +2637,6 @@ module.exports = {
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
             },
             result: {
-                need_protocol: { type: Boolean, mean: '是否需要签署协议', example: true },
                 doc_title: { type: String, mean: '协议标题', example: '运输协议' },
                 doc_content: { type: String, mean: '协议正文', example: '协议内容...' },
                 signers: {
