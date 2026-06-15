@@ -369,7 +369,7 @@ export default {
                         item: item,
                     });
                 }
-                if (!item.stuff.protocol_doc_path && item.stuff.need_driver_sign) {
+                if (item.stuff.need_driver_sign) {
                     ret.buttons.push({
                         text: '签名',
                         color: 'black',
