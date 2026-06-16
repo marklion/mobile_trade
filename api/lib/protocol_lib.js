@@ -61,6 +61,32 @@ function extract_paragraph_text(para) {
     return result;
 }
 
+function trim_trailing_newlines(text) {
+    let end = text.length;
+    while (end > 0 && text[end - 1] === '\n') {
+        end -= 1;
+    }
+    return end === text.length ? text : text.slice(0, end);
+}
+
+function is_hex_char(code) {
+    return (code >= 48 && code <= 57)
+        || (code >= 97 && code <= 102)
+        || (code >= 65 && code <= 70);
+}
+
+function is_hex_segment(segment, length) {
+    if (segment.length !== length) {
+        return false;
+    }
+    for (let i = 0; i < length; i += 1) {
+        if (!is_hex_char(segment.charCodeAt(i))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function extract_docx_text(doc_path) {
     const fullPath = path.resolve('/database' + doc_path);
     if (!fs.existsSync(fullPath)) {
@@ -81,11 +107,22 @@ function extract_docx_text(doc_path) {
     paragraphs.forEach((para) => {
         lines.push(extract_paragraph_text(para));
     });
-    return lines.join('\n').replace(/\n+$/,'');
+    return trim_trailing_newlines(lines.join('\n'));
 }
 
 function is_uuid_filename(name) {
-    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name);
+    if (typeof name !== 'string' || name.length !== 36) {
+        return false;
+    }
+    return is_hex_segment(name.slice(0, 8), 8)
+        && name[8] === '-'
+        && is_hex_segment(name.slice(9, 13), 4)
+        && name[13] === '-'
+        && is_hex_segment(name.slice(14, 18), 4)
+        && name[18] === '-'
+        && is_hex_segment(name.slice(19, 23), 4)
+        && name[23] === '-'
+        && is_hex_segment(name.slice(24, 36), 12);
 }
 
 function get_doc_title(doc_path, doc_content) {
