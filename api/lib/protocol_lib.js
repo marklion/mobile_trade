@@ -22,16 +22,41 @@ function get_signers(stuff) {
     return signers.length > 0 ? signers : ['司机'];
 }
 
+const BR_TAG = '<w:br';
+const T_TAG = '<w:t';
+const T_CLOSE = '</w:t>';
+const PARA_CLOSE = '</w:p>';
+const MAX_DOCX_XML_LENGTH = 5 * 1024 * 1024;
+
 function extract_paragraph_text(para) {
     let result = '';
-    const re = /<w:br\b[^>]*\/>|<w:t[^>]*>([^<]*)<\/w:t>/gi;
-    let m;
-    while ((m = re.exec(para)) !== null) {
-        if (/^<w:br\b/i.test(m[0])) {
-            result += '\n';
-        } else {
-            result += m[1];
+    let index = 0;
+    while (index < para.length) {
+        const brIndex = para.indexOf(BR_TAG, index);
+        const textIndex = para.indexOf(T_TAG, index);
+        if (brIndex === -1 && textIndex === -1) {
+            break;
         }
+        const useBr = brIndex !== -1 && (textIndex === -1 || brIndex < textIndex);
+        if (useBr) {
+            const closeIndex = para.indexOf('/>', brIndex);
+            if (closeIndex === -1) {
+                break;
+            }
+            result += '\n';
+            index = closeIndex + 2;
+            continue;
+        }
+        const openEnd = para.indexOf('>', textIndex);
+        if (openEnd === -1) {
+            break;
+        }
+        const closeIndex = para.indexOf(T_CLOSE, openEnd + 1);
+        if (closeIndex === -1) {
+            break;
+        }
+        result += para.slice(openEnd + 1, closeIndex);
+        index = closeIndex + T_CLOSE.length;
     }
     return result;
 }
@@ -48,7 +73,10 @@ function extract_docx_text(doc_path) {
         return '';
     }
     const xml = docFile.asText();
-    const paragraphs = xml.split(/<\/w:p>/);
+    if (xml.length > MAX_DOCX_XML_LENGTH) {
+        return '';
+    }
+    const paragraphs = xml.split(PARA_CLOSE);
     const lines = [];
     paragraphs.forEach((para) => {
         lines.push(extract_paragraph_text(para));
