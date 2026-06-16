@@ -17,7 +17,7 @@
                     <div>
                         <el-table :data="slotProps.content" style="width: 100%" stripe :default-sort="{ prop: 'name', order: 'ascending' }">
                             <el-table-column prop="name" label="物料名称" width="120" align="center" sortable></el-table-column>
-                            <el-table-column label="协议文本" width="300" align="center">
+                            <el-table-column label="协议文本" width="320" header-align="center">
                                 <template slot-scope="scope">
                                     <div class="protocol-cell">
                                         <div class="protocol-file-row">
@@ -31,10 +31,16 @@
                                                 <el-button v-if="scope.row.protocol_doc_path" size="mini" type="danger" plain icon="el-icon-delete" @click="clear_protocol_doc(scope.row)">清除</el-button>
                                             </div>
                                         </div>
-                                        <el-input v-model="scope.row.protocol_signers" size="mini" class="protocol-signers-input" placeholder="逗号分隔，如：司机,供方">
-                                            <template slot="prepend">签名要求</template>
-                                            <el-button slot="append" size="mini" type="primary" @click="save_protocol_signers(scope.row)">保存</el-button>
-                                        </el-input>
+                                        <div class="protocol-signers-row">
+                                            <span class="protocol-signers-label">签名要求</span>
+                                            <el-input
+                                                v-model="scope.row.protocol_signers"
+                                                size="mini"
+                                                class="protocol-signers-field"
+                                                placeholder="逗号分隔，如：司机,供方"
+                                            />
+                                            <el-button size="mini" type="primary" @click="save_protocol_signers(scope.row)">保存</el-button>
+                                        </div>
                                     </div>
                                 </template>
                             </el-table-column>
@@ -303,10 +309,16 @@
                 </page-content>
             </div>
         </el-dialog>
-        <el-dialog :title="protocol_preview_title" :visible.sync="protocol_preview_visible" width="640px">
-            <div class="protocol-preview-content">{{ protocol_preview_content || '暂无协议正文' }}</div>
+        <el-dialog
+            :title="protocol_preview_title"
+            :visible.sync="protocol_preview_visible"
+            width="640px"
+        >
+            <div
+                class="protocol-preview-content"
+                v-html="protocol_preview_content || '暂无协议正文'"
+            />
             <span slot="footer" class="dialog-footer">
-                <el-button v-if="protocol_preview_path" type="primary" plain @click="download_protocol_file">下载原文件</el-button>
                 <el-button @click="protocol_preview_visible = false">关闭</el-button>
             </span>
         </el-dialog>
@@ -316,6 +328,7 @@
 
 <script>
 import moment from 'moment';
+import mammoth from 'mammoth';
 import PageContent from '../../components/PageContent.vue';
 import { mapGetters } from 'vuex';
 export default {
@@ -345,7 +358,6 @@ export default {
             protocol_preview_visible: false,
             protocol_preview_title: '协议预览',
             protocol_preview_content: '',
-            protocol_preview_path: '',
             history_filter_string: '',
             filter_string: '',
             price_profile: {
@@ -717,23 +729,29 @@ export default {
             }
         },
         preview_protocol_doc: async function (stuff) {
-            try {
-                const req = { stuff_id: stuff.id };
-                if (this.show_stat_scope_selector && this.globalStatContextCompanyId != null) {
-                    req.stat_context_company_id = this.globalStatContextCompanyId;
-                }
-                const resp = await this.$send_req('/stuff/preview_protocol_doc', req);
-                this.protocol_preview_title = resp.doc_title || (stuff.name + ' 协议');
-                this.protocol_preview_content = resp.doc_content || '';
-                this.protocol_preview_path = stuff.protocol_doc_path;
-                this.protocol_preview_visible = true;
-            } catch (error) {
-                console.log(error);
+            if (!stuff.protocol_doc_path) {
+                this.$message.warning('未上传协议文本');
+                return;
             }
-        },
-        download_protocol_file: function () {
-            if (this.protocol_preview_path) {
-                this.$download_file(this.protocol_preview_path, this.protocol_preview_title);
+            const loading = this.$loading({ lock: true, text: '加载中...' });
+            try {
+                const resp = await fetch(stuff.protocol_doc_path);
+                if (!resp.ok) {
+                    throw new Error('fetch failed');
+                }
+                const arrayBuffer = await resp.arrayBuffer();
+                const result = await mammoth.convertToHtml({ arrayBuffer: arrayBuffer });
+                this.protocol_preview_title = (stuff.name || '物料') + ' 协议预览';
+                this.protocol_preview_content = result.value;
+                this.protocol_preview_visible = true;
+                if (!result.value.trim()) {
+                    this.$message.warning('暂无协议正文');
+                }
+            } catch (error) {
+                this.$message.error('协议预览失败');
+                console.log(error);
+            } finally {
+                loading.close();
             }
         },
         save_protocol_signers: async function (stuff) {
@@ -1000,6 +1018,8 @@ export default {
     flex-direction: column;
     gap: 8px;
     padding: 4px 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .protocol-cell .el-button {
@@ -1011,6 +1031,7 @@ export default {
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+    width: 100%;
 }
 
 .protocol-btns {
@@ -1020,28 +1041,68 @@ export default {
     flex-shrink: 0;
 }
 
-.protocol-signers-input {
+.protocol-signers-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     width: 100%;
+    box-sizing: border-box;
 }
 
-.protocol-signers-input >>> .el-input-group__prepend {
+.protocol-signers-label {
+    flex-shrink: 0;
     padding: 0 10px;
+    height: 28px;
+    line-height: 28px;
     font-size: 12px;
     color: #909399;
     background: #f5f7fa;
+    border: 1px solid #dcdfe6;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.protocol-signers-field {
+    flex: 1 1 0;
+    min-width: 0;
+    width: 0;
+}
+
+.protocol-signers-field >>> .el-input {
+    width: 100%;
+}
+
+.protocol-signers-row .el-button {
+    flex-shrink: 0;
+    margin-left: 0;
 }
 
 .protocol-preview-content {
     max-height: 60vh;
     overflow-y: auto;
     padding: 16px;
-    background: #fafafa;
+    background: #fff;
     border: 1px solid #ebeef5;
     border-radius: 4px;
     font-size: 14px;
     line-height: 1.8;
     color: #303133;
-    white-space: pre-wrap;
-    word-break: break-all;
+    word-break: break-word;
+}
+
+.protocol-preview-content >>> p {
+    margin: 0 0 1em;
+}
+
+.protocol-preview-content >>> table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+}
+
+.protocol-preview-content >>> td,
+.protocol-preview-content >>> th {
+    border: 1px solid #dcdfe6;
+    padding: 8px;
 }
 </style>

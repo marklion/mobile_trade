@@ -22,6 +22,20 @@ function get_signers(stuff) {
     return signers.length > 0 ? signers : ['司机'];
 }
 
+function extract_paragraph_text(para) {
+    let result = '';
+    const re = /<w:br\b[^>]*\/>|<w:t[^>]*>([^<]*)<\/w:t>/gi;
+    let m;
+    while ((m = re.exec(para)) !== null) {
+        if (m[1] !== undefined) {
+            result += m[1];
+        } else {
+            result += '\n';
+        }
+    }
+    return result;
+}
+
 function extract_docx_text(doc_path) {
     const fullPath = path.resolve('/database' + doc_path);
     if (!fs.existsSync(fullPath)) {
@@ -37,20 +51,9 @@ function extract_docx_text(doc_path) {
     const paragraphs = xml.split(/<\/w:p>/);
     const lines = [];
     paragraphs.forEach((para) => {
-        const texts = [];
-        const re = /<w:t[^>]*>([^<]*)<\/w:t>/g;
-        let m;
-        while ((m = re.exec(para)) !== null) {
-            if (m[1]) {
-                texts.push(m[1]);
-            }
-        }
-        const line = texts.join('');
-        if (line.trim()) {
-            lines.push(line.trim());
-        }
+        lines.push(extract_paragraph_text(para));
     });
-    return lines.join('\n');
+    return lines.join('\n').replace(/\n+$/,'');
 }
 
 function is_uuid_filename(name) {
