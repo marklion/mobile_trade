@@ -1,6 +1,7 @@
 const plan_lib = require('../lib/plan_lib');
 const rbac_lib = require('../lib/rbac_lib');
 const group_lib = require('../lib/group_lib');
+const protocol_lib = require('../lib/protocol_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const cash_lib = require('../lib/cash_lib');
@@ -1714,6 +1715,34 @@ module.exports = {
             },
             func: async function (body, token) {
                 return await change_stuff_single_switch(body.stuff_id, 'protocol_signers', body.protocol_signers || '', token, body.stat_context_company_id);
+            }
+        },
+        preview_protocol_doc: {
+            name: '预览物料协议文本',
+            description: '读取物料已上传协议docx的正文',
+            is_write: false,
+            is_get_api: true,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团首页切换统计主体公司id', example: 1 },
+            },
+            result: {
+                doc_title: { type: String, mean: '协议标题', example: '运输协议' },
+                doc_content: { type: String, mean: '协议正文', example: '协议内容...' },
+            },
+            func: async function (body, token) {
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (!await can_view_stuff(token, stuff, body.stat_context_company_id)) {
+                    throw { err_msg: '货物不存在' };
+                }
+                if (!stuff.protocol_doc_path) {
+                    throw { err_msg: '未上传协议文本' };
+                }
+                const doc_content = protocol_lib.extract_docx_text(stuff.protocol_doc_path);
+                return {
+                    doc_title: protocol_lib.get_doc_title(stuff.protocol_doc_path, doc_content),
+                    doc_content: doc_content,
+                };
             }
         },
         add_extra_info_config: {

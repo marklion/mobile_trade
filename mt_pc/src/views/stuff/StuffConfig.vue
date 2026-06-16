@@ -24,6 +24,7 @@
                                             <el-tag v-if="scope.row.protocol_doc_path" size="mini" type="success" effect="plain">已上传</el-tag>
                                             <el-tag v-else size="mini" type="info" effect="plain">未上传</el-tag>
                                             <div class="protocol-btns">
+                                                <el-button v-if="scope.row.protocol_doc_path" size="mini" type="info" plain icon="el-icon-view" @click="preview_protocol_doc(scope.row)">预览</el-button>
                                                 <el-upload :file-list="always_empty" :ref="'protocol_uploader' + scope.row.id" :show-file-list="false" :action="$make_file_url()" accept=".docx" :limit="1" :on-success="make_upload_protocol_func(scope.row)">
                                                     <el-button size="mini" type="primary" plain icon="el-icon-upload2">{{ scope.row.protocol_doc_path ? '重传' : '上传' }}</el-button>
                                                 </el-upload>
@@ -302,6 +303,13 @@
                 </page-content>
             </div>
         </el-dialog>
+        <el-dialog :title="protocol_preview_title" :visible.sync="protocol_preview_visible" width="640px">
+            <div class="protocol-preview-content">{{ protocol_preview_content || '暂无协议正文' }}</div>
+            <span slot="footer" class="dialog-footer">
+                <el-button v-if="protocol_preview_path" type="primary" plain @click="download_protocol_file">下载原文件</el-button>
+                <el-button @click="protocol_preview_visible = false">关闭</el-button>
+            </span>
+        </el-dialog>
     </el-main>
 </el-container>
 </template>
@@ -334,6 +342,10 @@ export default {
     data: function () {
         return {
             always_empty: [],
+            protocol_preview_visible: false,
+            protocol_preview_title: '协议预览',
+            protocol_preview_content: '',
+            protocol_preview_path: '',
             history_filter_string: '',
             filter_string: '',
             price_profile: {
@@ -704,6 +716,26 @@ export default {
                 console.log(error);
             }
         },
+        preview_protocol_doc: async function (stuff) {
+            try {
+                const req = { stuff_id: stuff.id };
+                if (this.show_stat_scope_selector && this.globalStatContextCompanyId != null) {
+                    req.stat_context_company_id = this.globalStatContextCompanyId;
+                }
+                const resp = await this.$send_req('/stuff/preview_protocol_doc', req);
+                this.protocol_preview_title = resp.doc_title || (stuff.name + ' 协议');
+                this.protocol_preview_content = resp.doc_content || '';
+                this.protocol_preview_path = stuff.protocol_doc_path;
+                this.protocol_preview_visible = true;
+            } catch (error) {
+                console.log(error);
+            }
+        },
+        download_protocol_file: function () {
+            if (this.protocol_preview_path) {
+                this.$download_file(this.protocol_preview_path, this.protocol_preview_title);
+            }
+        },
         save_protocol_signers: async function (stuff) {
             try {
                 const req = {
@@ -997,5 +1029,19 @@ export default {
     font-size: 12px;
     color: #909399;
     background: #f5f7fa;
+}
+
+.protocol-preview-content {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding: 16px;
+    background: #fafafa;
+    border: 1px solid #ebeef5;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.8;
+    color: #303133;
+    white-space: pre-wrap;
+    word-break: break-all;
 }
 </style>
