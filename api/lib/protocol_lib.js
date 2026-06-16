@@ -27,10 +27,10 @@ function extract_paragraph_text(para) {
     const re = /<w:br\b[^>]*\/>|<w:t[^>]*>([^<]*)<\/w:t>/gi;
     let m;
     while ((m = re.exec(para)) !== null) {
-        if (m[1] !== undefined) {
-            result += m[1];
-        } else {
+        if (/^<w:br\b/i.test(m[0])) {
             result += '\n';
+        } else {
+            result += m[1];
         }
     }
     return result;
