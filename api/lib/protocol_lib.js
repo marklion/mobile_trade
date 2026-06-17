@@ -292,7 +292,7 @@ module.exports = {
         if (!need_protocol(stuff)) {
             return {
                 doc_title: '',
-                doc_content: '',
+                doc_path: '',
                 signers: [],
                 all_signed: true,
             };
@@ -308,7 +308,7 @@ module.exports = {
         const doc_content = extract_docx_text(stuff.protocol_doc_path);
         return {
             doc_title: get_doc_title(stuff.protocol_doc_path, doc_content),
-            doc_content: doc_content,
+            doc_path: stuff.protocol_doc_path,
             signers: required.map((name) => ({
                 name,
                 signed: !!sign_map[name],

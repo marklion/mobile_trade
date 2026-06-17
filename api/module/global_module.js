@@ -1410,7 +1410,7 @@ module.exports = {
             },
             result: {
                 doc_title: { type: String, mean: '协议标题', example: '运输协议' },
-                doc_content: { type: String, mean: '协议正文', example: '协议内容...' },
+                doc_path: { type: String, mean: '协议docx路径', example: '/uploads/protocol.docx' },
                 signers: {
                     type: Array, mean: '签名人列表', explain: {
                         name: { type: String, mean: '签名人', example: '司机' },
@@ -2751,7 +2751,7 @@ module.exports = {
             },
             result: {
                 doc_title: { type: String, mean: '协议标题', example: '运输协议' },
-                doc_content: { type: String, mean: '协议正文', example: '协议内容...' },
+                doc_path: { type: String, mean: '协议docx路径', example: '/uploads/protocol.docx' },
                 signers: {
                     type: Array, mean: '签名人列表', explain: {
                         name: { type: String, mean: '签名人', example: '司机' },

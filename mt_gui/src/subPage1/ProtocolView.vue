@@ -2,7 +2,25 @@
 <view class="protocol-page">
     <scroll-view scroll-y class="protocol-scroll">
         <view class="protocol-body">
-            <text class="protocol-text">{{ displayContent }}</text>
+            <view v-if="doc_loading" class="protocol-doc-status">协议加载中...</view>
+            <view v-else-if="doc_error" class="protocol-doc-status protocol-doc-error">
+                <text>{{ doc_error }}</text>
+                <fui-button
+                    v-if="doc_path"
+                    text="打开协议文件"
+                    type="primary"
+                    btnSize="small"
+                    @click="openDocx"
+                />
+            </view>
+            <block v-else-if="doc_html">
+                <!-- #ifdef H5 -->
+                <div class="protocol-doc-html" v-html="doc_html"></div>
+                <!-- #endif -->
+                <!-- #ifndef H5 -->
+                <rich-text class="protocol-doc-html" :nodes="doc_html"></rich-text>
+                <!-- #endif -->
+            </block>
 
             <view v-if="signedSigners.length > 0" class="protocol-sign-zone">
                 <view
@@ -27,23 +45,22 @@
 </template>
 
 <script>
+import { load_docx_html, open_docx_file } from '@/utils/protocol_doc.js';
+
 export default {
     name: 'ProtocolView',
     data() {
         return {
             plan_id: 0,
             doc_title: '',
-            doc_content: '',
+            doc_path: '',
+            doc_html: '',
+            doc_loading: false,
+            doc_error: '',
             signers: [],
         };
     },
     computed: {
-        displayContent() {
-            if (this.doc_content && this.doc_content.trim()) {
-                return this.doc_content.trim();
-            }
-            return '暂无协议正文';
-        },
         signedSigners() {
             return (this.signers || []).filter((s) => s.signed && s.sign_pic);
         },
@@ -51,6 +68,38 @@ export default {
     methods: {
         signPicUrl(path) {
             return this.$convert_attach_url(path);
+        },
+        loadDocxPreview: async function () {
+            if (!this.doc_path) {
+                this.doc_html = '';
+                this.doc_error = '协议文件不存在';
+                return;
+            }
+            this.doc_loading = true;
+            this.doc_error = '';
+            this.doc_html = '';
+            try {
+                this.doc_html = await load_docx_html(this.doc_path, this.$convert_attach_url);
+            } catch (error) {
+                console.error(error);
+                this.doc_error = '协议预览失败，可尝试直接打开文件';
+            } finally {
+                this.doc_loading = false;
+            }
+        },
+        openDocx: async function () {
+            if (!this.doc_path) {
+                return;
+            }
+            uni.showLoading({ title: '打开中...' });
+            try {
+                await open_docx_file(this.doc_path, this.$convert_attach_url);
+            } catch (error) {
+                console.error(error);
+                uni.showToast({ title: '打开失败', icon: 'none' });
+            } finally {
+                uni.hideLoading();
+            }
         },
         loadProtocol: async function () {
             if (!this.plan_id) {
@@ -60,11 +109,12 @@ export default {
                 plan_id: this.plan_id,
             });
             this.doc_title = resp.doc_title;
-            this.doc_content = resp.doc_content;
+            this.doc_path = resp.doc_path || '';
             this.signers = resp.signers || [];
             if (this.doc_title) {
                 uni.setNavigationBarTitle({ title: this.doc_title });
             }
+            await this.loadDocxPreview();
         },
     },
     onLoad(option) {
@@ -96,13 +146,27 @@ export default {
     box-sizing: border-box;
 }
 
-.protocol-text {
+.protocol-doc-status {
+    font-size: 28rpx;
+    color: #999;
+    line-height: 1.8;
+    text-align: center;
+    padding: 40rpx 0;
+}
+
+.protocol-doc-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24rpx;
+}
+
+.protocol-doc-html {
     display: block;
     font-size: 28rpx;
     color: #333;
     line-height: 1.8;
-    white-space: pre-wrap;
-    word-break: break-all;
+    word-break: break-word;
 }
 
 .protocol-sign-zone {
