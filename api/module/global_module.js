@@ -1408,19 +1408,7 @@ module.exports = {
             params: {
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
             },
-            result: {
-                doc_title: { type: String, mean: '协议标题', example: '运输协议' },
-                doc_path: { type: String, mean: '协议docx路径', example: '/uploads/protocol.docx' },
-                signers: {
-                    type: Array, mean: '签名人列表', explain: {
-                        name: { type: String, mean: '签名人', example: '司机' },
-                        signed: { type: Boolean, mean: '是否已签', example: false },
-                        sign_pic: { type: String, mean: '签名图片', example: '' },
-                        sign_time: { type: String, mean: '签名时间', example: '' },
-                    },
-                },
-                all_signed: { type: Boolean, mean: '是否全部签署', example: false },
-            },
+            result: api_param_result_define.plan_protocol_info,
             func: async function (body, token) {
                 const plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (!plan) {
@@ -1766,10 +1754,17 @@ module.exports = {
                         const zip_path = path.join('/database/uploads/', zip_name);
                         const file_paths = [];
                         for (const plan of signed_plans) {
-                            const { buffer, filename } = await protocol_lib.generate_signed_docx_buffer(plan);
+                            const full_plan = await util_lib.get_single_plan_by_id(plan.id);
+                            if (!full_plan) {
+                                continue;
+                            }
+                            const { buffer, filename } = await protocol_lib.generate_signed_docx_buffer(full_plan);
                             const file_path = path.join(temp_dir, filename);
                             await fs.promises.writeFile(file_path, buffer);
                             file_paths.push(file_path);
+                        }
+                        if (file_paths.length === 0) {
+                            throw { err_msg: '未找到已签署的协议' };
                         }
 
                         const archive = archiver('zip', { zlib: { level: 9 } });
@@ -2749,19 +2744,7 @@ module.exports = {
                 open_id: { type: String, have_to: true, mean: '司机open_id', example: 'open_id' },
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
             },
-            result: {
-                doc_title: { type: String, mean: '协议标题', example: '运输协议' },
-                doc_path: { type: String, mean: '协议docx路径', example: '/uploads/protocol.docx' },
-                signers: {
-                    type: Array, mean: '签名人列表', explain: {
-                        name: { type: String, mean: '签名人', example: '司机' },
-                        signed: { type: Boolean, mean: '是否已签', example: false },
-                        sign_pic: { type: String, mean: '签名图片', example: '' },
-                        sign_time: { type: String, mean: '签名时间', example: '' },
-                    }
-                },
-                all_signed: { type: Boolean, mean: '是否全部签署', example: false },
-            },
+            result: api_param_result_define.plan_protocol_info,
             func: async function (body, token) {
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (!plan || plan.status == 3) {

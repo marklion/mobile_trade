@@ -11,8 +11,70 @@ function create_api_error(message) {
     return error;
 }
 
+function normalize_attach_path(attach_path) {
+    if (attach_path === undefined || attach_path === null) {
+        return '';
+    }
+    let normalized = String(attach_path).trim().replace(/^["']|["']$/g, '');
+    if (!normalized) {
+        return '';
+    }
+    if (/^https?:\/\//i.test(normalized)) {
+        try {
+            normalized = new URL(normalized).pathname;
+        } catch (error) {
+            return '';
+        }
+    }
+    if (!normalized.startsWith('/')) {
+        normalized = `/${normalized}`;
+    }
+    return normalized;
+}
+
+function resolve_storage_full_path(attach_path) {
+    const normalized = normalize_attach_path(attach_path);
+    if (!normalized) {
+        return '';
+    }
+    return path.resolve(`/database${normalized}`);
+}
+
+async function read_attach_file_buffer(attach_path) {
+    const normalized = normalize_attach_path(attach_path);
+    if (!normalized) {
+        throw create_api_error('协议文件不存在');
+    }
+    const full_path = resolve_storage_full_path(normalized);
+    if (full_path && fs.existsSync(full_path)) {
+        return fs.readFileSync(full_path);
+    }
+    const hosts = [
+        process.env.REMOTE_HOST,
+        process.env.INTERNAL_BASE_URL,
+        'http://127.0.0.1:8080',
+    ].filter(Boolean);
+    for (const host of hosts) {
+        const base = String(host).replace(/\/$/, '');
+        const url = `${base}${normalized}`;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                continue;
+            }
+            const array_buffer = await response.arrayBuffer();
+            if (array_buffer.byteLength > 0) {
+                return Buffer.from(array_buffer);
+            }
+        } catch (error) {
+            // try next host
+        }
+    }
+    throw create_api_error('协议文件不存在');
+}
+
 function need_protocol(stuff) {
-    return Boolean(stuff?.protocol_doc_path);
+    return Boolean(normalize_attach_path(stuff?.protocol_doc_path));
 }
 
 function get_signers(stuff) {
@@ -89,8 +151,8 @@ function is_hex_segment(segment, length) {
 }
 
 function extract_docx_text(doc_path) {
-    const fullPath = path.resolve('/database' + doc_path);
-    if (!fs.existsSync(fullPath)) {
+    const fullPath = resolve_storage_full_path(doc_path);
+    if (!fullPath || !fs.existsSync(fullPath)) {
         return '';
     }
     const content = fs.readFileSync(fullPath, 'binary');
@@ -181,8 +243,8 @@ function build_inline_image_xml(r_id, doc_pr_id, media_name, cx, cy) {
 }
 
 function embed_image_in_zip(zip, rels_xml, image_path) {
-    const full_path = path.resolve('/database' + image_path);
-    if (!fs.existsSync(full_path)) {
+    const full_path = resolve_storage_full_path(image_path);
+    if (!full_path || !fs.existsSync(full_path)) {
         return { rels_xml, image_xml: '' };
     }
     const image_buffer = fs.readFileSync(full_path);
@@ -201,12 +263,8 @@ function embed_image_in_zip(zip, rels_xml, image_path) {
     return { rels_xml: updated_rels, image_xml };
 }
 
-function append_signatures_to_docx(doc_path, signers) {
-    const full_path = path.resolve('/database' + doc_path);
-    if (!fs.existsSync(full_path)) {
-        throw create_api_error('协议文件不存在');
-    }
-    const content = fs.readFileSync(full_path, 'binary');
+async function append_signatures_to_docx(doc_path, signers) {
+    const content = await read_attach_file_buffer(doc_path);
     const zip = new PizZip(content);
     const doc_file = zip.file('word/document.xml');
     if (!doc_file) {
@@ -306,9 +364,10 @@ module.exports = {
             }
         });
         const doc_content = extract_docx_text(stuff.protocol_doc_path);
+        const doc_path = normalize_attach_path(stuff.protocol_doc_path);
         return {
-            doc_title: get_doc_title(stuff.protocol_doc_path, doc_content),
-            doc_path: stuff.protocol_doc_path,
+            doc_title: get_doc_title(doc_path, doc_content),
+            doc_path,
             signers: required.map((name) => ({
                 name,
                 signed: !!sign_map[name],
@@ -354,7 +413,7 @@ module.exports = {
         }
         const signed_signers = info.signers.filter((s) => s.sign_pic);
         return {
-            buffer: append_signatures_to_docx(plan.stuff.protocol_doc_path, signed_signers),
+            buffer: await append_signatures_to_docx(info.doc_path, signed_signers),
             filename: generate_protocol_filename(plan, info.doc_title),
         };
     },
