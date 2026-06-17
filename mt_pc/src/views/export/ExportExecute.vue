@@ -33,6 +33,14 @@
                 :external_scope_id="scope_selector_enabled ? globalStatContextCompanyId : null"
                 @do_export="export_ticket($event, single_module.module)"></export-date>
         </vue-cell>
+        <vue-cell class="cell_show" width="3of12">
+            <export-date
+                :key="'protocol-export-' + (globalStatContextCompanyId || 0)"
+                export_name="协议签署"
+                :need_company="protocol_export_need_company"
+                :external_scope_id="scope_selector_enabled ? globalStatContextCompanyId : null"
+                @do_export="export_protocol"></export-date>
+        </vue-cell>
     </vue-grid>
     <el-divider></el-divider>
     <h2>安检登记表导出</h2>
@@ -291,6 +299,9 @@ export default {
                 ? insert_supply_column(BASE_EXPORT_COLUMNS)
                 : [...BASE_EXPORT_COLUMNS];
         },
+        protocol_export_need_company: function () {
+            return this.$hasPermission('sale_management') || this.$hasPermission('buy_management');
+        },
     },
     methods: {
         with_stat_context: function (body = {}, fallbackScopeId = null) {
@@ -345,6 +356,20 @@ export default {
                     start_time: filter.start_time,
                     end_time: filter.end_time,
                     ticket_type: module,
+                    company_id: filter.company_id,
+                    only_finished: true,
+                    stat_context_company_id: filter.stat_context_company_id,
+                }, this.globalStatContextCompanyId));
+                this.show_export_success();
+            } catch (error) {
+                this.show_export_fail(error);
+            }
+        },
+        export_protocol: async function (filter) {
+            try {
+                await this.$send_req('/global/download_protocol_zip', this.with_stat_context({
+                    start_time: filter.start_time,
+                    end_time: filter.end_time,
                     company_id: filter.company_id,
                     only_finished: true,
                     stat_context_company_id: filter.stat_context_company_id,

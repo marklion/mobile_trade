@@ -174,6 +174,12 @@
 						"navigationBarTitleText": "协议签署"
 					}
 				},
+                {
+                    "path": "ProtocolView",
+                    "style": {
+                        "navigationBarTitleText": "协议签署"
+                    }
+                },
 				{
 					"path": "Audit",
 					"style": {

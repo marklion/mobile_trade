@@ -228,6 +228,7 @@ async function get_ticket_func(body, token) {
         replace_p_time: plan.stuff.company.global_replace_form?.replace_p_time || '过皮时间',
         replace_m_time: plan.stuff.company.global_replace_form?.replace_m_time || '过毛时间',
         replace_seal_no: plan.stuff.company.global_replace_form?.replace_seal_no || '封签号',
+        need_protocol: protocol_lib.need_protocol(plan.stuff),
     }
 }
 async function checkif_plan_checkinable(plan, driver, lat, lon) {
@@ -297,6 +298,22 @@ async function getPlansByTicketType(body, token) {
         default:
             throw { err_msg: '磅单类型错误' };
     }
+}
+
+async function getPlansForProtocolExport(body, token) {
+    const ticket_types = ['sale_management', 'buy_management', 'customer', 'supplier'];
+    const seen = new Set();
+    const plans = [];
+    for (const ticket_type of ticket_types) {
+        const sub_plans = await getPlansByTicketType({ ...body, ticket_type }, token);
+        for (const plan of sub_plans) {
+            if (!seen.has(plan.id)) {
+                seen.add(plan.id);
+                plans.push(plan);
+            }
+        }
+    }
+    return plans;
 }
 
 function normalize_copy_type(copy_type) {
@@ -1382,6 +1399,27 @@ module.exports = {
             result: api_param_result_define.ticket_content,
             func: get_ticket_func,
         },
+        get_plan_protocol: {
+            name: '获取计划协议签署结果',
+            description: '查看计划协议内容及已签署签名',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: api_param_result_define.plan_protocol_info,
+            func: async function (body, token) {
+                const plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (!plan) {
+                    throw create_api_error('计划不存在');
+                }
+                if (!protocol_lib.need_protocol(plan.stuff)) {
+                    throw create_api_error('该计划无需签署协议');
+                }
+                return await protocol_lib.get_plan_protocol_info(plan);
+            },
+        },
         get_user_role: {
             name: '获取用户角色',
             description: '获取用户角色',
@@ -1676,6 +1714,76 @@ module.exports = {
                     }
                 });
             }
+        },
+        download_protocol_zip: {
+            name: '下载协议签署ZIP',
+            description: '导出范围内已签署协议的docx压缩包',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
+                company_id: { type: Number, have_to: false, mean: '公司ID', example: 22 },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                url: { type: String, mean: '下载地址', example: 'https://abc' },
+            },
+            func: async function (body, token) {
+                return await common.do_export_later(token, '协议签署导出', async () => {
+                    const temp_dir = path.join('/database/uploads/', uuid.v4());
+                    await fs.promises.mkdir(temp_dir, { recursive: true });
+
+                    try {
+                        const plans = await getPlansForProtocolExport(body, token);
+                        const signed_plans = [];
+                        for (const plan of plans) {
+                            if (!protocol_lib.need_protocol(plan.stuff)) {
+                                continue;
+                            }
+                            if (await protocol_lib.plan_protocol_signed(plan)) {
+                                signed_plans.push(plan);
+                            }
+                        }
+                        if (signed_plans.length === 0) {
+                            throw { err_msg: '未找到已签署的协议' };
+                        }
+
+                        const zip_name = `协议签署导出_${uuid.v4()}.zip`;
+                        const zip_path = path.join('/database/uploads/', zip_name);
+                        const file_paths = [];
+                        for (const plan of signed_plans) {
+                            const full_plan = await util_lib.get_single_plan_by_id(plan.id);
+                            if (!full_plan) {
+                                continue;
+                            }
+                            const { buffer, filename } = await protocol_lib.generate_signed_docx_buffer(full_plan);
+                            const file_path = path.join(temp_dir, filename);
+                            await fs.promises.writeFile(file_path, buffer);
+                            file_paths.push(file_path);
+                        }
+                        if (file_paths.length === 0) {
+                            throw { err_msg: '未找到已签署的协议' };
+                        }
+
+                        const archive = archiver('zip', { zlib: { level: 9 } });
+                        const output = fs.createWriteStream(zip_path);
+                        archive.pipe(output);
+                        await Promise.all(file_paths.map(async (file_path) => {
+                            const file_data = await fs.promises.readFile(file_path);
+                            archive.append(file_data, { name: path.basename(file_path) });
+                        }));
+                        await archive.finalize();
+                        return '/uploads/' + zip_name;
+                    } catch (error) {
+                        console.error('协议签署导出错误:', error);
+                        throw error;
+                    } finally {
+                        await fs.promises.rm(temp_dir, { recursive: true, force: true });
+                    }
+                });
+            },
         },
         download_sc_contents_zip: {
             name: '下载安检登记表ZIP',
@@ -2636,19 +2744,7 @@ module.exports = {
                 open_id: { type: String, have_to: true, mean: '司机open_id', example: 'open_id' },
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 }
             },
-            result: {
-                doc_title: { type: String, mean: '协议标题', example: '运输协议' },
-                doc_content: { type: String, mean: '协议正文', example: '协议内容...' },
-                signers: {
-                    type: Array, mean: '签名人列表', explain: {
-                        name: { type: String, mean: '签名人', example: '司机' },
-                        signed: { type: Boolean, mean: '是否已签', example: false },
-                        sign_pic: { type: String, mean: '签名图片', example: '' },
-                        sign_time: { type: String, mean: '签名时间', example: '' },
-                    }
-                },
-                all_signed: { type: Boolean, mean: '是否全部签署', example: false },
-            },
+            result: api_param_result_define.plan_protocol_info,
             func: async function (body, token) {
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (!plan || plan.status == 3) {

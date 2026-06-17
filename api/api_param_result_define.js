@@ -162,6 +162,19 @@ module.exports = {
         id_card: { type: String, mean: '司机身份证', example: '1234567890' },
         open_id: { type: String, mean: '微信open_id', example: 'open_id' },
     },
+    plan_protocol_info: {
+        doc_title: { type: String, mean: '协议标题', example: '运输协议' },
+        doc_path: { type: String, mean: '协议docx路径', example: '/uploads/protocol.docx' },
+        signers: {
+            type: Array, mean: '签名人列表', explain: {
+                name: { type: String, mean: '签名人', example: '司机' },
+                signed: { type: Boolean, mean: '是否已签', example: false },
+                sign_pic: { type: String, mean: '签名图片', example: '' },
+                sign_time: { type: String, mean: '签名时间', example: '' },
+            },
+        },
+        all_signed: { type: Boolean, mean: '是否全部签署', example: false },
+    },
     ticket_content: {
         id: { type: Number, mean: 'ID', example: 1 },
         company_name: { type: String, mean: '公司名', example: 'company_example' },
@@ -204,6 +217,7 @@ module.exports = {
         replace_p_time: { type: String, mean: '过皮时间替换文字', example: '过皮时间替换文字' },
         replace_m_time: { type: String, mean: '过毛时间替换文字', example: '过毛时间替换文字' },
         replace_seal_no: { type: String, mean: '封签号替换文字', example: '封签号替换文字' },
+        need_protocol: { type: Boolean, mean: '是否需要签署协议', example: false },
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },

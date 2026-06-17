@@ -2,7 +2,13 @@
 <view class="protocol-page">
     <scroll-view scroll-y class="protocol-scroll">
         <view class="protocol-body">
-            <text class="protocol-text">{{ displayContent }}</text>
+            <protocol-doc-preview
+                :doc_loading="doc_loading"
+                :doc_error="doc_error"
+                :doc_path="doc_path"
+                :doc_html="doc_html"
+                @open="openDocx"
+            />
 
             <view class="protocol-sign-zone">
                 <view
@@ -37,29 +43,22 @@
 </template>
 
 <script>
+import ProtocolDocPreview from '@/components/ProtocolDocPreview.vue';
+import protocolDocMixin from '@/mixins/protocol_doc_mixin.js';
+
 export default {
     name: 'ProtocolSign',
+    components: {
+        ProtocolDocPreview,
+    },
+    mixins: [protocolDocMixin],
     data() {
         return {
             plan_id: 0,
             open_id: '',
-            doc_title: '',
-            doc_content: '',
-            signers: [],
         };
     },
-    computed: {
-        displayContent() {
-            if (this.doc_content && this.doc_content.trim()) {
-                return this.doc_content.trim();
-            }
-            return '暂无协议正文';
-        },
-    },
     methods: {
-        signPicUrl(path) {
-            return this.$convert_attach_url(path);
-        },
         loadProtocol: async function () {
             if (!this.plan_id || !this.open_id) {
                 return;
@@ -72,12 +71,11 @@ export default {
                 uni.navigateBack();
                 return;
             }
-            this.doc_title = resp.doc_title;
-            this.doc_content = resp.doc_content;
-            this.signers = resp.signers || [];
+            this.applyProtocolResponse(resp);
             if (resp.all_signed) {
                 this.onAllSigned();
             }
+            await this.loadDocxPreview();
         },
         openSign: function (signer) {
             if (signer.signed) {
@@ -109,75 +107,8 @@ export default {
 };
 </script>
 
-<style scoped>
-.protocol-page {
-    min-height: 100vh;
-    background: #f5f6f8;
-    box-sizing: border-box;
-}
-
-.protocol-scroll {
-    height: 100vh;
-    padding: 24rpx;
-    box-sizing: border-box;
-}
-
-.protocol-body {
-    background: #fff;
-    border-radius: 16rpx;
-    padding: 40rpx 32rpx;
-    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
-    min-height: calc(100vh - 48rpx);
-    box-sizing: border-box;
-}
-
-.protocol-text {
-    display: block;
-    font-size: 28rpx;
-    color: #333;
-    line-height: 1.8;
-    white-space: pre-wrap;
-    word-break: break-all;
-}
-
-.protocol-sign-zone {
-    margin-top: 48rpx;
-    padding-top: 32rpx;
-    border-top: 1px dashed #ddd;
-}
-
-.sign-slot {
-    margin-bottom: 32rpx;
-}
-
-.sign-slot:last-child {
-    margin-bottom: 0;
-}
-
-.sign-slot-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 12rpx;
-}
-
-.sign-slot-label {
-    font-size: 26rpx;
-    color: #666;
-}
-
-.sign-slot-time {
-    font-size: 22rpx;
-    color: #999;
-}
-
-.sign-slot-img {
-    width: 100%;
-    height: 140rpx;
-    background: #fafafa;
-    border: 1px solid #eee;
-    border-radius: 8rpx;
-}
+<style scoped lang="scss">
+@import '@/styles/protocol_page.scss';
 
 .sign-slot-btn-wrap {
     width: 100%;

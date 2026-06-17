@@ -72,6 +72,7 @@
     "crypto": "^1.0.1",
     "exceljs": "^4.4.0",
     "flyio": "^0.6.2",
+    "mammoth": "^1.12.0",
     "moment": "^2.30.1",
     "pinyin-match": "^1.2.6",
     "vue": "^2.6.11",
