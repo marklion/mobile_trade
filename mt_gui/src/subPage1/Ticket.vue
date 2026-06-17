@@ -6,6 +6,7 @@
         <fui-qrcode width="240" height="240" :value="qr_path()"></fui-qrcode>
         <fui-avatar mode="widthFix" shape="square" background="white" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
     </view>
+    <fui-button v-if="need_protocol" text="协议签署" @click="view_protocol" type="warning"></fui-button>
     <fui-button text="下载磅单图片" @click="download_pic" type="primary"></fui-button>
     <fui-button text="转发给好友" type="success" open-type="share"></fui-button>
 </view>
@@ -23,6 +24,7 @@ export default {
             qr_code: '',
             stamp_path: '',
             id: 0,
+            need_protocol: false,
             main_vehicle_plate: '',
             qr_path: function () {
                 let ret = process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + this.id
@@ -31,6 +33,11 @@ export default {
         }
     },
     methods: {
+        view_protocol: function () {
+            uni.navigateTo({
+                url: '/subPage1/ProtocolView?plan_id=' + this.id,
+            });
+        },
         download_pic: async function () {
             let resp = await this.$send_req('/global/download_ticket', {
                 id: this.id
@@ -71,12 +78,14 @@ export default {
         }
 
         this.id = plan_id;
+        this.need_protocol = false;
         let ticket = await this.$send_req('/global/get_ticket', {
             id: plan_id
         });
         if (ticket.plan_sct_infos == undefined) {
             ticket.plan_sct_infos = [];
         }
+        this.need_protocol = !!ticket.need_protocol;
         this.stamp_path = ticket.stamp_path;
         if (ticket.delegate_name) {
             if (options.is_internal && options.is_internal == 'true') {
