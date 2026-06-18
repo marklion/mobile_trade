@@ -872,6 +872,9 @@ export default {
         this.get_price_display_config();
         this.get_hide_order_detail_price_config();
     },
+    onShow() {
+        this.refresh_plans();
+    },
 }
 </script>
 
