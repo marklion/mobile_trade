@@ -35,7 +35,7 @@ export default {
     methods: {
         view_protocol: function () {
             uni.navigateTo({
-                url: '/subPage1/ProtocolView?plan_id=' + this.id,
+                url: '/subPage2/ProtocolView?plan_id=' + this.id,
             });
         },
         download_pic: async function () {

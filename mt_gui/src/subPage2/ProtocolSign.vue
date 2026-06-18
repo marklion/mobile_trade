@@ -82,7 +82,7 @@ export default {
                 return;
             }
             uni.navigateTo({
-                url: '/subPage1/ProtocolSignPad?plan_id=' + this.plan_id
+                url: '/subPage2/ProtocolSignPad?plan_id=' + this.plan_id
                     + '&open_id=' + encodeURIComponent(this.open_id)
                     + '&signer_name=' + encodeURIComponent(signer.name),
             });

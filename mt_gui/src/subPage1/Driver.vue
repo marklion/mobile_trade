@@ -552,7 +552,7 @@ export default {
             const need_protocol = !!(e.item.stuff && e.item.stuff.protocol_doc_path);
             if (need_protocol && !e.item.protocol_signed) {
                 uni.navigateTo({
-                    url: '/subPage1/ProtocolSign?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id,
+                    url: '/subPage2/ProtocolSign?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id,
                 });
                 return;
             }
