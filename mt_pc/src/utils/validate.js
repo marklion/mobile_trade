@@ -7,7 +7,7 @@
  * @returns {Boolean}
  */
 export function isExternal(path) {
-  return /^(https?:|mailto:|tel:)/.test(path) || path.startsWith('/api/')
+  return /^(https?:|mailto:|tel:)/.test(path)
 }
 
 /**

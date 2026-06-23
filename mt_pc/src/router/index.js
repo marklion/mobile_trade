@@ -404,11 +404,6 @@ export const asyncRoutes = [
         name: 'api_help',
         path: process.env.REMOTE_HOST + '/api/help',
         meta: { title: '开放接口', icon: 'link' }
-      },
-      {
-        name: 'api_swagger',
-        path: process.env.REMOTE_HOST + '/api/swagger/',
-        meta: { title: 'Swagger 文档', icon: 'link' }
       }
     ]
   },
