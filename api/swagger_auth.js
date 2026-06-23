@@ -11,10 +11,10 @@ const COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
 function parseCookie(req, name) {
     const header = req.headers.cookie || '';
     const parts = header.split(';');
-    for (let index = 0; index < parts.length; index++) {
-        const part = parts[index].trim();
-        if (part.startsWith(name + '=')) {
-            return decodeURIComponent(part.slice(name.length + 1));
+    for (const part of parts) {
+        const trimmed = part.trim();
+        if (trimmed.startsWith(name + '=')) {
+            return decodeURIComponent(trimmed.slice(name.length + 1));
         }
     }
     return '';

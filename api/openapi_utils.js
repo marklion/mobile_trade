@@ -5,6 +5,10 @@ function jsTypeToOpenApiType(type) {
     return 'string';
 }
 
+function compareAlphabetically(a, b) {
+    return a.localeCompare(b);
+}
+
 function paramsToSchema(params, isParams = true) {
     if (!params || Object.keys(params).length === 0) {
         return { type: 'object', properties: {} };
@@ -13,7 +17,7 @@ function paramsToSchema(params, isParams = true) {
     const properties = {};
     const required = [];
 
-    Object.keys(params).sort().forEach((key) => {
+    Object.keys(params).sort(compareAlphabetically).forEach((key) => {
         const param = params[key];
         properties[key] = paramToSchemaProperty(param);
         if (isParams && param.have_to) {
@@ -129,8 +133,8 @@ function buildOpenApiSpec(openapiPaths) {
         ],
         tags: [...new Set(Object.values(openapiPaths).flatMap((pathItem) => {
             const op = pathItem.post;
-            return op && op.tags ? op.tags : [];
-        }))].sort().map((name) => ({ name })),
+            return op?.tags ?? [];
+        }))].sort(compareAlphabetically).map((name) => ({ name })),
         paths: openapiPaths,
         security: [{ token: [] }],
         components: {
