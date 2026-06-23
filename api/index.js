@@ -10,6 +10,7 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
+app.openapi_paths = {};
 if (!isMainThread) {
     const { pic_list } = workerData;
     const targetWidth = 800; // 设定目标宽度
@@ -171,6 +172,20 @@ else {
         let resp = await global_module.methods.download_ticket.func({ id: id });
         res.download('/database' + resp.url);
     })
+    const { buildOpenApiSpec } = require('./openapi_utils');
+    const swaggerUi = require('swagger-ui-express');
+    const swaggerAuth = require('./swagger_auth');
+
+    app.post('/api/swagger/login', swaggerAuth.handleSwaggerLogin);
+    app.get('/api/swagger/logout', swaggerAuth.handleSwaggerLogout);
+    app.get('/api/openapi.json', swaggerAuth.requireSwaggerAdmin, (req, res) => {
+        res.json(buildOpenApiSpec(app.openapi_paths));
+    });
+    app.use('/api/swagger', swaggerAuth.requireSwaggerAdmin);
+    app.use('/api/swagger', swaggerAuth.serveDynamicInit);
+    app.use('/api/swagger', swaggerAuth.serveSwaggerAssets());
+    app.use('/api/swagger', swaggerAuth.setupSwaggerUi(swaggerUi));
+
     app.get('/api/help', (req, res) => {
         let out_json = app.help_info;
         const MarkdownIt = require('markdown-it');

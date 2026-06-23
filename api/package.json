@@ -43,6 +43,7 @@
     "sequelize": "^6.37.1",
     "showdown": "^2.1.0",
     "svg-captcha": "^1.4.0",
+    "swagger-ui-express": "^5.0.1",
     "thrift": "^0.14.2",
     "typescript": "^5.4.5",
     "url": "^0.11.3",
