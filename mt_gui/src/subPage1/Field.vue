@@ -88,7 +88,7 @@
     <measurement ref="measurement" :focus_plan="focus_plan" @refresh="measurement_refresh"></measurement>
 
     <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
-        <sc-execute ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
+        <sc-execute v-if="show_sc_confirm" ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
     </fui-bottom-popup>
 </view>
 </template>
