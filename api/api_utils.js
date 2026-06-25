@@ -1,6 +1,7 @@
 const result_maker = require('./result');
 const rbac_lib = require('./lib/rbac_lib');
 const approval_lib = require('./lib/approval_lib');
+const { makeOpenApiPath } = require('./openapi_utils');
 //params = {
 //         version:{have_to:true, type:String, mean:'版本号', example:'V1.1'},
 //         detail:{have_to:false,  type:Object, mean:'详细信息',
@@ -248,6 +249,10 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                 res.send(ret);
             });
             app.help_info.push(this.make_help_info());
+            if (!app.openapi_paths) {
+                app.openapi_paths = {};
+            }
+            app.openapi_paths[this.path] = makeOpenApiPath(this, make_req_example);
         },
     };
 
