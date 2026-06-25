@@ -181,9 +181,10 @@ else {
     app.get('/api/openapi.json', swaggerAuth.requireSwaggerAdmin, (req, res) => {
         res.json(buildOpenApiSpec(app.openapi_paths));
     });
+
+    app.use('/api/swagger', swaggerAuth.serveSwaggerAssets());
     app.use('/api/swagger', swaggerAuth.requireSwaggerAdmin);
     app.use('/api/swagger', swaggerAuth.serveDynamicInit);
-    app.use('/api/swagger', swaggerAuth.serveSwaggerAssets());
     app.use('/api/swagger', swaggerAuth.setupSwaggerUi(swaggerUi));
 
     app.get('/api/help', (req, res) => {
