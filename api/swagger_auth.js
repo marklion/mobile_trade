@@ -1,6 +1,6 @@
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs');
 const db_opt = require('./db_opt');
 const rbac_lib = require('./lib/rbac_lib');
 const group_lib = require('./lib/group_lib');
@@ -13,12 +13,9 @@ function getSwaggerStaticPath() {
     const candidates = [
         path.join(__dirname, 'swagger-ui-dist'),
         path.join(__dirname, '../swagger-ui-dist'),
+        path.join(__dirname, '../node_modules/swagger-ui-dist'),
+        path.join(__dirname, '../../node_modules/swagger-ui-dist'),
     ];
-    try {
-        candidates.push(require('swagger-ui-dist/absolute-path')());
-    } catch (e) {
-        // ignore when swagger-ui-dist is unavailable
-    }
     for (const candidate of candidates) {
         if (fs.existsSync(path.join(candidate, 'swagger-ui-bundle.js'))) {
             return candidate;
