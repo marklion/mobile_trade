@@ -478,53 +478,16 @@ class OutputHelper {
   }
 
   handleData(chunk) {
-    this.serialBuffer = Buffer.concat([this.serialBuffer, chunk]);
-    if (this.serialBuffer.length > 4096) {
-      this.serialBuffer = this.serialBuffer.slice(-4096);
-    }
-
-    while (this.serialBuffer.length > 0) {
-      const stxPos = this.serialBuffer.indexOf(FRAME_START);
-      if (stxPos < 0) {
-        this.serialBuffer = Buffer.alloc(0);
-        break;
+    try {
+      let parseFunc = eval(this.scriptText);
+      const parsedValue = parseFunc(chunk);
+      if (parsedValue !== null && parsedValue !== undefined) {
+        this.scaleValue = safeNumber(parsedValue);
+      } else {
+        console.warn('[output_helper] 脚本未返回有效重量:', frameArray);
       }
-      if (stxPos > 0) {
-        this.serialBuffer = this.serialBuffer.slice(stxPos);
-      }
-
-      const etxPos = this.serialBuffer.indexOf(FRAME_END_A, 1);
-      const crPos = this.serialBuffer.indexOf(FRAME_END_B, 1);
-      let endPos = -1;
-      if (etxPos >= 0 && crPos >= 0) {
-        endPos = Math.min(etxPos, crPos);
-      } else if (etxPos >= 0) {
-        endPos = etxPos;
-      } else if (crPos >= 0) {
-        endPos = crPos;
-      }
-      if (endPos < 0) {
-        break;
-      }
-
-      const frame = this.serialBuffer.slice(0, endPos + 1);
-      this.serialBuffer = this.serialBuffer.slice(endPos + 1);
-      const frameArray = Array.from(frame);
-      this.lastBytes = frameArray;
-
-      try {
-        const parsedValue = this.compiledScript.run(frameArray, {
-          parseFrameByConfig,
-          frameParsers: this.frameParsers,
-        });
-        if (parsedValue !== null && parsedValue !== undefined) {
-          this.scaleValue = safeNumber(parsedValue);
-        } else {
-          console.warn('[output_helper] 脚本未返回有效重量:', frameArray);
-        }
-      } catch (err) {
-        console.error('[output_helper] 脚本执行失败:', err.message);
-      }
+    } catch (err) {
+      console.error('[output_helper] 脚本执行失败:', err.message);
     }
   }
 }
