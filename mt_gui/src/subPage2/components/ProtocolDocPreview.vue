@@ -3,13 +3,6 @@
     <view v-if="doc_loading" class="protocol-doc-status">协议加载中...</view>
     <view v-else-if="doc_error" class="protocol-doc-status protocol-doc-error">
         <text>{{ doc_error }}</text>
-        <fui-button
-            v-if="doc_path"
-            text="打开协议文件"
-            type="primary"
-            btnSize="small"
-            @click="$emit('open')"
-        />
     </view>
     <block v-else-if="doc_html">
         <!-- #ifdef H5 -->
