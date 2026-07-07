@@ -1,5 +1,6 @@
 const express = require('express');
-const getAbsoluteSwaggerFsPath = require('swagger-ui-dist/absolute-path');
+const path = require('node:path');
+const fs = require('node:fs');
 const db_opt = require('./db_opt');
 const rbac_lib = require('./lib/rbac_lib');
 const group_lib = require('./lib/group_lib');
@@ -7,6 +8,21 @@ const group_lib = require('./lib/group_lib');
 const COOKIE_NAME = 'swagger_admin_token';
 const ADMIN_PHONE = '18911992582';
 const COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
+
+function getSwaggerStaticPath() {
+    const candidates = [
+        path.join(__dirname, 'swagger-ui-dist'),
+        path.join(__dirname, '../swagger-ui-dist'),
+        path.join(__dirname, '../node_modules/swagger-ui-dist'),
+        path.join(__dirname, '../../node_modules/swagger-ui-dist'),
+    ];
+    for (const candidate of candidates) {
+        if (fs.existsSync(path.join(candidate, 'swagger-ui-bundle.js'))) {
+            return candidate;
+        }
+    }
+    return candidates[0];
+}
 
 function parseCookie(req, name) {
     const header = req.headers.cookie || '';
@@ -152,7 +168,8 @@ function serveDynamicInit(req, res, next) {
 }
 
 function serveSwaggerAssets() {
-    return express.static(getAbsoluteSwaggerFsPath(), { index: false });
+    const staticPath = getSwaggerStaticPath();
+    return express.static(staticPath, { index: false });
 }
 
 function buildSwaggerUiOptions() {

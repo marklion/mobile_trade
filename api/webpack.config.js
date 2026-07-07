@@ -25,7 +25,14 @@ module.exports = {
                     from: path.resolve(__dirname, 'node_modules/svg-captcha/fonts/Comismsh.ttf'),
                     // 目标路径，这里是 build 目录下的 fonts 子目录
                     to: path.resolve(__dirname, 'build/fonts')
-                }
+                },
+                {
+                    from: path.resolve(__dirname, 'node_modules/swagger-ui-dist'),
+                    to: path.resolve(__dirname, 'build/api/swagger-ui-dist'),
+                    globOptions: {
+                        ignore: ['**/index.html', '**/oauth2-redirect.html'],
+                    },
+                },
             ]
     })],
     devtool: 'source-map',
