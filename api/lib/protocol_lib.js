@@ -175,13 +175,9 @@ function extract_docx_text(doc_path) {
 }
 
 async function convert_docx_to_html(doc_path) {
-    try {
-        const buffer = await read_attach_file_buffer(doc_path);
-        const result = await mammoth.convertToHtml({ buffer });
-        return result.value || '';
-    } catch (error) {
-        return '';
-    }
+    const buffer = await read_attach_file_buffer(doc_path);
+    const result = await mammoth.convertToHtml({ buffer });
+    return result.value || '';
 }
 
 function is_uuid_filename(name) {
@@ -377,7 +373,12 @@ module.exports = {
         });
         const doc_content = extract_docx_text(stuff.protocol_doc_path);
         const doc_path = normalize_attach_path(stuff.protocol_doc_path);
-        const doc_html = await convert_docx_to_html(stuff.protocol_doc_path);
+        let doc_html = '';
+        try {
+            doc_html = await convert_docx_to_html(stuff.protocol_doc_path);
+        } catch (error) {
+            console.error('协议 docx 转 HTML 失败:', doc_path, error);
+        }
         return {
             doc_title: get_doc_title(doc_path, doc_content),
             doc_path,
