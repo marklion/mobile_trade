@@ -32,8 +32,8 @@
 </template>
 
 <script>
-import ProtocolDocPreview from '@/components/ProtocolDocPreview.vue';
-import protocolDocMixin from '@/mixins/protocol_doc_mixin.js';
+import ProtocolDocPreview from './components/ProtocolDocPreview.vue';
+import protocolDocMixin from './mixins/protocol_doc_mixin.js';
 
 export default {
     name: 'ProtocolView',

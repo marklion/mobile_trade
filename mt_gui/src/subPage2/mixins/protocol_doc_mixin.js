@@ -1,4 +1,4 @@
-import { load_docx_html } from '@/utils/protocol_doc.js';
+import { load_docx_html } from '../utils/protocol_doc.js';
 
 export default {
     data() {
