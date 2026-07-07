@@ -2,6 +2,10 @@ import App from './App'
 // #ifndef VUE3
 
 import Vue from 'vue'
+// #ifdef MP-WEIXIN
+// mammoth 依赖 new Function，必须打进主包；放在 subPage2 分包 vendor 里会运行失败
+import 'mammoth';
+// #endif
 import uView from '@/uni_modules/uview-ui'
 Vue.use(uView)
 import './uni.promisify.adaptor'
