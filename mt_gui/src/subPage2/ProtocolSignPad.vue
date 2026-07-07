@@ -18,9 +18,13 @@ function decodeQueryParam(value) {
     if (!value) {
         return '';
     }
+    if (!/%[0-9A-Fa-f]{2}/.test(value)) {
+        return value;
+    }
     try {
         return decodeURIComponent(value);
     } catch (error) {
+        console.warn('[ProtocolSignPad] decodeQueryParam failed:', error);
         return value;
     }
 }
@@ -93,15 +97,17 @@ export default {
             if (typeof data !== 'string') {
                 return '';
             }
-            if (data.startsWith('{')) {
-                try {
-                    const parsed = JSON.parse(data);
-                    return parsed.file_path || parsed.url || parsed.result || '';
-                } catch {
-                    return data;
-                }
+            if (!data.startsWith('{')) {
+                return data;
             }
-            return data;
+            let parsed;
+            try {
+                parsed = JSON.parse(data);
+            } catch (error) {
+                console.warn('[ProtocolSignPad] upload response JSON parse failed:', error);
+                return data;
+            }
+            return parsed.file_path || parsed.url || parsed.result || '';
         },
         uploadSignatureImage(imgPath) {
             return new Promise((resolve, reject) => {
