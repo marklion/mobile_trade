@@ -14,6 +14,17 @@
 <script>
 import FuiAutograph from '@/components/firstui/fui-autograph/fui-autograph.vue';
 
+function decodeQueryParam(value) {
+    if (!value) {
+        return '';
+    }
+    try {
+        return decodeURIComponent(value);
+    } catch (error) {
+        return value;
+    }
+}
+
 export default {
     name: 'ProtocolSignPad',
     components: {
@@ -70,14 +81,14 @@ export default {
                     }
                     uni.navigateBack();
                 } catch (error) {
-                    console.error(error);
-                    uni.showToast({ title: '保存失败', icon: 'none' });
+                    const msg = typeof error === 'string' ? error : (error?.message || '保存失败');
+                    uni.showToast({ title: msg, icon: 'none' });
                 }
             });
         },
         parseUploadFilePath(data) {
             if (typeof data === 'object' && data) {
-                return data.file_path || data.url || '';
+                return data.file_path || data.url || data.result || '';
             }
             if (typeof data !== 'string') {
                 return '';
@@ -85,9 +96,8 @@ export default {
             if (data.startsWith('{')) {
                 try {
                     const parsed = JSON.parse(data);
-                    return parsed.file_path || parsed.url || '';
-                } catch (parseError) {
-                    console.warn('upload response JSON parse failed', parseError);
+                    return parsed.file_path || parsed.url || parsed.result || '';
+                } catch {
                     return data;
                 }
             }
@@ -103,6 +113,10 @@ export default {
                         token: uni.getStorageSync('token'),
                     },
                     success: (res) => {
+                        if (res.statusCode !== 200) {
+                            reject(new Error('上传失败，状态码 ' + res.statusCode));
+                            return;
+                        }
                         const filePath = this.parseUploadFilePath(res.data);
                         if (filePath) {
                             resolve(filePath);
@@ -117,8 +131,8 @@ export default {
     },
     onLoad(option) {
         this.plan_id = Number.parseInt(option.plan_id, 10) || 0;
-        this.open_id = option.open_id || '';
-        this.signer_name = option.signer_name || '';
+        this.open_id = decodeQueryParam(option.open_id);
+        this.signer_name = decodeQueryParam(option.signer_name);
         if (this.signer_name) {
             uni.setNavigationBarTitle({
                 title: this.signer_name + '签字',
