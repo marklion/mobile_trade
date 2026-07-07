@@ -7,7 +7,6 @@
                 :doc_error="doc_error"
                 :doc_path="doc_path"
                 :doc_html="doc_html"
-                @open="openDocx"
             />
 
             <view class="protocol-sign-zone">
@@ -63,11 +62,14 @@ export default {
             if (!this.plan_id || !this.open_id) {
                 return;
             }
+            this.doc_loading = true;
+            this.doc_error = '';
             const resp = await this.$send_req('/global/driver_get_protocol', {
                 plan_id: this.plan_id,
                 open_id: this.open_id,
             });
             if (!resp.signers || resp.signers.length === 0) {
+                this.doc_loading = false;
                 uni.navigateBack();
                 return;
             }

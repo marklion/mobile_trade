@@ -7,7 +7,6 @@
                 :doc_error="doc_error"
                 :doc_path="doc_path"
                 :doc_html="doc_html"
-                @open="openDocx"
             />
 
             <view v-if="signedSigners.length > 0" class="protocol-sign-zone">
@@ -57,6 +56,8 @@ export default {
             if (!this.plan_id) {
                 return;
             }
+            this.doc_loading = true;
+            this.doc_error = '';
             const resp = await this.$send_req('/global/get_plan_protocol', {
                 plan_id: this.plan_id,
             });

@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const PizZip = require('pizzip');
+const mammoth = require('mammoth');
 const moment = require('moment');
 const uuid = require('uuid');
 const db_opt = require('../db_opt');
@@ -171,6 +172,16 @@ function extract_docx_text(doc_path) {
         lines.push(extract_paragraph_text(para));
     });
     return trim_trailing_newlines(lines.join('\n'));
+}
+
+async function convert_docx_to_html(doc_path) {
+    try {
+        const buffer = await read_attach_file_buffer(doc_path);
+        const result = await mammoth.convertToHtml({ buffer });
+        return result.value || '';
+    } catch (error) {
+        return '';
+    }
 }
 
 function is_uuid_filename(name) {
@@ -351,6 +362,7 @@ module.exports = {
             return {
                 doc_title: '',
                 doc_path: '',
+                doc_html: '',
                 signers: [],
                 all_signed: true,
             };
@@ -365,9 +377,11 @@ module.exports = {
         });
         const doc_content = extract_docx_text(stuff.protocol_doc_path);
         const doc_path = normalize_attach_path(stuff.protocol_doc_path);
+        const doc_html = await convert_docx_to_html(stuff.protocol_doc_path);
         return {
             doc_title: get_doc_title(doc_path, doc_content),
             doc_path,
+            doc_html,
             signers: required.map((name) => ({
                 name,
                 signed: !!sign_map[name],

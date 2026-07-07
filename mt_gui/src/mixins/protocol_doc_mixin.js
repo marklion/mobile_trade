@@ -1,4 +1,4 @@
-import { load_docx_html, open_docx_file } from '@/utils/protocol_doc.js';
+import { load_docx_html } from '@/utils/protocol_doc.js';
 
 export default {
     data() {
@@ -18,6 +18,7 @@ export default {
         applyProtocolResponse(resp) {
             this.doc_title = resp.doc_title;
             this.doc_path = resp.doc_path || '';
+            this.doc_html = resp.doc_html || '';
             this.signers = resp.signers || [];
             if (this.doc_title) {
                 uni.setNavigationBarTitle({ title: this.doc_title });
@@ -29,31 +30,30 @@ export default {
                 this.doc_error = '协议文件不存在';
                 return;
             }
+            if (this.doc_html) {
+                this.doc_loading = false;
+                this.doc_error = '';
+                return;
+            }
+            // #ifdef H5
             this.doc_loading = true;
             this.doc_error = '';
-            this.doc_html = '';
             try {
                 this.doc_html = await load_docx_html(this.doc_path, this.$convert_attach_url);
+                if (!this.doc_html) {
+                    this.doc_error = '协议内容加载失败';
+                }
             } catch (error) {
                 console.error(error);
-                this.doc_error = '协议预览失败，可尝试直接打开文件';
+                this.doc_error = '协议内容加载失败';
             } finally {
                 this.doc_loading = false;
             }
-        },
-        openDocx: async function () {
-            if (!this.doc_path) {
-                return;
-            }
-            uni.showLoading({ title: '打开中...' });
-            try {
-                await open_docx_file(this.doc_path, this.$convert_attach_url);
-            } catch (error) {
-                console.error(error);
-                uni.showToast({ title: '打开失败', icon: 'none' });
-            } finally {
-                uni.hideLoading();
-            }
+            // #endif
+            // #ifndef H5
+            this.doc_loading = false;
+            this.doc_error = '协议内容加载失败';
+            // #endif
         },
     },
 };

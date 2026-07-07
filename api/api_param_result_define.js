@@ -165,6 +165,7 @@ module.exports = {
     plan_protocol_info: {
         doc_title: { type: String, mean: '协议标题', example: '运输协议' },
         doc_path: { type: String, mean: '协议docx路径', example: '/uploads/protocol.docx' },
+        doc_html: { type: String, mean: '协议HTML预览', example: '<p>协议内容</p>' },
         signers: {
             type: Array, mean: '签名人列表', explain: {
                 name: { type: String, mean: '签名人', example: '司机' },
