@@ -3,25 +3,34 @@ const path = require('node:path');
 const fs = require('node:fs');
 const db_opt = require('./db_opt');
 const rbac_lib = require('./lib/rbac_lib');
-const group_lib = require('./lib/group_lib');
 
 const COOKIE_NAME = 'swagger_admin_token';
-const ADMIN_PHONE = '18911992582';
 const COOKIE_MAX_AGE_MS = 8 * 60 * 60 * 1000;
 
 function getSwaggerStaticPath() {
     const candidates = [
         path.join(__dirname, 'swagger-ui-dist'),
-        path.join(__dirname, '../swagger-ui-dist'),
-        path.join(__dirname, '../node_modules/swagger-ui-dist'),
-        path.join(__dirname, '../../node_modules/swagger-ui-dist'),
+        path.join(__dirname, 'node_modules/swagger-ui-dist'),
     ];
+    try {
+        candidates.push(require('swagger-ui-dist/absolute-path')());
+    } catch (e) {
+        // ignore
+    }
     for (const candidate of candidates) {
         if (fs.existsSync(path.join(candidate, 'swagger-ui-bundle.js'))) {
             return candidate;
         }
     }
-    return candidates[0];
+    throw new Error('swagger-ui-dist not found, run npm install in api/');
+}
+
+function isSwaggerStaticAsset(req) {
+    const url_path = (req.url || '').split('?')[0];
+    if (url_path.endsWith('/swagger-ui-init.js')) {
+        return false;
+    }
+    return /\.(?:css|js|png|map|html|txt)$/i.test(url_path);
 }
 
 function parseCookie(req, name) {
@@ -58,7 +67,7 @@ function getLoginHtml(error_msg = '') {
 <body>
     <form method="post" action="/api/swagger/login">
         <h1>接口文档登录</h1>
-        <p class="desc">仅超级管理员可访问 Swagger 调试页面</p>
+        <p class="desc">使用系统账号登录后可调试接口</p>
         ${error_block}
         <label for="phone">手机号</label>
         <input id="phone" name="phone" type="text" autocomplete="username" required>
@@ -70,10 +79,7 @@ function getLoginHtml(error_msg = '') {
 </html>`;
 }
 
-async function verifySwaggerAdminCredentials(phone, password) {
-    if (phone !== ADMIN_PHONE) {
-        return '';
-    }
+async function verifySwaggerCredentials(phone, password) {
     const sq = db_opt.get_sq();
     const user = await sq.models.rbac_user.findOne({
         where: {
@@ -89,49 +95,58 @@ async function verifySwaggerAdminCredentials(phone, password) {
     return '';
 }
 
-async function isSwaggerAdminToken(token) {
+async function isSwaggerTokenValid(token) {
     if (!token) {
         return false;
     }
     const user = await rbac_lib.get_user_by_token(token);
-    return group_lib.is_super_admin_user(user);
+    return !!user;
 }
 
 async function requireSwaggerAdmin(req, res, next) {
+    if (isSwaggerStaticAsset(req)) {
+        return next();
+    }
     const token = parseCookie(req, COOKIE_NAME);
-    if (await isSwaggerAdminToken(token)) {
+    if (await isSwaggerTokenValid(token)) {
         req.swagger_admin_token = token;
         return next();
     }
     if (req.method === 'GET') {
         return res.status(401).send(getLoginHtml());
     }
-    return res.status(401).send('需要管理员登录');
+    return res.status(401).send('需要登录');
+}
+
+function getCookieOptions() {
+    return {
+        httpOnly: true,
+        path: '/api',
+        sameSite: 'lax',
+    };
 }
 
 async function handleSwaggerLogin(req, res) {
     const phone = (req.body.phone || '').trim();
     const password = req.body.password || '';
-    const token = await verifySwaggerAdminCredentials(phone, password);
+    const token = await verifySwaggerCredentials(phone, password);
     if (!token) {
         return res.status(401).send(getLoginHtml('账号或密码错误'));
     }
     res.cookie(COOKIE_NAME, token, {
-        httpOnly: true,
-        path: '/api',
+        ...getCookieOptions(),
         maxAge: COOKIE_MAX_AGE_MS,
-        sameSite: 'lax',
     });
-    return res.redirect(301, '/api/swagger/');
+    return res.redirect(302, '/api/swagger/');
 }
 
 function handleSwaggerLogout(req, res) {
-    res.clearCookie(COOKIE_NAME, { path: '/api' });
-    return res.redirect(301, '/api/swagger/');
+    res.clearCookie(COOKIE_NAME, getCookieOptions());
+    return res.redirect(302, '/api/swagger/');
 }
 
-function buildInitScript(admin_token) {
-    const token_json = JSON.stringify(admin_token);
+function buildInitScript(user_token) {
+    const token_json = JSON.stringify(user_token);
     return `
 window.onload = function() {
   var swaggerOptions = {
@@ -155,6 +170,19 @@ window.onload = function() {
   var ui = SwaggerUIBundle(swaggerOptions);
   ui.preauthorizeApiKey('token', ${token_json});
   window.ui = ui;
+
+  var logoutBar = document.createElement('div');
+  logoutBar.style.cssText = 'position:fixed;top:10px;right:20px;z-index:9999;';
+  var logoutLink = document.createElement('a');
+  logoutLink.href = '/api/swagger/logout';
+  logoutLink.textContent = '退出登录';
+  logoutLink.style.cssText = 'padding:6px 14px;background:#fff;border:1px solid #ddd;border-radius:4px;color:#333;text-decoration:none;font-size:14px;box-shadow:0 1px 4px rgba(0,0,0,.08);cursor:pointer;';
+  logoutLink.addEventListener('click', function(e) {
+    e.preventDefault();
+    window.location.href = '/api/swagger/logout?_=' + Date.now();
+  });
+  logoutBar.appendChild(logoutLink);
+  document.body.appendChild(logoutBar);
 };`;
 }
 
