@@ -17,9 +17,14 @@ zyzl_plugin::zyzl_plugin()
             auto ers = sqlite_orm::search_record_all<sql_zyzl_plugin_que>("PRI_ID != 0");
             for (auto &itr : ers)
             {
+                auto req_body = neb::CJsonObject(itr.req_body);
+                if (itr.plate.length() > 0 && req_body.KeyExist("id") && req_body("id") == "")
+                {
+                    req_body.Replace("id", get_id_from_plate(itr.plate));
+                }
                 auto send_ret = send_to_zyzl(
                     itr.req_url,
-                    neb::CJsonObject(itr.req_body),
+                    req_body,
                     [](const neb::CJsonObject &)
                     { return true; });
                 if (send_ret)
@@ -64,22 +69,7 @@ bool zyzl_plugin::push_weight(const std::string &_plate, const std::string &_p_t
     req.Add("ticketNo", _ticket_no);
     req.Add("sealNo", _seal_no);
 
-    send_to_que(push_weight_path, req);
-    ret = true;
-
-    return ret;
-}
-
-bool zyzl_plugin::push_call(const std::string &_plate, const std::string &_driver_name)
-{
-    bool ret = false;
-    std::string call_vehicle_path = "/call_vehicle";
-
-    neb::CJsonObject req;
-    req.Add("plateNo", _plate);
-    req.Add("driverName", _driver_name);
-
-    send_to_que(call_vehicle_path, req);
+    send_to_que(push_weight_path, req, _plate);
     ret = true;
 
     return ret;
@@ -92,11 +82,7 @@ bool zyzl_plugin::push_p(const std::string &_plate)
     neb::CJsonObject req;
     req.Add("id", get_id_from_plate(_plate));
 
-    send_to_zyzl(
-        push_p_path,
-        req,
-        [](const neb::CJsonObject &)
-        { return true; });
+    send_to_que(push_p_path, req, _plate);
     return true;
 }
 
@@ -286,11 +272,12 @@ std::string zyzl_plugin::get_driver_name_from_plate(const std::string &_plate)
     return ret;
 }
 
-void zyzl_plugin::send_to_que(const std::string &_path, const neb::CJsonObject &_req, bool _is_get)
+void zyzl_plugin::send_to_que(const std::string &_path, const neb::CJsonObject &_req, const std::string &_plate)
 {
     sql_zyzl_plugin_que tmp;
     tmp.req_body = _req.ToString();
     tmp.req_url = _path;
+    tmp.plate = _plate;
     tmp.insert_record();
 }
 

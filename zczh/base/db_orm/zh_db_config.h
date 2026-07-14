@@ -490,12 +490,14 @@ class sql_zyzl_plugin_que : public sql_tree_base
 public:
     std::string req_body;
     std::string req_url;
+    std::string plate;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
 
         ret.push_back(sqlite_orm_column("req_body", sqlite_orm_column::STRING, &req_body));
         ret.push_back(sqlite_orm_column("req_url", sqlite_orm_column::STRING, &req_url));
+        ret.push_back(sqlite_orm_column("plate", sqlite_orm_column::STRING, &plate));
 
         return ret;
     }
