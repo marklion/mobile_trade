@@ -1008,17 +1008,28 @@ module.exports = {
                 if (body.base_day) {
                     base_moment = moment(body.base_day, 'YYYY-MM-DD');
                 }
-                let condition = {
-                    plan_time: base_moment.add(day_offset, 'days').format('YYYY-MM-DD'), stuffId: {
-                        [db_opt.Op.in]: [],
-                    },
-                    is_buy: false
-                };
+                let plan_time = base_moment.add(day_offset, 'days').format('YYYY-MM-DD');
                 let stuff = await company.getStuff({ where: { use_for_buy: false } });
-                for (let index = 0; index < stuff.length; index++) {
-                    const element = stuff[index];
-                    condition.stuffId[db_opt.Op.in].push(element.id);
-                }
+                let stuff_ids = stuff.map((item) => item.id);
+                let condition = {
+                    plan_time: plan_time,
+                    stuffId: { [db_opt.Op.in]: stuff_ids },
+                    is_buy: false,
+                };
+                const count_by_chart_status = async (customer_id, status) => {
+                    let where = plan_lib.make_plan_where_condition({
+                        start_time: plan_time,
+                        end_time: plan_time,
+                        status: status,
+                        hide_manual_close: true,
+                        only_count: true,
+                        company_id: customer_id,
+                    }, false);
+                    where[db_opt.Op.and].push({
+                        stuffId: { [db_opt.Op.in]: stuff_ids },
+                    });
+                    return await db_opt.get_sq().models.plan.count({ where });
+                };
                 let plans = await db_opt.get_sq().models.plan.findAll({
                     where: condition,
                     attributes: ['companyId'],
@@ -1027,52 +1038,21 @@ module.exports = {
                 for (let index = 0; index < plans.length; index++) {
                     const element = plans[index];
                     let customer = await db_opt.get_sq().models.company.findByPk(element.companyId);
-                    const confirmHistoryInclude = [{
-                        model: db_opt.get_sq().models.plan_history,
-                        where: { action_type: '确认' }
-                    }];
-                    const buildConfirmBaseCond = (overrides = {}) => {
-                        let total_cond = {
+                    let status1_count = await count_by_chart_status(customer.id, 1);
+                    let status2_count = await count_by_chart_status(customer.id, 2);
+                    let status3_count = await count_by_chart_status(customer.id, 3);
+                    let cancel_count = await db_opt.get_sq().models.plan.count({
+                        where: {
                             ...condition,
-                            status: { [db_opt.Op.ne]: 0 },
-                            '$plan_histories.action_type$': '确认',
-                            ...overrides,
-                        };
-                        if (body.day_offset == 0 && body.base_day == moment().format('YYYY-MM-DD') && overrides.manual_close === undefined) {
-                            total_cond.manual_close = false;
-                        }
-                        return total_cond;
-                    };
-                    let confirm_count = await customer.countPlans({
-                        where: buildConfirmBaseCond(),
-                        include: confirmHistoryInclude
-                    });
-                    let tmp_cond = {
-                        ...condition,
-                        manual_close: false,
-                        [db_opt.Op.or]: [
-                            { status: 3 },
-                            {
-                                status: 2,
-                                checkout_delay: true,
-                                count: { [db_opt.Op.gt]: 0 }
-                            }
-                        ]
-                    }
-                    let finish_count = await customer.countPlans({
-                        where: tmp_cond
-                    });
-                    let cancel_count = await customer.countPlans({
-                        where: buildConfirmBaseCond({
+                            companyId: customer.id,
                             status: 3,
                             manual_close: true,
-                        }),
-                        include: confirmHistoryInclude
+                        },
                     });
                     ret.push({
                         company: customer,
-                        confirm_count: confirm_count,
-                        finish_count: finish_count,
+                        confirm_count: status1_count + status2_count + status3_count,
+                        finish_count: status3_count,
                         cancel_count: cancel_count,
                     })
                 }
