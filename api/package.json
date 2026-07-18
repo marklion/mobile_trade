@@ -39,6 +39,7 @@
     "node-int64": "^0.4.0",
     "officegen": "^0.6.5",
     "pg-hstore": "^2.3.4",
+    "pinyin": "^4.0.0",
     "pizzip": "^3.1.7",
     "readable-stream": "^2.3.8",
     "sequelize": "^6.37.1",

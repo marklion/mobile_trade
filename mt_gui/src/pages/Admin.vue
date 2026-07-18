@@ -1,6 +1,6 @@
 <template>
 <view>
-    <list-show v-model="data2show" ref="cp_ref" height="95vh" :fetch_function="get_company" search_key="head">
+    <list-show v-model="data2show" ref="cp_ref" height="95vh" :fetch_function="get_company" search_key="head" server_search>
         <fui-panel v-for="item in data2show" :key="item.id" :panelData="item">
             <view style="display: flex;">
                 <fui-button btn-size="mini" radius="0" text="管理员配置" class="btn_config" @click="show_admin_config = true;focus_company=item.id"></fui-button>
@@ -139,11 +139,15 @@ export default {
             ret = res.all_module;
             return ret;
         },
-        get_company: async function (_pageNo) {
+        get_company: async function (_pageNo, _fetch_params, fetch_options = {}) {
             let ret = [];
-            let res = await this.$send_req('/global/company_get_all', {
-                pageNo: _pageNo
-            });
+            let req = {
+                pageNo: _pageNo,
+            };
+            if (fetch_options.search_key) {
+                req.search_key = fetch_options.search_key;
+            }
+            let res = await this.$send_req('/global/company_get_all', req);
             res.all_company.forEach(ele => {
                 let module_array = [];
                 ele.bound_modules.forEach(item => {

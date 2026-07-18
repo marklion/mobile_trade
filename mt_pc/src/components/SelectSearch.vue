@@ -90,8 +90,10 @@ export default {
                 this.is_waiting = true;
                 setTimeout(() => {
                     if (this.search_input.length == 0) {
+                        delete this.$refs.filter.req_body.search_key;
                         this.$refs.filter.cancel_search();
                     } else {
+                        this.$refs.filter.req_body.search_key = this.search_input;
                         this.$refs.filter.do_search();
                     }
                     this.is_waiting = false;

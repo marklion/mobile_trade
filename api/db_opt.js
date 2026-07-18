@@ -95,6 +95,7 @@ let db_opt = {
         company: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING, unique: true },
+            py_search: { type: DataTypes.TEXT },
             script: { type: DataTypes.STRING },
             address: { type: DataTypes.STRING(2048) },
             contact: { type: DataTypes.STRING(2048) },
