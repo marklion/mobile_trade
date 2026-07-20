@@ -140,6 +140,8 @@ let db_opt = {
             is_group: { type: DataTypes.BOOLEAN, defaultValue: false },
             group_admin_user_id: { type: DataTypes.INTEGER, allowNull: true },
             parentGroupCompanyId: { type: DataTypes.INTEGER, allowNull: true },
+            tplus_appkey: { type: DataTypes.TEXT },
+            tplus_appsecret: { type: DataTypes.TEXT },
         },
         group_member_data_grant: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
