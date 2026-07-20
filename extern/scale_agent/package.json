@@ -1,7 +1,7 @@
 {
   "name": "scale_agent",
   "version": "1.0.0",
-  "description": "Scale agent: serial + script to localhost:39109/scale",
+  "description": "半自动过磅插件：读串口+脚本解析，提供 localhost:39109/scale",
   "main": "index.js",
   "bin": "index.js",
   "scripts": {
@@ -9,7 +9,6 @@
     "build:win": "rm -rf dist && pkg index.js --targets node18-win-x64 --output dist/scale_agent.exe && mkdir -p dist/prebuilds/win32-x64 && cp node_modules/@serialport/bindings-cpp/prebuilds/win32-x64/node.napi.node dist/prebuilds/win32-x64/node.napi.node"
   },
   "dependencies": {
-    "js-yaml": "^4.1.0",
     "serialport": "^12.0.0"
   },
   "devDependencies": {
