@@ -12,20 +12,24 @@ module.exports = {
                 "openToken": token
             }
         });
-        let resp = await axios_instance({
-            method: method,
-            url: url,
-            params: params,
-            data: body
-        });
-        let ret;
-        if (resp.status === 200) {
-            ret = resp.data;
+        let resp;
+        try {
+            resp = await axios_instance({
+                method: method,
+                url: url,
+                params: params,
+                data: body,
+                timeout: 30000,
+                validateStatus: () => true,
+            });
+        } catch (e) {
+            console.error('call tplus failed:', e && e.message ? e.message : e);
+            throw { err_msg: '调用T+接口失败' };
         }
-        else {
-            console.error("call tplus failed:");
-            console.error(JSON.stringify(resp));
+        if (resp.status !== 200) {
+            console.error(`call tplus failed: status=${resp.status}`);
+            throw { err_msg: '调用T+接口失败' };
         }
-        return ret;
+        return resp.data;
     }
 };
