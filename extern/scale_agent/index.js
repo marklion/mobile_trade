@@ -1,16 +1,248 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-const vm = require('vm');
 const { SerialPort } = require('serialport');
 
 const PORT = 39109;
 const APP_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
 const CONFIG_PATH = process.env.SCALE_AGENT_CONFIG || path.join(APP_DIR, 'scale_agent.config.json');
+const SCRIPT_MAX_LEN = 2048;
 
-/** 仅允许函数表达式 / 箭头函数，防止配置脚本注入任意语句。 */
-const SCRIPT_PATTERN =
-  /^\s*(?:function\s*\([^)]*\)\s*\{[\s\S]*\}|(?:\([^)]*\)|[\w$]+)\s*=>[\s\S]+)\s*$/;
+function extractExpression(script) {
+  const text = String(script || '').trim();
+  if (!text || text.length > SCRIPT_MAX_LEN) {
+    throw new TypeError('script 无效或过长');
+  }
+
+  if (text.startsWith('function')) {
+    const marker = 'return ';
+    const idx = text.indexOf(marker);
+    if (idx < 0) {
+      throw new TypeError('script 函数体必须包含 return 表达式');
+    }
+    let expr = text.slice(idx + marker.length).trim();
+    if (expr.endsWith('}')) {
+      expr = expr.slice(0, -1).trim();
+    }
+    if (expr.endsWith(';')) {
+      expr = expr.slice(0, -1).trim();
+    }
+    return expr;
+  }
+
+  const arrow = text.indexOf('=>');
+  if (arrow >= 0) {
+    let expr = text.slice(arrow + 2).trim();
+    if (expr.startsWith('{')) {
+      const marker = 'return ';
+      const idx = expr.indexOf(marker);
+      if (idx < 0) {
+        throw new TypeError('script 箭头函数体必须包含 return 表达式');
+      }
+      expr = expr.slice(idx + marker.length).trim();
+      if (expr.endsWith('}')) {
+        expr = expr.slice(0, -1).trim();
+      }
+      if (expr.endsWith(';')) {
+        expr = expr.slice(0, -1).trim();
+      }
+    }
+    return expr;
+  }
+
+  return text;
+}
+
+/** 仅允许 array[下标] 与四则 / 位运算，拒绝任意代码执行。 */
+function compileExpression(expr) {
+  const source = String(expr || '').trim();
+  if (!source) {
+    throw new TypeError('script 表达式为空');
+  }
+
+  let i = 0;
+  const peek = () => source[i];
+  const next = () => source[i++];
+
+  function skipWs() {
+    while (i < source.length && source[i] <= ' ') {
+      i += 1;
+    }
+  }
+
+  function parsePrimary() {
+    skipWs();
+    if (i >= source.length) {
+      throw new TypeError('script 表达式不完整');
+    }
+
+    if (peek() === '(') {
+      next();
+      const value = parseBitwiseOr();
+      skipWs();
+      if (peek() !== ')') {
+        throw new TypeError('script 缺少右括号');
+      }
+      next();
+      return value;
+    }
+
+    if (source.startsWith('array[', i)) {
+      i += 'array['.length;
+      skipWs();
+      let num = '';
+      while (i < source.length && source[i] >= '0' && source[i] <= '9') {
+        num += next();
+      }
+      skipWs();
+      if (!num || peek() !== ']') {
+        throw new TypeError('script 仅支持 array[非负整数]');
+      }
+      next();
+      const index = Number(num);
+      return (array) => array[index];
+    }
+
+    if ((peek() >= '0' && peek() <= '9') || peek() === '.') {
+      let num = '';
+      while (i < source.length && ((source[i] >= '0' && source[i] <= '9') || source[i] === '.')) {
+        num += next();
+      }
+      const literal = Number(num);
+      if (Number.isNaN(literal)) {
+        throw new TypeError('script 数字字面量无效');
+      }
+      return () => literal;
+    }
+
+    if (peek() === '+' || peek() === '-' || peek() === '~') {
+      const op = next();
+      const inner = parsePrimary();
+      return (array) => {
+        const v = inner(array);
+        if (op === '+') return +v;
+        if (op === '-') return -v;
+        return ~v;
+      };
+    }
+
+    throw new TypeError(`script 含有不允许的内容: ${source.slice(i, i + 16)}`);
+  }
+
+  function parseMulDiv() {
+    let left = parsePrimary();
+    for (;;) {
+      skipWs();
+      const op = peek();
+      if (op !== '*' && op !== '/' && op !== '%') {
+        return left;
+      }
+      next();
+      const right = parsePrimary();
+      const prev = left;
+      left = (array) => {
+        const a = prev(array);
+        const b = right(array);
+        if (op === '*') return a * b;
+        if (op === '/') return a / b;
+        return a % b;
+      };
+    }
+  }
+
+  function parseAddSub() {
+    let left = parseMulDiv();
+    for (;;) {
+      skipWs();
+      const op = peek();
+      if (op !== '+' && op !== '-') {
+        return left;
+      }
+      next();
+      const right = parseMulDiv();
+      const prev = left;
+      left = (array) => {
+        const a = prev(array);
+        const b = right(array);
+        return op === '+' ? a + b : a - b;
+      };
+    }
+  }
+
+  function parseShift() {
+    let left = parseAddSub();
+    for (;;) {
+      skipWs();
+      if (source.startsWith('<<', i)) {
+        i += 2;
+        const right = parseAddSub();
+        const prev = left;
+        left = (array) => prev(array) << right(array);
+      } else if (source.startsWith('>>>', i)) {
+        i += 3;
+        const right = parseAddSub();
+        const prev = left;
+        left = (array) => prev(array) >>> right(array);
+      } else if (source.startsWith('>>', i)) {
+        i += 2;
+        const right = parseAddSub();
+        const prev = left;
+        left = (array) => prev(array) >> right(array);
+      } else {
+        return left;
+      }
+    }
+  }
+
+  function parseBitwiseAnd() {
+    let left = parseShift();
+    for (;;) {
+      skipWs();
+      if (peek() !== '&' || source.startsWith('&&', i)) {
+        return left;
+      }
+      next();
+      const right = parseShift();
+      const prev = left;
+      left = (array) => prev(array) & right(array);
+    }
+  }
+
+  function parseBitwiseXor() {
+    let left = parseBitwiseAnd();
+    for (;;) {
+      skipWs();
+      if (peek() !== '^') {
+        return left;
+      }
+      next();
+      const right = parseBitwiseAnd();
+      const prev = left;
+      left = (array) => prev(array) ^ right(array);
+    }
+  }
+
+  function parseBitwiseOr() {
+    let left = parseBitwiseXor();
+    for (;;) {
+      skipWs();
+      if (peek() !== '|' || source.startsWith('||', i)) {
+        return left;
+      }
+      next();
+      const right = parseBitwiseXor();
+      const prev = left;
+      left = (array) => prev(array) | right(array);
+    }
+  }
+
+  const compiled = parseBitwiseOr();
+  skipWs();
+  if (i !== source.length) {
+    throw new TypeError(`script 含有不允许的内容: ${source.slice(i, i + 16)}`);
+  }
+  return compiled;
+}
 
 /**
  * 打开串口，按脚本处理字节数组，结果供 scale() 返回。
@@ -27,25 +259,7 @@ class OutputHelper {
   }
 
   async apply(serial, script, baudRate = 9600) {
-    const text = String(script || '').trim();
-    if (!SCRIPT_PATTERN.test(text)) {
-      throw new TypeError(
-        'script 必须是函数，例如: function (array) { return array[0] + array[1]; }',
-      );
-    }
-    let fn;
-    try {
-      fn = vm.runInNewContext(`(${text})`, Object.create(null), {
-        timeout: 1000,
-        displayErrors: true,
-      });
-    } catch (err) {
-      throw new TypeError(`script 无法解析为函数: ${err.message}`);
-    }
-    if (typeof fn !== 'function') {
-      throw new TypeError('script 必须是函数，例如: function (array) { return array[0] + array[1]; }');
-    }
-    this._parse = fn;
+    this._parse = compileExpression(extractExpression(script));
 
     if (this._port) {
       await new Promise((resolve) => this._port.close(() => resolve()));
@@ -63,10 +277,17 @@ class OutputHelper {
       baudRate: Number(baudRate) || 9600,
       autoOpen: false,
     });
-    this._port.on('error', (err) => console.error('[OutputHelper] 串口错误:', err.message));
+    this._port.on('error', (err) => console.error('[OutputHelper] 串口错误'));
     this._port.on('data', (chunk) => this._onData(chunk));
     await new Promise((resolve, reject) => {
-      this._port.open((err) => (err ? reject(err) : resolve()));
+      this._port.open((err) => {
+        if (err) {
+          // 避免把设备路径等敏感信息写入日志
+          reject(new Error('串口打开失败'));
+          return;
+        }
+        resolve();
+      });
     });
     console.log('[OutputHelper] 串口已打开');
   }
@@ -82,8 +303,8 @@ class OutputHelper {
       if (!Number.isNaN(n) && Number.isFinite(n)) {
         this._weight = n;
       }
-    } catch (err) {
-      console.error('[OutputHelper] 脚本执行失败:', err.message);
+    } catch {
+      console.error('[OutputHelper] 脚本执行失败');
     }
   }
 
@@ -98,7 +319,7 @@ class OutputHelper {
 
 function loadConfig() {
   if (!fs.existsSync(CONFIG_PATH)) {
-    throw new Error(`配置文件不存在: ${CONFIG_PATH}`);
+    throw new Error('配置文件不存在');
   }
   return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 }
@@ -131,7 +352,6 @@ async function main() {
 
   server.listen(PORT, () => {
     console.log(`scale_agent 已启动: http://localhost:${PORT}/scale`);
-    console.log(`配置文件: ${CONFIG_PATH}`);
   });
 
   const shutdown = async () => {
@@ -142,7 +362,7 @@ async function main() {
   process.on('SIGTERM', shutdown);
 }
 
-main().catch((err) => {
-  console.error('scale_agent 启动失败:', err.message);
+main().catch(() => {
+  console.error('scale_agent 启动失败');
   process.exit(1);
 });
