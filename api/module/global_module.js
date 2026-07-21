@@ -2806,7 +2806,7 @@ module.exports = {
         test_t_plus:{
             name: '测试T+接口',
             description: '测试T+接口',
-            need_rbac: false,
+            need_rbac: true,
             is_write: false,
             is_get_api: false,
             params: {
