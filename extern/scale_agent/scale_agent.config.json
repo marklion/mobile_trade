@@ -4,9 +4,9 @@
   "frameSize": 12,
   "script": "function(e){return 12==e.length?(e[7]-48+10*(e[6]-48)+100*(e[5]-48)+1e3*(e[4]-48)+1e4*(e[3]-48)+1e5*(e[2]-48))/1e3:0}",
   "_comment": {
-    "serial": "串口名，必须和设备管理器一致；留空则只起 HTTP，读数会一直是 0",
-    "baudRate": "波特率，需与仪表一致",
-    "frameSize": "定长帧字节数；现场脚本用 length==N 判断时务必配置，否则半包返回 0 会一直盖掉读数",
-    "script": "解析函数。浏览器打开 http://localhost:39109/scale 可看 opened/gotData 排查"
+    "serial": "串口名，Windows 如 COM1，Linux 如 /dev/ttyUSB0；留空则只起 HTTP",
+    "baudRate": "波特率，默认 9600",
+    "frameSize": "定长帧字节数；脚本用 length==N 时务必配置",
+    "script": "解析函数，入参为字节数组。浏览器打开 http://localhost:39109/scale 可看 opened/gotData"
   }
 }

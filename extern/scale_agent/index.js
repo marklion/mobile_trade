@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
+const vm = require('vm');
 const { SerialPort } = require('serialport');
 
 const PORT = 39109;
@@ -9,20 +10,36 @@ const CONFIG_PATH = process.env.SCALE_AGENT_CONFIG || path.join(APP_DIR, 'scale_
 const SCRIPT_MAX_LEN = 8192;
 const BUF_MAX = 4096;
 
-/**
- * 编译配置里的解析函数（本地可信配置）。
- * 无法解析时请返回 null；若仍返回 0，必须配置 frameSize，否则半包会把读数盖成 0。
- */
+
 function compileScript(script) {
   const text = String(script || '').trim();
   if (!text || text.length > SCRIPT_MAX_LEN) {
     throw new TypeError('script 无效或过长');
   }
-  const fn = new Function(`"use strict"; return (${text});`)();
+  if (!text.startsWith('function') && !text.includes('=>')) {
+    throw new TypeError('script 必须是函数');
+  }
+  let fn;
+  try {
+    fn = vm.runInNewContext(`(${text})`, Object.create(null), {
+      timeout: 1000,
+      displayErrors: true,
+    }); // NOSONAR
+  } catch (err) {
+    throw new TypeError(`script 无法解析: ${err?.message ?? err}`);
+  }
   if (typeof fn !== 'function') {
     throw new TypeError('script 必须是函数');
   }
   return fn;
+}
+
+function toFiniteNumber(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 class OutputHelper {
@@ -49,7 +66,7 @@ class OutputHelper {
 
   async apply(serial, script, baudRate = 9600, frameSize = 0) {
     this._parse = compileScript(script);
-    this._frameSize = Number(frameSize) > 0 ? Number(frameSize) : 0;
+    this._frameSize = Math.max(0, Number(frameSize) || 0);
     this._buf = [];
     this._opened = false;
     this._gotData = false;
@@ -65,6 +82,10 @@ class OutputHelper {
       return;
     }
 
+    await this._openPort(pathName, baudRate);
+  }
+
+  async _openPort(pathName, baudRate) {
     const port = new SerialPort({
       path: pathName,
       baudRate: Number(baudRate) || 9600,
@@ -92,19 +113,7 @@ class OutputHelper {
     }
   }
 
-  _applyValue(value) {
-    if (value === null || value === undefined) {
-      return false;
-    }
-    const n = Number(value);
-    if (!Number.isFinite(n)) {
-      return false;
-    }
-    this._weight = n;
-    return true;
-  }
-
-  _onData(chunk) {
+  _appendChunk(chunk) {
     this._gotData = true;
     for (const b of chunk) {
       this._buf.push(b);
@@ -112,49 +121,36 @@ class OutputHelper {
     if (this._buf.length > BUF_MAX) {
       this._buf.splice(0, this._buf.length - 512);
     }
+  }
 
-    if (this._frameSize > 0) {
-      // 定长帧：兼容「长度不对就返回 0」的现场脚本
-      while (this._buf.length >= this._frameSize) {
-        const frame = this._buf.slice(0, this._frameSize);
-        let value;
-        try {
-          value = this._parse(frame);
-        } catch {
-          this._buf.shift();
-          continue;
-        }
-        if (value === null || value === undefined) {
-          this._buf.shift();
-          continue;
-        }
-        const n = Number(value);
-        if (!Number.isFinite(n)) {
-          this._buf.shift();
-          continue;
-        }
-        this._weight = n;
-        this._buf.splice(0, this._frameSize);
-      }
-      return;
+  _tryParse(bytes) {
+    try {
+      return toFiniteNumber(this._parse(bytes));
+    } catch {
+      return null;
     }
+  }
 
-    // 未配置 frameSize：从长到短试前缀；0 不作为“解析成功”（避免半包盖成 0）
+  _drainFixedFrames() {
+    while (this._buf.length >= this._frameSize) {
+      const frame = this._buf.slice(0, this._frameSize);
+      const n = this._tryParse(frame);
+      if (n === null) {
+        this._buf.shift();
+        continue;
+      }
+      this._weight = n;
+      this._buf.splice(0, this._frameSize);
+    }
+  }
+
+  _drainVariableFrames() {
     let progressed = true;
     while (progressed && this._buf.length > 0) {
       progressed = false;
       for (let len = this._buf.length; len >= 1; len -= 1) {
-        let value;
-        try {
-          value = this._parse(this._buf.slice(0, len));
-        } catch {
-          continue;
-        }
-        if (value === null || value === undefined) {
-          continue;
-        }
-        const n = Number(value);
-        if (!Number.isFinite(n) || n === 0) {
+        const n = this._tryParse(this._buf.slice(0, len));
+        if (n === null || n === 0) {
           continue;
         }
         this._weight = n;
@@ -167,6 +163,15 @@ class OutputHelper {
         progressed = true;
       }
     }
+  }
+
+  _onData(chunk) {
+    this._appendChunk(chunk);
+    if (this._frameSize > 0) {
+      this._drainFixedFrames();
+      return;
+    }
+    this._drainVariableFrames();
   }
 
   async close() {
@@ -186,12 +191,8 @@ function loadConfig() {
   return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 }
 
-async function main() {
-  const config = loadConfig();
-  const helper = new OutputHelper();
-  await helper.apply(config.serial, config.script, config.baudRate, config.frameSize);
-
-  const server = http.createServer((req, res) => {
+function createServer(helper) {
+  return http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     if (req.method === 'OPTIONS') {
@@ -211,7 +212,14 @@ async function main() {
     res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ err: 'not found' }));
   });
+}
 
+async function main() {
+  const config = loadConfig();
+  const helper = new OutputHelper();
+  await helper.apply(config.serial, config.script, config.baudRate, config.frameSize);
+
+  const server = createServer(helper);
   server.listen(PORT, () => {
     console.log(`scale_agent 已启动: http://localhost:${PORT}/scale`);
   });
@@ -225,6 +233,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('scale_agent 启动失败:', err && err.message ? err.message : err);
+  console.error('scale_agent 启动失败:', err?.message ?? err);
   process.exit(1);
 });
