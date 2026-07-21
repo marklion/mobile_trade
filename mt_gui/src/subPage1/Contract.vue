@@ -101,7 +101,7 @@
     </fui-modal>
     <fui-bottom-popup :show="show_customers" @close="show_customers= false">
         <fui-list>
-            <list-show v-if="show_customers" v-model="customers_data2show" :fetch_function="get_customers" search_key="name" height="40vh">
+            <list-show v-if="show_customers" v-model="customers_data2show" :fetch_function="get_customers" search_key="name" server_search height="40vh">
                 <fui-list-cell arrow v-for="item in customers_data2show" :key="item.id" @click="select_company(item)">
                     {{item.name}}
                 </fui-list-cell>
@@ -844,10 +844,14 @@ export default {
             this.company_name = item.name;
             this.show_customers = false;
         },
-        get_customers: async function (pageNo) {
-            let ret = await this.$send_req('/global/company_get_all', {
-                pageNo: pageNo
-            });
+        get_customers: async function (pageNo, fetch_params, fetch_options = {}) {
+            let req = {
+                pageNo: pageNo,
+            };
+            if (fetch_options.search_key) {
+                req.search_key = fetch_options.search_key;
+            }
+            let ret = await this.$send_req('/global/company_get_all', req);
             return ret.all_company;
         },
         update_contract: async function (detail) {

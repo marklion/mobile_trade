@@ -38,6 +38,8 @@ export default {
             let ret = [];
             if (this.search_condition == '') {
                 ret = this.all_data;
+            } else if (this.server_search) {
+                ret = this.all_data;
             } else {
                 this.all_data.forEach(ele => {
                     if (PinyinMatch.match(ele[this.search_key], this.search_condition)) {
@@ -68,6 +70,10 @@ export default {
             type: String,
             default: ''
         },
+        server_search: {
+            type: Boolean,
+            default: false,
+        },
     },
     watch: {
         show_count: function () {
@@ -82,10 +88,12 @@ export default {
     methods: {
         cancel: function () {
             this.search_condition = '';
-            this.$refs.searchBar.reset()
+            this.$refs.searchBar.reset();
+            this.refresh();
         },
         search: async function (e) {
             this.search_condition = e.detail.value;
+            this.refresh();
         },
         refresh: function () {
             this.all_data = [];
@@ -96,7 +104,11 @@ export default {
         fetch_new: async function () {
             if (!this.finish && !this.fetching) {
                 this.fetching = true;
-                let new_data = await this.fetch_function(this.page, this.fetch_params);
+                let fetch_options = {};
+                if (this.server_search && this.search_condition) {
+                    fetch_options.search_key = this.search_condition;
+                }
+                let new_data = await this.fetch_function(this.page, this.fetch_params, fetch_options);
                 if (new_data.length == 0) {
                     this.finish = true;
                 } else {

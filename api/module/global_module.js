@@ -1123,6 +1123,7 @@ module.exports = {
             is_write: false,
             is_get_api: true,
             params: {
+                search_key: { type: String, have_to: false, mean: '搜索关键字', example: 'zhuochuang' },
             },
             result: {
                 all_company: {
@@ -1152,7 +1153,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let ret = {};
-                let result = await rbac_lib.get_all_company(body.pageNo);
+                let result = await rbac_lib.get_all_company(body.pageNo, body.search_key);
                 ret.all_company = result.companys;
                 ret.total = result.count;
                 return ret;

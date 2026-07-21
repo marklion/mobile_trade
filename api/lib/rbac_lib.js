@@ -1,4 +1,5 @@
 const db_opt = require('../db_opt');
+const py_search_lib = require('./py_search_lib');
 const moment = require('moment');
 
 module.exports = {
@@ -104,8 +105,10 @@ module.exports = {
             where: { name: _name },
             defaults: {
                 name: _name,
+                py_search: py_search_lib.buildPySearch(_name),
             },
         });
+        one[0].py_search = py_search_lib.buildPySearch(_name);
         if (one[1]) {
             await this.bind_company2module(one[0].id, (await sq.models.rbac_module.findOne({ where: { name: 'customer' } })).id);
         }
@@ -140,14 +143,23 @@ module.exports = {
             await one.destroy();
         }
     },
-    get_all_company: async function (_page) {
+    get_all_company: async function (_page, _search_key) {
         let sq = db_opt.get_sq();
+        let where = {};
+        if (_search_key && _search_key.trim()) {
+            const key = _search_key.trim();
+            where[db_opt.Op.or] = [
+                { py_search: { [db_opt.Op.like]: `%${key}%` } },
+                { name: { [db_opt.Op.like]: `%${key}%` } },
+            ];
+        }
         let companys = await sq.models.company.findAll({
+            where,
             order: [['id', 'ASC']],
             limit: 20,
             offset: _page * 20,
         });
-        let count = await sq.models.company.count();
+        let count = await sq.models.company.count({ where });
         for (let index = 0; index < companys.length; index++) {
             const element = companys[index];
             element.bound_modules = [];
