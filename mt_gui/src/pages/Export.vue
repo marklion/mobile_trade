@@ -80,6 +80,12 @@
                 <u-cell title="导出现场检查表" isLink @click="export_fc_contents()"></u-cell>
             </u-cell-group>
         </module-filter>
+        <u-divider lineColor="blue"></u-divider>
+        <module-filter require_module="exam">
+            <u-cell-group title="司机考试试卷导出">
+                <u-cell title="导出司机考试试卷" isLink @click="export_driver_exam()"></u-cell>
+            </u-cell-group>
+        </module-filter>
     </view>
     <view v-if="cur_page == 1">
         <list-show ref="dr" :fetch_function="get_export_record" height="90vh" v-model="records">
@@ -300,6 +306,21 @@ export default {
         export_fc_contents: async function () {
             try {
                 await this.$send_req('/sc/export_fc_table', {
+                    start_time: this.begin_date,
+                    end_time: this.end_date,
+                });
+                this.cur_page = 1;
+            } catch (error) {
+                uni.showToast({
+                    title: error,
+                    icon: 'none',
+                    duration: 2000
+                });
+            }
+        },
+        export_driver_exam: async function () {
+            try {
+                await this.$send_req('/exam/export_exam_papers', {
                     start_time: this.begin_date,
                     end_time: this.end_date,
                 });

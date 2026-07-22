@@ -1,4 +1,96 @@
 const db_opt = require('../db_opt')
+const fs = require('fs');
+const path = require('path');
+const archiver = require('archiver');
+const uuid = require('uuid');
+const officegen = require('officegen');
+
+function was_selected(option, exam) {
+    if (!exam.exam_answers) {
+        return false;
+    }
+    for (let i = 0; i < exam.exam_answers.length; i++) {
+        const answer = exam.exam_answers[i];
+        if (answer.option_answer && answer.option_answer.id == option.id) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function option_label(index) {
+    return String.fromCharCode('A'.charCodeAt(0) + index);
+}
+
+function write_exam_docx(plan, exams) {
+    return new Promise((resolve, reject) => {
+        let docx = officegen('docx');
+        docx.on('error', reject);
+
+        docx.createP({ align: 'center' }).addText('司机考试试卷', { bold: true, font_size: 20 });
+        docx.createP().addText('订单号：' + plan.id, { font_size: 12 });
+        docx.createP().addText('计划日期：' + (plan.plan_time || ''), { font_size: 12 });
+        docx.createP().addText('主车号：' + (plan.main_vehicle ? plan.main_vehicle.plate : ''), { font_size: 12 });
+        docx.createP().addText('挂车号：' + (plan.behind_vehicle ? plan.behind_vehicle.plate : ''), { font_size: 12 });
+        docx.createP().addText('司机：' + (plan.driver ? plan.driver.name : ''), { font_size: 12 });
+        docx.createP().addText('司机电话：' + (plan.driver ? plan.driver.phone : ''), { font_size: 12 });
+        docx.createP().addText('物料：' + (plan.stuff ? plan.stuff.name : ''), { font_size: 12 });
+
+        for (let i = 0; i < exams.length; i++) {
+            const exam = exams[i];
+            const paper = exam.exam_paper || {};
+            const questions = paper.questions || [];
+            const per_score = questions.length > 0 ? (100 / questions.length) : 0;
+
+            docx.createP().addText('');
+            docx.createP().addText('试卷：' + (paper.name || '') + '　　得分：' + (exam.score != null ? exam.score : ''), {
+                bold: true,
+                font_size: 14,
+            });
+
+            for (let q = 0; q < questions.length; q++) {
+                const question = questions[q];
+                const options = question.option_answers || [];
+                let correct_labels = [];
+                let selected_correct = false;
+                let selected_label = '';
+
+                docx.createP().addText((q + 1) + '. ' + (question.name || ''), { bold: true, font_size: 12 });
+
+                for (let o = 0; o < options.length; o++) {
+                    const option = options[o];
+                    const label = option_label(o);
+                    let suffix = '';
+                    if (option.is_correct) {
+                        correct_labels.push(label);
+                    }
+                    if (was_selected(option, exam)) {
+                        selected_label = label;
+                        selected_correct = !!option.is_correct;
+                        suffix = '（司机所选）';
+                    }
+                    docx.createP().addText('    ' + label + '. ' + (option.name || '') + suffix, { font_size: 12 });
+                }
+
+                const answer_text = correct_labels.length > 0 ? correct_labels.join('、') : '无';
+                const question_score = selected_correct ? parseFloat(per_score.toFixed(2)) : 0;
+                docx.createP().addText('    答案：' + answer_text + '　　本题得分：' + question_score, { font_size: 12 });
+                if (selected_label) {
+                    docx.createP().addText('    司机作答：' + selected_label + (selected_correct ? '（正确）' : '（错误）'), { font_size: 12 });
+                }
+            }
+        }
+
+        const plate = plan.main_vehicle ? plan.main_vehicle.plate : 'unknown';
+        const file_name = `司机考试试卷_${plan.id}-${plate}.docx`;
+        const download_path = path.resolve('/database/uploads/', file_name);
+        const out = fs.createWriteStream(download_path);
+        out.on('error', reject);
+        out.on('close', () => resolve(download_path));
+        docx.generate(out);
+    });
+}
+
 module.exports = {
     plan_pass_exam:async function(plan) {
         let ret = false;
@@ -132,7 +224,11 @@ module.exports = {
                         {
                             model: db_opt.get_sq().models.question,
                             include: [
-                                db_opt.get_sq().models.option_answer
+                                {
+                                    model: db_opt.get_sq().models.option_answer,
+                                    order: [['id', 'ASC']],
+                                    separate: true,
+                                }
                             ]
                         }
                     ]
@@ -145,6 +241,42 @@ module.exports = {
             ]
         });
         return exams;
+    },
+    export_exam_papers: async function (plans, start_time, end_time) {
+        let filePaths = [];
+        for (let index = 0; index < plans.length; index++) {
+            const plan = plans[index];
+            const exams = await this.get_exam_by_plan(plan);
+            if (!exams || exams.length === 0) {
+                continue;
+            }
+            filePaths.push(await write_exam_docx(plan, exams));
+        }
+        if (filePaths.length === 0) {
+            throw { err_msg: '未找到司机考试记录' };
+        }
+
+        const zip_name = `司机考试试卷_${uuid.v4().split('-')[0]}_${start_time}_至_${end_time}.zip`;
+        const zip_path = path.resolve('/database/uploads/', zip_name);
+        const output = fs.createWriteStream(zip_path);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        archive.pipe(output);
+        for (const filePath of filePaths) {
+            archive.append(fs.createReadStream(filePath), { name: path.basename(filePath) });
+        }
+        await new Promise((resolve, reject) => {
+            output.on('close', resolve);
+            archive.on('error', reject);
+            archive.finalize();
+        });
+        await Promise.all(filePaths.map(async (filePath) => {
+            try {
+                await fs.promises.unlink(filePath);
+            } catch (err) {
+                console.error(`无法删除文件 ${filePath}: ${err.message}`);
+            }
+        }));
+        return '/uploads/' + zip_name;
     },
 
 }
