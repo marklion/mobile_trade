@@ -1,540 +1,207 @@
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
-const readline = require('readline');
 const vm = require('vm');
-const yaml = require('js-yaml');
 const { SerialPort } = require('serialport');
 
 const PORT = 39109;
-const APP_BASE_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
-const DEFAULT_CONFIG_PATH = path.join(APP_BASE_DIR, 'scale_agent.config.json');
-const SCRIPT_MAX_LENGTH = 8000;
-const SCRIPT_RUN_TIMEOUT_MS = 50;
-const SCRIPT_FORBIDDEN_PATTERNS = [
-  /\brequire\b/,
-  /\bprocess\b/,
-  /\bglobalThis\b/,
-  /\bglobal\b/,
-  /\bFunction\b/,
-  /\beval\b/,
-  /__proto__/,
-  /\bprototype\b/,
-  /\bconstructor\b/,
-];
-const FRAME_START = 0x02;
-const FRAME_END_A = 0x03;
-const FRAME_END_B = 0x0d;
+const APP_DIR = process.pkg ? path.dirname(process.execPath) : __dirname;
+const CONFIG_PATH = process.env.SCALE_AGENT_CONFIG || path.join(APP_DIR, 'scale_agent.config.json');
+const SCRIPT_MAX_LEN = 8192;
+const BUF_MAX = 4096;
 
-function safeNumber(value) {
-  const n = Number(value);
-  if (Number.isNaN(n) || !Number.isFinite(n)) {
-    return 0;
+
+function compileScript(script) {
+  const text = String(script || '').trim();
+  if (!text || text.length > SCRIPT_MAX_LEN) {
+    throw new TypeError('script 无效或过长');
   }
-  return n;
-}
-
-function normalizeScriptText(scriptText) {
-  const raw = String(scriptText || '').trim();
-  if (!raw) {
-    return '';
+  if (!text.startsWith('function') && !text.includes('=>')) {
+    throw new TypeError('script 必须是函数');
   }
-  return raw.replace(
-    /^function\s*\(([^)]*)\)\s*:\s*Number\s*\{/,
-    'function ($1) {'
-  );
-}
-
-function validateScriptSecurity(scriptText) {
-  SCRIPT_FORBIDDEN_PATTERNS.forEach((pattern) => {
-    if (pattern.test(scriptText)) {
-      throw new Error(`脚本包含不允许的标识: ${pattern}`);
-    }
-  });
-}
-
-function compileScaleScript(scriptText) {
-  const normalized = normalizeScriptText(scriptText);
-  if (!normalized) {
-    throw new Error('脚本不能为空');
-  }
-  if (normalized.length > SCRIPT_MAX_LENGTH) {
-    throw new Error(`脚本长度不能超过 ${SCRIPT_MAX_LENGTH} 个字符`);
-  }
-  validateScriptSecurity(normalized);
-
-  const sandbox = Object.assign(Object.create(null), {
-    Math,
-    Number,
-    Array,
-    JSON,
-    parseInt,
-    parseFloat,
-    isNaN,
-    isFinite,
-  });
-  vm.createContext(sandbox, {
-    codeGeneration: {
-      strings: false,
-      wasm: false,
-    },
-  });
-
-  let scriptFn;
-  let runScript;
+  let fn;
   try {
-    // Security boundary:
-    // 1) script text is pre-validated by deny-list;
-    // 2) vm context disables nested code generation;
-    // 3) runtime is bounded by timeout.
-    const factoryScript = new vm.Script(`"use strict";\n(${normalized})`);
-    scriptFn = factoryScript.runInContext(sandbox, { timeout: SCRIPT_RUN_TIMEOUT_MS });
-    runScript = new vm.Script('"use strict";\n__userScript(__frameArray, __helpers)');
-  } catch (error) {
-    throw new Error(`脚本编译失败: ${error.message}`);
+    fn = vm.runInNewContext(`(${text})`, Object.create(null), {
+      timeout: 1000,
+      displayErrors: true,
+    }); // NOSONAR
+  } catch (err) {
+    throw new TypeError(`script 无法解析: ${err?.message ?? err}`);
   }
-  if (typeof scriptFn !== 'function') {
-    throw new Error('脚本必须是函数，例如: function (frameArray, helpers) { return 0; }');
+  if (typeof fn !== 'function') {
+    throw new TypeError('script 必须是函数');
   }
-  return {
-    source: normalized,
-    run(frameArray, helpers) {
-      const safeHelpers = Object.freeze({
-        parseFrameByConfig: (frame, frameParsers) => parseFrameByConfig(frame, frameParsers),
-        frameParsers: Array.isArray(helpers?.frameParsers) ? helpers.frameParsers.slice() : [],
-      });
-      sandbox.__userScript = scriptFn;
-      sandbox.__frameArray = Array.from(frameArray || []);
-      sandbox.__helpers = safeHelpers;
-      let ret;
-      try {
-        ret = runScript.runInContext(sandbox, { timeout: SCRIPT_RUN_TIMEOUT_MS });
-      } finally {
-        delete sandbox.__frameArray;
-        delete sandbox.__helpers;
-        delete sandbox.__userScript;
-      }
-      if (ret === null || ret === undefined) {
-        return null;
-      }
-      const value = Number(ret);
-      if (Number.isNaN(value) || !Number.isFinite(value)) {
-        throw new Error('脚本返回值必须是数字、null 或 undefined');
-      }
-      return value;
-    },
-  };
+  return fn;
 }
 
-function normalizeByte(value, fieldName) {
-  if (value === undefined || value === null || value === '') {
+function toFiniteNumber(value) {
+  if (value === null || value === undefined) {
     return null;
   }
-  if (typeof value === 'number') {
-    const intValue = Math.floor(value);
-    if (intValue < 0 || intValue > 255) {
-      throw new Error(`${fieldName} 必须在 0~255`);
-    }
-    return intValue;
-  }
-  const text = String(value).trim();
-  if (!text) {
-    return null;
-  }
-  let parsed = NaN;
-  if (text.toLowerCase().startsWith('0x')) {
-    parsed = parseInt(text, 16);
-  } else if (/^[0-9a-fA-F]{2}$/.test(text)) {
-    parsed = parseInt(text, 16);
-  } else if (/^\d+$/.test(text)) {
-    parsed = parseInt(text, 10);
-  }
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 255) {
-    throw new Error(`${fieldName} 格式错误: ${value}`);
-  }
-  return parsed;
-}
-
-function normalizeByteList(values, fieldName) {
-  if (values === undefined || values === null) {
-    return [];
-  }
-  if (!Array.isArray(values)) {
-    throw new Error(`${fieldName} 必须是数组`);
-  }
-  return values
-    .map((value) => normalizeByte(value, fieldName))
-    .filter((value) => value !== null);
-}
-
-function normalizeFrameParsers(frameParsers) {
-  const source = Array.isArray(frameParsers) && frameParsers.length > 0
-    ? frameParsers
-    : [];
-  return source.map((item, idx) => {
-    const parser = item || {};
-    const parserType = String(parser.parserType || '').trim();
-    if (!parserType) {
-      throw new Error(`frameParsers[${idx}] 缺少 parserType`);
-    }
-    const name = String(parser.name || `${parserType}_${idx + 1}`).trim();
-    const options = parser.options && typeof parser.options === 'object'
-      ? parser.options
-      : {};
-    const normalized = {
-      name,
-      enabled: parser.enabled !== false,
-      parserType,
-      startByte: normalizeByte(parser.startByte, `frameParsers[${idx}].startByte`),
-      endByte: normalizeByte(parser.endByte, `frameParsers[${idx}].endByte`),
-      secondByteIn: normalizeByteList(parser.secondByteIn, `frameParsers[${idx}].secondByteIn`),
-      minLength: Math.max(0, Math.floor(safeNumber(parser.minLength || 0))),
-      maxLength: Math.max(0, Math.floor(safeNumber(parser.maxLength || 0))),
-      divisor: safeNumber(parser.divisor || 1) || 1,
-      options,
-    };
-    if (normalized.maxLength > 0 && normalized.maxLength < normalized.minLength) {
-      throw new Error(`frameParsers[${idx}] maxLength 不能小于 minLength`);
-    }
-    return normalized;
-  });
-}
-
-function frameMatchesParser(frame, parser) {
-  if (!Array.isArray(frame) || frame.length < 2 || !parser.enabled) {
-    return false;
-  }
-  if (parser.startByte !== null && frame[0] !== parser.startByte) {
-    return false;
-  }
-  if (parser.endByte !== null && frame[frame.length - 1] !== parser.endByte) {
-    return false;
-  }
-  if (parser.minLength > 0 && frame.length < parser.minLength) {
-    return false;
-  }
-  if (parser.maxLength > 0 && frame.length > parser.maxLength) {
-    return false;
-  }
-  if (parser.secondByteIn.length > 0 && !parser.secondByteIn.includes(frame[1])) {
-    return false;
-  }
-  const acceptableLengths = Array.isArray(parser.options.acceptableLengths)
-    ? parser.options.acceptableLengths.map((v) => Math.floor(safeNumber(v))).filter((v) => v > 0)
-    : [];
-  if (acceptableLengths.length > 0 && !acceptableLengths.includes(frame.length)) {
-    return false;
-  }
-  return true;
-}
-
-function parseBySignedTailDigits(frame, parser) {
-  const options = parser.options || {};
-  const digitStartIndex = Math.max(0, Math.floor(safeNumber(options.digitStartIndex || 2)));
-  const digitEndOffset = Math.max(0, Math.floor(safeNumber(options.digitEndOffset || 1)));
-  const tailDigits = Math.max(1, Math.floor(safeNumber(options.tailDigits || 6)));
-  const negativeSecondBytes = normalizeByteList(
-    options.negativeSecondBytes || [0x2d],
-    `${parser.name}.options.negativeSecondBytes`
-  );
-  const digitEndExclusive = Math.max(digitStartIndex, frame.length - digitEndOffset);
-  const digits = [];
-  for (let i = digitStartIndex; i < digitEndExclusive; i += 1) {
-    const ch = frame[i];
-    if (ch >= 0x30 && ch <= 0x39) {
-      digits.push(ch - 0x30);
-    }
-  }
-  if (digits.length === 0) {
-    return null;
-  }
-  const tail = digits.slice(-tailDigits);
-  let value = 0;
-  for (let i = 0; i < tail.length; i += 1) {
-    value = value * 10 + tail[i];
-  }
-  if (negativeSecondBytes.includes(frame[1])) {
-    value = -value;
-  }
-  return safeNumber(value / parser.divisor);
-}
-
-function parseByTldStyle(frame, parser) {
-  const options = parser.options || {};
-  const dotMask = Math.max(0, Math.floor(safeNumber(options.dotMask || 0x07)));
-  const baseExponent = Math.floor(safeNumber(options.baseExponent || 2));
-  const digitStartIndex = Math.max(0, Math.floor(safeNumber(options.digitStartIndex || 4)));
-  const digitCount = Math.max(1, Math.floor(safeNumber(options.digitCount || 6)));
-  if (frame.length <= digitStartIndex) {
-    return null;
-  }
-  let powNumber = baseExponent - (frame[1] & dotMask);
-  if (powNumber > 0) {
-    powNumber = 0;
-  }
-  let rawValue = 0;
-  for (let i = 0; i < digitCount; i += 1) {
-    const byteValue = frame[digitStartIndex + i];
-    const digit = byteValue >= 0x30 && byteValue <= 0x39 ? byteValue - 0x30 : 0;
-    rawValue += digit * Math.pow(10, digitCount - 1 + powNumber - i);
-  }
-  return safeNumber(rawValue / parser.divisor);
-}
-
-function parseFrameByConfig(frame, frameParsers) {
-  for (let i = 0; i < frameParsers.length; i += 1) {
-    const parser = frameParsers[i];
-    if (!frameMatchesParser(frame, parser)) {
-      continue;
-    }
-    if (parser.parserType === 'signedTailDigits') {
-      const value = parseBySignedTailDigits(frame, parser);
-      if (value !== null) {
-        return value;
-      }
-      continue;
-    }
-    if (parser.parserType === 'tldStyle') {
-      const value = parseByTldStyle(frame, parser);
-      if (value !== null) {
-        return value;
-      }
-      continue;
-    }
-  }
-  return null;
-}
-
-function getDefaultConfig() {
-  return {
-    serial: '',
-    baudRate: 9600,
-    script: '',
-    frameParsers: [],
-  };
-}
-
-function parseJsonConfigWithComments(text) {
-  const raw = String(text || '');
-  let out = '';
-  let i = 0;
-  let inString = false;
-  let escaped = false;
-  let inLineComment = false;
-  let inBlockComment = false;
-
-  while (i < raw.length) {
-    const ch = raw[i];
-    const next = i + 1 < raw.length ? raw[i + 1] : '';
-
-    if (inLineComment) {
-      if (ch === '\n') {
-        inLineComment = false;
-        out += ch;
-      }
-      i += 1;
-      continue;
-    }
-
-    if (inBlockComment) {
-      if (ch === '*' && next === '/') {
-        inBlockComment = false;
-        i += 2;
-      } else {
-        i += 1;
-      }
-      continue;
-    }
-
-    if (inString) {
-      out += ch;
-      if (escaped) {
-        escaped = false;
-      } else if (ch === '\\') {
-        escaped = true;
-      } else if (ch === '"') {
-        inString = false;
-      }
-      i += 1;
-      continue;
-    }
-
-    if (ch === '"') {
-      inString = true;
-      out += ch;
-      i += 1;
-      continue;
-    }
-
-    if (ch === '/' && next === '/') {
-      inLineComment = true;
-      i += 2;
-      continue;
-    }
-
-    if (ch === '/' && next === '*') {
-      inBlockComment = true;
-      i += 2;
-      continue;
-    }
-
-    out += ch;
-    i += 1;
-  }
-
-  return JSON.parse(out);
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 class OutputHelper {
-  constructor() {
-    const defaults = getDefaultConfig();
-    this.serialName = '';
-    this.baudRate = 9600;
-    this.scriptText = defaults.script;
-    this.compiledScript = null;
-    this.frameParsers = normalizeFrameParsers(defaults.frameParsers);
-    this.scaleValue = 0;
-    this.lastBytes = [];
-    this.serialPort = null;
-    this.serialBuffer = Buffer.alloc(0);
-  }
+  _weight = 0;
+  _port = null;
+  _buf = [];
+  _parse = null;
+  _frameSize = 0;
+  _opened = false;
+  _gotData = false;
 
   scale() {
-    return safeNumber(this.scaleValue);
+    return this._weight;
   }
 
-  getState() {
+  status() {
     return {
-      serial: this.serialName,
-      baudRate: this.baudRate,
-      script: this.scriptText,
-      frameParsers: this.frameParsers,
-      currentScale: this.scale(),
-      lastBytes: this.lastBytes,
+      scale: this._weight,
+      opened: this._opened,
+      gotData: this._gotData,
+      buf: this._buf.length,
     };
   }
 
-  async applyConfig({ serial, baudRate, script, frameParsers }) {
-    if (baudRate !== undefined) {
-      const parsedBaudRate = Math.floor(safeNumber(baudRate));
-      if (parsedBaudRate <= 0) {
-        throw new Error('波特率必须是正整数');
-      }
-      this.baudRate = parsedBaudRate;
-    }
-    if (frameParsers !== undefined) {
-      this.frameParsers = normalizeFrameParsers(frameParsers);
-    }
-    if (script !== undefined) {
-      this.compiledScript = compileScaleScript(script);
-      this.scriptText = normalizeScriptText(script);
-    }
-    if (!this.compiledScript) {
-      throw new Error('脚本不能为空');
-    }
-    if (serial !== undefined) {
-      this.serialName = String(serial || '').trim();
-      await this.reopenSerial();
-    }
-  }
+  async apply(serial, script, baudRate = 9600, frameSize = 0) {
+    this._parse = compileScript(script);
+    this._frameSize = Math.max(0, Number(frameSize) || 0);
+    this._buf = [];
+    this._opened = false;
+    this._gotData = false;
 
-  async reopenSerial() {
-    this.serialBuffer = Buffer.alloc(0);
-    if (this.serialPort) {
-      await new Promise((resolve) => {
-        this.serialPort.close(() => resolve());
-      });
-      this.serialPort = null;
+    if (this._port) {
+      await new Promise((resolve) => this._port.close(() => resolve()));
+      this._port = null;
     }
-    if (!this.serialName) {
-      console.log('[output_helper] 串口为空，等待配置...');
+
+    const pathName = String(serial || '').trim();
+    if (!pathName) {
+      console.log('[OutputHelper] 串口为空，仅提供 HTTP 服务');
       return;
     }
 
-    this.serialPort = new SerialPort({
-      path: this.serialName,
-      baudRate: this.baudRate,
+    await this._openPort(pathName, baudRate);
+  }
+
+  async _openPort(pathName, baudRate) {
+    const port = new SerialPort({
+      path: pathName,
+      baudRate: Number(baudRate) || 9600,
       autoOpen: false,
     });
-
-    this.serialPort.on('error', (err) => {
-      console.error('[output_helper] 串口错误:', err.message);
-    });
-
-    this.serialPort.on('data', (chunk) => {
-      this.handleData(chunk);
-    });
-
-    await new Promise((resolve, reject) => {
-      this.serialPort.open((err) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-        resolve();
-      });
-    });
-    console.log(`[output_helper] 串口已打开: ${this.serialName}, 波特率: ${this.baudRate}`);
-  }
-
-  handleData(chunk) {
+    port.on('error', () => console.error('[OutputHelper] 串口错误'));
+    port.on('data', (chunk) => this._onData(chunk));
     try {
-      let parseFunc = eval(this.scriptText);
-      const parsedValue = parseFunc(chunk);
-      if (parsedValue !== null && parsedValue !== undefined) {
-        this.scaleValue = safeNumber(parsedValue);
-      } else {
-        console.warn('[output_helper] 脚本未返回有效重量:', frameArray);
+      await new Promise((resolve, reject) => {
+        port.open((err) => (err ? reject(err) : resolve()));
+      });
+      this._port = port;
+      this._opened = true;
+      console.log('[OutputHelper] 串口已打开');
+    } catch {
+      port.removeAllListeners();
+      try {
+        port.close(() => {});
+      } catch {
+        // ignore
       }
-    } catch (err) {
-      console.error('[output_helper] 脚本执行失败:', err.message);
+      this._port = null;
+      this._opened = false;
+      console.error('[OutputHelper] 串口打开失败，仅提供 HTTP 服务');
     }
   }
+
+  _appendChunk(chunk) {
+    this._gotData = true;
+    for (const b of chunk) {
+      this._buf.push(b);
+    }
+    if (this._buf.length > BUF_MAX) {
+      this._buf.splice(0, this._buf.length - 512);
+    }
+  }
+
+  _tryParse(bytes) {
+    try {
+      return toFiniteNumber(this._parse(bytes));
+    } catch {
+      return null;
+    }
+  }
+
+  _drainFixedFrames() {
+    while (this._buf.length >= this._frameSize) {
+      const frame = this._buf.slice(0, this._frameSize);
+      const n = this._tryParse(frame);
+      if (n === null) {
+        this._buf.shift();
+        continue;
+      }
+      this._weight = n;
+      this._buf.splice(0, this._frameSize);
+    }
+  }
+
+  _drainVariableFrames() {
+    let progressed = true;
+    while (progressed && this._buf.length > 0) {
+      progressed = false;
+      for (let len = this._buf.length; len >= 1; len -= 1) {
+        const n = this._tryParse(this._buf.slice(0, len));
+        if (n === null || n === 0) {
+          continue;
+        }
+        this._weight = n;
+        this._buf.splice(0, len);
+        progressed = true;
+        break;
+      }
+      if (!progressed && this._buf.length >= 256) {
+        this._buf.shift();
+        progressed = true;
+      }
+    }
+  }
+
+  _onData(chunk) {
+    this._appendChunk(chunk);
+    if (this._frameSize > 0) {
+      this._drainFixedFrames();
+      return;
+    }
+    this._drainVariableFrames();
+  }
+
+  async close() {
+    if (!this._port) {
+      return;
+    }
+    await new Promise((resolve) => this._port.close(() => resolve()));
+    this._port = null;
+    this._opened = false;
+  }
 }
 
-function loadConfig(configPath) {
-  const defaults = getDefaultConfig();
-  if (!fs.existsSync(configPath)) {
-    return defaults;
+function loadConfig() {
+  if (!fs.existsSync(CONFIG_PATH)) {
+    throw new Error('配置文件不存在');
   }
-  const text = fs.readFileSync(configPath, 'utf8');
-  const ext = path.extname(configPath).toLowerCase();
-  let loaded = {};
-  if (ext === '.yml' || ext === '.yaml') {
-    loaded = yaml.load(text) || {};
-  } else {
-    loaded = parseJsonConfigWithComments(text);
-  }
-  return {
-    ...defaults,
-    ...loaded,
-    frameParsers: Array.isArray(loaded.frameParsers) && loaded.frameParsers.length > 0
-      ? loaded.frameParsers
-      : defaults.frameParsers,
-  };
+  return JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
 }
 
-function saveConfig(configPath, data) {
-  const ext = path.extname(configPath).toLowerCase();
-  if (ext === '.yml' || ext === '.yaml') {
-    fs.writeFileSync(configPath, yaml.dump(data), 'utf8');
-    return;
-  }
-  fs.writeFileSync(configPath, JSON.stringify(data, null, 2), 'utf8');
-}
-
-function createServer(output_helper) {
-  const server = http.createServer((req, res) => {
+function createServer(helper) {
+  return http.createServer((req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
       return;
     }
     if (req.method === 'GET' && req.url === '/scale') {
-      const body = JSON.stringify({ scale: output_helper.scale() });
+      const body = JSON.stringify(helper.status());
       res.writeHead(200, {
         'Content-Type': 'application/json; charset=utf-8',
         'Content-Length': Buffer.byteLength(body),
@@ -542,157 +209,30 @@ function createServer(output_helper) {
       res.end(body);
       return;
     }
-    if (req.method === 'GET' && req.url === '/healthz') {
-      res.writeHead(200, {
-        'Content-Type': 'text/plain; charset=utf-8',
-      });
-      res.end('ok');
-      return;
-    }
-    res.writeHead(404, {
-      'Content-Type': 'application/json; charset=utf-8',
-    });
+    res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ err: 'not found' }));
   });
-  return server;
-}
-
-function printHelp() {
-  console.log('');
-  console.log('命令说明:');
-  console.log('  serial <串口名>          例如: serial COM1');
-  console.log('  baud <波特率>            例如: baud 9600');
-  console.log('  script <解析脚本>        例如: script function (frameArray, helpers) { return helpers.parseFrameByConfig(frameArray, helpers.frameParsers); }');
-  console.log('  save                     保存并应用配置');
-  console.log('  show                     显示当前状态');
-  console.log('  help                     显示帮助');
-  console.log('  exit                     退出程序');
-  console.log('');
 }
 
 async function main() {
-  const configPath = process.env.SCALE_AGENT_CONFIG || DEFAULT_CONFIG_PATH;
-  const output_helper = new OutputHelper();
+  const config = loadConfig();
+  const helper = new OutputHelper();
+  await helper.apply(config.serial, config.script, config.baudRate, config.frameSize);
 
-  let config = loadConfig(configPath);
-  let draftSerial = config.serial || '';
-  let draftBaudRate = Math.floor(safeNumber(config.baudRate || 9600)) || 9600;
-  let draftScript = normalizeScriptText(config.script);
-  let draftFrameParsers = Array.isArray(config.frameParsers) ? config.frameParsers : [];
-
-  await output_helper.applyConfig({
-    serial: draftSerial,
-    baudRate: draftBaudRate,
-    script: draftScript,
-    frameParsers: draftFrameParsers,
-  });
-
-  const server = createServer(output_helper);
+  const server = createServer(helper);
   server.listen(PORT, () => {
     console.log(`scale_agent 已启动: http://localhost:${PORT}/scale`);
-    console.log(`配置文件: ${configPath}`);
-    printHelp();
-    console.log(`当前串口: ${draftSerial || '(未设置)'}`);
-    console.log(`当前波特率: ${draftBaudRate}`);
-    console.log(`当前脚本: ${draftScript}`);
   });
 
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-    prompt: 'scale_agent> ',
-  });
-
-  rl.prompt();
-  rl.on('line', async (line) => {
-    const input = String(line || '').trim();
-    if (!input) {
-      rl.prompt();
-      return;
-    }
-    if (input === 'help') {
-      printHelp();
-      rl.prompt();
-      return;
-    }
-    if (input === 'show') {
-      const state = output_helper.getState();
-      console.log('当前配置草稿:');
-      console.log(`  串口: ${draftSerial || '(未设置)'}`);
-      console.log(`  波特率: ${draftBaudRate}`);
-      console.log(`  脚本: ${draftScript}`);
-      console.log('运行状态:');
-      console.log(`  scale: ${state.currentScale}`);
-      console.log(`  lastBytes: [${state.lastBytes.join(', ')}]`);
-      rl.prompt();
-      return;
-    }
-    if (input === 'exit') {
-      rl.close();
-      return;
-    }
-    if (input === 'save') {
-      try {
-        config = {
-          serial: draftSerial,
-          baudRate: draftBaudRate,
-          script: draftScript,
-          frameParsers: draftFrameParsers,
-        };
-        saveConfig(configPath, config);
-        await output_helper.applyConfig(config);
-        console.log('配置已保存并生效');
-      } catch (err) {
-        console.error('保存失败:', err.message);
-      }
-      rl.prompt();
-      return;
-    }
-    if (input.startsWith('serial ')) {
-      draftSerial = input.slice('serial '.length).trim();
-      console.log(`串口草稿已更新: ${draftSerial || '(空)'}`);
-      rl.prompt();
-      return;
-    }
-    if (input.startsWith('baud ')) {
-      const nextBaudRate = Math.floor(safeNumber(input.slice('baud '.length).trim()));
-      if (nextBaudRate <= 0) {
-        console.log('波特率必须是正整数');
-      } else {
-        draftBaudRate = nextBaudRate;
-        console.log(`波特率草稿已更新: ${draftBaudRate}`);
-      }
-      rl.prompt();
-      return;
-    }
-    if (input.startsWith('script ')) {
-      const nextScript = input.slice('script '.length).trim();
-      try {
-        compileScaleScript(nextScript);
-        draftScript = normalizeScriptText(nextScript);
-        console.log('脚本草稿已更新');
-      } catch (err) {
-        console.log(`脚本无效: ${err.message}`);
-      }
-      rl.prompt();
-      return;
-    }
-    console.log('未知命令，输入 help 查看可用命令');
-    rl.prompt();
-  });
-
-  rl.on('close', async () => {
-    console.log('正在退出...');
-    if (output_helper.serialPort && output_helper.serialPort.isOpen) {
-      await new Promise((resolve) => output_helper.serialPort.close(() => resolve()));
-    }
-    server.close(() => {
-      process.exit(0);
-    });
-  });
+  const shutdown = async () => {
+    await helper.close();
+    server.close(() => process.exit(0));
+  };
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
 }
 
 main().catch((err) => {
-  console.error('scale_agent 启动失败:', err.message);
+  console.error('scale_agent 启动失败:', err?.message ?? err);
   process.exit(1);
 });
