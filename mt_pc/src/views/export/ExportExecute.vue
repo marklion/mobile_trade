@@ -75,6 +75,9 @@
                 :external_scope_id="scope_selector_enabled ? globalStatContextCompanyId : null"
                 @do_export="export_customer_statement"></export-date>
         </vue-cell>
+        <vue-cell class="cell_show" width="4of12" v-if="$hasPermission('exam')">
+            <export-date export_name="司机考试试卷" @do_export="export_driver_exam"></export-date>
+        </vue-cell>
     </vue-grid>
     </template>
 </div>
@@ -450,6 +453,17 @@ export default {
                     end_time: filter.end_time,
                     company_id: filter.company_id,
                     stat_context_company_id: filter.stat_context_company_id,
+                }, this.globalStatContextCompanyId));
+                this.show_export_success();
+            } catch (error) {
+                this.show_export_fail(error);
+            }
+        },
+        export_driver_exam: async function (filter) {
+            try {
+                await this.$send_req('/exam/export_exam_papers', this.with_stat_context({
+                    start_time: filter.start_time,
+                    end_time: filter.end_time,
                 }, this.globalStatContextCompanyId));
                 this.show_export_success();
             } catch (error) {

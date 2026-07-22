@@ -2,6 +2,8 @@ const api_param_result_define = require('../api_param_result_define');
 const db_opt = require('../db_opt');
 const exam_lib = require('../lib/exam_lib')
 const rbac_lib = require('../lib/rbac_lib')
+const plan_lib = require('../lib/plan_lib')
+const common = require('./common')
 module.exports = {
     name: 'exam',
     description: '考试管理',
@@ -196,6 +198,28 @@ module.exports = {
             func: async function (body, token) {
                 let plan = await db_opt.get_sq().models.plan.findByPk(body.plan_id);
                 return { exams: await exam_lib.get_exam_by_plan(plan) };
+            },
+        },
+        export_exam_papers: {
+            name: '导出司机考试试卷',
+            description: '根据订单导出司机考试试卷Word文档',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                start_time: { type: String, have_to: true, mean: '开始时间', example: '2020-01-01 12:00:00' },
+                end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01 12:00:00' },
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true },
+            },
+            func: async function (body, token) {
+                let plans = [];
+                plans = plans.concat(await plan_lib.filter_plan4manager(body, token, false));
+                plans = plans.concat(await plan_lib.filter_plan4manager(body, token, true));
+                return await common.do_export_later(token, '司机考试试卷', async () => {
+                    return await exam_lib.export_exam_papers(plans, body.start_time, body.end_time);
+                });
             },
         },
     }
