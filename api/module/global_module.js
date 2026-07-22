@@ -18,6 +18,7 @@ const uuid = require('uuid');
 const path = require('path');
 const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
+const t_plus_lib = require('../lib/t_plus_lib');
 
 function create_api_error(message) {
     const error = new Error(message);
@@ -2802,6 +2803,30 @@ module.exports = {
             func: async function (body, token) {
                 return verifyTicketQrContent(body.qr_content);
             }
+        },
+        test_t_plus:{
+            name: '测试T+接口',
+            description: '测试T+接口',
+            need_rbac: true,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                test_param: { type: String, have_to: false, mean: '测试参数', example: 'test' },
+                test_body:{type: String, have_to: false, mean: '测试body', example: 'test'},
+                test_url:{type: String, have_to: true, mean: '测试url', example: 'test'},
+                test_method:{type: String, have_to: true, mean: '测试method', example: 'test'},
+            },
+            result: {
+                result: { type: String, mean: '测试结果', example: 'result' },
+            },
+            func: async function (body, token) {
+                let ret = await t_plus_lib.req2tplus(
+                    body.test_method,
+                    body.test_url, JSON.parse(body.test_param),
+                    JSON.parse(body.test_body),
+                    await rbac_lib.get_company_by_token(token));
+                return { result: JSON.stringify(ret) };
+            },
         },
     },
 }
