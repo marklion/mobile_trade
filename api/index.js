@@ -104,6 +104,7 @@ else {
         await module_install(role.id, app, require('./module/supplier_module'));
         await module_install(role.id, app, require('./module/exam_module'));
         await module_install(role.id, app, require('./module/u8c_module'));
+        await module_install(role.id, app, require('./module/tplus_module'));
         await module_install(role.id, app, require('./module/approval_module'));
         await module_install(role.id, app, require('./module/group_module'));
         let all_modules = await sq.models.rbac_module.findAll();
@@ -279,6 +280,7 @@ else {
     const bidding_lib = require('./lib/bidding_lib');
     const old_zczh = require('./plugin/old_zczh');
     const field_lib = require('./lib/field_lib');
+    const t_plus_lib = require('./lib/t_plus_lib');
     legacy_api.install(app);
 
     if (fs.existsSync('/database/map.json')) {
@@ -307,6 +309,7 @@ else {
         plan_lib.stuff_price_timeout();
         field_lib.auto_uncheck_in();
         plan_lib.walk_through2checkout();
+        t_plus_lib.walk_through_tplus_settle();
     });
     add_min_timer(6, async () => {
         let sq = db_opt.get_sq();
