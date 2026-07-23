@@ -42,12 +42,25 @@ function toFiniteNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function parseByte(value, name) {
+  if (value === null || value === undefined || value === '') {
+    throw new TypeError(`请配置 ${name}`);
+  }
+  const n = typeof value === 'string' ? Number.parseInt(value, 0) : Number(value);
+  if (!Number.isInteger(n) || n < 0 || n > 255) {
+    throw new TypeError(`${name} 必须是 0~255 的字节值，当前: ${value}`);
+  }
+  return n;
+}
+
 class OutputHelper {
   _weight = 0;
   _port = null;
   _buf = [];
   _parse = null;
   _frameSize = 0;
+  _frameHead = 0;
+  _frameTail = 0;
   _opened = false;
   _gotData = false;
 
@@ -64,12 +77,18 @@ class OutputHelper {
     };
   }
 
-  async apply(serial, script, baudRate = 9600, frameSize = 0) {
+  async apply(serial, script, baudRate = 9600, frameSize = 0, frameHead = 0x02, frameTail = 0x03) {
     this._parse = compileScript(script);
     this._frameSize = Math.max(0, Number(frameSize) || 0);
+    this._frameHead = parseByte(frameHead, 'frameHead');
+    this._frameTail = parseByte(frameTail, 'frameTail');
     this._buf = [];
     this._opened = false;
     this._gotData = false;
+
+    if (this._frameSize < 2) {
+      throw new TypeError('frameSize 至少为 2（需容纳帧头和帧尾）');
+    }
 
     if (this._port) {
       await new Promise((resolve) => this._port.close(() => resolve()));
@@ -113,13 +132,18 @@ class OutputHelper {
     }
   }
 
+  _formatChunk(chunk) {
+    return Array.from(chunk, (b) => b.toString(16).padStart(2, '0')).join(' ').toUpperCase();
+  }
+
   _appendChunk(chunk) {
     this._gotData = true;
     for (const b of chunk) {
       this._buf.push(b);
     }
     if (this._buf.length > BUF_MAX) {
-      this._buf.splice(0, this._buf.length - 512);
+      console.log('[OutputHelper] buffer 溢出，丢弃:', this._formatChunk(this._buf));
+      this._buf = [];
     }
   }
 
@@ -131,47 +155,36 @@ class OutputHelper {
     }
   }
 
-  _drainFixedFrames() {
-    while (this._buf.length >= this._frameSize) {
-      const frame = this._buf.slice(0, this._frameSize);
-      const n = this._tryParse(frame);
-      if (n === null) {
-        this._buf.shift();
-        continue;
-      }
-      this._weight = n;
-      this._buf.splice(0, this._frameSize);
-    }
+  _matchFrame(frame) {
+    return frame.length === this._frameSize
+      && frame[0] === this._frameHead
+      && frame[this._frameSize - 1] === this._frameTail;
   }
 
-  _drainVariableFrames() {
-    let progressed = true;
-    while (progressed && this._buf.length > 0) {
-      progressed = false;
-      for (let len = this._buf.length; len >= 1; len -= 1) {
-        const n = this._tryParse(this._buf.slice(0, len));
-        if (n === null || n === 0) {
-          continue;
-        }
-        this._weight = n;
-        this._buf.splice(0, len);
-        progressed = true;
-        break;
+ 
+  _processBuffer() {
+    const need = this._frameSize;
+    while (this._buf.length >= need) {
+      const frame = this._buf.slice(0, need);
+      if (!this._matchFrame(frame)) {
+        console.log('[OutputHelper] 帧校验失败，丢弃 buffer:', this._formatChunk(this._buf));
+        this._buf = [];
+        return;
       }
-      if (!progressed && this._buf.length >= 256) {
-        this._buf.shift();
-        progressed = true;
+      const result = this._tryParse(frame);
+      if (result === null) {
+        console.log('[OutputHelper] 脚本解析失败，丢弃 buffer:', this._formatChunk(this._buf));
+        this._buf = [];
+        return;
       }
+      this._weight = result;
+      this._buf.splice(0, need);
     }
   }
 
   _onData(chunk) {
     this._appendChunk(chunk);
-    if (this._frameSize > 0) {
-      this._drainFixedFrames();
-      return;
-    }
-    this._drainVariableFrames();
+    this._processBuffer();
   }
 
   async close() {
@@ -217,7 +230,14 @@ function createServer(helper) {
 async function main() {
   const config = loadConfig();
   const helper = new OutputHelper();
-  await helper.apply(config.serial, config.script, config.baudRate, config.frameSize);
+  await helper.apply(
+    config.serial,
+    config.script,
+    config.baudRate,
+    config.frameSize,
+    config.frameHead,
+    config.frameTail,
+  );
 
   const server = createServer(helper);
   server.listen(PORT, () => {
