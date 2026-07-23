@@ -1,4 +1,8 @@
 <script>
+const menuImages = {
+  'tpluslogo.png': require('@/assets/tpluslogo.png')
+}
+
 export default {
   name: 'MenuItem',
   functional: true,
@@ -21,7 +25,13 @@ export default {
     const vnodes = []
 
     if (icon) {
-      if (icon.includes('el-icon')) {
+      if (icon.startsWith('img:')) {
+        const imgName = icon.slice(4)
+        const imgSrc = menuImages[imgName]
+        if (imgSrc) {
+          vnodes.push(<img src={imgSrc} class="sidebar-menu-img" />)
+        }
+      } else if (icon.includes('el-icon')) {
         vnodes.push(<i class={[icon, 'sub-el-icon']} />)
       } else {
         vnodes.push(<svg-icon icon-class={icon}/>)
@@ -51,6 +61,14 @@ export default {
   color: currentColor;
   width: 1em;
   height: 1em;
+}
+
+.sidebar-menu-img {
+  width: 18px;
+  height: 18px;
+  margin-right: 12px;
+  vertical-align: middle;
+  object-fit: contain;
 }
 
 .menu-title-with-badge {
