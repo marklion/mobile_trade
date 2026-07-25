@@ -69,50 +69,37 @@
         <div class="panel-header">
             <div class="record-title-row">
                 <span class="panel-title">结算记录</span>
-                <el-input
-                    class="record-filter"
-                    placeholder="按车号过滤"
-                    v-model="filter_string"
-                    clearable
-                    @clear="cancel_search"
-                    @keyup.enter.native="do_search"
-                >
-                    <el-button slot="append" type="primary" icon="el-icon-search" @click="do_search">搜索</el-button>
-                </el-input>
             </div>
             <div class="header-actions">
-                <div class="success-switch">
-                    <span class="success-switch-label">{{ only_success ? '仅成功' : '全部' }}</span>
-                    <el-switch v-model="only_success" active-color="#3a7afe" @change="on_success_filter_change"></el-switch>
-                </div>
-                <el-button class="export-btn" type="primary" :loading="exporting" @click="export_detail">导出明细</el-button>
+                <el-button class="export-btn" type="primary" icon="el-icon-refresh" @click="refresh_records">刷新</el-button>
             </div>
         </div>
         <page-content
             ref="records"
-            :key="'tplus-records-' + (only_success ? 'ok' : 'fail')"
             body_key="records"
             enable
             req_url="/tplus/settle_records_get"
-            :req_body="records_req_body"
-            :search_input="filter_string"
-            :search_key="record_search_keys"
+            :req_body="{}"
         >
             <template v-slot:default="slotProps">
                 <div class="record-table-wrap">
                     <el-table :data="slotProps.content" style="width: 100%" height="100%" class="record-table">
-                        <el-table-column prop="plan_date" label="计划日期" min-width="170"></el-table-column>
-                        <el-table-column prop="plate" label="车号" min-width="110"></el-table-column>
-                        <el-table-column prop="order_company" label="下单公司" min-width="140"></el-table-column>
-                        <el-table-column prop="accept_company" label="接单公司" min-width="140"></el-table-column>
-                        <el-table-column prop="stuff_name" label="物料" min-width="100"></el-table-column>
-                        <el-table-column prop="unit_price" label="单价" min-width="90"></el-table-column>
-                        <el-table-column prop="count" label="数量" min-width="90"></el-table-column>
-                        <el-table-column prop="total_price" label="总价" min-width="90"></el-table-column>
-                        <el-table-column prop="execute_result" label="执行结果" min-width="110"></el-table-column>
-                        <el-table-column label="操作" width="90" fixed="right">
+                        <el-table-column prop="settle_time" label="结算时间" min-width="180"></el-table-column>
+                        <el-table-column prop="settle_type" label="类型" min-width="100">
                             <template slot-scope="scope">
-                                <el-button type="text" @click="open_detail(scope.row)">详情</el-button>
+                                {{ scope.row.settle_type === 'buy' ? '采购' : '销售' }}
+                            </template>
+                        </el-table-column>
+                        <el-table-column prop="status" label="结算状态" min-width="140"></el-table-column>
+                        <el-table-column prop="plate_summary" label="车号" min-width="140"></el-table-column>
+                        <el-table-column prop="operator" label="操作人" min-width="120"></el-table-column>
+                        <el-table-column label="操作" width="120" fixed="right">
+                            <template slot-scope="scope">
+                                <el-button
+                                    type="text"
+                                    :loading="exporting_id === scope.row.id"
+                                    @click="export_record_detail(scope.row)"
+                                >导出详情</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
@@ -120,24 +107,6 @@
             </template>
         </page-content>
     </div>
-
-    <el-dialog
-        title="推送日志"
-        :visible.sync="detail_visible"
-        width="720px"
-        append-to-body
-    >
-        <el-table :data="push_logs" v-loading="push_logs_loading" style="width: 100%" max-height="420">
-            <el-table-column prop="push_time" label="时间" min-width="170"></el-table-column>
-            <el-table-column prop="success" label="是否成功" width="100">
-                <template slot-scope="scope">
-                    <span :class="scope.row.success ? 'ok-text' : 'fail-text'">{{ scope.row.success ? '成功' : '失败' }}</span>
-                </template>
-            </el-table-column>
-            <el-table-column prop="operator" label="操作人" min-width="100"></el-table-column>
-            <el-table-column prop="execute_result" label="操作" min-width="200"></el-table-column>
-        </el-table>
-    </el-dialog>
 </div>
 </template>
 
@@ -161,37 +130,14 @@ export default {
             buy_settling: false,
             sale_settling: false,
             saving: false,
-            exporting: false,
-            only_success: true,
-            filter_string: '',
-            record_search_keys: ['plate'],
-            detail_visible: false,
-            push_logs: [],
-            push_logs_loading: false,
+            exporting_id: null,
         }
     },
-    computed: {
-        records_req_body: function () {
-            return {
-                only_success: this.only_success,
-            }
-        },
-    },
     methods: {
-        do_search: function () {
-            this.$refs.records.do_search()
-        },
-        cancel_search: function () {
-            this.filter_string = ''
-            this.$refs.records.cancel_search()
-        },
-        on_success_filter_change: function () {
-            this.filter_string = ''
-            this.$nextTick(() => {
-                if (this.$refs.records) {
-                    this.$refs.records.refresh(1)
-                }
-            })
+        refresh_records: function () {
+            if (this.$refs.records) {
+                this.$refs.records.refresh(1)
+            }
         },
         init_config: async function () {
             const resp = await this.$send_req('/tplus/config_get', {})
@@ -232,7 +178,7 @@ export default {
                 await this.save_config()
                 const resp = await this.$send_req('/tplus/direct_settle', { is_buy: is_buy })
                 this.$message.success(resp.status || '结算完成')
-                this.$refs.records.refresh(1)
+                this.refresh_records()
             } finally {
                 if (is_buy) {
                     this.buy_settling = false
@@ -241,24 +187,13 @@ export default {
                 }
             }
         },
-        export_detail: async function () {
-            this.exporting = true
+        export_record_detail: async function (row) {
+            this.exporting_id = row.id
             try {
-                await this.$send_req('/tplus/export_settle_detail', {})
+                await this.$send_req('/tplus/export_settle_detail', { record_id: row.id })
                 this.$message.success('导出成功,请到导出记录中查看')
             } finally {
-                this.exporting = false
-            }
-        },
-        open_detail: async function (row) {
-            this.detail_visible = true
-            this.push_logs = []
-            this.push_logs_loading = true
-            try {
-                const resp = await this.$send_req('/tplus/push_log_get', { plan_id: row.id })
-                this.push_logs = resp.logs || []
-            } finally {
-                this.push_logs_loading = false
+                this.exporting_id = null
             }
         },
     },
@@ -386,19 +321,6 @@ export default {
     flex-shrink: 0;
 }
 
-.success-switch {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-right: 4px;
-}
-
-.success-switch-label {
-    color: #6f7d90;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
 .record-title-row {
     display: flex;
     align-items: center;
@@ -406,18 +328,6 @@ export default {
     flex: 1;
     min-width: 0;
     margin-right: 12px;
-}
-
-.record-filter {
-    max-width: 420px;
-    flex: 1;
-}
-
-.record-filter /deep/ .el-input__inner {
-    border-radius: 10px 0 0 10px;
-    border-color: #d8e0ec;
-    height: 36px;
-    line-height: 36px;
 }
 
 .record-box {
@@ -454,13 +364,5 @@ export default {
 .tplus-page /deep/ .el-button--text {
     color: #3a7afe;
     font-weight: 600;
-}
-
-.ok-text {
-    color: #19a87b;
-}
-
-.fail-text {
-    color: #e34d59;
 }
 </style>

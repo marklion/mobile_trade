@@ -79,38 +79,25 @@ module.exports = {
         },
         settle_records_get: {
             name: '获取结算记录',
-            description: '分页获取已执行的Tplus结算明细',
+            description: '分页获取Tplus结算批次记录',
             is_write: false,
             is_get_api: true,
-            params: {
-                only_success: { type: Boolean, have_to: false, mean: '为真只看成功，为假看全部', example: true },
-            },
+            params: {},
             result: {
                 records: {
-                    type: Array, mean: '结算明细', explain: {
-                        id: { type: Number, mean: '计划ID', example: 1 },
-                        record_id: { type: Number, mean: '结算批次ID', example: 1 },
+                    type: Array, mean: '结算记录', explain: {
+                        id: { type: Number, mean: '记录ID', example: 1 },
                         settle_time: { type: String, mean: '结算时间', example: '2024-09-08 12:31:34' },
                         settle_type: { type: String, mean: '类型 buy/sale', example: 'sale' },
-                        plan_date: { type: String, mean: '计划日期', example: '2024-09-08' },
-                        plate: { type: String, mean: '车号', example: '京A12345' },
-                        order_company: { type: String, mean: '下单公司', example: '某某公司' },
-                        accept_company: { type: String, mean: '接单公司', example: '某某公司' },
-                        stuff_name: { type: String, mean: '物料', example: '煤炭' },
-                        unit_price: { type: Number, mean: '单价', example: 100 },
-                        count: { type: Number, mean: '数量', example: 10 },
-                        total_price: { type: Number, mean: '总价', example: 1000 },
-                        execute_result: { type: String, mean: '执行结果', example: '结算成功' },
-                        success: { type: Boolean, mean: '是否成功', example: true },
-                        push_time: { type: String, mean: '推送时间', example: '2024-09-08 12:31:34' },
+                        status: { type: String, mean: '结算状态', example: '推送成功' },
                         operator: { type: String, mean: '操作人', example: '张三' },
+                        plate_summary: { type: String, mean: '车号摘要', example: '京A12345等3车' },
                     },
                 },
             },
             func: async function (body, token) {
                 const company = await rbac_lib.get_company_by_token(token);
-                const only_success = body.only_success !== false;
-                const resp = await t_plus_lib.get_settle_records(company, body.pageNo, only_success);
+                const resp = await t_plus_lib.get_settle_records(company, body.pageNo);
                 return {
                     records: resp.rows,
                     total: resp.count,
@@ -118,44 +105,21 @@ module.exports = {
             },
         },
         export_settle_detail: {
-            name: '导出结算明细',
-            description: '导出本周期全部结算计划的《结算记录表》',
+            name: '导出结算详情',
+            description: '导出指定结算记录下每条计划的推送详情',
             is_write: false,
             is_get_api: false,
-            params: {},
+            params: {
+                record_id: { type: Number, have_to: true, mean: '结算记录ID', example: 1 },
+            },
             result: {
                 result: { type: Boolean, mean: '结果', example: true },
             },
             func: async function (body, token) {
                 const company = await rbac_lib.get_company_by_token(token);
-                return await common.do_export_later(token, '结算记录表', async () => {
-                    return await t_plus_lib.export_settle_detail(company);
+                return await common.do_export_later(token, '结算详情', async () => {
+                    return await t_plus_lib.export_settle_detail(company, body.record_id);
                 });
-            },
-        },
-        push_log_get: {
-            name: '获取推送日志',
-            description: '获取某条结算计划的推送日志',
-            is_write: false,
-            is_get_api: false,
-            params: {
-                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
-            },
-            result: {
-                logs: {
-                    type: Array, mean: '推送日志', explain: {
-                        id: { type: Number, mean: '日志ID', example: 1 },
-                        push_time: { type: String, mean: '时间', example: '2024-09-08 12:31:34' },
-                        success: { type: Boolean, mean: '是否成功', example: true },
-                        execute_result: { type: String, mean: '操作', example: '推送成功' },
-                        operator: { type: String, mean: '操作人', example: '张三' },
-                    },
-                },
-            },
-            func: async function (body, token) {
-                const company = await rbac_lib.get_company_by_token(token);
-                const logs = await t_plus_lib.get_push_log(company, body.plan_id);
-                return { logs };
             },
         },
     },

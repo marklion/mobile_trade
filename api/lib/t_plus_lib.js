@@ -17,19 +17,12 @@ function format_plan_datetime(plan) {
     return plan_time;
 }
 
-function map_plan_row(plan, company) {
+function map_plan_export_row(plan, company) {
     const plain = plan.toJSON ? plan.toJSON() : plan;
-    const record = plain.tplus_settle_record || {};
     const push_log = plain.tplus_push_log || {};
     const unit_price = parseFloat(plain.unit_price) || 0;
     const count = parseFloat(plain.count) || 0;
     return {
-        id: plain.id,
-        record_id: record.id,
-        settle_time: record.settle_time,
-        settle_type: record.settle_type,
-        status: record.status,
-        operator: push_log.operator || record.operator,
         plan_date: format_plan_datetime(plain),
         plate: plain.main_vehicle ? plain.main_vehicle.plate : '',
         order_company: plain.company ? plain.company.name : '',
@@ -39,8 +32,9 @@ function map_plan_row(plan, company) {
         count,
         total_price: unit_price * count,
         execute_result: push_log.execute_result || '',
-        success: !!push_log.success,
+        success: push_log.success ? '成功' : '失败',
         push_time: push_log.push_time || '',
+        operator: push_log.operator || '',
     };
 }
 
@@ -171,8 +165,7 @@ module.exports = {
             const plan = plans[i];
             const success = !!plan.tplus_success;
             const execute_result = plan.execute_result || '';
-            plan.tplusSettleRecordId = record.id;
-            await plan.save();
+            await plan.setTplus_settle_record(record);
 
             let push_log = await plan.getTplus_push_log();
             if (push_log) {
@@ -245,70 +238,45 @@ module.exports = {
             }
         }
     },
-    get_push_log: async function (company, plan_id) {
-        const sq = db_opt.get_sq();
-        const record_ids = (await company.getTplus_settle_records({
-            attributes: ['id'],
-        })).map((r) => r.id);
-        if (record_ids.length === 0) {
-            throw { err_msg: '结算计划不存在' };
-        }
-        const plan = await sq.models.plan.findOne({
-            where: {
-                id: plan_id,
-                tplusSettleRecordId: {
-                    [db_opt.Op.in]: record_ids,
-                },
-            },
-            include: [{
-                model: sq.models.tplus_push_log,
-                required: false,
-            }],
+    get_settle_records: async function (company, pageNo) {
+        const rows = await company.getTplus_settle_records({
+            offset: pageNo * 20,
+            limit: 20,
+            order: [['id', 'DESC']],
         });
-        if (!plan) {
-            throw { err_msg: '结算计划不存在' };
-        }
-        const log = plan.tplus_push_log;
-        if (!log) {
-            return [];
-        }
-        const plain = log.toJSON();
-        return [{
-            id: plain.id,
-            push_time: plain.push_time,
-            success: plain.success,
-            execute_result: plain.execute_result,
-            operator: plain.operator,
-        }];
-    },
-    get_settle_records: async function (company, pageNo, only_success) {
-        const sq = db_opt.get_sq();
-        const record_ids = (await company.getTplus_settle_records({
-            attributes: ['id'],
-        })).map((r) => r.id);
-        if (record_ids.length === 0) {
-            return { rows: [], count: 0 };
-        }
-        const push_log_include = {
-            model: sq.models.tplus_push_log,
-            required: true,
+        const count = await company.countTplus_settle_records();
+        return {
+            rows: rows.map((r) => {
+                const plain = r.toJSON();
+                return {
+                    id: plain.id,
+                    settle_time: plain.settle_time,
+                    settle_type: plain.settle_type,
+                    status: plain.status,
+                    operator: plain.operator,
+                    plate_summary: plain.plate_summary,
+                };
+            }),
+            count,
         };
-        if (only_success) {
-            push_log_include.where = { success: true };
-        }
-        const { count, rows } = await sq.models.plan.findAndCountAll({
+    },
+    export_settle_detail: async function (company, record_id) {
+        const sq = db_opt.get_sq();
+        const record = await sq.models.tplus_settle_record.findOne({
             where: {
-                tplusSettleRecordId: {
-                    [db_opt.Op.in]: record_ids,
-                },
+                id: record_id,
+                companyId: company.id,
             },
+        });
+        if (!record) {
+            throw { err_msg: '结算记录不存在' };
+        }
+        const plans = await record.getPlans({
             include: [
                 {
-                    model: sq.models.tplus_settle_record,
-                    attributes: ['id', 'settle_time', 'settle_type', 'status', 'operator'],
-                    required: true,
+                    model: sq.models.tplus_push_log,
+                    required: false,
                 },
-                push_log_include,
                 { model: sq.models.vehicle, as: 'main_vehicle', paranoid: false },
                 { model: sq.models.company, paranoid: false },
                 {
@@ -317,62 +285,10 @@ module.exports = {
                     include: [{ model: sq.models.company, paranoid: false }],
                 },
             ],
-            offset: pageNo * 20,
-            limit: 20,
             order: [['id', 'DESC']],
-            distinct: true,
         });
-        return {
-            rows: rows.map((p) => map_plan_row(p, company)),
-            count,
-        };
-    },
-    export_settle_detail: async function (company) {
-        const sq = db_opt.get_sq();
-        const config = await this.get_or_create_config(company);
-        const buy_cycle = config.buy_settle_cycle || 5;
-        const sale_cycle = config.sale_settle_cycle || 5;
-        const buy_start = moment().subtract(buy_cycle, 'days').format('YYYY-MM-DD');
-        const sale_start = moment().subtract(sale_cycle, 'days').format('YYYY-MM-DD');
-        const record_ids = (await company.getTplus_settle_records({
-            attributes: ['id'],
-        })).map((r) => r.id);
-        let plans = [];
-        if (record_ids.length > 0) {
-            plans = await sq.models.plan.findAll({
-                where: {
-                    tplusSettleRecordId: {
-                        [db_opt.Op.in]: record_ids,
-                    },
-                },
-                include: [
-                    {
-                        model: sq.models.tplus_settle_record,
-                        attributes: ['settle_type'],
-                        required: true,
-                    },
-                    {
-                        model: sq.models.tplus_push_log,
-                        required: true,
-                    },
-                    { model: sq.models.vehicle, as: 'main_vehicle', paranoid: false },
-                    { model: sq.models.company, paranoid: false },
-                    {
-                        model: sq.models.stuff,
-                        paranoid: false,
-                        include: [{ model: sq.models.company, paranoid: false }],
-                    },
-                ],
-                order: [['id', 'DESC']],
-            });
-            plans = plans.filter((p) => {
-                const settle_type = p.tplus_settle_record ? p.tplus_settle_record.settle_type : '';
-                const start = settle_type === 'buy' ? buy_start : sale_start;
-                return (format_plan_datetime(p) || '') >= start;
-            });
-        }
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('结算记录表');
+        const worksheet = workbook.addWorksheet('结算详情');
         worksheet.columns = [
             { header: '计划日期', key: 'plan_date', width: 20 },
             { header: '车号', key: 'plate', width: 14 },
@@ -382,21 +298,13 @@ module.exports = {
             { header: '单价', key: 'unit_price', width: 12 },
             { header: '数量', key: 'count', width: 12 },
             { header: '总价', key: 'total_price', width: 12 },
+            { header: '推送时间', key: 'push_time', width: 20 },
+            { header: '是否成功', key: 'success', width: 12 },
             { header: '执行结果', key: 'execute_result', width: 16 },
+            { header: '操作人', key: 'operator', width: 12 },
         ];
         plans.forEach((p) => {
-            const row = map_plan_row(p, company);
-            worksheet.addRow({
-                plan_date: row.plan_date,
-                plate: row.plate,
-                order_company: row.order_company,
-                accept_company: row.accept_company,
-                stuff_name: row.stuff_name,
-                unit_price: row.unit_price,
-                count: row.count,
-                total_price: row.total_price,
-                execute_result: row.execute_result,
-            });
+            worksheet.addRow(map_plan_export_row(p, company));
         });
         ['unit_price', 'count', 'total_price'].forEach((key) => {
             worksheet.getColumn(key).numFmt = '0.00';
