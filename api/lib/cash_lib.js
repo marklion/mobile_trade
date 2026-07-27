@@ -8,6 +8,7 @@ const { default: axios } = require('axios');
 const util_lib = require('./util_lib');
 const { Utils } = require('sequelize');
 const httpsAgent = require('https').Agent;
+const tplus_lib = require('./t_plus_lib');
 module.exports = {
     charge_by_username_and_contract: async function (user_name, contract, _cash_increased, _comment, subsidy_record) {
         contract.balance += parseFloat(_cash_increased);
@@ -37,7 +38,12 @@ module.exports = {
         if (user && contract) {
             let sale_company = await plan_lib.resolve_sale_contract_context_company(_token, stat_context_company_id, true);
             if (sale_company && await sale_company.hasSale_contract(contract)) {
-                await this.charge_by_username_and_contract(user.name, contract, _cash_increased, _comment);
+                let final_comment = _comment;
+                if (sale_company.tplus_appkey && sale_company.tplus_appsecret) {
+                    let tplus_code = await tplus_lib.push_charge_msg(contract, _cash_increased);
+                    final_comment += `，T+单号:${tplus_code}`;
+                }
+                await this.charge_by_username_and_contract(user.name, contract, _cash_increased, final_comment);
             }
             else {
                 throw { err_msg: '无权限' }

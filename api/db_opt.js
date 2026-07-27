@@ -143,6 +143,8 @@ let db_opt = {
             parentGroupCompanyId: { type: DataTypes.INTEGER, allowNull: true },
             tplus_appkey: { type: DataTypes.TEXT },
             tplus_appsecret: { type: DataTypes.TEXT },
+            tplus_market_oid: { type: DataTypes.TEXT },
+            tplus_market_code: { type: DataTypes.TEXT },
         },
         group_member_data_grant: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
