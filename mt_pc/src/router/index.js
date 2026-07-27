@@ -212,6 +212,24 @@ export const asyncRoutes = [
     ]
   },
   {
+    path: '/tplus',
+    component: Layout,
+    name: 'TplusMenu',
+    meta: {
+      title: 'Tplus',
+      icon: 'img:tpluslogo.png',
+      roles: ['tplus']
+    },
+    children: [
+      {
+        path: 'index',
+        name: 'Tplus',
+        component: () => import('@/views/tplus/Tplus'),
+        meta: { title: 'Tplus', roles: ['tplus'] }
+      },
+    ]
+  },
+  {
     path: '/field',
     component: Layout,
     name: 'Field',

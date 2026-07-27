@@ -454,6 +454,30 @@ let db_opt = {
             time: { type: DataTypes.STRING },
             is_running: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
+        tplus_config: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            buy_settle_time: { type: DataTypes.STRING, defaultValue: '00:00:00' },
+            buy_settle_cycle: { type: DataTypes.INTEGER, defaultValue: 5 },
+            buy_last_settle_time: { type: DataTypes.STRING },
+            sale_settle_time: { type: DataTypes.STRING, defaultValue: '00:00:00' },
+            sale_settle_cycle: { type: DataTypes.INTEGER, defaultValue: 5 },
+            sale_last_settle_time: { type: DataTypes.STRING },
+        },
+        tplus_settle_record: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            settle_time: { type: DataTypes.STRING },
+            settle_type: { type: DataTypes.STRING },
+            status: { type: DataTypes.STRING },
+            plate_summary: { type: DataTypes.STRING },
+            operator: { type: DataTypes.STRING },
+        },
+        tplus_push_log: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            push_time: { type: DataTypes.STRING },
+            success: { type: DataTypes.BOOLEAN, defaultValue: false },
+            execute_result: { type: DataTypes.STRING },
+            operator: { type: DataTypes.STRING },
+        },
         delegate: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
@@ -696,6 +720,15 @@ let db_opt = {
         _sq.models.u8c_order_info.hasMany(_sq.models.plan);
         _sq.models.u8c_order_info.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.u8c_order_info);
+
+        _sq.models.company.hasOne(_sq.models.tplus_config);
+        _sq.models.tplus_config.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.tplus_settle_record);
+        _sq.models.tplus_settle_record.belongsTo(_sq.models.company);
+        _sq.models.tplus_settle_record.hasMany(_sq.models.plan);
+        _sq.models.plan.belongsTo(_sq.models.tplus_settle_record);
+        _sq.models.plan.hasOne(_sq.models.tplus_push_log);
+        _sq.models.tplus_push_log.belongsTo(_sq.models.plan);
 
         _sq.models.delegate.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.delegate);
