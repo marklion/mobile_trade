@@ -1,117 +1,251 @@
 <template>
-    <view class="main-warp">
+    <view class="home-page">
+        <view class="page-mesh"></view>
+        <view class="page-glow page-glow-a"></view>
+        <view class="page-glow page-glow-b"></view>
         <notice-bar ref="noticeBar" />
-        <fui-row style="background-color: white;padding: 20rpx 0rpx;" isFlex justify="start">
-            <fui-col :span="6" v-if="self_info.company_logo">
-                <fui-avatar size="large" shape="square" :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
-            </fui-col>
-            <fui-col>
-                <fui-section :title="self_info.company" isLine size="50" fontWeight="500"></fui-section>
-            </fui-col>
-        </fui-row>
-        <fui-divider style="background-color: white;"></fui-divider>
-        <fui-card v-if="stat_scopes.length > 1" title="操作主体" full color="black" size="35">
-            <view class="scope-picker-trigger" @click="open_scope_picker">
-                <view class="scope-picker-label">{{ current_scope_name || '请选择公司' }}</view>
-                <fui-icon name="arrowright" size="32" color="#999"></fui-icon>
+
+        <view class="home-hero">
+            <view class="company-card">
+                <view class="hero-orb hero-orb-1"></view>
+                <view class="hero-orb hero-orb-2"></view>
+                <view class="hero-orb hero-orb-3"></view>
+                <view class="hero-top">
+                    <text class="hero-greeting">欢迎回来</text>
+                    <view class="hero-badge">
+                        <view class="hero-badge-dot"></view>
+                        <text class="hero-badge-text">经营看板</text>
+                    </view>
+                </view>
+                <view class="company-row">
+                    <view v-if="self_info.company_logo" class="company-logo-wrap">
+                        <fui-avatar size="middle" shape="square" :radius="16"
+                            :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
+                    </view>
+                    <view class="company-info" :class="{ 'has-logo': !!self_info.company_logo }">
+                        <text class="company-name">{{ self_info.company }}</text>
+                        <text class="company-sub">今日经营概览 · 实时洞察</text>
+                    </view>
+                </view>
+                <fui-list-cell v-if="stat_scopes.length > 1" :padding="['22rpx', '8rpx', '8rpx', '8rpx']"
+                    :topBorder="true" :bottomBorder="false" :topLeft="0" :topRight="0"
+                    borderColor="rgba(255,255,255,0.2)" background="transparent" arrow highlight
+                    arrowColor="#FFFFFF" @click="open_scope_picker">
+                    <view class="meta-left">
+                        <text class="meta-label hero-meta-label">操作主体</text>
+                        <text class="meta-value hero-meta-value">{{ current_scope_name || '请选择公司' }}</text>
+                    </view>
+                </fui-list-cell>
             </view>
-        </fui-card>
-        <fui-white-space v-if="stat_scopes.length > 1" size="default"></fui-white-space>
+        </view>
+
         <fui-bottom-popup :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
             <fui-list>
                 <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
                     <view class="scope-row">
                         <view class="scope-name">{{ s.name }}</view>
                         <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30"
-                            color="#1E9FFF"></fui-icon>
+                            color="#465CFF"></fui-icon>
                     </view>
                 </fui-list-cell>
             </fui-list>
         </fui-bottom-popup>
-        <fui-card title="数据一览" full color="black" size="35">
-            <view style="display: flex;flex-wrap: wrap;">
-                <view :class="charts.length > 1 ? 'charts-box' : 'charts-box-full'" v-for="(single_cts, index) in charts"
-                    :key="index">
-                    <qiun-data-charts v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0) > 0"
-                        type="column" :chartData="single_cts.chartData" :opts="single_cts.opts"></qiun-data-charts>
-                    <view v-else
-                        style="height: 300px; display: flex; justify-content: center;align-items: center; font-size: 13px;font-weight: 500;color:#DDD;">
-                        无数据</view>
-                    <view style="display: flex; justify-content: center;font-size: 13px;font-weight: 500;">
-                        {{ single_cts.opts.title }}</view>
+
+        <view class="content-stack">
+            <view class="section-shell">
+                <view class="section-head">
+                    <view class="section-head-left">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">数据一览</text>
+                            <text class="section-en">OVERVIEW</text>
+                        </view>
+                    </view>
+                </view>
+                <view class="section-body">
+                    <view class="charts-grid">
+                        <view :class="charts.length > 1 ? 'charts-box' : 'charts-box-full'"
+                            v-for="(single_cts, index) in charts" :key="index">
+                            <view class="chart-panel">
+                                <qiun-data-charts
+                                    v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0) > 0"
+                                    type="column" :chartData="single_cts.chartData"
+                                    :opts="single_cts.opts"></qiun-data-charts>
+                                <view v-else class="chart-empty">
+                                    <view class="chart-empty-icon">
+                                        <fui-icon name="order" size="48" color="#A8B4D8"></fui-icon>
+                                    </view>
+                                    <text class="chart-empty-text">暂无数据</text>
+                                </view>
+                                <view class="chart-title-wrap">
+                                    <text class="chart-title">{{ single_cts.opts.title }}</text>
+                                </view>
+                            </view>
+                        </view>
+                    </view>
+
+                    <module-filter require_module="sale_management">
+                        <view class="section-divider">
+                            <fui-divider text="物料统计" color="#7B8499" backgroundColor="#FFFFFF"></fui-divider>
+                        </view>
+                        <view class="stat-toolbar-card">
+                            <fui-list-cell :padding="['16rpx', '8rpx']" :topBorder="false" :bottomBorder="false"
+                                background="transparent" highlight @click="show_pick_date = true">
+                                <view class="meta-row-inner">
+                                    <view class="meta-left">
+                                        <text class="meta-label">统计日期</text>
+                                        <text class="meta-value">{{ base_day }}</text>
+                                    </view>
+                                    <fui-icon name="calendar" size="36" color="#465CFF"></fui-icon>
+                                </view>
+                            </fui-list-cell>
+                            <view class="day-toolbar">
+                                <view class="day-chips">
+                                    <fui-tag text="前日"
+                                        :background="day_offset === -1 ? '#465CFF' : '#FFFFFF'"
+                                        :color="day_offset === -1 ? '#FFFFFF' : '#4A5568'"
+                                        :borderColor="day_offset === -1 ? '#465CFF' : '#E4E8F2'" :radius="28"
+                                        :padding="['12rpx', '28rpx']" :marginRight="16" highlight
+                                        @click="switch_day_offset(-1)"></fui-tag>
+                                    <fui-tag text="当天"
+                                        :background="day_offset === 0 ? '#465CFF' : '#FFFFFF'"
+                                        :color="day_offset === 0 ? '#FFFFFF' : '#4A5568'"
+                                        :borderColor="day_offset === 0 ? '#465CFF' : '#E4E8F2'" :radius="28"
+                                        :padding="['12rpx', '28rpx']" :marginRight="16" highlight
+                                        @click="switch_day_offset(0)"></fui-tag>
+                                    <fui-tag text="翌天"
+                                        :background="day_offset === 1 ? '#465CFF' : '#FFFFFF'"
+                                        :color="day_offset === 1 ? '#FFFFFF' : '#4A5568'"
+                                        :borderColor="day_offset === 1 ? '#465CFF' : '#E4E8F2'" :radius="28"
+                                        :padding="['12rpx', '28rpx']" highlight
+                                        @click="switch_day_offset(1)"></fui-tag>
+                                </view>
+                                <fui-text v-if="tableData.length > 7" type="primary" :text="expand_text"
+                                    decoration="underline" @click="handle_expand"></fui-text>
+                            </view>
+                        </view>
+                        <view class="table-bleed">
+                            <fui-table :height="table_height" :gap="24" full fixed stripe :itemList="tableData"
+                                :header="headerData"></fui-table>
+                        </view>
+                    </module-filter>
                 </view>
             </view>
-            <fui-divider text="物料统计"></fui-divider>
-            <module-filter require_module="sale_management">
-                <fui-input label="统计日期" disabled borderTop placeholder="请输入时间" v-model="base_day"
-                    @click="show_pick_date = true"></fui-input>
-                <u-row style="margin: 20rpx 20rpx;">
-                    <u-col span="10">
-                        <u-radio-group v-model="day_offset" placement="row" @change="init_statistic">
-                            <u-radio label="前日" :name="-1"></u-radio>
-                            <u-radio label="当天" :name="0"></u-radio>
-                            <u-radio label="翌天" :name="1"></u-radio>
-                        </u-radio-group>
-                    </u-col>
-                    <u-col v-if="tableData.length > 7" span="2">
-                        <fui-text type="primary" :text="expand_text" decoration="underline"
-                            @click="handle_expand"></fui-text>
-                    </u-col>
-                </u-row>
-                <fui-table :height="table_height" fixed stripe :itemList="tableData" :header="headerData"></fui-table>
+
+            <fui-date-picker zIndex="1004" :show="show_pick_date" type="3" :value="base_day"
+                @change="choose_expired_date" @cancel="show_pick_date = false"></fui-date-picker>
+
+            <module-filter require_module="customer">
+                <view class="section-shell">
+                    <view class="section-head">
+                        <view class="section-head-left">
+                            <view class="section-bar"></view>
+                            <view class="section-titles">
+                                <text class="section-title">采购提单</text>
+                                <text class="section-en">PROCUREMENT</text>
+                            </view>
+                        </view>
+                    </view>
+                    <view class="section-body">
+                        <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
+                            <view class="stuff-item" v-for="item in stuff2buy" :key="item.id">
+                                <view class="stuff-accent"></view>
+                                <view class="stuff-row">
+                                    <view class="stuff-main">
+                                        <text class="stuff-title">{{ item.name }}</text>
+                                        <text class="stuff-company">{{ item.company.name }}</text>
+                                        <text class="stuff-desc" v-if="item.comment">{{ item.comment }}</text>
+                                    </view>
+                                    <view class="stuff-side">
+                                        <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
+                                        <fui-button btnSize="mini" text="下单" background="#465CFF" color="#FFFFFF"
+                                            radius="28rpx" width="120rpx" height="56rpx" size="24"
+                                            @click="start_plan_creation(item)"></fui-button>
+                                    </view>
+                                </view>
+                            </view>
+                        </list-show>
+                    </view>
+                </view>
             </module-filter>
-        </fui-card>
-        <fui-date-picker zIndex="1004" :show="show_pick_date" type="3" :value="base_day" @change="choose_expired_date"
-            @cancel="show_pick_date = false"></fui-date-picker>
-        <fui-white-space size="default"></fui-white-space>
-        <module-filter require_module="customer">
-            <fui-card title="采购提单" full color="black" size="35">
-                <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
-                    <view v-for="item in stuff2buy" :key="item.id">
-                        <u-cell :title="item.name + '-' + item.company.name" :label="item.comment"
-                            :value="item.price == -1 ? '未关注' : item.price">
-                            <view slot="right-icon">
-                                <fui-button btnSize="mini" text="下单" @click="start_plan_creation(item)"></fui-button>
-                            </view>
-                        </u-cell>
-                    </view>
-                </list-show>
-            </fui-card>
-        </module-filter>
-        <fui-white-space size="default"></fui-white-space>
-        <module-filter require_module="supplier">
-            <fui-card title="销售提单" full color="black" size="35">
-                <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
-                    <view>
-                        <u-cell v-for="(item, index) in stuff2sale" :key="index"
-                            :title="item.name + '-' + item.company.name" :label="item.comment">
-                            <view slot="right-icon">
-                                <fui-button v-if="item.price != -1" btnSize="mini" text="下单"
-                                    @click="start_plan_creation(item, true)"></fui-button>
-                            </view>
-                        </u-cell>
-                    </view>
-                </list-show>
-            </fui-card>
-        </module-filter>
-        <fui-white-space size="default"></fui-white-space>
-        <module-filter require_module="stuff">
-            <fui-card title="物料统计" full color="black" size="35">
-                <fui-table fixed stripe :itemList="totalCountData" :header="stuff_count_header"></fui-table>
-            </fui-card>
-        </module-filter>
-        <fui-white-space size="default"></fui-white-space>
-        <module-filter require_module="stuff">
-            <fui-card title="通知管理" full color="black" size="35">
-                <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容"
-                    v-model="notice.notice"></fui-textarea>
-                <fui-textarea flexStart isCounter label="司机通知" maxlength="2000" placeholder="请输入内容"
-                    v-model="notice.driver_notice"></fui-textarea>
-                <fui-button type="primary" text="保存" @click="save_notice"></fui-button>
-            </fui-card>
 
-        </module-filter>
+            <module-filter require_module="supplier">
+                <view class="section-shell">
+                    <view class="section-head">
+                        <view class="section-head-left">
+                            <view class="section-bar"></view>
+                            <view class="section-titles">
+                                <text class="section-title">销售提单</text>
+                                <text class="section-en">SALES</text>
+                            </view>
+                        </view>
+                    </view>
+                    <view class="section-body">
+                        <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
+                            <view class="stuff-item" v-for="(item, index) in stuff2sale" :key="index">
+                                <view class="stuff-accent"></view>
+                                <view class="stuff-row">
+                                    <view class="stuff-main">
+                                        <text class="stuff-title">{{ item.name }}</text>
+                                        <text class="stuff-company">{{ item.company.name }}</text>
+                                        <text class="stuff-desc" v-if="item.comment">{{ item.comment }}</text>
+                                    </view>
+                                    <view class="stuff-side" v-if="item.price != -1">
+                                        <fui-button btnSize="mini" text="下单" background="#465CFF" color="#FFFFFF"
+                                            radius="28rpx" width="120rpx" height="56rpx" size="24"
+                                            @click="start_plan_creation(item, true)"></fui-button>
+                                    </view>
+                                </view>
+                            </view>
+                        </list-show>
+                    </view>
+                </view>
+            </module-filter>
 
+            <module-filter require_module="stuff">
+                <view class="section-shell">
+                    <view class="section-head">
+                        <view class="section-head-left">
+                            <view class="section-bar"></view>
+                            <view class="section-titles">
+                                <text class="section-title">物料统计</text>
+                                <text class="section-en">MATERIALS</text>
+                            </view>
+                        </view>
+                    </view>
+                    <view class="section-body">
+                        <view class="table-bleed">
+                            <fui-table :gap="24" full fixed stripe :itemList="totalCountData"
+                                :header="stuff_count_header"></fui-table>
+                        </view>
+                    </view>
+                </view>
+            </module-filter>
+
+            <module-filter require_module="stuff">
+                <view class="section-shell section-shell-last">
+                    <view class="section-head">
+                        <view class="section-head-left">
+                            <view class="section-bar"></view>
+                            <view class="section-titles">
+                                <text class="section-title">通知管理</text>
+                                <text class="section-en">NOTICE</text>
+                            </view>
+                        </view>
+                    </view>
+                    <view class="section-body">
+                        <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容"
+                            v-model="notice.notice"></fui-textarea>
+                        <fui-textarea flexStart isCounter label="司机通知" maxlength="2000" placeholder="请输入内容"
+                            v-model="notice.driver_notice"></fui-textarea>
+                        <view class="notice-actions">
+                            <fui-button type="primary" text="保存" background="#465CFF" radius="44rpx" height="88rpx"
+                                @click="save_notice"></fui-button>
+                        </view>
+                    </view>
+                </view>
+            </module-filter>
+        </view>
     </view>
 </template>
 
@@ -146,32 +280,32 @@ export default {
             stuff_count_header: [{
                 prop: 'name',
                 label: '物料',
-                width: '260',
+                width: '240',
             }, {
                 prop: 'yesterday_count',
                 label: '昨日',
-                width: '150',
+                width: '140',
             }, {
                 prop: 'today_count',
                 label: '今日',
-                width: '150',
+                width: '140',
             }, {
                 prop: 'second_unit',
                 label: '单位',
-                width: '140',
+                width: '120',
             }],
             headerData: [{
                 prop: 'company_name',
                 label: '客户',
-                width: '400'
+                width: '280'
             }, {
                 prop: 'confirm_count',
                 label: '总车数(取消)',
-                width: '200'
+                width: '220'
             }, {
                 prop: 'finish_count',
                 label: '完成数',
-                width: '160'
+                width: '140'
             }],
             day_offset: 0,
             expand_text: '展开',
@@ -194,6 +328,13 @@ export default {
         choose_expired_date: function (e) {
             this.base_day = e.result;
             this.show_pick_date = false;
+            this.init_statistic();
+        },
+        switch_day_offset: function (offset) {
+            if (this.day_offset === offset) {
+                return;
+            }
+            this.day_offset = offset;
             this.init_statistic();
         },
         handle_expand() {
@@ -267,7 +408,7 @@ export default {
                         activeBgColor: "#000000",
                         activeBgOpacity: 0.08,
                         meterBorder: 2,
-                        meterFillColor: "#FFFFFF"
+                        meterFillColor: "#F5F7FB"
                     },
                     tooltip: {
                         showBox: true,
@@ -445,7 +586,7 @@ export default {
                             },
                             {
                                 name: '已完成',
-                                color: '#1890ff',
+                                color: '#465CFF',
                                 data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
                             }
                             ]
@@ -514,39 +655,496 @@ export default {
 }
 </script>
 
+
 <style scoped>
+.home-page {
+    position: relative;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #D5DEF6 0%, #E4EAF8 200rpx, #EEF1F8 420rpx, #F2F4FA 100%);
+    padding-bottom: 48rpx;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.page-mesh {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 420rpx;
+    background:
+        radial-gradient(circle at 18% 30%, rgba(70, 92, 255, 0.16) 0%, transparent 28%),
+        radial-gradient(circle at 82% 18%, rgba(70, 92, 255, 0.12) 0%, transparent 26%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.page-glow {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.page-glow-a {
+    top: 280rpx;
+    right: -100rpx;
+    width: 360rpx;
+    height: 360rpx;
+    background: radial-gradient(circle, rgba(120, 150, 255, 0.22) 0%, rgba(120, 150, 255, 0) 70%);
+}
+
+.page-glow-b {
+    top: 680rpx;
+    left: -140rpx;
+    width: 420rpx;
+    height: 420rpx;
+    background: radial-gradient(circle, rgba(70, 92, 255, 0.12) 0%, rgba(70, 92, 255, 0) 72%);
+}
+
+.table-bleed {
+    margin-left: -24rpx;
+    margin-right: -24rpx;
+}
+
+.home-hero {
+    position: relative;
+    z-index: 1;
+    padding: 8rpx 0 0;
+}
+
+.company-card {
+    position: relative;
+    margin: 0 24rpx;
+    padding: 36rpx 32rpx 28rpx;
+    background: linear-gradient(145deg, #3A4FE0 0%, #465CFF 48%, #6B82FF 100%);
+    border-radius: 32rpx;
+    border: 1rpx solid rgba(255, 255, 255, 0.35);
+    box-shadow: 0 24rpx 56rpx rgba(70, 92, 255, 0.32);
+    overflow: hidden;
+}
+
+.hero-orb {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.hero-orb-1 {
+    top: -70rpx;
+    right: -30rpx;
+    width: 240rpx;
+    height: 240rpx;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.hero-orb-2 {
+    bottom: -90rpx;
+    left: 20rpx;
+    width: 220rpx;
+    height: 220rpx;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.hero-orb-3 {
+    top: 40%;
+    right: 30%;
+    width: 90rpx;
+    height: 90rpx;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hero-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28rpx;
+}
+
+.hero-greeting {
+    font-size: 24rpx;
+    color: rgba(255, 255, 255, 0.82);
+    letter-spacing: 4rpx;
+    font-weight: 500;
+}
+
+.hero-badge {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 8rpx 18rpx;
+    border-radius: 24rpx;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1rpx solid rgba(255, 255, 255, 0.3);
+}
+
+.hero-badge-dot {
+    width: 10rpx;
+    height: 10rpx;
+    border-radius: 50%;
+    background: #7DFFB3;
+    margin-right: 10rpx;
+    box-shadow: 0 0 10rpx rgba(125, 255, 179, 0.8);
+}
+
+.hero-badge-text {
+    font-size: 20rpx;
+    color: #FFFFFF;
+    letter-spacing: 1rpx;
+}
+
+.company-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.company-logo-wrap {
+    padding: 8rpx;
+    border-radius: 20rpx;
+    background: rgba(255, 255, 255, 0.22);
+    border: 1rpx solid rgba(255, 255, 255, 0.4);
+}
+
+.company-info {
+    flex: 1;
+    overflow: hidden;
+}
+
+.company-info.has-logo {
+    margin-left: 22rpx;
+}
+
+.company-name {
+    display: block;
+    font-size: 42rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 1rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow: 0 8rpx 24rpx rgba(20, 30, 90, 0.25);
+}
+
+.company-sub {
+    display: block;
+    margin-top: 12rpx;
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.hero-meta-label {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.hero-meta-value {
+    color: #FFFFFF !important;
+}
+
+.content-stack {
+    position: relative;
+    z-index: 2;
+    margin-top: 28rpx;
+    padding: 0 24rpx;
+}
+
+.section-shell {
+    margin-bottom: 24rpx;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 28rpx;
+    box-shadow: 0 18rpx 48rpx rgba(40, 58, 120, 0.12);
+    border: 1rpx solid rgba(255, 255, 255, 0.9);
+    overflow: hidden;
+}
+
+.section-shell-last {
+    margin-bottom: 8rpx;
+}
+
+.section-head {
+    padding: 28rpx 28rpx 18rpx;
+    background: linear-gradient(90deg, #F3F5FF 0%, #FFFFFF 70%);
+    border-bottom: 1rpx solid #EEF1F8;
+}
+
+.section-head-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.section-bar {
+    width: 8rpx;
+    height: 36rpx;
+    border-radius: 8rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    margin-right: 16rpx;
+}
+
+.section-titles {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-title {
+    font-size: 32rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.section-en {
+    margin-top: 4rpx;
+    font-size: 18rpx;
+    color: #9AA3B8;
+    letter-spacing: 2rpx;
+}
+
+.section-body {
+    padding: 24rpx 24rpx 28rpx;
+}
+
+.meta-row-inner {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.meta-left {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    overflow: hidden;
+    margin-right: 16rpx;
+}
+
+.meta-label {
+    flex-shrink: 0;
+    font-size: 24rpx;
+    color: #8A94A6;
+    margin-right: 16rpx;
+}
+
+.meta-value {
+    flex: 1;
+    font-size: 26rpx;
+    color: #2D3748;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.charts-grid {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 0 -8rpx;
+}
+
+.charts-box,
+.charts-box-full {
+    box-sizing: border-box;
+    padding: 8rpx;
+}
+
 .charts-box {
     width: 50%;
-    height: 300px;
-    margin: 10px 0;
 }
 
 .charts-box-full {
     width: 100%;
-    height: 300px;
-    margin: 10px 0;
 }
 
-.main-warp {
-    background-color: #F1F4FA;
+.chart-panel {
+    position: relative;
+    background: linear-gradient(165deg, #F7F8FE 0%, #EEF1FB 100%);
+    border-radius: 22rpx;
+    padding: 22rpx 12rpx 18rpx;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    border: 1rpx solid #E4E9F6;
+    box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
+    overflow: hidden;
 }
 
-.scope-picker-trigger {
+.chart-panel::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 24rpx;
+    bottom: 24rpx;
+    width: 6rpx;
+    border-radius: 0 6rpx 6rpx 0;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+}
+
+.chart-empty {
+    flex: 1;
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.chart-empty-icon {
+    width: 96rpx;
+    height: 96rpx;
+    border-radius: 48rpx;
+    background: linear-gradient(145deg, rgba(70, 92, 255, 0.12), rgba(70, 92, 255, 0.04));
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 12rpx 0;
+    justify-content: center;
+    margin-bottom: 16rpx;
 }
 
-.scope-picker-label {
-    flex: 1;
-    color: #333;
-    font-size: 30rpx;
+.chart-empty-text {
+    font-size: 24rpx;
+    color: #A0AABC;
     font-weight: 500;
+}
+
+.chart-title-wrap {
+    margin-top: 12rpx;
+    display: flex;
+    justify-content: center;
+}
+
+.chart-title {
+    font-size: 22rpx;
+    color: #4A5568;
+    font-weight: 600;
+    padding: 8rpx 22rpx;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20rpx;
+    border: 1rpx solid #E8ECF6;
+    box-shadow: 0 4rpx 12rpx rgba(40, 58, 120, 0.05);
+}
+
+.section-divider {
+    margin-top: 12rpx;
+}
+
+.stat-toolbar-card {
+    margin: 8rpx 0 12rpx;
+    padding: 8rpx 12rpx 4rpx;
+    background: linear-gradient(180deg, #F6F8FE 0%, #F2F4FB 100%);
+    border-radius: 20rpx;
+    border: 1rpx solid #E8ECF6;
+}
+
+.day-toolbar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12rpx 4rpx 16rpx;
+}
+
+.day-chips {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+}
+
+.stuff-item {
+    position: relative;
+    margin: 0 0 18rpx;
+    padding: 28rpx 24rpx 28rpx 28rpx;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FD 100%);
+    border-radius: 20rpx;
+    border: 1rpx solid #E8ECF6;
+    box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.05);
+    overflow: hidden;
+}
+
+.stuff-item:last-child {
+    margin-bottom: 0;
+}
+
+.stuff-accent {
+    position: absolute;
+    left: 0;
+    top: 22rpx;
+    bottom: 22rpx;
+    width: 6rpx;
+    border-radius: 0 6rpx 6rpx 0;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+}
+
+.stuff-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.stuff-main {
+    flex: 1;
+    overflow: hidden;
+    margin-right: 16rpx;
+}
+
+.stuff-title {
+    display: block;
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 600;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    margin-right: 20rpx;
+}
+
+.stuff-company {
+    display: block;
+    margin-top: 8rpx;
+    font-size: 22rpx;
+    color: #6B7280;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stuff-desc {
+    display: block;
+    margin-top: 8rpx;
+    font-size: 22rpx;
+    color: #8A94A6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stuff-side {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.stuff-price {
+    margin-bottom: 14rpx;
+    font-size: 30rpx;
+    color: #465CFF;
+    font-weight: 700;
+    letter-spacing: 0.5rpx;
+}
+
+.notice-actions {
+    margin-top: 28rpx;
+    padding: 0 4rpx 8rpx;
 }
 
 .scope-row {
