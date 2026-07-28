@@ -660,7 +660,7 @@ export default {
 .home-page {
     position: relative;
     min-height: 100vh;
-    background: linear-gradient(180deg, #D5DEF6 0%, #E4EAF8 200rpx, #EEF1F8 420rpx, #F2F4FA 100%);
+    background: linear-gradient(180deg, #2F3FCF 0%, #465CFF 160rpx, #D8E0F6 340rpx, #E9EEF8 520rpx, #F2F4FA 100%);
     padding-bottom: 48rpx;
     box-sizing: border-box;
     overflow: hidden;
@@ -673,8 +673,8 @@ export default {
     top: 0;
     height: 420rpx;
     background:
-        radial-gradient(circle at 18% 30%, rgba(70, 92, 255, 0.16) 0%, transparent 28%),
-        radial-gradient(circle at 82% 18%, rgba(70, 92, 255, 0.12) 0%, transparent 26%);
+        radial-gradient(circle at 18% 30%, rgba(255, 255, 255, 0.18) 0%, transparent 28%),
+        radial-gradient(circle at 82% 18%, rgba(255, 255, 255, 0.14) 0%, transparent 26%);
     pointer-events: none;
     z-index: 0;
 }
@@ -717,10 +717,10 @@ export default {
     position: relative;
     margin: 0 24rpx;
     padding: 36rpx 32rpx 28rpx;
-    background: linear-gradient(145deg, #3A4FE0 0%, #465CFF 48%, #6B82FF 100%);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.08) 100%);
     border-radius: 32rpx;
-    border: 1rpx solid rgba(255, 255, 255, 0.35);
-    box-shadow: 0 24rpx 56rpx rgba(70, 92, 255, 0.32);
+    border: 1rpx solid rgba(255, 255, 255, 0.32);
+    box-shadow: 0 24rpx 56rpx rgba(24, 36, 110, 0.28);
     overflow: hidden;
 }
 
