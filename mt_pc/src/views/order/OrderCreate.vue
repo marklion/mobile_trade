@@ -341,6 +341,47 @@ export default {
         deleteRow(index, rows) {
             rows.splice(index, 1);
         },
+        getImportVehicleErrors(element) {
+            const errors = [];
+            if (!element.main_vehicle_plate) {
+                errors.push('主车牌：不能为空');
+            } else if (!this.isCarNo(element.main_vehicle_plate)) {
+                errors.push(`主车牌：格式不符合规定（当前值：${element.main_vehicle_plate}）`);
+            }
+            if (!element.behind_vehicle_plate) {
+                errors.push('挂车牌：不能为空');
+            } else if (!this.isCarNo(element.behind_vehicle_plate)) {
+                errors.push(`挂车牌：格式不符合规定（当前值：${element.behind_vehicle_plate}）`);
+            }
+            if (!element.driver_name) {
+                errors.push('司机姓名：不能为空');
+            } else if (!/^[\u4e00-\u9fa5·]{2,10}$/.test(element.driver_name)) {
+                errors.push(`司机姓名：格式不符合规定（当前值：${element.driver_name}）`);
+            }
+            if (!element.driver_phone) {
+                errors.push('司机电话：不能为空');
+            } else if (!/^1[3-9]\d{9}$/.test(element.driver_phone)) {
+                errors.push(`司机电话：格式不符合规定（当前值：${element.driver_phone}）`);
+            }
+            return errors;
+        },
+        downloadImportErrorReport(errorLines) {
+            const content = [
+                '批量导入车辆失败明细',
+                `生成时间：${new Date().toLocaleString()}`,
+                '',
+                ...errorLines
+            ].join('\n');
+            const blob = new Blob(['\uFEFF' + content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `车辆导入失败明细_${Date.now()}.txt`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        },
         async handlerBeforeUpload(file) {
             try {
                 let ar = await this.convert_excel2array(file.arrayBuffer());
@@ -349,65 +390,65 @@ export default {
                     errorCount: 0,
                     totalCount: ar.length
                 };
-                const processedData = await Promise.all(ar.map(async (element) => {
-                    try {
-                        this.new_vehicle = {
-                            ...this.new_vehicle,
-                            ...element
-                        };
-                        await this.$nextTick();
-                        await this.$refs.vb_form.validate(); //校验失败抛异常，此处
-
-                        this.$refs.vb_form.resetFields();
-                        try {
-                            const [mv, bv, dr] = await Promise.all([
-                                this.$send_req(this.type_define.vh_fetch_url, {
-                                    plate: element.main_vehicle_plate
-                                }),
-                                this.$send_req(this.type_define.vh_fetch_url, {
-                                    plate: element.behind_vehicle_plate
-                                }),
-                                this.$send_req(this.type_define.dr_fetch_url, {
-                                    phone: element.driver_phone,
-                                    name: element.driver_name
-                                })
-                            ]);
-
-                            importInfo.successCount++;
-                            return {
-                                main_vehicle: {
-                                    id: mv.id,
-                                    plate: element.main_vehicle_plate
-                                },
-                                behind_vehicle: {
-                                    id: bv.id,
-                                    plate: element.behind_vehicle_plate
-                                },
-                                driver: {
-                                    id: dr.id,
-                                    name: element.driver_name,
-                                    phone: element.driver_phone
-                                },
-                                comment: element.comment || '文件导入',
-                                trans_company_name: element.trans_company_name || '',
-                            };
-                        } catch (error) {
-                            console.error('error:', error);
-                            importInfo.errorCount++;
-                            return null;
-                        }
-
-                    } catch (e) {
-                        console.log('e', e)
+                // 逐条校验并导入，避免共用表单校验产生竞态，导致不合规数据被放行
+                const processedData = [];
+                const errorLines = [];
+                for (let i = 0; i < ar.length; i++) {
+                    const element = ar[i];
+                    const excelRow = i + 2; // 第1行为表头
+                    const fieldErrors = this.getImportVehicleErrors(element);
+                    if (fieldErrors.length > 0) {
                         importInfo.errorCount++;
-                        return null;
+                        errorLines.push(`第${excelRow}行：${fieldErrors.join('；')}`);
+                        continue;
                     }
+                    try {
+                        const [mv, bv, dr] = await Promise.all([
+                            this.$send_req(this.type_define.vh_fetch_url, {
+                                plate: element.main_vehicle_plate
+                            }),
+                            this.$send_req(this.type_define.vh_fetch_url, {
+                                plate: element.behind_vehicle_plate
+                            }),
+                            this.$send_req(this.type_define.dr_fetch_url, {
+                                phone: element.driver_phone,
+                                name: element.driver_name
+                            })
+                        ]);
 
-                }));
-                this.vehicles.unshift(...processedData.filter(item => item !== null));
+                        importInfo.successCount++;
+                        processedData.push({
+                            main_vehicle: {
+                                id: mv.id,
+                                plate: element.main_vehicle_plate
+                            },
+                            behind_vehicle: {
+                                id: bv.id,
+                                plate: element.behind_vehicle_plate
+                            },
+                            driver: {
+                                id: dr.id,
+                                name: element.driver_name,
+                                phone: element.driver_phone
+                            },
+                            comment: element.comment || '文件导入',
+                            trans_company_name: element.trans_company_name || '',
+                        });
+                    } catch (error) {
+                        console.error('error:', error);
+                        importInfo.errorCount++;
+                        const errMsg = (error && (error.err_msg || error.message)) || '接口处理失败';
+                        errorLines.push(`第${excelRow}行：提交失败（${errMsg}）`);
+                    }
+                }
+                this.vehicles.unshift(...processedData);
+                if (errorLines.length > 0) {
+                    this.downloadImportErrorReport(errorLines);
+                }
                 this.$message({
-                    message: `成功导入${importInfo.successCount}条,失败${importInfo.errorCount}条`,
-                    type: 'success',
+                    message: `成功导入${importInfo.successCount}条,失败${importInfo.errorCount}条` +
+                        (errorLines.length > 0 ? '，已下载失败明细' : ''),
+                    type: importInfo.errorCount > 0 ? 'warning' : 'success',
                     duration: 5000
                 });
             } catch (error) {

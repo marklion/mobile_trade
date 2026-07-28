@@ -426,10 +426,12 @@ export default {
                     totalCount: ar.length
                 };
 
-                // 数据验证函数
+                // 主车牌、挂车牌、司机姓名、电话均需合法，避免仅一侧车牌合法时放行不合规数据
                 const isValidData = (element) => {
-                    return (this.$regExp('plate', element.main_vehicle) || this.$regExp('plate', element.behind_vehicle)) &&
-                        (this.$regExp('name', element.driver_name) && this.$regExp('phone', element.driver_phone));
+                    return this.$regExp('plate', element.main_vehicle) &&
+                        this.$regExp('plate', element.behind_vehicle) &&
+                        this.$regExp('name', element.driver_name) &&
+                        this.$regExp('phone', element.driver_phone);
                 };
 
                 // 处理数据
