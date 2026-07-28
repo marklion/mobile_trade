@@ -7,7 +7,11 @@
                     <fui-text text="一键检查" type="primary" @click="toggleAll(single_table)"></fui-text>
                 </view>
                 <view v-for="item in single_table.fc_plan_table.fc_check_results" :key="item.id">
-                    <u--form v-if="item.field_check_item.need_input" labelPosition="left">
+                    <view v-if="item.field_check_item.need_photo" style="padding: 20rpx;">
+                        <view style="margin-bottom: 12rpx;">{{item.field_check_item.name}}</view>
+                        <fui-upload :ref="'photo_up_' + item.id" max="1" :sizeType="['compressed']" :sourceType="['camera']" :formData="{compress: '1'}" immediate :fileList="item.photo_file_list" :url="photo_upload_url" @success="after_photo_uploaded($event, item)" @complete="after_photo_complete($event, item)"></fui-upload>
+                    </view>
+                    <u--form v-else-if="item.field_check_item.need_input" labelPosition="left">
                         <u-form-item :label="item.field_check_item.name" borderBottom>
                             <u--input v-model="item.input" border="none"></u--input>
                             <u-button slot="right" @tap="input_fc(item.input, item)" text="保存" type="success" size="mini"></u-button>
@@ -37,9 +41,51 @@ export default {
         return {
             plan_id: 0,
             tables: [],
+            photo_upload_url: this.$remote_url() + '/api/v1/upload_file?compress=1',
         }
     },
     methods: {
+        get_photo_uploader: function (item) {
+            let ref = this.$refs['photo_up_' + item.id];
+            if (Array.isArray(ref)) {
+                return ref[0];
+            }
+            return ref;
+        },
+        after_photo_uploaded: async function (e, item) {
+            let path = e.res && e.res.data;
+            if (typeof path === 'object' && path !== null) {
+                path = path.result || path.url || path.path || '';
+            }
+            if (!path || typeof path !== 'string' || path.indexOf('/uploads/') !== 0) {
+                uni.showToast({ title: '上传失败', icon: 'none' });
+                return;
+            }
+            await this.$send_req('/sc/input_fc_item', {
+                fc_result_id: item.id,
+                input: path,
+            });
+            item.input = path;
+            item.checked = true;
+            const full_url = this.$convert_attach_url(path);
+            const uploader = this.get_photo_uploader(item);
+            if (uploader && typeof uploader.result === 'function' && e.index !== undefined) {
+                uploader.result(full_url, e.index);
+            }
+            // fui-upload 的 fileList 需要字符串数组，不是 {url} 对象
+            this.$set(item, 'photo_file_list', [full_url]);
+        },
+        after_photo_complete: async function (e, item) {
+            if (e.action === 'delete') {
+                await this.$send_req('/sc/input_fc_item', {
+                    fc_result_id: item.id,
+                    input: '',
+                });
+                item.input = '';
+                item.checked = false;
+                this.$set(item, 'photo_file_list', []);
+            }
+        },
         commit: async function (table) {
             await this.$send_req('/sc/commit_fc_plan', {
                 fc_plan_id: table.fc_plan_table.id,
@@ -68,13 +114,20 @@ export default {
             resp.fc_plan_tables.forEach((table) => {
                 table.fc_plan_table.fc_check_results.forEach((item) => {
                     item.checked = item.pass_time && item.pass_time.length > 0;
+                    if (item.field_check_item.need_photo && item.input) {
+                        item.photo_file_list = [this.$convert_attach_url(item.input)];
+                    } else {
+                        item.photo_file_list = [];
+                    }
                 });
             });
             return resp.fc_plan_tables;
         },
         toggleAll: async function (table) {
             for (let item of table.fc_plan_table.fc_check_results) {
-                await this.pass_fc(true, item);
+                if (!item.field_check_item.need_input && !item.field_check_item.need_photo) {
+                    await this.pass_fc(true, item);
+                }
             }
             await this.commit(table);
         },

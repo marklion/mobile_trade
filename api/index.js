@@ -126,25 +126,63 @@ else {
     const multer = require('multer');
     const wx_api_util = require('./lib/wx_api_util');
     const upload = multer({ dest: '/database/uploads/' });
-    app.post('/api/v1/upload_file', upload.single('file'), (req, res) => {
+    async function compress_uploaded_image(filePath) {
         const path = require('path');
         const fs = require('fs');
-        let fileExtension = path.extname(req.file.originalname);
-        fs.readFile(req.file.path, (err, data) => {
-            if (err) {
-                console.error(err);
-                res.send({ err_msg: '文件读取失败' });
-                return;
-            }
-            let base64Content = data.toString('base64');
-            const decodedData = Buffer.from(base64Content, 'base64');
+        const imageExts = ['.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif'];
+        const ext = path.extname(filePath).toLowerCase();
+        if (!imageExts.includes(ext)) {
+            return filePath;
+        }
+        const targetWidth = 1280;
+        const targetFileSize = 200 * 1024;
+        const absPath = '/database' + filePath;
+        const image = await jimp.read(absPath);
+        if (image.bitmap.width > targetWidth) {
+            image.resize(targetWidth, jimp.AUTO);
+        }
+        let quality = 85;
+        let buffer = await image.quality(quality).getBufferAsync(jimp.MIME_JPEG);
+        while (buffer.byteLength > targetFileSize && quality > 30) {
+            quality -= 10;
+            buffer = await image.quality(quality).getBufferAsync(jimp.MIME_JPEG);
+        }
+        const uuid = require('uuid');
+        const compressedPath = '/uploads/' + uuid.v4() + '.jpg';
+        fs.writeFileSync('/database' + compressedPath, buffer);
+        try {
+            fs.unlinkSync(absPath);
+        } catch (e) {
+            console.error('删除原图失败:', e.message);
+        }
+        return compressedPath;
+    }
+    app.post('/api/v1/upload_file', upload.single('file'), async (req, res) => {
+        const path = require('path');
+        const fs = require('fs');
+        try {
+            let fileExtension = path.extname(req.file.originalname);
+            const data = fs.readFileSync(req.file.path);
             const uuid = require('uuid');
-            real_file_name = uuid.v4();
-            const filePath = '/uploads/' + real_file_name + fileExtension;
-            fs.writeFileSync('/database' + filePath, decodedData);
+            const real_file_name = uuid.v4();
+            let filePath = '/uploads/' + real_file_name + fileExtension;
+            fs.writeFileSync('/database' + filePath, data);
+            try {
+                fs.unlinkSync(req.file.path);
+            } catch (e) { }
+            const need_compress = req.query.compress === '1' || req.body.compress === '1' || req.body.compress === true;
+            if (need_compress) {
+                filePath = await compress_uploaded_image(filePath);
+            }
             res.send(filePath);
-        });
+        } catch (err) {
+            console.error(err);
+            res.send({ err_msg: '文件上传失败' });
+        }
     });
+
+    app.use('/uploads', express.static('/database/uploads'));
+    app.use('/logo_res', express.static('/database/logo_res'));
 
     app.post('/api/v1/merge_pics', async (req, res) => {
         let body = req.body;

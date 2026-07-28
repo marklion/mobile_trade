@@ -15,14 +15,22 @@
                             <div v-for="item of fc.fc_plan_table.fc_check_results" :key="item.id">
                                 <el-row>
                                     <el-col :span="4">
-                                        <el-form-item v-if="!item.field_check_item.need_input">
+                                        <el-form-item v-if="item.field_check_item.need_photo">
+                                            <el-upload :action="photo_upload_url" :data="{compress: '1'}" :show-file-list="false" accept="image/*" capture="environment" :limit="1" :on-success="make_photo_upload_func(item)" :file-list="photo_file_lists[item.id] || []">
+                                                <el-button size="mini" type="primary">拍照</el-button>
+                                            </el-upload>
+                                        </el-form-item>
+                                        <el-form-item v-else-if="!item.field_check_item.need_input">
                                             <el-switch v-model="form[item.id]" @change="(value) => pass_fc(value, item)"></el-switch>
                                         </el-form-item>
                                         <el-button v-else @click="input_fc_item(item)">输入</el-button>
                                     </el-col>
                                     <el-col :span="20">
                                         <span>{{ item.field_check_item.name  }}</span>
-                                        <span v-if="item.input">-{{item.input}}</span>
+                                        <span v-if="item.input && !item.field_check_item.need_photo">-{{item.input}}</span>
+                                        <div v-if="item.field_check_item.need_photo && item.input" style="margin-top: 6px;">
+                                            <el-image style="width: 120px; height: 120px" :src="item.input" fit="cover" :preview-src-list="[item.input]"></el-image>
+                                        </div>
                                     </el-col>
                                 </el-row>
                             </div>
@@ -63,11 +71,29 @@ export default {
             fc_plan_tables: [],
             form: {
 
-            }
+            },
+            photo_upload_url: this.$make_file_url() + '?compress=1',
+            photo_file_lists: {},
         }
     },
 
     methods: {
+        make_photo_upload_func: function (item) {
+            let self = this;
+            return async function (res) {
+                if (!res || typeof res !== 'string' || res.indexOf('/uploads/') !== 0) {
+                    self.$message.error('图片上传失败');
+                    return;
+                }
+                await self.$send_req('/sc/input_fc_item', {
+                    fc_result_id: item.id,
+                    input: res,
+                });
+                item.input = res;
+                self.$set(self.form, item.id, true);
+                self.$set(self.photo_file_lists, item.id, []);
+            };
+        },
         input_fc_item: async function (item) {
             let that = this;
             this.$prompt('请输入' + item.field_check_item.name, '输入检查项', {

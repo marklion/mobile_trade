@@ -25,7 +25,8 @@
                     <view v-for="single_item in item.field_check_items" :key="single_item.id">
                         <u-cell :title="single_item.name">
                             <view slot="label">
-                                <fui-tag theme="plain" :scaleRatio="0.8" v-if="single_item.need_input" text="输入" type="success"></fui-tag>
+                                <fui-tag theme="plain" :scaleRatio="0.8" v-if="single_item.need_photo" text="拍照" type="warning"></fui-tag>
+                                <fui-tag theme="plain" :scaleRatio="0.8" v-else-if="single_item.need_input" text="输入" type="success"></fui-tag>
                                 <fui-tag theme="plain" :scaleRatio="0.8" v-else text="打钩" type="primary"></fui-tag>
                             </view>
                             <view slot="right-icon">
@@ -100,6 +101,7 @@
             <fui-radio-group v-model="new_fc_item.check_method">
                 <fui-radio value="0" checked></fui-radio><text>打钩</text>
                 <fui-radio value="1"></fui-radio><text>输入</text>
+                <fui-radio value="2"></fui-radio><text>拍照</text>
             </fui-radio-group>
         </fui-form-item>
     </fui-modal>
@@ -316,6 +318,7 @@ export default {
                     name: this.new_fc_item.name,
                     table_id: this.new_fc_item.table_id,
                     need_input: this.new_fc_item.check_method == '1',
+                    need_photo: this.new_fc_item.check_method == '2',
                 });
                 uni.startPullDownRefresh();
             }
@@ -323,6 +326,8 @@ export default {
         },
         prepare_add_item2fc_table: function (fc_table) {
             this.focus_fc_table = fc_table;
+            this.new_fc_item.name = '';
+            this.new_fc_item.check_method = '0';
             this.show_add_item2fc_table = true;
         },
         delete_fc_item: async function (e) {
