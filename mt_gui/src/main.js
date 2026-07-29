@@ -5,6 +5,8 @@ import Vue from 'vue'
 import uView from '@/uni_modules/uview-ui'
 Vue.use(uView)
 import './uni.promisify.adaptor'
+import { initLogoLoading } from '@/utils/logoLoading'
+initLogoLoading()
 Vue.config.productionTip = false
 Vue.prototype.$remote_url = function () {
   if (process.env.NODE_ENV === 'development') {
