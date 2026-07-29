@@ -44,7 +44,7 @@ function showOnInstance(instance, title) {
 }
 
 export function showLogoLoading(options = {}) {
-    const title = (options && options.title) || '加载中...'
+    const title = (options && options.title) || '加载中'
     count += 1
 
     const h5 = ensureH5Vm()

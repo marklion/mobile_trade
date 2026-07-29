@@ -1,13 +1,9 @@
 <template>
     <view class="logo-loading-mask" v-show="visible" @touchmove.stop.prevent="noop">
         <view class="logo-loading-box">
-            <view class="logo-ring">
-                <view class="logo-stage">
-                    <!-- 浅色：品牌浅色调 -->
-                    <image class="logo-img logo-light" src="/static/logo.jpg" mode="aspectFit"></image>
-                    <!-- 深色：原色加深覆盖，形成浅→深 -->
-                    <image class="logo-img logo-deep" src="/static/logo.jpg" mode="aspectFit"></image>
-                </view>
+            <view class="logo-stage">
+                <image class="logo-img logo-light" src="/static/logo.jpg" mode="aspectFit"></image>
+                <image class="logo-img logo-deep" src="/static/logo.jpg" mode="aspectFit"></image>
             </view>
             <view class="logo-dots">
                 <view class="logo-dot logo-dot-a"></view>
@@ -25,15 +21,14 @@ export default {
     data() {
         return {
             visible: false,
-            title: '加载中...'
+            title: '加载中'
         }
     },
     methods: {
         noop() {},
         show(title) {
-            if (title) {
-                this.title = title
-            }
+            const text = (title || '加载中')
+            this.title = text || '加载中'
             this.visible = true
         },
         hide() {
@@ -69,22 +64,10 @@ export default {
     align-items: center;
 }
 
-.logo-ring {
-    width: 136rpx;
-    height: 136rpx;
-    border-radius: 50%;
-    padding: 8rpx;
-    box-sizing: border-box;
-    background: linear-gradient(145deg, #D8E0F6 0%, #A8B6FF 35%, #465CFF 70%, #2F3FCF 100%);
-    background-size: 220% 220%;
-    animation: ring-flow 1.6s ease-in-out infinite;
-    box-shadow: 0 10rpx 28rpx rgba(70, 92, 255, 0.3);
-}
-
 .logo-stage {
     position: relative;
-    width: 100%;
-    height: 100%;
+    width: 120rpx;
+    height: 120rpx;
     border-radius: 50%;
     overflow: hidden;
     background: #FFFFFF;
@@ -148,18 +131,6 @@ export default {
     color: #465CFF;
     letter-spacing: 2rpx;
     font-weight: 500;
-}
-
-@keyframes ring-flow {
-    0% {
-        background-position: 0% 40%;
-    }
-    50% {
-        background-position: 100% 60%;
-    }
-    100% {
-        background-position: 0% 40%;
-    }
 }
 
 @keyframes logo-deepen {
