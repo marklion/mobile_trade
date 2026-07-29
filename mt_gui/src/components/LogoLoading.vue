@@ -1,5 +1,5 @@
 <template>
-    <view class="logo-loading-mask" v-show="visible" @touchmove.stop.prevent="noop" @click.stop="noop">
+    <view v-if="visible" class="logo-loading-mask" @touchmove.stop.prevent="noop" @click.stop="noop">
         <view class="logo-loading-box">
             <view class="logo-stage">
                 <image class="logo-img logo-light" src="/static/logo.jpg" mode="aspectFit"></image>
@@ -20,44 +20,33 @@ import { loadingState, nativeBridge } from '@/utils/logoLoadingState.js'
 
 export default {
     name: 'LogoLoading',
-    data() {
-        return {
-            isPresenter: false
-        }
-    },
     computed: {
         visible() {
-            return loadingState.visible && this.isPresenter
+            return !!loadingState.visible
         },
         title() {
             return loadingState.title || '加载中'
         }
     },
     created() {
-        // 同一时刻只由一个实例负责展示，避免遮罩叠两层
-        this.isPresenter = loadingState.mounted === 0
         loadingState.mounted += 1
-        // 自定义已就绪：立刻关掉可能刚弹出的原生 loading
+        // 自定义层就绪：关掉原生，并在有进行中请求时立刻展示
         nativeBridge.cancel()
+        if (loadingState.pending > 0) {
+            loadingState.visible = true
+            nativeBridge.cancel()
+        }
     },
     beforeDestroy() {
         loadingState.mounted = Math.max(0, loadingState.mounted - 1)
     },
     methods: {
-        noop() {},
-        show(title) {
-            loadingState.title = title || '加载中'
-            loadingState.visible = true
-        },
-        hide() {
-            loadingState.visible = false
-        }
+        noop() {}
     }
 }
 </script>
 
 <style scoped>
-/* 主页渐变参照：#D8E0F6(浅) → #465CFF → #2F3FCF(深) */
 .logo-loading-mask {
     position: fixed;
     left: 0;
@@ -100,9 +89,6 @@ export default {
 
 .logo-light {
     opacity: 0.55;
-    /* #ifndef MP */
-    filter: brightness(1.9) contrast(0.82) saturate(0.9);
-    /* #endif */
 }
 
 .logo-deep {

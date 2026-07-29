@@ -4,11 +4,9 @@ import { loadingState, setCancelNativeFallback } from '@/utils/logoLoadingState.
 
 let count = 0
 let patched = false
-let mixinInstalled = false
 let nativeShowLoading = null
 let nativeHideLoading = null
 let usedNativeFallback = false
-let fallbackTimer = null
 let h5Vm = null
 
 function canUseDomOverlay() {
@@ -25,21 +23,6 @@ function ensureH5Vm() {
     return h5Vm
 }
 
-function isPageVm(vm) {
-    if (!vm || !vm.$options) return false
-    if (vm.$options.mpType === 'page') return true
-    if (vm.$mp && vm.$mp.mpType === 'page') return true
-    const file = vm.$options.__file || ''
-    return /\/pages\/|\/subPage\d\//.test(file)
-}
-
-function clearFallbackTimer() {
-    if (fallbackTimer) {
-        clearTimeout(fallbackTimer)
-        fallbackTimer = null
-    }
-}
-
 function hideNativeQuietly() {
     if (!nativeHideLoading) return
     try {
@@ -51,7 +34,6 @@ function hideNativeQuietly() {
 }
 
 function cancelNativeFallback() {
-    clearFallbackTimer()
     if (usedNativeFallback) {
         hideNativeQuietly()
     }
@@ -61,84 +43,41 @@ export function showLogoLoading(options = {}) {
     let title = (options && options.title) || '加载中'
     title = String(title).replace(/\.+$/, '').replace(/…+$/, '').replace(/。+$/, '') || '加载中'
     count += 1
-
+    loadingState.pending = count
     loadingState.title = title
-    loadingState.visible = true
 
-    // 先清掉可能残留的原生 loading，只走自定义
-    clearFallbackTimer()
-    hideNativeQuietly()
-
+    // H5：挂 body 自定义层
     ensureH5Vm()
 
-    // 若短时间内自定义组件仍未挂载，再回退原生（仅此一层）
-    if (loadingState.mounted === 0) {
-        fallbackTimer = setTimeout(() => {
-            fallbackTimer = null
-            if (count <= 0 || !loadingState.visible) return
-            if (loadingState.mounted > 0) return
-            if (!nativeShowLoading) return
-            usedNativeFallback = true
-            nativeShowLoading.call(uni, {
-                title,
-                mask: options.mask !== false
-            })
-        }, 100)
+    if (loadingState.mounted > 0) {
+        loadingState.visible = true
+        hideNativeQuietly()
+        return
+    }
+
+    // 小程序当前页还没有 <logo-loading />：只用原生，避免双层
+    loadingState.visible = false
+    if (nativeShowLoading) {
+        usedNativeFallback = true
+        nativeShowLoading.call(uni, {
+            title,
+            mask: options.mask !== false
+        })
     }
 }
 
 export function hideLogoLoading() {
     count = Math.max(0, count - 1)
+    loadingState.pending = count
     if (count > 0) return
-
-    clearFallbackTimer()
-    loadingState.visible = false
-
-    if (usedNativeFallback) {
-        hideNativeQuietly()
-    }
+    forceHideAll()
 }
 
-function installPageMixin() {
-    if (mixinInstalled) return
-    mixinInstalled = true
-
-    Vue.component('logo-loading', LogoLoading)
-    Vue.component('LogoLoading', LogoLoading)
-
-    Vue.mixin({
-        beforeCreate() {
-            if (!isPageVm(this)) return
-            if (this.$options.__mtLogoLoadingWrapped) return
-            this.$options.__mtLogoLoadingWrapped = true
-
-            const components = this.$options.components || {}
-            components['logo-loading'] = LogoLoading
-            components.LogoLoading = LogoLoading
-            this.$options.components = components
-
-            const originalRender = this.$options.render
-            if (typeof originalRender !== 'function') return
-
-            this.$options.render = function (h) {
-                const pageVNode = originalRender.apply(this, arguments)
-                return h(
-                    'view',
-                    {
-                        class: ['mt-page-logo-loading-host'],
-                        style: {
-                            width: '100%',
-                            height: '100%'
-                        }
-                    },
-                    [
-                        pageVNode,
-                        h('logo-loading')
-                    ]
-                )
-            }
-        }
-    })
+function forceHideAll() {
+    count = 0
+    loadingState.pending = 0
+    loadingState.visible = false
+    hideNativeQuietly()
 }
 
 export function patchUniLoading() {
@@ -146,17 +85,25 @@ export function patchUniLoading() {
     patched = true
     nativeShowLoading = uni.showLoading.bind(uni)
     nativeHideLoading = uni.hideLoading.bind(uni)
+
     uni.showLoading = function (options) {
         showLogoLoading(options || {})
     }
     uni.hideLoading = function () {
+        // 兼容业务里偶发多次 hide：直接清干净，避免一直转
+        if (count <= 1) {
+            forceHideAll()
+            return
+        }
         hideLogoLoading()
     }
 }
 
 export function initLogoLoading() {
     setCancelNativeFallback(cancelNativeFallback)
-    installPageMixin()
+    // 仅注册组件名，方便页面里写 <logo-loading />；不再 mixin 改写页面 render
+    Vue.component('logo-loading', LogoLoading)
+    Vue.component('LogoLoading', LogoLoading)
     patchUniLoading()
     ensureH5Vm()
 }
