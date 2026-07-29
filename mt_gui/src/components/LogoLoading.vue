@@ -1,5 +1,5 @@
 <template>
-    <view class="logo-loading-mask" v-show="visible" @touchmove.stop.prevent="noop">
+    <view class="logo-loading-mask" v-show="visible" @touchmove.stop.prevent="noop" @click.stop="noop">
         <view class="logo-loading-box">
             <view class="logo-stage">
                 <image class="logo-img logo-light" src="/static/logo.jpg" mode="aspectFit"></image>
@@ -16,23 +16,41 @@
 </template>
 
 <script>
+import { loadingState, nativeBridge } from '@/utils/logoLoadingState.js'
+
 export default {
     name: 'LogoLoading',
     data() {
         return {
-            visible: false,
-            title: '加载中'
+            isPresenter: false
         }
+    },
+    computed: {
+        visible() {
+            return loadingState.visible && this.isPresenter
+        },
+        title() {
+            return loadingState.title || '加载中'
+        }
+    },
+    created() {
+        // 同一时刻只由一个实例负责展示，避免遮罩叠两层
+        this.isPresenter = loadingState.mounted === 0
+        loadingState.mounted += 1
+        // 自定义已就绪：立刻关掉可能刚弹出的原生 loading
+        nativeBridge.cancel()
+    },
+    beforeDestroy() {
+        loadingState.mounted = Math.max(0, loadingState.mounted - 1)
     },
     methods: {
         noop() {},
         show(title) {
-            const text = (title || '加载中')
-            this.title = text || '加载中'
-            this.visible = true
+            loadingState.title = title || '加载中'
+            loadingState.visible = true
         },
         hide() {
-            this.visible = false
+            loadingState.visible = false
         }
     }
 }
@@ -81,16 +99,16 @@ export default {
 }
 
 .logo-light {
-    /* 浅色观感：提亮，贴近主页浅蓝 #D8E0F6 */
     opacity: 0.55;
+    /* #ifndef MP */
     filter: brightness(1.9) contrast(0.82) saturate(0.9);
+    /* #endif */
 }
 
 .logo-deep {
     position: absolute;
     left: 0;
     top: 0;
-    /* 深色层淡入：完成浅 → 深（贴近 #2F3FCF / 原 logo 深色） */
     animation: logo-deepen 1.6s ease-in-out infinite;
 }
 
@@ -136,19 +154,15 @@ export default {
 @keyframes logo-deepen {
     0% {
         opacity: 0;
-        filter: brightness(1.35);
     }
     40% {
         opacity: 0.7;
-        filter: brightness(1.08);
     }
     55% {
         opacity: 1;
-        filter: brightness(0.92);
     }
     100% {
         opacity: 0;
-        filter: brightness(1.35);
     }
 }
 

@@ -1,5 +1,6 @@
 <template>
 <view>
+    <logo-loading />
     <fui-grid>
         <fui-grid-item v-for="(item,index) in show_apps" :key="index">
             <view style="display:flex;flex-direction: column; align-items: center; justify-content: center;">

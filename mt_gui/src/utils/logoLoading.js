@@ -1,67 +1,89 @@
 import Vue from 'vue'
 import LogoLoading from '@/components/LogoLoading.vue'
+import { loadingState, setCancelNativeFallback } from '@/utils/logoLoadingState.js'
 
 let count = 0
-let vm = null
 let patched = false
 let mixinInstalled = false
 let nativeShowLoading = null
 let nativeHideLoading = null
-const pageInstances = []
+let usedNativeFallback = false
+let fallbackTimer = null
+let h5Vm = null
 
 function canUseDomOverlay() {
     return typeof document !== 'undefined' && typeof document.createElement === 'function'
 }
 
-function getActiveInstance() {
-    if (vm) return vm
-    for (let i = pageInstances.length - 1; i >= 0; i--) {
-        const item = pageInstances[i]
-        if (item && !item._isDestroyed) {
-            return item
-        }
-    }
-    return null
-}
-
 function ensureH5Vm() {
-    if (vm) return vm
+    if (h5Vm) return h5Vm
     if (!canUseDomOverlay()) return null
     const Ctor = Vue.extend(LogoLoading)
-    vm = new Ctor()
-    vm.$mount()
-    document.body.appendChild(vm.$el)
-    return vm
+    h5Vm = new Ctor()
+    h5Vm.$mount()
+    document.body.appendChild(h5Vm.$el)
+    return h5Vm
 }
 
-function showOnInstance(instance, title) {
-    if (!instance) return false
-    if (typeof instance.show === 'function') {
-        instance.show(title)
-        return true
+function isPageVm(vm) {
+    if (!vm || !vm.$options) return false
+    if (vm.$options.mpType === 'page') return true
+    if (vm.$mp && vm.$mp.mpType === 'page') return true
+    const file = vm.$options.__file || ''
+    return /\/pages\/|\/subPage\d\//.test(file)
+}
+
+function clearFallbackTimer() {
+    if (fallbackTimer) {
+        clearTimeout(fallbackTimer)
+        fallbackTimer = null
     }
-    return false
+}
+
+function hideNativeQuietly() {
+    if (!nativeHideLoading) return
+    try {
+        nativeHideLoading.call(uni, { noConflict: true })
+    } catch (e) {
+        // ignore
+    }
+    usedNativeFallback = false
+}
+
+function cancelNativeFallback() {
+    clearFallbackTimer()
+    if (usedNativeFallback) {
+        hideNativeQuietly()
+    }
 }
 
 export function showLogoLoading(options = {}) {
-    const title = (options && options.title) || '加载中'
+    let title = (options && options.title) || '加载中'
+    title = String(title).replace(/\.+$/, '').replace(/…+$/, '').replace(/。+$/, '') || '加载中'
     count += 1
 
-    const h5 = ensureH5Vm()
-    if (showOnInstance(h5, title)) {
-        return
-    }
+    loadingState.title = title
+    loadingState.visible = true
 
-    const pageVm = getActiveInstance()
-    if (showOnInstance(pageVm, title)) {
-        return
-    }
+    // 先清掉可能残留的原生 loading，只走自定义
+    clearFallbackTimer()
+    hideNativeQuietly()
 
-    if (nativeShowLoading) {
-        nativeShowLoading.call(uni, {
-            title,
-            mask: options.mask !== false
-        })
+    ensureH5Vm()
+
+    // 若短时间内自定义组件仍未挂载，再回退原生（仅此一层）
+    if (loadingState.mounted === 0) {
+        fallbackTimer = setTimeout(() => {
+            fallbackTimer = null
+            if (count <= 0 || !loadingState.visible) return
+            if (loadingState.mounted > 0) return
+            if (!nativeShowLoading) return
+            usedNativeFallback = true
+            nativeShowLoading.call(uni, {
+                title,
+                mask: options.mask !== false
+            })
+        }, 100)
     }
 }
 
@@ -69,20 +91,11 @@ export function hideLogoLoading() {
     count = Math.max(0, count - 1)
     if (count > 0) return
 
-    const h5 = vm
-    if (h5 && typeof h5.hide === 'function') {
-        h5.hide()
-        return
-    }
+    clearFallbackTimer()
+    loadingState.visible = false
 
-    const pageVm = getActiveInstance()
-    if (pageVm && typeof pageVm.hide === 'function') {
-        pageVm.hide()
-        return
-    }
-
-    if (nativeHideLoading) {
-        nativeHideLoading.call(uni, { noConflict: true })
+    if (usedNativeFallback) {
+        hideNativeQuietly()
     }
 }
 
@@ -90,13 +103,17 @@ function installPageMixin() {
     if (mixinInstalled) return
     mixinInstalled = true
 
+    Vue.component('logo-loading', LogoLoading)
+    Vue.component('LogoLoading', LogoLoading)
+
     Vue.mixin({
         beforeCreate() {
-            if (this.$options.mpType !== 'page') return
+            if (!isPageVm(this)) return
             if (this.$options.__mtLogoLoadingWrapped) return
             this.$options.__mtLogoLoadingWrapped = true
 
             const components = this.$options.components || {}
+            components['logo-loading'] = LogoLoading
             components.LogoLoading = LogoLoading
             this.$options.components = components
 
@@ -104,7 +121,7 @@ function installPageMixin() {
             if (typeof originalRender !== 'function') return
 
             this.$options.render = function (h) {
-                const pageVNode = originalRender.call(this, h)
+                const pageVNode = originalRender.apply(this, arguments)
                 return h(
                     'view',
                     {
@@ -116,34 +133,9 @@ function installPageMixin() {
                     },
                     [
                         pageVNode,
-                        h('LogoLoading', {
-                            ref: 'mtLogoLoading'
-                        })
+                        h('logo-loading')
                     ]
                 )
-            }
-        },
-        onReady() {
-            if (this.$options.mpType !== 'page') return
-            const inst = this.$refs && this.$refs.mtLogoLoading
-            if (inst && pageInstances.indexOf(inst) === -1) {
-                pageInstances.push(inst)
-            }
-        },
-        onShow() {
-            if (this.$options.mpType !== 'page') return
-            const inst = this.$refs && this.$refs.mtLogoLoading
-            if (inst && pageInstances.indexOf(inst) === -1) {
-                pageInstances.push(inst)
-            }
-        },
-        onUnload() {
-            if (this.$options.mpType !== 'page') return
-            const inst = this.$refs && this.$refs.mtLogoLoading
-            if (!inst) return
-            const idx = pageInstances.indexOf(inst)
-            if (idx !== -1) {
-                pageInstances.splice(idx, 1)
             }
         }
     })
@@ -163,9 +155,8 @@ export function patchUniLoading() {
 }
 
 export function initLogoLoading() {
+    setCancelNativeFallback(cancelNativeFallback)
     installPageMixin()
     patchUniLoading()
-    if (canUseDomOverlay()) {
-        ensureH5Vm()
-    }
+    ensureH5Vm()
 }
