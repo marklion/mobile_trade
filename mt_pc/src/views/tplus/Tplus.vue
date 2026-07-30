@@ -19,10 +19,12 @@
                             </div>
                             <div class="buy-body">
                                 <div class="buy-top">
-                                    <span class="field-label">结算时间点</span>
-                                    <el-time-picker v-model="buy_settle_time_value" value-format="HH:mm:ss"
-                                        placeholder="选择时间" :clearable="false" class="time-picker"
-                                        @change="save_config"></el-time-picker>
+                                    <span class="field-label">结算周期</span>
+                                    <div class="cycle-wrap">
+                                        <el-input-number v-model="config.buy_settle_cycle" :min="1" :max="365"
+                                            @change="save_config"></el-input-number>
+                                        <span class="unit-text">天</span>
+                                    </div>
                                 </div>
                                 <div class="buy-prices">
                                     <div class="field-bar">
@@ -139,11 +141,10 @@ export default {
             active_tab: 'settle',
             records_ready: false,
             config: {
-                buy_settle_time: '00:00:00',
+                buy_settle_cycle: 5,
                 sale_settle_time: '00:00:00',
                 sale_settle_cycle: 5,
             },
-            buy_settle_time_value: '00:00:00',
             sale_settle_time_value: '00:00:00',
             buy_stuff_prices: [],
             buy_stuff_options: [],
@@ -221,11 +222,10 @@ export default {
         init_config: async function () {
             const resp = await this.$send_req('/tplus/config_get', {})
             this.config = {
-                buy_settle_time: resp.buy_settle_time || '00:00:00',
+                buy_settle_cycle: resp.buy_settle_cycle || 5,
                 sale_settle_time: resp.sale_settle_time || '00:00:00',
                 sale_settle_cycle: resp.sale_settle_cycle || 5,
             }
-            this.buy_settle_time_value = this.config.buy_settle_time
             this.sale_settle_time_value = this.config.sale_settle_time
             this.buy_stuff_prices = this.normalize_buy_stuff_prices(resp.buy_stuff_prices)
         },
@@ -236,12 +236,11 @@ export default {
             this.saving = true
             try {
                 await this.$send_req('/tplus/config_set', {
-                    buy_settle_time: this.buy_settle_time_value || '00:00:00',
+                    buy_settle_cycle: this.config.buy_settle_cycle,
                     buy_stuff_prices: this.get_valid_buy_stuff_prices(),
                     sale_settle_time: this.sale_settle_time_value || '00:00:00',
                     sale_settle_cycle: this.config.sale_settle_cycle,
                 })
-                this.config.buy_settle_time = this.buy_settle_time_value
                 this.config.sale_settle_time = this.sale_settle_time_value
             } finally {
                 this.saving = false
