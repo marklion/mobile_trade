@@ -219,13 +219,14 @@
 		"autoscan": true,
 		"custom": {
 			"fui-(.*)": "@/components/firstui/fui-$1/fui-$1.vue",
-			"^u-(.*)": "@/uni_modules/uview-ui/components/u-$1/u-$1.vue"
+			"^u-(.*)": "@/uni_modules/uview-ui/components/u-$1/u-$1.vue",
+			"^logo-loading$": "@/components/LogoLoading.vue"
 		}
 	},
 	"tabBar": {
-		"color": "#7A7E83",
-		"selectedColor": "#3cc51f",
-		"borderStyle": "black",
+		"color": "#8A94A6",
+		"selectedColor": "#465CFF",
+		"borderStyle": "white",
 		"backgroundColor": "#ffffff",
 		"list": [
 			{
