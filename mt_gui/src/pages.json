@@ -3,7 +3,9 @@
 		{
 			"path": "pages/Home",
 			"style": {
-				"enablePullDownRefresh": true
+				"enablePullDownRefresh": true,
+				"navigationBarBackgroundColor": "#2F3FCF",
+				"navigationBarTextStyle": "white"
 			}
 		},
 		{
