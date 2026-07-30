@@ -84,12 +84,6 @@ module.exports = {
             is_get_api: false,
             params: {
                 is_buy: { type: Boolean, have_to: true, mean: '是否采购结算', example: true },
-                stuff_prices: {
-                    type: Array, have_to: false, mean: '采购结算物料价格(结算时覆盖单价，仅采购时有效)', explain: {
-                        stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
-                        price: { type: Number, have_to: true, mean: '结算单价', example: 100.5 },
-                    },
-                },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true },
@@ -98,7 +92,7 @@ module.exports = {
             func: async function (body, token) {
                 const user = await rbac_lib.get_user_by_token(token);
                 const company = await rbac_lib.get_company_by_token(token);
-                const record = await t_plus_lib.do_settle(company, !!body.is_buy, user.name, body.stuff_prices);
+                const record = await t_plus_lib.do_settle(company, !!body.is_buy, user.name);
                 return { result: true, status: record.status };
             },
         },

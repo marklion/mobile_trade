@@ -248,22 +248,13 @@ export default {
         },
         direct_settle: async function (is_buy) {
             if (is_buy) {
-                const stuff_prices = this.get_valid_buy_stuff_prices()
-                if (stuff_prices.length === 0) {
-                    this.$message.warning('请至少配置一组物料 ID 和价格')
-                    return
-                }
                 this.buy_settling = true
             } else {
                 this.sale_settling = true
             }
             try {
                 await this.save_config()
-                const req = { is_buy: is_buy }
-                if (is_buy) {
-                    req.stuff_prices = this.get_valid_buy_stuff_prices()
-                }
-                const resp = await this.$send_req('/tplus/direct_settle', req)
+                const resp = await this.$send_req('/tplus/direct_settle', { is_buy: is_buy })
                 this.$message.success(resp.status || '结算完成')
                 this.records_ready = true
             } finally {

@@ -129,17 +129,26 @@ function apply_buy_stuff_prices(plans, stuff_prices) {
         const stuff_id = Number(plan.stuffId);
         if (price_map.has(stuff_id)) {
             const price = price_map.get(stuff_id);
-            plan.settle_unit_price = price;
             if (typeof plan.setDataValue === 'function') {
                 plan.setDataValue('unit_price', price);
             } else {
                 plan.unit_price = price;
             }
-        } else {
-            plan.settle_unit_price = parseFloat(plan.unit_price) || 0;
         }
     });
     return plans;
+}
+
+function get_buy_settle_price(stuff_prices, stuff_id, fallback_price) {
+    const price_map = new Map();
+    parse_buy_stuff_prices(stuff_prices).forEach((item) => {
+        price_map.set(item.stuff_id, item.price);
+    });
+    const id = Number(stuff_id);
+    if (price_map.has(id)) {
+        return price_map.get(id);
+    }
+    return parseFloat(fallback_price) || 0;
 }
 
 async function get_partner_code(sale_company, buy_company) {
@@ -481,15 +490,9 @@ module.exports = {
             include: util_lib.plan_detail_include(),
         });
     },
-    do_settle: async function (company, is_buy, operator, stuff_prices) {
+    do_settle: async function (company, is_buy, operator) {
         const config = await this.get_or_create_config(company);
-        let buy_prices = parse_buy_stuff_prices(stuff_prices);
-        if (is_buy && buy_prices.length === 0) {
-            buy_prices = parse_buy_stuff_prices(config.buy_stuff_prices);
-        }
-        if (is_buy && buy_prices.length === 0) {
-            throw { err_msg: '请先配置采购结算的物料价格' };
-        }
+        const buy_prices = parse_buy_stuff_prices(config.buy_stuff_prices);
         const filter_opts = is_buy
             ? {
                 stuff_ids: buy_prices.map((item) => item.stuff_id),
@@ -499,10 +502,6 @@ module.exports = {
         let plans = await this.filter_unsettled_plans(company, is_buy, filter_opts);
         if (is_buy) {
             plans = apply_buy_stuff_prices(plans, buy_prices);
-        } else {
-            plans.forEach((plan) => {
-                plan.settle_unit_price = parseFloat(plan.unit_price) || 0;
-            });
         }
         const settle_type = is_buy ? 'buy' : 'sale';
         const settle_time = moment().format('YYYY-MM-DD HH:mm:ss');
@@ -541,8 +540,8 @@ module.exports = {
             const plan = plans[i];
             const success = !!plan.tplus_success;
             const execute_result = plan.execute_result || '';
-            const settle_unit_price = plan.settle_unit_price !== undefined
-                ? Number(plan.settle_unit_price)
+            const settle_unit_price = is_buy
+                ? get_buy_settle_price(buy_prices, plan.stuffId, plan.unit_price)
                 : (parseFloat(plan.unit_price) || 0);
             await plan.setTplus_settle_record(record);
 
