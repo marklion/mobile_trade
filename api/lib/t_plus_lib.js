@@ -21,9 +21,9 @@ function map_plan_export_row(plan, company) {
     const plain = plan.toJSON ? plan.toJSON() : plan;
     const push_log = plain.tplus_push_log || {};
     const unit_price = (push_log.unit_price !== undefined && push_log.unit_price !== null)
-        ? (parseFloat(push_log.unit_price) || 0)
-        : (parseFloat(plain.unit_price) || 0);
-    const count = parseFloat(plain.count) || 0;
+        ? (Number.parseFloat(push_log.unit_price) || 0)
+        : (Number.parseFloat(plain.unit_price) || 0);
+    const count = Number.parseFloat(plain.count) || 0;
     return {
         plan_date: format_plan_datetime(plain),
         plate: plain.main_vehicle ? plain.main_vehicle.plate : '',
@@ -73,7 +73,7 @@ async function private_req2tplus(method, url, params, body, company) {
         }
     });
     let resp;
-    console.log(`call ${url + '?idMarketingOrgan=' + company.tplus_market_oid}\nreq:${JSON.stringify(body)}`);
+    console.log(`call ${method} ${url}?idMarketingOrgan=${company.tplus_market_oid}`);
     try {
         resp = await axios_instance({
             method: method,
@@ -148,7 +148,7 @@ function get_buy_settle_price(stuff_prices, stuff_id, fallback_price) {
     if (price_map.has(id)) {
         return price_map.get(id);
     }
-    return parseFloat(fallback_price) || 0;
+    return Number.parseFloat(fallback_price) || 0;
 }
 
 async function get_partner_code(sale_company, buy_company) {
@@ -542,7 +542,7 @@ module.exports = {
             const execute_result = plan.execute_result || '';
             const settle_unit_price = is_buy
                 ? get_buy_settle_price(buy_prices, plan.stuffId, plan.unit_price)
-                : (parseFloat(plan.unit_price) || 0);
+                : (Number.parseFloat(plan.unit_price) || 0);
             await plan.setTplus_settle_record(record);
 
             let push_log = await plan.getTplus_push_log();
