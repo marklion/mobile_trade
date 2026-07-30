@@ -125,7 +125,12 @@
 					"path": "Bind"
 				},
 				{
-					"path": "Login"
+					"path": "Login",
+					"style": {
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "登录"
+					}
 				},
 				{
 					"path": "Contract",
