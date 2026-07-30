@@ -1,113 +1,130 @@
 <template>
-<div class="tplus-page">
-    <div class="page-header card">
-        <div class="header-left">
-            <img src="@/assets/tpluslogo.png" class="tplus-logo" alt="Tplus">
-            <div>
+    <div class="tplus-page">
+        <div class="page-header card">
+            <div class="header-left">
+                <img src="@/assets/tpluslogo.png" class="tplus-logo" alt="Tplus">
                 <div class="panel-title">Tplus 对接系统</div>
             </div>
         </div>
-    </div>
 
-    <div class="config-area">
-        <div class="config-block card">
-            <div class="panel-header">
-                <span class="panel-title">采购结算</span>
-            </div>
-            <div class="config-grid">
-                <div class="config-row">
-                    <span class="config-label">结算时间点</span>
-                    <el-time-picker
-                        v-model="buy_settle_time_value"
-                        value-format="HH:mm:ss"
-                        placeholder="选择时间"
-                        :clearable="false"
-                        class="config-control"
-                        @change="save_config"
-                    ></el-time-picker>
-                </div>
-                <div class="config-row">
-                    <span class="config-label">结算周期</span>
-                    <div class="cycle-wrap">
-                        <el-input-number v-model="config.buy_settle_cycle" :min="1" :max="365" @change="save_config"></el-input-number>
-                        <span class="unit-text">天</span>
+        <div class="main-card card">
+            <el-tabs v-model="active_tab" @tab-click="on_tab_click">
+                <el-tab-pane label="结算" name="settle">
+                    <div class="config-area">
+                        <div class="config-block">
+                            <div class="panel-header">
+                                <span class="section-title">采购结算</span>
+                                <el-button type="primary" class="action-btn" :disabled="!can_buy_settle"
+                                    :loading="buy_settling" @click="direct_settle(true)">直接结算</el-button>
+                            </div>
+                            <div class="buy-body">
+                                <div class="buy-top">
+                                    <span class="field-label">结算时间点</span>
+                                    <el-time-picker v-model="buy_settle_time_value" value-format="HH:mm:ss"
+                                        placeholder="选择时间" :clearable="false" class="time-picker"
+                                        @change="save_config"></el-time-picker>
+                                </div>
+                                <div class="buy-prices">
+                                    <div class="field-bar">
+                                        <span class="field-label">物料价格</span>
+                                        <el-button type="text" icon="el-icon-plus"
+                                            @click="add_buy_stuff_price">添加</el-button>
+                                    </div>
+                                    <el-table :data="buy_stuff_prices" size="small" border class="stuff-table"
+                                        empty-text="暂无物料，点击添加">
+                                        <el-table-column label="物料" min-width="160">
+                                            <template slot-scope="scope">
+                                                <el-select :key="'buy-stuff-' + scope.$index + '-' + selected_stuff_key"
+                                                    v-model="scope.row.stuff_id" filterable clearable placeholder="选择物料"
+                                                    size="small" style="width: 100%" @change="save_config">
+                                                    <el-option v-for="item in get_stuff_options_for_row(scope.$index)"
+                                                        :key="item.id" :label="item.name + ' (#' + item.id + ')'"
+                                                        :value="item.id"></el-option>
+                                                </el-select>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column label="价格" width="150" align="center">
+                                            <template slot-scope="scope">
+                                                <el-input-number v-model="scope.row.price" :min="0" :precision="2"
+                                                    size="small" controls-position="right" class="price-input"
+                                                    @change="save_config"></el-input-number>
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column label="操作" width="64" align="center">
+                                            <template slot-scope="scope">
+                                                <el-button type="text" icon="el-icon-delete" class="remove-btn"
+                                                    @click="remove_buy_stuff_price(scope.$index)"></el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="config-block">
+                            <div class="panel-header">
+                                <span class="section-title">销售结算</span>
+                                <el-button type="primary" class="action-btn" :loading="sale_settling"
+                                    @click="direct_settle(false)">直接结算</el-button>
+                            </div>
+                            <div class="sale-body">
+                                <div class="sale-field">
+                                    <div class="field-label">结算时间点</div>
+                                    <el-time-picker v-model="sale_settle_time_value" value-format="HH:mm:ss"
+                                        placeholder="选择时间" :clearable="false" class="time-picker"
+                                        @change="save_config"></el-time-picker>
+                                </div>
+                                <div class="sale-field">
+                                    <div class="field-label">结算周期</div>
+                                    <div class="cycle-wrap">
+                                        <el-input-number v-model="config.sale_settle_cycle" :min="1" :max="365"
+                                            @change="save_config"></el-input-number>
+                                        <span class="unit-text">天</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
-            <el-button class="action-btn" type="primary" :loading="buy_settling" @click="direct_settle(true)">直接结算</el-button>
-        </div>
+                </el-tab-pane>
 
-        <div class="config-block card">
-            <div class="panel-header">
-                <span class="panel-title">销售结算</span>
-            </div>
-            <div class="config-grid">
-                <div class="config-row">
-                    <span class="config-label">结算时间点</span>
-                    <el-time-picker
-                        v-model="sale_settle_time_value"
-                        value-format="HH:mm:ss"
-                        placeholder="选择时间"
-                        :clearable="false"
-                        class="config-control"
-                        @change="save_config"
-                    ></el-time-picker>
-                </div>
-                <div class="config-row">
-                    <span class="config-label">结算周期</span>
-                    <div class="cycle-wrap">
-                        <el-input-number v-model="config.sale_settle_cycle" :min="1" :max="365" @change="save_config"></el-input-number>
-                        <span class="unit-text">天</span>
+                <el-tab-pane label="结算记录" name="records">
+                    <div class="record-box">
+                        <div class="record-toolbar">
+                            <el-button class="export-btn" type="primary" icon="el-icon-refresh"
+                                @click="refresh_records">刷新</el-button>
+                        </div>
+                        <page-content v-if="records_ready" ref="records" body_key="records" enable
+                            req_url="/tplus/settle_records_get" :req_body="{}">
+                            <template v-slot:default="slotProps">
+                                <div class="record-table-wrap">
+                                    <el-table :data="slotProps.content" style="width: 100%" height="100%"
+                                        class="record-table">
+                                        <el-table-column prop="settle_time" label="结算时间"
+                                            min-width="180"></el-table-column>
+                                        <el-table-column prop="settle_type" label="类型" min-width="100">
+                                            <template slot-scope="scope">
+                                                {{ scope.row.settle_type === 'buy' ? '采购' : '销售' }}
+                                            </template>
+                                        </el-table-column>
+                                        <el-table-column prop="status" label="结算状态" min-width="140"></el-table-column>
+                                        <el-table-column prop="plate_summary" label="车号"
+                                            min-width="140"></el-table-column>
+                                        <el-table-column prop="operator" label="操作人" min-width="120"></el-table-column>
+                                        <el-table-column label="操作" width="120" fixed="right">
+                                            <template slot-scope="scope">
+                                                <el-button type="text" :loading="exporting_id === scope.row.id"
+                                                    @click="export_record_detail(scope.row)">导出详情</el-button>
+                                            </template>
+                                        </el-table-column>
+                                    </el-table>
+                                </div>
+                            </template>
+                        </page-content>
                     </div>
-                </div>
-            </div>
-            <el-button class="action-btn" type="primary" :loading="sale_settling" @click="direct_settle(false)">直接结算</el-button>
+                </el-tab-pane>
+            </el-tabs>
         </div>
     </div>
-
-    <div class="record-box card">
-        <div class="panel-header">
-            <div class="record-title-row">
-                <span class="panel-title">结算记录</span>
-            </div>
-            <div class="header-actions">
-                <el-button class="export-btn" type="primary" icon="el-icon-refresh" @click="refresh_records">刷新</el-button>
-            </div>
-        </div>
-        <page-content
-            ref="records"
-            body_key="records"
-            enable
-            req_url="/tplus/settle_records_get"
-            :req_body="{}"
-        >
-            <template v-slot:default="slotProps">
-                <div class="record-table-wrap">
-                    <el-table :data="slotProps.content" style="width: 100%" height="100%" class="record-table">
-                        <el-table-column prop="settle_time" label="结算时间" min-width="180"></el-table-column>
-                        <el-table-column prop="settle_type" label="类型" min-width="100">
-                            <template slot-scope="scope">
-                                {{ scope.row.settle_type === 'buy' ? '采购' : '销售' }}
-                            </template>
-                        </el-table-column>
-                        <el-table-column prop="status" label="结算状态" min-width="140"></el-table-column>
-                        <el-table-column prop="plate_summary" label="车号" min-width="140"></el-table-column>
-                        <el-table-column prop="operator" label="操作人" min-width="120"></el-table-column>
-                        <el-table-column label="操作" width="120" fixed="right">
-                            <template slot-scope="scope">
-                                <el-button
-                                    type="text"
-                                    :loading="exporting_id === scope.row.id"
-                                    @click="export_record_detail(scope.row)"
-                                >导出详情</el-button>
-                            </template>
-                        </el-table-column>
-                    </el-table>
-                </div>
-            </template>
-        </page-content>
-    </div>
-</div>
 </template>
 
 <script>
@@ -119,36 +136,98 @@ export default {
     },
     data: function () {
         return {
+            active_tab: 'settle',
+            records_ready: false,
             config: {
                 buy_settle_time: '00:00:00',
-                buy_settle_cycle: 5,
                 sale_settle_time: '00:00:00',
                 sale_settle_cycle: 5,
             },
             buy_settle_time_value: '00:00:00',
             sale_settle_time_value: '00:00:00',
+            buy_stuff_prices: [],
+            buy_stuff_options: [],
             buy_settling: false,
             sale_settling: false,
             saving: false,
             exporting_id: null,
         }
     },
+    computed: {
+        can_buy_settle: function () {
+            return this.get_valid_buy_stuff_prices().length > 0
+        },
+        selected_stuff_key: function () {
+            return this.buy_stuff_prices.map((row) => row.stuff_id || '').join(',')
+        },
+    },
     methods: {
+        on_tab_click: function (tab) {
+            if (tab.name === 'records') {
+                this.records_ready = true
+                this.$nextTick(() => {
+                    this.refresh_records()
+                })
+            }
+        },
         refresh_records: function () {
             if (this.$refs.records) {
                 this.$refs.records.refresh(1)
+            }
+        },
+        normalize_buy_stuff_prices: function (list) {
+            const rows = Array.isArray(list) ? list : []
+            return rows
+                .map((item) => ({
+                    stuff_id: item.stuff_id ? Number(item.stuff_id) : null,
+                    price: item.price === undefined || item.price === null || item.price === ''
+                        ? undefined
+                        : Number(item.price),
+                }))
+                .filter((item) => item.stuff_id)
+        },
+        get_valid_buy_stuff_prices: function () {
+            return this.normalize_buy_stuff_prices(this.buy_stuff_prices)
+                .filter((item) => item.price !== undefined && !Number.isNaN(item.price))
+        },
+        is_stuff_selected: function (stuff_id, current_index) {
+            return this.buy_stuff_prices.some((row, index) => {
+                return index !== current_index && Number(row.stuff_id) === Number(stuff_id)
+            })
+        },
+        get_stuff_options_for_row: function (current_index) {
+            return this.buy_stuff_options.filter((item) => {
+                return !this.is_stuff_selected(item.id, current_index)
+            })
+        },
+        add_buy_stuff_price: function () {
+            this.buy_stuff_prices.push({
+                stuff_id: null,
+                price: undefined,
+            })
+        },
+        remove_buy_stuff_price: async function (index) {
+            this.buy_stuff_prices.splice(index, 1)
+            await this.save_config()
+        },
+        init_stuff_options: async function () {
+            const resp = await this.$send_req('/stuff/get_all', {})
+            const stuff_list = (resp && resp.stuff) ? resp.stuff : []
+            this.buy_stuff_options = stuff_list.filter((item) => item.use_for_buy)
+            if (this.buy_stuff_options.length === 0) {
+                this.buy_stuff_options = stuff_list
             }
         },
         init_config: async function () {
             const resp = await this.$send_req('/tplus/config_get', {})
             this.config = {
                 buy_settle_time: resp.buy_settle_time || '00:00:00',
-                buy_settle_cycle: resp.buy_settle_cycle || 5,
                 sale_settle_time: resp.sale_settle_time || '00:00:00',
                 sale_settle_cycle: resp.sale_settle_cycle || 5,
             }
             this.buy_settle_time_value = this.config.buy_settle_time
             this.sale_settle_time_value = this.config.sale_settle_time
+            this.buy_stuff_prices = this.normalize_buy_stuff_prices(resp.buy_stuff_prices)
         },
         save_config: async function () {
             if (this.saving) {
@@ -158,7 +237,7 @@ export default {
             try {
                 await this.$send_req('/tplus/config_set', {
                     buy_settle_time: this.buy_settle_time_value || '00:00:00',
-                    buy_settle_cycle: this.config.buy_settle_cycle,
+                    buy_stuff_prices: this.get_valid_buy_stuff_prices(),
                     sale_settle_time: this.sale_settle_time_value || '00:00:00',
                     sale_settle_cycle: this.config.sale_settle_cycle,
                 })
@@ -170,15 +249,24 @@ export default {
         },
         direct_settle: async function (is_buy) {
             if (is_buy) {
+                const stuff_prices = this.get_valid_buy_stuff_prices()
+                if (stuff_prices.length === 0) {
+                    this.$message.warning('请至少配置一组物料 ID 和价格')
+                    return
+                }
                 this.buy_settling = true
             } else {
                 this.sale_settling = true
             }
             try {
                 await this.save_config()
-                const resp = await this.$send_req('/tplus/direct_settle', { is_buy: is_buy })
+                const req = { is_buy: is_buy }
+                if (is_buy) {
+                    req.stuff_prices = this.get_valid_buy_stuff_prices()
+                }
+                const resp = await this.$send_req('/tplus/direct_settle', req)
                 this.$message.success(resp.status || '结算完成')
-                this.refresh_records()
+                this.records_ready = true
             } finally {
                 if (is_buy) {
                     this.buy_settling = false
@@ -198,6 +286,7 @@ export default {
         },
     },
     mounted: async function () {
+        await this.init_stuff_options()
         await this.init_config()
     },
 }
@@ -238,57 +327,143 @@ export default {
     object-fit: contain;
 }
 
-.panel-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
 .panel-title {
     color: #1f2d3d;
     font-size: 20px;
     font-weight: 600;
 }
 
+.main-card {
+    flex: 1;
+    min-height: 0;
+    padding: 8px 18px 16px;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-card /deep/ .el-tabs {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-card /deep/ .el-tabs__header {
+    margin-bottom: 14px;
+}
+
+.main-card /deep/ .el-tabs__content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.main-card /deep/ .el-tab-pane {
+    height: 100%;
+}
+
+.panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.section-title {
+    color: #1f2d3d;
+    font-size: 18px;
+    font-weight: 600;
+}
 
 .config-area {
     display: flex;
+    align-items: flex-start;
     gap: 14px;
 }
 
 .config-block {
     flex: 1;
-    padding: 16px;
+    min-width: 0;
+    padding: 14px 16px;
+    border: 1px solid #ebf0f6;
+    border-radius: 10px;
+    background: #fafcff;
     display: flex;
     flex-direction: column;
     gap: 14px;
 }
 
-.config-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(200px, 1fr));
-    gap: 10px;
-}
-
-.config-row {
-    border: 1px solid #ebf0f6;
-    border-radius: 10px;
-    padding: 10px 12px;
+.buy-body {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fafcff;
-    gap: 10px;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.config-label {
+.buy-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.buy-prices {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.field-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 22px;
+}
+
+.field-label {
     color: #6f7d90;
     font-size: 14px;
+    line-height: 22px;
     white-space: nowrap;
 }
 
-.config-control {
+.time-picker {
     width: 150px;
+}
+
+.stuff-table {
+    width: 100%;
+}
+
+.stuff-table /deep/ th {
+    background: #f8fafc !important;
+    color: #6f7d90;
+    font-weight: 600;
+}
+
+.stuff-table /deep/ .cell {
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.price-input {
+    width: 130px;
+}
+
+.sale-body {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.sale-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 180px;
+}
+
+.sale-field .time-picker {
+    width: 100%;
 }
 
 .cycle-wrap {
@@ -302,47 +477,39 @@ export default {
     font-size: 14px;
 }
 
+.remove-btn {
+    color: #f56c6c !important;
+    padding: 0;
+}
+
 .action-btn {
-    width: 132px;
-    font-size: 16px;
-    height: 42px;
-    border-radius: 10px;
-    align-self: flex-start;
+    width: 116px;
+    height: 36px;
+    font-size: 14px;
+    border-radius: 8px;
 }
 
 .export-btn {
     border-radius: 10px;
 }
 
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
-.record-title-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-    min-width: 0;
-    margin-right: 12px;
-}
-
 .record-box {
-    flex: 1;
+    height: 100%;
     min-height: 0;
-    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
+.record-toolbar {
+    display: flex;
+    justify-content: flex-end;
+}
+
 .record-table-wrap {
     flex: 1;
-    min-height: 280px;
-    height: calc(100vh - 420px);
+    min-height: 360px;
+    height: calc(100vh - 280px);
 }
 
 .record-table /deep/ th {
@@ -357,7 +524,7 @@ export default {
 
 .tplus-page /deep/ .el-input__inner,
 .tplus-page /deep/ .el-input-number .el-input__inner {
-    border-radius: 10px;
+    border-radius: 8px;
     border-color: #d8e0ec;
 }
 

@@ -20,7 +20,9 @@ function format_plan_datetime(plan) {
 function map_plan_export_row(plan, company) {
     const plain = plan.toJSON ? plan.toJSON() : plan;
     const push_log = plain.tplus_push_log || {};
-    const unit_price = parseFloat(plain.unit_price) || 0;
+    const unit_price = (push_log.unit_price !== undefined && push_log.unit_price !== null)
+        ? (parseFloat(push_log.unit_price) || 0)
+        : (parseFloat(plain.unit_price) || 0);
     const count = parseFloat(plain.count) || 0;
     return {
         plan_date: format_plan_datetime(plain),
@@ -76,6 +78,49 @@ async function private_req2tplus(method, url, params, body, company) {
 
     return resp.data;
 }
+function parse_buy_stuff_prices(raw) {
+    if (Array.isArray(raw)) {
+        return raw.map((item) => ({
+            stuff_id: Number(item.stuff_id),
+            price: Number(Number(item.price).toFixed(2)),
+        })).filter((item) => item.stuff_id > 0 && !Number.isNaN(item.price));
+    }
+    if (!raw || typeof raw !== 'string') {
+        return [];
+    }
+    try {
+        return parse_buy_stuff_prices(JSON.parse(raw));
+    } catch (e) {
+        return [];
+    }
+}
+
+function stringify_buy_stuff_prices(prices) {
+    return JSON.stringify(parse_buy_stuff_prices(prices));
+}
+
+function apply_buy_stuff_prices(plans, stuff_prices) {
+    const price_map = new Map();
+    parse_buy_stuff_prices(stuff_prices).forEach((item) => {
+        price_map.set(item.stuff_id, item.price);
+    });
+    plans.forEach((plan) => {
+        const stuff_id = Number(plan.stuffId);
+        if (price_map.has(stuff_id)) {
+            const price = price_map.get(stuff_id);
+            plan.settle_unit_price = price;
+            if (typeof plan.setDataValue === 'function') {
+                plan.setDataValue('unit_price', price);
+            } else {
+                plan.unit_price = price;
+            }
+        } else {
+            plan.settle_unit_price = parseFloat(plan.unit_price) || 0;
+        }
+    });
+    return plans;
+}
+
 async function get_partner_code(sale_company, buy_company) {
     let ret = null;
     let resp = await private_req2tplus(
@@ -111,55 +156,80 @@ module.exports = {
         }
         return plans;
     },
+    parse_buy_stuff_prices,
+    stringify_buy_stuff_prices,
     get_or_create_config: async function (company) {
         let config = await company.getTplus_config();
         if (!config) {
             config = await company.createTplus_config({
                 buy_settle_time: '00:00:00',
                 buy_settle_cycle: 5,
+                buy_stuff_prices: '[]',
                 sale_settle_time: '00:00:00',
                 sale_settle_cycle: 5,
             });
         }
         return config;
     },
-    filter_unsettled_plans: async function (company, is_buy, cycle_days) {
+    filter_unsettled_plans: async function (company, is_buy, options) {
         const sq = db_opt.get_sq();
-        const stuff = await company.getStuff({ paranoid: false });
-        if (!stuff || stuff.length === 0) {
-            return [];
+        const opts = options || {};
+        let stuff_ids = Array.isArray(opts.stuff_ids) ? opts.stuff_ids.filter((id) => id > 0) : [];
+        if (stuff_ids.length === 0) {
+            const stuff = await company.getStuff({ paranoid: false });
+            if (!stuff || stuff.length === 0) {
+                return [];
+            }
+            stuff_ids = stuff.map((s) => s.id);
         }
-        const stuff_or = stuff.map((s) => ({ stuffId: s.id }));
-        const start_date = moment().subtract(cycle_days || 5, 'days').format('YYYY-MM-DD');
-        const where_condition = {
-            [db_opt.Op.and]: [
-                {
-                    status: 3,
-                    manual_close: false,
-                    is_buy: !!is_buy,
-                    count: {
-                        [db_opt.Op.ne]: 0,
-                    },
-                    plan_time: {
-                        [db_opt.Op.gte]: start_date,
-                    },
+        const and_conditions = [
+            {
+                status: 3,
+                manual_close: false,
+                is_buy: !!is_buy,
+                count: {
+                    [db_opt.Op.ne]: 0,
                 },
-                {
-                    [db_opt.Op.or]: stuff_or,
-                },
-                // 推送成功过的计划不再推；无日志或失败可推
-                sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`),
-            ],
-        };
+            },
+            {
+                [db_opt.Op.or]: stuff_ids.map((id) => ({ stuffId: id })),
+            },
+            // 推送成功过的计划不再推；无日志或失败可推
+            sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`),
+        ];
+        if (!is_buy) {
+            const start_date = moment().subtract(opts.cycle_days || 5, 'days').format('YYYY-MM-DD');
+            and_conditions[0].plan_time = {
+                [db_opt.Op.gte]: start_date,
+            };
+        }
         return await sq.models.plan.findAll({
-            where: where_condition,
+            where: {
+                [db_opt.Op.and]: and_conditions,
+            },
             include: util_lib.plan_detail_include(),
         });
     },
-    do_settle: async function (company, is_buy, operator) {
+    do_settle: async function (company, is_buy, operator, stuff_prices) {
         const config = await this.get_or_create_config(company);
-        const cycle = is_buy ? (config.buy_settle_cycle || 5) : (config.sale_settle_cycle || 5);
-        let plans = await this.filter_unsettled_plans(company, is_buy, cycle);
+        let buy_prices = parse_buy_stuff_prices(stuff_prices);
+        if (is_buy && buy_prices.length === 0) {
+            buy_prices = parse_buy_stuff_prices(config.buy_stuff_prices);
+        }
+        if (is_buy && buy_prices.length === 0) {
+            throw { err_msg: '请先配置采购结算的物料价格' };
+        }
+        const filter_opts = is_buy
+            ? { stuff_ids: buy_prices.map((item) => item.stuff_id) }
+            : { cycle_days: config.sale_settle_cycle || 5 };
+        let plans = await this.filter_unsettled_plans(company, is_buy, filter_opts);
+        if (is_buy) {
+            plans = apply_buy_stuff_prices(plans, buy_prices);
+        } else {
+            plans.forEach((plan) => {
+                plan.settle_unit_price = parseFloat(plan.unit_price) || 0;
+            });
+        }
         const settle_type = is_buy ? 'buy' : 'sale';
         const settle_time = moment().format('YYYY-MM-DD HH:mm:ss');
         const op = operator || '系统';
@@ -197,6 +267,9 @@ module.exports = {
             const plan = plans[i];
             const success = !!plan.tplus_success;
             const execute_result = plan.execute_result || '';
+            const settle_unit_price = plan.settle_unit_price !== undefined
+                ? Number(plan.settle_unit_price)
+                : (parseFloat(plan.unit_price) || 0);
             await plan.setTplus_settle_record(record);
 
             let push_log = await plan.getTplus_push_log();
@@ -205,6 +278,7 @@ module.exports = {
                 push_log.success = success;
                 push_log.execute_result = execute_result;
                 push_log.operator = op;
+                push_log.unit_price = settle_unit_price;
                 await push_log.save();
             } else {
                 await plan.createTplus_push_log({
@@ -212,6 +286,7 @@ module.exports = {
                     success,
                     execute_result,
                     operator: op,
+                    unit_price: settle_unit_price,
                 });
             }
         }
@@ -259,7 +334,7 @@ module.exports = {
                 continue;
             }
             try {
-                if (this.should_auto_settle(config.buy_last_settle_time, config.buy_settle_time, config.buy_settle_cycle)) {
+                if (this.should_auto_settle(config.buy_last_settle_time, config.buy_settle_time, 1)) {
                     await this.do_settle(company, true, '定时任务');
                 }
                 if (this.should_auto_settle(config.sale_last_settle_time, config.sale_settle_time, config.sale_settle_cycle)) {
