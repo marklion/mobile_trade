@@ -7,7 +7,7 @@ const db_opt = require('../db_opt');
 const sq = db_opt.get_sq();
 const archiver = require('archiver');
 const uuid = require('uuid');
-function replace_content2pic(renderedZip, xmlContent, sig, orig_content) {
+function replace_content2pic(renderedZip, xmlContent, sig, orig_content, size_cm) {
     const imagePath = path.resolve('/database' + sig);
     let ret = xmlContent;
     if (fs.existsSync(imagePath)) {
@@ -36,8 +36,10 @@ function replace_content2pic(renderedZip, xmlContent, sig, orig_content) {
         renderedZip.file(relsPath, relsXml);
 
         // size in EMU (1cm = 360000 EMU)
-        const cx = 2 * 360000; // 3cm
-        const cy = 0.7 * 360000; // 1cm
+        const width_cm = (size_cm && size_cm.width) ? size_cm.width : 2;
+        const height_cm = (size_cm && size_cm.height) ? size_cm.height : 0.7;
+        const cx = width_cm * 360000;
+        const cy = height_cm * 360000;
 
         // build drawing xml for a floating (anchor) picture placed above text (behindDoc="1")
         const drawingXml = `
@@ -169,13 +171,17 @@ module.exports = {
             }),
         };
     },
-    add_item2fc_table: async function (fc_id, item_name, need_input = false) {
+    add_item2fc_table: async function (fc_id, item_name, need_input = false, need_photo = false) {
         let fc_table = await this.get_fc_table(fc_id);
         let exist_fc_item = await fc_table.getField_check_items({ where: { name: item_name } });
         if (exist_fc_item.length > 0) {
             return;
         }
-        let new_one = await sq.models.field_check_item.create({ name: item_name, need_input: need_input });
+        let new_one = await sq.models.field_check_item.create({
+            name: item_name,
+            need_input: !!need_input && !need_photo,
+            need_photo: !!need_photo,
+        });
         await new_one.setField_check_table(fc_table);
     },
     get_fc_item: async function (item_id) {
@@ -268,11 +274,20 @@ module.exports = {
     make_fc_for_export: async function (fc_plan_table, plan) {
         let ret = {};
         if (fc_plan_table.fc_plan_table) {
+            ret._fc_photos = [];
             for (let index = 0; index < fc_plan_table.fc_plan_table.fc_check_results.length; index++) {
                 const element = fc_plan_table.fc_plan_table.fc_check_results[index];
                 if (element && element.field_check_item) {
                     let fc_content = element.pass_time ? '通过' : '未通过';
-                    if (element.field_check_item.need_input) {
+                    if (element.field_check_item.need_photo) {
+                        if (element.input) {
+                            const placeholder = `PIC${element.id}`;
+                            fc_content = placeholder;
+                            ret._fc_photos.push({ path: element.input, placeholder: placeholder });
+                        } else {
+                            fc_content = '未拍照';
+                        }
+                    } else if (element.field_check_item.need_input) {
                         fc_content = element.input ? element.input : '未填写';
                     }
                     ret[element.field_check_item.name] = fc_content;
@@ -282,14 +297,22 @@ module.exports = {
                 ret.finish_time = fc_plan_table.fc_plan_table.finish_time;
 
                 try {
-                    const user = await sq.models.rbac_user.findByPk(fc_plan_table.fc_plan_table.rbac_user.id, {
-                        attributes: ['id', 'name', 'signature_pic']
-                    });
+                    const rbac_user = fc_plan_table.fc_plan_table.rbac_user;
+                    if (rbac_user && rbac_user.id) {
+                        const user = await sq.models.rbac_user.findByPk(rbac_user.id, {
+                            attributes: ['id', 'name', 'signature_pic']
+                        });
 
-                    if (user) {
-                        ret.checker = user.name;
-                        if (user.signature_pic) {
-                            ret.user_signature = user.signature_pic;
+                        if (user) {
+                            ret.checker = user.name;
+                            if (user.signature_pic) {
+                                ret.user_signature = user.signature_pic;
+                            }
+                        }
+                    } else if (rbac_user && rbac_user.name) {
+                        ret.checker = rbac_user.name;
+                        if (rbac_user.signature_pic) {
+                            ret.user_signature = rbac_user.signature_pic;
                         }
                     }
                 } catch (error) {
@@ -297,12 +320,12 @@ module.exports = {
                 }
             }
             ret.table_name = fc_plan_table.name;
-            ret.stuff_name = plan.stuff.name;
-            ret.company_name = plan.stuff.company.name;
-            ret.main_vehicle = plan.main_vehicle.plate;
-            ret.behind_vehicle = plan.behind_vehicle.plate;
-            ret.driver_signature = plan.driver.signature_pic;
-            ret.driver_name = plan.driver.name;
+            ret.stuff_name = plan.stuff && plan.stuff.name;
+            ret.company_name = plan.stuff && plan.stuff.company && plan.stuff.company.name;
+            ret.main_vehicle = plan.main_vehicle && plan.main_vehicle.plate;
+            ret.behind_vehicle = plan.behind_vehicle && plan.behind_vehicle.plate;
+            ret.driver_signature = plan.driver && plan.driver.signature_pic;
+            ret.driver_name = plan.driver && plan.driver.name;
             ret.seal_no = plan.seal_no;
             ret.count = plan.count;
         }
@@ -329,9 +352,12 @@ module.exports = {
             xmlOptions: {
                 parser: DOMParser,
                 serializer: XMLSerializer
-            }
+            },
+            nullGetter: () => '',
         });
 
+        const fc_photos = fc_result._fc_photos || [];
+        delete fc_result._fc_photos;
         doc.setData(fc_result);
 
         try {
@@ -345,14 +371,27 @@ module.exports = {
         let xmlContent = renderedZip.files['word/document.xml'].asText();
 
         // 处理检查人签名图片
-        if (fc_result.user_signature) {
+        if (fc_result.user_signature && fc_result.checker) {
             xmlContent = replace_content2pic(renderedZip, xmlContent, fc_result.user_signature, fc_result.checker);
         }
-        if (fc_result.driver_signature) {
+        if (fc_result.driver_signature && fc_result.driver_name) {
             xmlContent = replace_content2pic(renderedZip, xmlContent, fc_result.driver_signature, fc_result.driver_name);
         }
+        // 处理现场拍照检查项图片
+        for (let index = 0; index < fc_photos.length; index++) {
+            const photo = fc_photos[index];
+            if (!photo.path || !photo.placeholder) {
+                continue;
+            }
+            try {
+                xmlContent = replace_content2pic(renderedZip, xmlContent, photo.path, photo.placeholder, { width: 6, height: 4.5 });
+            } catch (error) {
+                console.error('嵌入拍照图片失败:', photo.path, error);
+            }
+        }
 
-        let filename = `fc_${fc_result.main_vehicle}-${fc_result.behind_vehicle}-${fc_result.finish_time}.docx`;
+        const safe_time = String(fc_result.finish_time || '').replace(/[:\s]/g, '_');
+        let filename = `fc_${fc_result.main_vehicle || '无'}-${fc_result.behind_vehicle || '无'}-${safe_time}.docx`;
         let download_path = path.resolve('/database/uploads/', filename);
 
         const buf = renderedZip.generate({ type: 'nodebuffer' });
@@ -361,7 +400,6 @@ module.exports = {
         return download_path;
     },
     export_fc: async function (plans) {
-        let ret = '';
         let filePaths = [];
 
         for (let index = 0; index < plans.length; index++) {
@@ -385,57 +423,69 @@ module.exports = {
                         let full_template_path = '/database' + template_path;
 
                         if (fs.existsSync(full_template_path)) {
-                            let tmp_doc = await this.make_file_by_fc_result(fc_result_table, full_template_path);
-                            filePaths.push(tmp_doc);
+                            try {
+                                let tmp_doc = await this.make_file_by_fc_result(fc_result_table, full_template_path);
+                                filePaths.push(tmp_doc);
+                            } catch (error) {
+                                console.error('生成现场检查表失败:', fc_plan_table.name, error);
+                            }
+                        } else {
+                            console.error('现场检查表模板文件不存在:', full_template_path, '表名:', fc_plan_table.name);
                         }
+                    } else {
+                        console.error('现场检查表未配置模板:', fc_plan_table.name || fc_plan_table.id);
                     }
+                } else {
+                    console.error('现场检查表未提交，跳过导出:', fc_plan_table && fc_plan_table.name);
                 }
             }
         }
 
         if (filePaths.length === 0) {
-            return '';
+            // 返回 'no' 让前端结束「正在导出」状态（空字符串会被当成仍在导出）
+            return 'no';
         }
 
         let download_path = `/uploads/fc_${uuid.v4().split('-')[0]}.zip`;
         const outputPath = `/database${download_path}`;
 
-        const output = fs.createWriteStream(outputPath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
+        await new Promise((resolve, reject) => {
+            const output = fs.createWriteStream(outputPath);
+            const archive = archiver('zip', { zlib: { level: 9 } });
 
-        output.on('close', async () => {
-            console.log('ZIP文件创建成功,大小:' + archive.pointer() + ' bytes');
-            // 删除打包前的文件
-            await Promise.all(filePaths.map(async (filePath) => {
+            output.on('close', () => {
+                console.log('ZIP文件创建成功,大小:' + archive.pointer() + ' bytes');
+                resolve();
+            });
+            output.on('error', reject);
+            archive.on('error', reject);
+
+            archive.pipe(output);
+            filePaths.forEach((filePath) => {
+                const absolutePath = path.resolve(filePath);
                 try {
-                    const absolutePath = path.resolve(filePath);
-                    await fs.promises.unlink(absolutePath);
-                    console.log(`文件已删除: ${absolutePath}`);
+                    const matched = absolutePath.match(/fc_(.*)/);
+                    const fileName = matched ? matched[1] : path.basename(absolutePath);
+                    archive.file(absolutePath, { name: `现场检查表_${fileName}` });
+                    console.log(`文件已添加到ZIP: ${absolutePath}`);
                 } catch (err) {
-                    console.error(`无法删除文件 ${absolutePath}: ${err.message}`);
+                    console.error(`无法访问文件 ${absolutePath}: ${err.message}`);
                 }
-            }));
+            });
+            archive.finalize();
         });
 
-        archive.on('error', (err) => {
-            console.error('ZIP文件创建失败: ' + err.message);
-        });
-
-        archive.pipe(output);
         await Promise.all(filePaths.map(async (filePath) => {
-            const absolutePath = path.resolve(filePath);
             try {
-                const fileName = absolutePath.match(/fc_(.*)/)[1];
-                await archive.file(absolutePath, { name: `现场检查表_${fileName}` });
-                console.log(`文件已添加到ZIP: ${absolutePath}`);
+                const absolutePath = path.resolve(filePath);
+                await fs.promises.unlink(absolutePath);
+                console.log(`文件已删除: ${absolutePath}`);
             } catch (err) {
-                console.error(`无法访问文件 ${absolutePath}: ${err.message}`);
+                console.error(`无法删除文件 ${filePath}: ${err.message}`);
             }
         }));
-        archive.finalize()
-        ret = download_path;
 
-        return ret;
+        return download_path;
     },
     upload_fc_table_template: async function (fc_table_id, file_path) {
         let fc_table = await this.get_fc_table(fc_table_id);

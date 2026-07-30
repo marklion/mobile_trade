@@ -418,6 +418,7 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             need_input: { type: DataTypes.BOOLEAN, defaultValue: false },
+            need_photo: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         fc_plan_table: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

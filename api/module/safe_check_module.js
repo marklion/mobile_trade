@@ -44,6 +44,7 @@ function fc_table_explain(has_plan = false) {
                 id: { type: Number, mean: '检查项ID', example: 1 },
                 name: { type: String, mean: '检查项名', example: '检查项名' },
                 need_input: { type: Boolean, mean: '是否需要输入', example: false },
+                need_photo: { type: Boolean, mean: '是否需要拍照', example: false },
             }
         },
         rbac_role: {
@@ -68,6 +69,7 @@ function fc_table_explain(has_plan = false) {
                                 id: { type: Number, mean: '检查项ID', example: 1 },
                                 name: { type: String, mean: '检查项名', example: '检查项名' },
                                 need_input: { type: Boolean, mean: '是否需要输入', example: false },
+                                need_photo: { type: Boolean, mean: '是否需要拍照', example: false },
                             }
                         },
                     }
@@ -290,6 +292,7 @@ module.exports = {
                 table_id: { type: Number, have_to: true, mean: '表ID', example: 1 },
                 name: { type: String, have_to: true, mean: '检查项名', example: '检查项名' },
                 need_input: { type: Boolean, have_to: false, mean: '是否需要输入', example: false },
+                need_photo: { type: Boolean, have_to: false, mean: '是否需要拍照', example: false },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
@@ -299,7 +302,7 @@ module.exports = {
                 if (!await could_config_stuff(fc_table.stuff.id, token)) {
                     throw { err_msg: '无权限' };
                 }
-                await fc_lib.add_item2fc_table(body.table_id, body.name, body.need_input);
+                await fc_lib.add_item2fc_table(body.table_id, body.name, body.need_input, body.need_photo);
                 return { result: true };
             }
         },
@@ -481,12 +484,14 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let plans = [];
-                let tmp_plans = await plan_lib.filter_plan4manager(body, token);
-                plans = plans.concat(tmp_plans);
-                tmp_plans = await plan_lib.filter_plan4manager(body, token, true);
-                plans = plans.concat(tmp_plans);
                 await common.do_export_later(token, '现场检查表', async () => {
+                    console.log('开始导出现场检查表', body.start_time, body.end_time);
+                    let plans = [];
+                    let tmp_plans = await plan_lib.filter_plan4manager(body, token);
+                    plans = plans.concat(tmp_plans);
+                    tmp_plans = await plan_lib.filter_plan4manager(body, token, true);
+                    plans = plans.concat(tmp_plans);
+                    console.log('现场检查表候选计划数:', plans.length);
                     let arch_plans = [];
                     for (let index = 0; index < plans.length; index++) {
                         const element = plans[index];
@@ -495,8 +500,12 @@ module.exports = {
                             arch_plans.push(tmp);
                         }
                     }
-                    return await fc_lib.export_fc(arch_plans);
+                    console.log('现场检查表归档计划数:', arch_plans.length);
+                    const ret = await fc_lib.export_fc(arch_plans);
+                    console.log('现场检查表导出结果:', ret);
+                    return ret;
                 });
+                return { result: true };
             },
         },
     }

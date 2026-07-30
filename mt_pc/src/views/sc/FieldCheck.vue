@@ -5,9 +5,9 @@
             <template #default="scope">
                 <el-table :data="scope.row.field_check_items" size="mini" style="padding-left: 50px;">
                     <el-table-column prop="name" label="检查项"></el-table-column>
-                    <el-table-column label="是否需要输入" width="150px">
+                    <el-table-column label="检查方式" width="150px">
                         <template slot-scope="sub_scope">
-                            {{sub_scope.row.need_input ? '是' : '否'}}
+                            {{sub_scope.row.need_photo ? '拍照' : (sub_scope.row.need_input ? '输入' : '打钩')}}
                         </template>
                     </el-table-column>
                     <el-table-column fixed="right" width="80px" label="操作">
@@ -80,6 +80,7 @@
                 <el-radio-group v-model="new_check_item.check_method">
                     <el-radio label="0">打钩</el-radio>
                     <el-radio label="1">输入</el-radio>
+                    <el-radio label="2">拍照</el-radio>
                 </el-radio-group>
             </el-form-item>
         </el-form>
@@ -151,6 +152,7 @@ export default {
                 name: this.new_check_item.name,
                 table_id: this.new_check_item.table_id,
                 need_input: this.new_check_item.check_method == 1,
+                need_photo: this.new_check_item.check_method == 2,
             });
             this.new_check_item_diag = false;
             this.$refs.fc_list.refresh_list();

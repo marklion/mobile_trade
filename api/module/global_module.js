@@ -405,6 +405,8 @@ async function copy_field_check_config(source_stuff, destination_stuff, transact
             await new_table.createField_check_item({
                 name: item.name,
                 need_input: item.need_input,
+
+                need_photo: item.need_photo,
             }, { transaction });
         }
     }
@@ -1478,6 +1480,20 @@ module.exports = {
             },
             func: async function (body, token) {
                 let user = await rbac_lib.get_user_by_token(token);
+                // 清理超过 2 分钟仍无结果的导出记录，避免界面一直显示「正在导出」
+                const stuck = await user.getExport_records({
+                    where: {
+                        url: '',
+                        createdAt: {
+                            [db_opt.Op.lt]: moment().subtract(2, 'minutes').toDate()
+                        }
+                    }
+                });
+                for (let i = 0; i < stuck.length; i++) {
+                    stuck[i].url = 'no';
+                    stuck[i].create_time = stuck[i].create_time || moment(stuck[i].createdAt).format('YYYY-MM-DD HH:mm:ss');
+                    await stuck[i].save();
+                }
                 let records = await user.getExport_records({ order: [['id', 'DESC']], limit: 20, offset: body.pageNo * 20 });
                 let count = await user.countExport_records();
                 return {
