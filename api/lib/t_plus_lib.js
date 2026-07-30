@@ -37,6 +37,27 @@ function map_plan_export_row(plan, company) {
         operator: push_log.operator || '',
     };
 }
+function normalize_stuff_code(stuff_code) {
+    if (!stuff_code) {
+        return '';
+    }
+    let split_array = stuff_code.split('|');
+    if (split_array.length == 1) {
+        return split_array[0];
+    }
+    else {
+        return split_array[1];
+    }
+}
+function get_inv_code_from_stuff(stuff_code) {
+    let ret = '';
+    let split_array = stuff_code.split('|');
+    if (split_array.length >2)
+    {
+        ret = split_array[2];
+    }
+    return ret;
+}
 async function private_req2tplus(method, url, params, body, company) {
     let appkey = company.tplus_appkey;
     let token_resp = await axios.get(`https://cjtapi.d8sis.cn/token?appkey=${appkey}`);
@@ -50,7 +71,7 @@ async function private_req2tplus(method, url, params, body, company) {
         }
     });
     let resp;
-    console.log(`call ${url}\nreq:${JSON.stringify(body)}`);
+    console.log(`call ${url + '?idMarketingOrgan=' + company.tplus_market_oid}\nreq:${JSON.stringify(body)}`);
     try {
         resp = await axios_instance({
             method: method,
@@ -100,14 +121,262 @@ async function get_partner_code(sale_company, buy_company) {
     }
     return ret;
 }
+
+async function group_order_by_partner_code(plans) {
+    let ret = [];
+    const group_map = {};
+
+    for (let i = 0; i < (plans || []).length; i++) {
+        const plan = plans[i];
+        const company_id = plan && plan.company ? plan.company.id : null;
+        const is_buy = !!(plan && plan.is_buy);
+        const is_direct = plan.stuff.stuff_code[0] == '|';
+        const inv_code = get_inv_code_from_stuff(plan.stuff.stuff_code);
+        const key = `${company_id}_${is_buy ? 1 : 0}_${is_direct ? 1 : 0}_${inv_code}`;
+
+        if (!group_map[key]) {
+            group_map[key] = {
+                company_id,
+                is_buy,
+                is_direct,
+                inv_code,
+                plans: [],
+            };
+        }
+        group_map[key].plans.push(plan);
+    }
+
+    ret = Object.keys(group_map).map((k) => group_map[k]);
+
+    return ret;
+}
+
+async function push_buy_settle(buy_groups, host_company) {
+    const sq = db_opt.get_sq();
+    for (let one_company_group of buy_groups) {
+        let parter_code = await get_partner_code(host_company, await sq.models.company.findByPk(one_company_group.company_id));
+        let enter_count = 0
+        let real_count = 0;
+        one_company_group.plans.forEach(plan => {
+            enter_count += plan.enter_count * 1450;
+            real_count += plan.count * 1450;
+        });
+        let body = {
+            dto: {
+                ExternalCode: `${one_company_group.company_id}_${parter_code}_${moment().format('YYYYMMDDHHmmss')}`,
+                VoucherType: {
+                    Code: "ST1001",
+                },
+                BusiType: {
+                    Code: "01",
+                },
+                Partner: {
+                    Code: parter_code,
+                },
+                Warehouse: {
+                    Code: host_company.tplus_buy_inv_code,
+                },
+                VoucherDate: moment().format('YYYY-MM-DD'),
+                RDRecordDetails: [],
+                //DynamicPropertyKeys: ["pubuserdefdecm1", "pubuserdefdecm2"],
+                //DynamicPropertyValues: [enter_count, real_count-enter_count],
+            }
+        }
+        for (let plan of one_company_group.plans) {
+            body.dto.RDRecordDetails.push({
+                Inventory: {
+                    Code: normalize_stuff_code(plan.stuff.stuff_code),
+                },
+                Unit: {
+                    Name: '立方'
+                },
+                Quantity: plan.count * 1450,
+                TaxRate: '0.09',
+            });
+        }
+        try {
+            let resp = await private_req2tplus(
+                "POST",
+                "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
+                {},
+                body,
+                host_company
+            );
+            one_company_group.plans.forEach(plan => {
+                plan.tplus_success = true;
+                plan.execute_result = '推送成功';
+            })
+        } catch (e) {
+            one_company_group.plans.forEach(plan => {
+                plan.tplus_success = false;
+                plan.execute_result = e.err_msg;
+            })
+        }
+
+    }
+}
+function make_sale_body(sale_company, partner_code, plans, is_direct = false, inv_code = '') {
+    let ret = {
+        dto: {
+            ExternalCode: `${sale_company.id}_${partner_code}_${moment().format('YYYYMMDDHHmmss')}`,
+            VoucherType: {
+                Code: is_direct ? "ST1024" : "ST1021",
+            },
+            BusiType: {
+                Code: is_direct ? "99" : "15",
+            },
+            Partner: {
+                Code: partner_code,
+            },
+            Warehouse: {
+                Code: inv_code ? inv_code : sale_company.tplus_sale_inv_code,
+            },
+            DynamicPropertyKeys: ["pubuserdefnvc2"],
+            DynamicPropertyValues: [plans[0].stuff.company.name],
+            VoucherDate: moment().format('YYYY-MM-DD'),
+            RDRecordDetails: [],
+        }
+    }
+    for (let plan of plans) {
+        if (is_direct) {
+            ret.dto.RDRecordDetails.push({
+                Inventory: {
+                    Code: normalize_stuff_code(plan.stuff.stuff_code),
+                },
+                BaseQuantity: plan.count,
+            });
+        }
+        else {
+            ret.dto.RDRecordDetails.push({
+                Inventory: {
+                    Code: normalize_stuff_code(plan.stuff.stuff_code),
+                },
+                Unit: {
+                    Name: '吨'
+                },
+                BaseQuantity: plan.count,
+                origTaxSalePrice: plan.unit_price,
+            })
+        }
+
+    }
+    return ret;
+}
+function make_buy_body(buy_company, partner_code, plans) {
+    let ret = {
+        dto: {
+            ExternalCode: `${buy_company.id}_${partner_code}_${moment().format('YYYYMMDDHHmmss')}`,
+            VoucherType: {
+                Code: "ST1001",
+            },
+            BusiType: {
+                Code: "01",
+            },
+            Partner: {
+                Code: partner_code,
+            },
+            Warehouse: {
+                Code: buy_company.tplus_buy_inv_code,
+            },
+            VoucherDate: moment().format('YYYY-MM-DD'),
+            RDRecordDetails: [],
+        }
+    };
+    for (let plan of plans) {
+        if (normalize_stuff_code(plan.stuff.stuff_code).length > 0) {
+            ret.dto.RDRecordDetails.push({
+                Price: plan.unit_price,
+                Quantity: plan.count,
+                Inventory: {
+                    Code: normalize_stuff_code(plan.stuff.stuff_code),
+                },
+                Unit: {
+                    Name: '吨'
+                },
+            })
+        }
+    }
+
+    return ret;
+}
+async function push_sale_settle(sale_groups, host_company) {
+    const sq = db_opt.get_sq();
+    let parent_comapny = await host_company.getParent_group_company();
+    let f2s_sale_pc = await get_partner_code(host_company, parent_comapny);
+    let f2s_buy_pc = await get_partner_code(parent_comapny, host_company);
+    for (let one_company_group of sale_groups) {
+        let customer_company = await sq.models.company.findByPk(one_company_group.company_id);
+        if (one_company_group.is_direct) {
+            let f2c_sale_pc = await get_partner_code(host_company, customer_company);
+            try {
+                let resp_direct = await private_req2tplus(
+                    "POST",
+                    "https://openapi.chanjet.com/tplus/api/v2/otherDispatch/Create",
+                    {},
+                    make_sale_body(host_company, f2c_sale_pc, one_company_group.plans, true, one_company_group.inv_code),
+                    host_company
+                );
+                one_company_group.plans.forEach(plan => {
+                    plan.tplus_success = true;
+                    plan.execute_result = '推送成功';
+                })
+            } catch (e) {
+                one_company_group.plans.forEach(plan => {
+                    plan.tplus_success = false;
+                    plan.execute_result = e.err_msg;
+                })
+            }
+        }
+        else {
+            let s2c_sale_pc = await get_partner_code(parent_comapny, customer_company);
+            try {
+                let first_resp = await private_req2tplus(
+                    "POST",
+                    "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                    {},
+                    make_sale_body(host_company, f2s_sale_pc, one_company_group.plans),
+                    host_company
+                );
+                let second_resp = await private_req2tplus(
+                    "POST",
+                    "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
+                    {},
+                    make_buy_body(parent_comapny, f2s_buy_pc, one_company_group.plans),
+                    parent_comapny
+                );
+                let third_resp = await private_req2tplus(
+                    "POST",
+                    "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                    {},
+                    make_sale_body(parent_comapny, s2c_sale_pc, one_company_group.plans),
+                    parent_comapny
+                );
+                one_company_group.plans.forEach(plan => {
+                    plan.tplus_success = true;
+                    plan.execute_result = '推送成功';
+                })
+            } catch (e) {
+                one_company_group.plans.forEach(plan => {
+                    plan.tplus_success = false;
+                    plan.execute_result = e.err_msg;
+                })
+            }
+        }
+
+
+    }
+}
+
 module.exports = {
     req2tplus: private_req2tplus,
 
     tplus_settle: async function (plans) {
-        for (let i = 0; i < plans.length; i++) {
-            const plan = plans[i];
-            plan.execute_result = '推送成功';
-            plan.tplus_success = true;
+        if (plans.length > 0) {
+            let group = await group_order_by_partner_code(plans);
+            let buy_groups = group.filter((g) => g.is_buy);
+            let sale_groups = group.filter((g) => !g.is_buy);
+            await push_buy_settle(buy_groups, plans[0].stuff.company);
+            await push_sale_settle(sale_groups, plans[0].stuff.company);
         }
         return plans;
     },
@@ -129,7 +398,7 @@ module.exports = {
         if (!stuff || stuff.length === 0) {
             return [];
         }
-        const stuff_or = stuff.map((s) => ({ stuffId: s.id }));
+        const stuff_or = stuff.filter(s => s.stuff_code).map((s) => ({ stuffId: s.id }));
         const start_date = moment().subtract(cycle_days || 5, 'days').format('YYYY-MM-DD');
         const where_condition = {
             [db_opt.Op.and]: [
