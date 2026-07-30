@@ -463,6 +463,7 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             buy_settle_time: { type: DataTypes.STRING, defaultValue: '00:00:00' },
             buy_settle_cycle: { type: DataTypes.INTEGER, defaultValue: 5 },
+            buy_stuff_prices: { type: DataTypes.TEXT, defaultValue: '[]' },
             buy_last_settle_time: { type: DataTypes.STRING },
             sale_settle_time: { type: DataTypes.STRING, defaultValue: '00:00:00' },
             sale_settle_cycle: { type: DataTypes.INTEGER, defaultValue: 5 },
@@ -482,6 +483,7 @@ let db_opt = {
             success: { type: DataTypes.BOOLEAN, defaultValue: false },
             execute_result: { type: DataTypes.STRING },
             operator: { type: DataTypes.STRING },
+            unit_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('unit_price') },
         },
         delegate: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

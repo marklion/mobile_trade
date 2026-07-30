@@ -13,8 +13,13 @@ module.exports = {
             is_get_api: false,
             params: {},
             result: {
-                buy_settle_time: { type: String, mean: '采购结算时间点', example: '03:56:12' },
                 buy_settle_cycle: { type: Number, mean: '采购结算周期(天)', example: 5 },
+                buy_stuff_prices: {
+                    type: Array, mean: '采购结算物料价格(结算时覆盖单价)', explain: {
+                        stuff_id: { type: Number, mean: '物料ID', example: 1 },
+                        price: { type: Number, mean: '结算单价', example: 100.5 },
+                    },
+                },
                 buy_last_settle_time: { type: String, mean: '采购上次结算时间', example: '2024-09-08 12:31:34' },
                 sale_settle_time: { type: String, mean: '销售结算时间点', example: '03:56:12' },
                 sale_settle_cycle: { type: Number, mean: '销售结算周期(天)', example: 5 },
@@ -22,17 +27,31 @@ module.exports = {
             },
             func: async function (body, token) {
                 const company = await rbac_lib.get_company_by_token(token);
-                return await t_plus_lib.get_or_create_config(company);
+                const config = await t_plus_lib.get_or_create_config(company);
+                const plain = config.toJSON ? config.toJSON() : config;
+                return {
+                    buy_settle_cycle: plain.buy_settle_cycle,
+                    buy_stuff_prices: t_plus_lib.parse_buy_stuff_prices(plain.buy_stuff_prices),
+                    buy_last_settle_time: plain.buy_last_settle_time,
+                    sale_settle_time: plain.sale_settle_time,
+                    sale_settle_cycle: plain.sale_settle_cycle,
+                    sale_last_settle_time: plain.sale_last_settle_time,
+                };
             },
         },
         config_set: {
             name: '设置Tplus配置',
-            description: '设置采购/销售结算时间点与周期',
+            description: '设置采购周期与物料价格、销售结算时间点与周期',
             is_write: true,
             is_get_api: false,
             params: {
-                buy_settle_time: { type: String, have_to: false, mean: '采购结算时间点', example: '03:56:12' },
                 buy_settle_cycle: { type: Number, have_to: false, mean: '采购结算周期(天)', example: 5 },
+                buy_stuff_prices: {
+                    type: Array, have_to: false, mean: '采购结算物料价格(结算时覆盖单价)', explain: {
+                        stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+                        price: { type: Number, have_to: true, mean: '结算单价', example: 100.5 },
+                    },
+                },
                 sale_settle_time: { type: String, have_to: false, mean: '销售结算时间点', example: '03:56:12' },
                 sale_settle_cycle: { type: Number, have_to: false, mean: '销售结算周期(天)', example: 5 },
             },
@@ -42,11 +61,11 @@ module.exports = {
             func: async function (body, token) {
                 const company = await rbac_lib.get_company_by_token(token);
                 const config = await t_plus_lib.get_or_create_config(company);
-                if (body.buy_settle_time !== undefined) {
-                    config.buy_settle_time = body.buy_settle_time;
-                }
                 if (body.buy_settle_cycle !== undefined) {
                     config.buy_settle_cycle = body.buy_settle_cycle;
+                }
+                if (body.buy_stuff_prices !== undefined) {
+                    config.buy_stuff_prices = t_plus_lib.stringify_buy_stuff_prices(body.buy_stuff_prices);
                 }
                 if (body.sale_settle_time !== undefined) {
                     config.sale_settle_time = body.sale_settle_time;
