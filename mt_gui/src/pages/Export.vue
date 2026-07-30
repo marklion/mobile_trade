@@ -1,5 +1,6 @@
 <template>
 <view>
+    <logo-loading />
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
         <u-cell-group title="时间段">

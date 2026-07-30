@@ -1,5 +1,6 @@
 <template>
     <view class="home-page">
+        <logo-loading />
         <view class="page-mesh"></view>
         <view class="page-glow page-glow-a"></view>
         <view class="page-glow page-glow-b"></view>

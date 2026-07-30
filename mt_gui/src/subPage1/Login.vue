@@ -1,5 +1,6 @@
 <template>
 <view>
+    <logo-loading />
     <fui-card full>
         <view style="display: flex; justify-content: center; flex-direction: column; align-items: center;">
             <view style="margin-top: 10vh; margin-bottom: 3vh;">

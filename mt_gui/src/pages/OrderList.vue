@@ -1,5 +1,6 @@
 <template>
 <view>
+    <logo-loading />
     <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
     <fui-tabs scroll alignLeft :current="tab_current" :tabs="tabs" @change="change_tab"></fui-tabs>
     <view style="padding: 10rpx;">

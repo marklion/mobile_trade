@@ -1,5 +1,6 @@
 <template>
 <view class="main-warp">
+    <logo-loading />
     <view style="padding: 15px 0;background-color: white;">
         <fui-row isFlex justify="end" align="top">
             <fui-col :span="6" :pushLeft="1">
