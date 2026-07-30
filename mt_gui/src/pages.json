@@ -24,7 +24,12 @@
 			"path": "pages/Myself"
 		},
 		{
-			"path": "pages/AppPanel"
+			"path": "pages/AppPanel",
+			"style": {
+				"navigationBarBackgroundColor": "#2F3FCF",
+				"navigationBarTextStyle": "white",
+				"navigationBarTitleText": "掌易助理"
+			}
 		},
 		{
 			"path": "pages/OrderList",

@@ -304,8 +304,19 @@ export default {
         },
         init_sc_show_switch: async function () {
             this.show_sc_in_field = (await this.$send_req('/global/get_show_sc_in_field', {})).show_sc_in_field;
-            this.$refs.sc_confirm.refresh();
+            this.refresh_plans();
+            if (this.$refs.sc_confirm) {
+                this.$refs.sc_confirm.refresh();
+            }
         },
+    },
+    onLoad: function (options) {
+        if (options && options.tab != null && options.tab !== '') {
+            const tab = Number(options.tab);
+            if (!Number.isNaN(tab) && tab >= 0 && tab < this.sub_pages.length) {
+                this.cur_page = tab;
+            }
+        }
     },
     onPullDownRefresh: function () {
         if (this.$refs.plans) {
