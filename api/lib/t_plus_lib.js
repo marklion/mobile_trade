@@ -470,12 +470,10 @@ module.exports = {
             // 推送成功过的计划不再推；无日志或失败可推
             sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`),
         ];
-        if (!is_buy) {
-            const start_date = moment().subtract(opts.cycle_days || 5, 'days').format('YYYY-MM-DD');
-            and_conditions[0].plan_time = {
-                [db_opt.Op.gte]: start_date,
-            };
-        }
+        const start_date = moment().subtract(opts.cycle_days || 5, 'days').format('YYYY-MM-DD');
+        and_conditions[0].plan_time = {
+            [db_opt.Op.gte]: start_date,
+        };
         return await sq.models.plan.findAll({
             where: {
                 [db_opt.Op.and]: and_conditions,
@@ -493,7 +491,10 @@ module.exports = {
             throw { err_msg: '请先配置采购结算的物料价格' };
         }
         const filter_opts = is_buy
-            ? { stuff_ids: buy_prices.map((item) => item.stuff_id) }
+            ? {
+                stuff_ids: buy_prices.map((item) => item.stuff_id),
+                cycle_days: config.buy_settle_cycle || 5,
+            }
             : { cycle_days: config.sale_settle_cycle || 5 };
         let plans = await this.filter_unsettled_plans(company, is_buy, filter_opts);
         if (is_buy) {
@@ -607,9 +608,7 @@ module.exports = {
                 continue;
             }
             try {
-                if (this.should_auto_settle(config.buy_last_settle_time, config.buy_settle_time, 1)) {
-                    await this.do_settle(company, true, '定时任务');
-                }
+                // 采购仅支持手动结算，不走定时任务
                 if (this.should_auto_settle(config.sale_last_settle_time, config.sale_settle_time, config.sale_settle_cycle)) {
                     await this.do_settle(company, false, '定时任务');
                 }
