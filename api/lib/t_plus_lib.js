@@ -73,7 +73,7 @@ async function private_req2tplus(method, url, params, body, company) {
         }
     });
     let resp;
-    console.log(`call ${method} ${url}?idMarketingOrgan=${company.tplus_market_oid}\nreq:${body}`);
+    console.log(`call ${method} ${url}?idMarketingOrgan=${company.tplus_market_oid}\nreq:${body ? JSON.stringify(body) : ''}`);
     try {
         resp = await axios_instance({
             method: method,
