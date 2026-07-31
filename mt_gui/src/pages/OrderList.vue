@@ -116,8 +116,10 @@
                 </view>
                 <view class="section-search">
                     <view class="section-search-box">
+                        <label class="section-search-label" for="order-list-search">搜索</label>
                         <fui-icon name="search" size="28" color="#8A94A6"></fui-icon>
                         <input class="section-search-input" type="text" confirm-type="search"
+                            id="order-list-search" name="order-list-search"
                             placeholder="请输入搜索关键词" placeholder-class="section-search-ph"
                             :value="order_search_input" @input="on_order_search_input"
                             @confirm="on_order_search_confirm" />
@@ -394,9 +396,8 @@ export default {
         },
         selected_lookup: function () {
             const lookup = Object.create(null);
-            const list = this.plan_selected || [];
-            for (let i = 0; i < list.length; i++) {
-                lookup[list[i]] = true;
+            for (const id of this.plan_selected || []) {
+                lookup[id] = true;
             }
             return lookup;
         },
@@ -1496,6 +1497,19 @@ export default {
     border: 1rpx solid rgba(70, 92, 255, 0.08);
     box-shadow: 0 4rpx 12rpx rgba(40, 58, 120, 0.04);
     box-sizing: border-box;
+    position: relative;
+}
+
+.section-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .section-search-input {
