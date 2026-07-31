@@ -169,10 +169,7 @@ module.exports = {
                 let resp = [];
                 for (let index = 0; index < all_plans.length; index++) {
                     const element = all_plans[index];
-                    let full_plan = await util_lib.get_single_plan_by_id(element.id);
-                    if (!full_plan.stuff.need_enter_weight || (full_plan.enter_count > 0 && full_plan.enter_attachment.length > 0)) {
-                        resp.push(await make_plan_resp(element));
-                    }
+                    resp.push(await make_plan_resp(element));
                 }
                 ret.err_msg = "";
                 ret.result = resp;
