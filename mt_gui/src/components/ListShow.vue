@@ -1,10 +1,21 @@
 <template>
-<view>
-    <scroll-view ref="container" :style="'height: ' + height + ';'" @scrolltolower="scrollToLower" show-scrollbar scroll-y>
+<view class="list-show">
+    <view class="list-search" v-if="search_key">
+        <view class="list-search-box">
+            <label class="list-search-label" :for="search_input_id">搜索</label>
+            <fui-icon name="search" size="32" color="#8A94A6"></fui-icon>
+            <input class="list-search-input" type="text" confirm-type="search"
+                :id="search_input_id" :name="search_input_id"
+                placeholder="请输入搜索关键词" placeholder-class="list-search-ph"
+                :value="search_condition" @input="on_search_input" @confirm="on_search_confirm" />
+            <fui-icon v-if="search_condition" name="close" size="28" color="#C5CAD5"
+                @click="cancel"></fui-icon>
+            <text class="list-search-btn" v-if="search_condition" @tap.stop="on_search_confirm">搜索</text>
+        </view>
+    </view>
+    <scroll-view ref="container" class="list-show-scroll" :style="'height: ' + height + ';'"
+        @scrolltolower="scrollToLower" show-scrollbar scroll-y>
         <view ref="content">
-            <fui-sticky v-if="search_key" z-index="20">
-                <fui-search-bar ref="searchBar" @search="search" @clear="cancel" @cancel="cancel"></fui-search-bar>
-            </fui-sticky>
             <slot>
             </slot>
         </view>
@@ -15,6 +26,9 @@
 
 <script>
 import PinyinMatch from 'pinyin-match'
+
+let list_show_search_id_seq = 0;
+
 export default {
     name: 'ListShow',
     model: {
@@ -23,6 +37,7 @@ export default {
     },
     data: function () {
         return {
+            search_input_id: 'list-show-search-' + (++list_show_search_id_seq),
             search_condition: '',
             all_data: [],
             page: 0,
@@ -88,8 +103,19 @@ export default {
     methods: {
         cancel: function () {
             this.search_condition = '';
-            this.$refs.searchBar.reset();
             this.refresh();
+        },
+        on_search_input: function (e) {
+            this.search_condition = e.detail.value;
+        },
+        on_search_confirm: function (e) {
+            if (e && e.detail && e.detail.value != null) {
+                this.search_condition = e.detail.value;
+            }
+            this.refresh();
+        },
+        reset: function () {
+            this.search_condition = '';
         },
         search: async function (e) {
             this.search_condition = e.detail.value;
@@ -134,5 +160,60 @@ export default {
 </script>
 
 <style>
+.list-show {
+    width: 100%;
+}
 
+.list-search {
+    padding: 16rpx 24rpx;
+    background: #F1F4FA;
+    box-sizing: border-box;
+}
+
+.list-search-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 72rpx;
+    padding: 0 24rpx;
+    border-radius: 12rpx;
+    background: #FFFFFF;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.list-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.list-search-input {
+    flex: 1;
+    min-width: 0;
+    height: 72rpx;
+    padding: 0 16rpx;
+    font-size: 28rpx;
+    color: #181818;
+    background: transparent;
+}
+
+.list-search-ph {
+    color: #B2B2B2;
+    font-size: 28rpx;
+}
+
+.list-search-btn {
+    flex-shrink: 0;
+    margin-left: 16rpx;
+    font-size: 28rpx;
+    color: #465CFF;
+    font-weight: 600;
+}
 </style>
