@@ -2,6 +2,11 @@
 export default {
     onLaunch: function () {
         console.log('App Launch')
+        try {
+            uni.hideTabBar({ animation: false });
+        } catch (e) {
+            // ignore
+        }
     },
     onShow: async function (options) {
         let path = options.path;
