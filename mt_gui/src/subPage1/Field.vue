@@ -1,5 +1,5 @@
 <template>
-<view>
+<div class="sc_execute_show">
     <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
     <view v-if="cur_page == 0">
         <list-show ref="plans" :fetch_function="get_wait_que" height="85vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field,only_show_uncalled]">
@@ -104,7 +104,7 @@
             </view>
         </view>
     </fui-backdrop>
-</view>
+</div>
 </template>
 
 <script>
@@ -402,5 +402,9 @@ export default {
     justify-content: center;
     align-items: center;
     z-index: 8889;
+}
+.sc_execute_show {
+    height: 100%;
+    width: 100%;
 }
 </style>
