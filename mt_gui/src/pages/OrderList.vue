@@ -105,7 +105,7 @@
             </scroll-view>
         </fui-bottom-popup>
 
-        <view class="list-shell">
+            <view class="list-shell" :class="{ 'is-selecting': select_active }">
             <view class="section-head">
                 <view class="section-head-left">
                     <view class="section-bar"></view>
@@ -114,18 +114,55 @@
                         <text class="section-en">ORDERS</text>
                     </view>
                 </view>
-                <text class="list-hint">点选查看详情</text>
+                <view class="section-search">
+                    <view class="section-search-box">
+                        <fui-icon name="search" size="28" color="#8A94A6"></fui-icon>
+                        <input class="section-search-input" type="text" confirm-type="search"
+                            placeholder="请输入搜索关键词" placeholder-class="section-search-ph"
+                            :value="order_search_input" @input="on_order_search_input"
+                            @confirm="on_order_search_confirm" />
+                        <fui-icon v-if="order_search_input" name="close" size="26" color="#C5CAD5"
+                            @click="clear_order_search"></fui-icon>
+                        <view class="section-search-btn" @tap.stop="on_order_search_confirm">
+                            <text class="section-search-btn-text">搜索</text>
+                        </view>
+                    </view>
+                </view>
+            </view>
+
+            <view class="list-select-bar">
+                <view class="select-chips select-ops">
+                    <view class="chip warn" @click="close_select_mode">
+                        <text class="chip-text">关闭多选</text>
+                    </view>
+                    <view class="chip ok" @click="select_all">
+                        <text class="chip-text">全选</text>
+                    </view>
+                    <view class="chip danger" @click="select_other">
+                        <text class="chip-text">反选</text>
+                    </view>
+                </view>
+                <view class="chip select-entry" @click="open_select_mode">
+                    <text class="chip-text">多选</text>
+                </view>
+                <text class="list-hint hint-normal" v-if="!select_active">点选查看详情</text>
+                <text class="list-hint list-hint-count" v-else-if="plan_selected.length > 0">已选中 {{ plan_selected.length }} 条</text>
+                <text class="list-hint hint-select" v-else>勾选后可批量操作</text>
             </view>
 
             <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="62vh"
-                search_key="search_cond"
+                search_key="search_cond" :hide_search="true"
                 :fetch_params="[plan_filter, cur_get_url, cur_is_motion, make_context_req, show_sale_scope_switch, stat_context_company_id]">
-                <view class="order-card" v-for="item in sp_data2show" :key="item.id"
-                    @click="go_to_order_detail(item)">
+                <view class="order-card" :class="{ selected: !!selected_lookup[item.id] }"
+                    v-for="item in sp_data2show" :key="item.id"
+                    @click="on_order_card_click(item)">
                     <view class="order-accent" :class="'accent-' + status_key(item)"></view>
                     <view class="order-main">
                         <view class="order-top">
                             <view class="order-top-left">
+                                <view class="order-check" :class="{ on: !!selected_lookup[item.id] }">
+                                    <view class="order-check-tick"></view>
+                                </view>
                                 <view class="order-title-wrap">
                                     <view class="title-line">
                                         <text class="order-title">{{ item.company_show }}</text>
@@ -139,7 +176,9 @@
                                     </view>
                                 </view>
                             </view>
-                            <fui-icon name="arrowright" size="24" color="#C5CAD5"></fui-icon>
+                            <view class="order-arrow">
+                                <fui-icon name="arrowright" size="24" color="#C5CAD5"></fui-icon>
+                            </view>
                         </view>
 
                             <view class="plate-row">
@@ -178,11 +217,25 @@
                                     {{ item.duplicateInfo.message }}
                                 </text>
                             </view>
+                        </view>
                     </view>
-                </view>
-            </list-show>
+                </list-show>
         </view>
     </view>
+
+    <view class="batch-bar" :class="{ show: select_active && plan_selected.length > 0 }">
+        <view class="batch-bar-item" v-for="(item, index) in batch_actions" :key="index"
+            @click="do_action(item)">
+            <text class="batch-bar-text">{{ item.text }}</text>
+        </view>
+    </view>
+    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show"
+        @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
+        <fui-form ref="new_stuff_price_form" top="100">
+            <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
+            <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
+        </fui-form>
+    </fui-modal>
 
     <module-filter require_module="stuff">
         <fui-bottom-popup :show="show_stuff_list" @close="close_stuff_list">
@@ -242,23 +295,8 @@ export default {
                 comment: '',
                 isMuti: false
             },
-            action_show: false,
-            action_list: () => {
-                return [{
-                    text: "批量确认",
-                    url: this.cur_confirm_url,
-                }, {
-                    text: '批量验款',
-                    url: '',
-                }, {
-                    text: '批量取消',
-                    url: this.cur_close_url ? this.cur_close_url : this.cur_cancel_url,
-                }, {
-                    text: '批量调价',
-                    url: '/stuff/change_price_by_plan',
-                }]
-            },
             select_active: false,
+            order_search_input: '',
             plan_selected: [],
             cur_get_url: '',
             cur_is_motion: false,
@@ -338,6 +376,29 @@ export default {
                 ret.stat_context_company_id = this.stat_context_company_id;
             }
             return ret;
+        },
+        batch_actions: function () {
+            return [{
+                text: '批量确认',
+                url: this.cur_confirm_url,
+            }, {
+                text: '批量验款',
+                url: '',
+            }, {
+                text: '批量取消',
+                url: this.cur_close_url ? this.cur_close_url : this.cur_cancel_url,
+            }, {
+                text: '批量调价',
+                url: '/stuff/change_price_by_plan',
+            }];
+        },
+        selected_lookup: function () {
+            const lookup = Object.create(null);
+            const list = this.plan_selected || [];
+            for (let i = 0; i < list.length; i++) {
+                lookup[list[i]] = true;
+            }
+            return lookup;
         },
 
     },
@@ -532,7 +593,6 @@ export default {
                     if (p && p.enabled && p.approver_mode === 'submit_specify') {
                         batch_approval_auditer = await this.pick_submit_specify_auditer();
                         if (!batch_approval_auditer) {
-                            this.action_show = false;
                             return;
                         }
                     }
@@ -559,7 +619,6 @@ export default {
             } catch (error) {
                 console.log(error)
             } finally {
-                this.action_show = false;
                 this.select_active = false;
                 this.plan_selected = [];
                 this.refresh_plans();
@@ -578,6 +637,46 @@ export default {
                     this.plan_selected = this.plan_selected.filter(ele => ele != item.id);
                 }
             });
+        },
+        on_order_search_input: function (e) {
+            this.order_search_input = e.detail.value;
+        },
+        on_order_search_confirm: function () {
+            const list = this.$refs.sold_plans;
+            if (!list) {
+                return;
+            }
+            list.search_input = this.order_search_input;
+            list.search_condition = this.order_search_input;
+            list.refresh();
+        },
+        clear_order_search: function () {
+            this.order_search_input = '';
+            const list = this.$refs.sold_plans;
+            if (!list) {
+                return;
+            }
+            list.cancel();
+        },
+        open_select_mode: function () {
+            this.select_active = true;
+            this.plan_selected = [];
+        },
+        close_select_mode: function () {
+            this.select_active = false;
+            this.plan_selected = [];
+        },
+        on_order_card_click: function (item) {
+            if (this.select_active) {
+                const idx = this.plan_selected.indexOf(item.id);
+                if (idx === -1) {
+                    this.plan_selected.push(item.id);
+                } else {
+                    this.plan_selected.splice(idx, 1);
+                }
+                return;
+            }
+            this.go_to_order_detail(item);
         },
         batch_confirm: async function () {
             await this.$send_req(this.cur_batch_confirm_url, this.plan_filter);
@@ -670,7 +769,6 @@ export default {
             this.new_stuff_price.comment = "";
             this.new_stuff_price.show = false;
             this.new_stuff_price.isMuti = false;
-            this.action_show = false;
             this.select_active = false;
             this.plan_selected = [];
         },
@@ -1165,9 +1263,11 @@ export default {
     align-items: center;
     justify-content: space-between;
     margin-top: 8rpx;
+    gap: 8rpx;
 }
 
-.filter-chips {
+.filter-chips,
+.select-chips {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
@@ -1175,7 +1275,47 @@ export default {
     flex: 1;
 }
 
-.filter-chips .chip {
+.select-entry {
+    flex-shrink: 0;
+    background: rgba(70, 92, 255, 0.1);
+    border-color: rgba(70, 92, 255, 0.28);
+}
+
+.select-entry .chip-text {
+    color: #465CFF;
+    font-weight: 700;
+}
+
+.chip.warn {
+    background: rgba(255, 138, 43, 0.12);
+    border-color: rgba(255, 138, 43, 0.35);
+}
+
+.chip.warn .chip-text {
+    color: #FF8A2B;
+}
+
+.chip.ok {
+    background: rgba(45, 190, 108, 0.12);
+    border-color: rgba(45, 190, 108, 0.35);
+}
+
+.chip.ok .chip-text {
+    color: #2DBE6C;
+}
+
+.chip.danger {
+    background: rgba(255, 77, 79, 0.12);
+    border-color: rgba(255, 77, 79, 0.35);
+}
+
+.chip.danger .chip-text {
+    color: #FF4D4F;
+}
+
+.filter-chips .chip,
+.select-chips .chip,
+.list-select-bar .chip {
     margin-right: 12rpx;
     margin-bottom: 4rpx;
 }
@@ -1296,16 +1436,18 @@ export default {
 }
 
 .section-head {
-    padding: 16rpx 18rpx 10rpx;
+    padding: 16rpx 18rpx 12rpx;
     background: linear-gradient(90deg, #F3F5FF 0%, #FFFFFF 70%);
     border-bottom: 1rpx solid #EEF1F8;
     display: flex;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    gap: 16rpx;
 }
 
 .section-head-left {
+    flex-shrink: 0;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -1338,9 +1480,98 @@ export default {
     letter-spacing: 2rpx;
 }
 
+.section-search {
+    flex: 1;
+    min-width: 0;
+}
+
+.section-search-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 64rpx;
+    padding: 0 8rpx 0 16rpx;
+    border-radius: 32rpx;
+    background: #FFFFFF;
+    border: 1rpx solid rgba(70, 92, 255, 0.08);
+    box-shadow: 0 4rpx 12rpx rgba(40, 58, 120, 0.04);
+    box-sizing: border-box;
+}
+
+.section-search-input {
+    flex: 1;
+    min-width: 0;
+    height: 64rpx;
+    padding: 0 10rpx;
+    font-size: 24rpx;
+    color: #181818;
+    background: transparent;
+}
+
+.section-search-ph {
+    color: #B2B2B2;
+    font-size: 22rpx;
+}
+
+.section-search-btn {
+    flex-shrink: 0;
+    margin-left: 6rpx;
+    min-width: 88rpx;
+    height: 48rpx;
+    padding: 0 18rpx;
+    border-radius: 24rpx;
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+    box-shadow: 0 6rpx 12rpx rgba(47, 63, 207, 0.24);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.section-search-btn-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 1rpx;
+}
+
+.list-select-bar {
+    padding: 14rpx 18rpx;
+    background: #F1F4FA;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12rpx;
+    box-sizing: border-box;
+}
+
+.list-select-bar .select-chips {
+    flex: 1;
+    min-width: 0;
+}
+
+.list-shell .select-ops {
+    display: none;
+}
+
+.list-shell.is-selecting .select-ops {
+    display: flex;
+}
+
+.list-shell.is-selecting .select-entry {
+    display: none;
+}
+
 .list-hint {
+    flex-shrink: 0;
     font-size: 20rpx;
     color: #9AA3B8;
+}
+
+.list-hint-count {
+    color: #465CFF;
+    font-weight: 600;
 }
 
 .order-card {
@@ -1351,6 +1582,11 @@ export default {
     border-radius: 16rpx;
     overflow: hidden;
     box-shadow: 0 4rpx 16rpx rgba(40, 58, 120, 0.04);
+}
+
+.order-card.selected {
+    border-color: rgba(70, 92, 255, 0.45);
+    background: linear-gradient(135deg, #F3F5FF 0%, #EEF1FB 100%);
 }
 
 .order-accent {
@@ -1384,9 +1620,59 @@ export default {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
+    gap: 12rpx;
     flex: 1;
     min-width: 0;
     margin-right: 8rpx;
+}
+
+.order-check {
+    display: none;
+    flex-shrink: 0;
+    width: 36rpx;
+    height: 36rpx;
+    margin-top: 4rpx;
+    border-radius: 50%;
+    border: 2rpx solid #C5CAD5;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    background: #FFFFFF;
+}
+
+.order-check.on {
+    border-color: #465CFF;
+    background: #465CFF;
+}
+
+.order-check-tick {
+    width: 16rpx;
+    height: 8rpx;
+    border-left: 3rpx solid #FFFFFF;
+    border-bottom: 3rpx solid #FFFFFF;
+    transform: rotate(-45deg);
+    margin-top: -4rpx;
+    opacity: 0;
+}
+
+.order-check.on .order-check-tick {
+    opacity: 1;
+}
+
+.order-arrow {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-top: 4rpx;
+}
+
+.list-shell.is-selecting .order-check {
+    display: flex;
+}
+
+.list-shell.is-selecting .order-arrow {
+    display: none;
 }
 
 .order-title-wrap {
@@ -1594,5 +1880,61 @@ export default {
     text-overflow: ellipsis;
     white-space: nowrap;
     margin-right: 20rpx;
+}
+
+.batch-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(102rpx + env(safe-area-inset-bottom));
+    z-index: 990;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12rpx;
+    padding: 16rpx 20rpx;
+    background: #FFFFFF;
+    border-top: 1rpx solid #EEF1F8;
+    box-shadow: 0 -8rpx 24rpx rgba(40, 58, 120, 0.08);
+    box-sizing: border-box;
+    transform: translateY(120%);
+    transition: transform 0.25s ease;
+    pointer-events: none;
+}
+
+.batch-bar.show {
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.batch-bar-item {
+    flex: 1;
+    min-width: 0;
+    height: 72rpx;
+    border-radius: 16rpx;
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.batch-bar-item:nth-child(2) {
+    background: linear-gradient(145deg, #5AD8D8 0%, #13C2C2 100%);
+}
+
+.batch-bar-item:nth-child(3) {
+    background: linear-gradient(145deg, #FF8A8B 0%, #FF4D4F 100%);
+}
+
+.batch-bar-item:nth-child(4) {
+    background: linear-gradient(145deg, #FFB06B 0%, #FF8A2B 100%);
+}
+
+.batch-bar-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    white-space: nowrap;
 }
 </style>
