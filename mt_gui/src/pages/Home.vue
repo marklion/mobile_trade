@@ -64,15 +64,38 @@
                         <view :class="charts.length > 1 ? 'charts-box' : 'charts-box-full'"
                             v-for="(single_cts, index) in charts" :key="index">
                             <view class="chart-panel">
-                                <qiun-data-charts
-                                    v-if="single_cts.chartData.series[0].data.reduce((a, b) => a + b, 0) > 0"
-                                    type="column" :chartData="single_cts.chartData"
-                                    :opts="single_cts.opts"></qiun-data-charts>
-                                <view v-else class="chart-empty">
-                                    <view class="chart-empty-icon">
-                                        <fui-icon name="order" size="48" color="#A8B4D8"></fui-icon>
+                                <view class="chart-canvas-wrap">
+                                    <view v-if="chart_has_data(single_cts)" class="lite-chart" :class="{ play: charts_anim }">
+                                        <view class="lite-col"
+                                            v-for="(cat, ci) in single_cts.chartData.categories" :key="ci"
+                                            :style="{ animationDelay: (ci * 0.1) + 's' }">
+                                            <view class="lite-meter-track">
+                                                <view class="lite-meter"
+                                                    :style="{
+                                                        height: (charts_anim ? chart_meter_pct(single_cts, ci) : 0) + '%',
+                                                        transitionDelay: (ci * 0.1) + 's'
+                                                    }">
+                                                    <text class="lite-total">{{ chart_total(single_cts, ci) }}</text>
+                                                    <view class="lite-fill"
+                                                        :style="{
+                                                            height: (charts_anim ? chart_fill_pct(single_cts, ci) : 0) + '%',
+                                                            transitionDelay: (ci * 0.1 + 0.18) + 's'
+                                                        }">
+                                                        <text class="lite-done" v-if="chart_done(single_cts, ci) > 0">
+                                                            {{ chart_done(single_cts, ci) }}
+                                                        </text>
+                                                    </view>
+                                                </view>
+                                            </view>
+                                            <text class="lite-label">{{ cat }}</text>
+                                        </view>
                                     </view>
-                                    <text class="chart-empty-text">暂无数据</text>
+                                    <view v-else class="chart-empty">
+                                        <view class="chart-empty-icon">
+                                            <fui-icon name="order" size="48" color="#A8B4D8"></fui-icon>
+                                        </view>
+                                        <text class="chart-empty-text">暂无数据</text>
+                                    </view>
                                 </view>
                                 <view class="chart-title-wrap">
                                     <text class="chart-title">{{ single_cts.opts.title }}</text>
@@ -273,6 +296,7 @@ export default {
             stuff2buy: [],
             stuff2sale: [],
             charts: [],
+            charts_anim: false,
             notice: {
                 notice: '',
                 driver_notice: '',
@@ -378,6 +402,50 @@ export default {
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);
             uni.startPullDownRefresh();
+        },
+        // 仅展示用：从已有 chartData 读取，不改统计逻辑
+        chart_has_data: function (cts) {
+            const series = cts && cts.chartData && cts.chartData.series && cts.chartData.series[0];
+            if (!series || !Array.isArray(series.data)) {
+                return false;
+            }
+            return series.data.reduce((a, b) => a + b, 0) > 0;
+        },
+        chart_total: function (cts, index) {
+            return Number(cts.chartData.series[0].data[index] || 0);
+        },
+        chart_done: function (cts, index) {
+            const series = cts.chartData.series[1];
+            if (!series || !Array.isArray(series.data)) {
+                return 0;
+            }
+            return Number(series.data[index] || 0);
+        },
+        // 所有卡片共用同一刻度，避免「32 和 106 一样高」
+        chart_scale_max: function () {
+            let max = 1;
+            (this.charts || []).forEach((cts) => {
+                if (!this.chart_has_data(cts)) {
+                    return;
+                }
+                (cts.chartData.series[0].data || []).forEach((v) => {
+                    const n = Number(v) || 0;
+                    if (n > max) {
+                        max = n;
+                    }
+                });
+            });
+            return max;
+        },
+        chart_meter_pct: function (cts, index) {
+            return Math.max(6, Math.round(this.chart_total(cts, index) / this.chart_scale_max() * 100));
+        },
+        chart_fill_pct: function (cts, index) {
+            const total = this.chart_total(cts, index);
+            if (!total) {
+                return 0;
+            }
+            return Math.min(100, Math.round(this.chart_done(cts, index) / total * 100));
         },
         chart_opt: function (title, subtitle) {
             return {
@@ -614,12 +682,18 @@ export default {
             if (this.$has_module('sale_management')) {
                 tmp.push(await make_data('/sale_management/order_search', '对方下单', '销售'));
             }
+            this.charts_anim = false;
             this.charts = []
             tmp.forEach((item, index) => {
                 // 过滤掉可能的 null 值
                 if (item !== null) {
                     this.$set(this.charts, index, JSON.parse(JSON.stringify(item)))
                 }
+            });
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    this.charts_anim = true;
+                }, 40);
             });
         },
         init_notice: async function () {
@@ -937,15 +1011,136 @@ export default {
 
 .chart-panel {
     position: relative;
+    z-index: 1;
     background: linear-gradient(165deg, #F7F8FE 0%, #EEF1FB 100%);
     border-radius: 22rpx;
     padding: 22rpx 12rpx 18rpx;
-    min-height: 280px;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     border: 1rpx solid #E4E9F6;
     box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.9);
     overflow: hidden;
+    isolation: isolate;
+}
+
+.chart-canvas-wrap {
+    width: 100%;
+    height: 220px;
+    position: relative;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.lite-chart {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: space-around;
+    padding: 8rpx 8rpx 0;
+    box-sizing: border-box;
+}
+
+.lite-col {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 0;
+    padding: 0 6rpx;
+    box-sizing: border-box;
+    opacity: 0;
+    transform: translateY(12rpx);
+}
+
+.lite-chart.play .lite-col {
+    animation: liteColIn 0.45s ease forwards;
+}
+
+.lite-meter-track {
+    width: 44rpx;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.lite-meter {
+    width: 100%;
+    min-height: 0;
+    border-radius: 10rpx;
+    background: #F5F7FB;
+    border: 2rpx solid rgba(70, 92, 255, 0.35);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    box-sizing: border-box;
+    position: relative;
+    transition: height 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lite-total {
+    position: absolute;
+    top: 4rpx;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    text-align: center;
+    font-size: 18rpx;
+    color: #4A5568;
+    font-weight: 700;
+    line-height: 1.1;
+    pointer-events: none;
+}
+
+.lite-fill {
+    width: 100%;
+    background: linear-gradient(180deg, #6B7CFF 0%, #465CFF 55%, #2F3FCF 100%);
+    border-radius: 0 0 8rpx 8rpx;
+    transition: height 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow: 0 -6rpx 14rpx rgba(47, 63, 207, 0.2);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.lite-done {
+    margin-top: 4rpx;
+    font-size: 18rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    line-height: 1.1;
+    text-shadow: 0 1rpx 2rpx rgba(20, 30, 90, 0.25);
+}
+
+.lite-label {
+    margin-top: 10rpx;
+    font-size: 20rpx;
+    color: #8A94A6;
+    font-weight: 500;
+}
+
+@keyframes liteColIn {
+    from {
+        opacity: 0;
+        transform: translateY(12rpx);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .chart-panel::before {
@@ -957,11 +1152,14 @@ export default {
     width: 6rpx;
     border-radius: 0 6rpx 6rpx 0;
     background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    z-index: 1;
+    pointer-events: none;
 }
 
 .chart-empty {
-    flex: 1;
-    min-height: 220px;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
     display: flex;
     flex-direction: column;
     justify-content: center;
