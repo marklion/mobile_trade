@@ -243,6 +243,7 @@
                 </view>
             </module-filter>
         </view>
+    <app-tab-bar :selected="0" />
     </view>
 </template>
 
@@ -251,12 +252,15 @@ import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilter from '../components/ModuleFilter.vue';
 import NoticeBar from '../components/NoticeBar.vue';
+import AppTabBar from '../components/AppTabBar.vue';
+import { setTabBarSelected } from '@/utils/setTabBarSelected';
 export default {
     name: 'Home',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilter,
         "notice-bar": NoticeBar,
+        "app-tab-bar": AppTabBar,
     },
     data() {
         return {
@@ -649,6 +653,9 @@ export default {
         this.init_statistic();
         this.get_stuff_total();
     },
+    onShow() {
+        setTabBarSelected();
+    },
 }
 </script>
 
@@ -658,7 +665,7 @@ export default {
     position: relative;
     min-height: 100vh;
     background: linear-gradient(180deg, #2F3FCF 0%, #465CFF 160rpx, #D8E0F6 340rpx, #E9EEF8 520rpx, #F2F4FA 100%);
-    padding-bottom: 48rpx;
+    padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
     overflow: hidden;
 }

@@ -214,13 +214,20 @@
                 <fui-input label="后几天？" borderTop placeholder="请输入天数" v-model="prefer_req.end_offset"></fui-input>
             </fui-form>
         </fui-modal>
+        <app-tab-bar :selected="4" />
     </view>
 </template>
 
 <script>
 import ModuleFilter from '../components/ModuleFilter.vue';
+import AppTabBar from '../components/AppTabBar.vue';
+import { setTabBarSelected } from '@/utils/setTabBarSelected';
 export default {
     name: 'Myself',
+    components: {
+        "module-filter": ModuleFilter,
+        "app-tab-bar": AppTabBar,
+    },
     data: function () {
         return {
             show_order_prefer: false,
@@ -244,9 +251,6 @@ export default {
                 check_in_stay_minutes: ''
             },
         };
-    },
-    components: {
-        "module-filter": ModuleFilter
     },
     computed: {
         avatar_text: function () {
@@ -370,6 +374,7 @@ export default {
         }
     },
     onShow: function () {
+        setTabBarSelected();
         this.self_info = uni.getStorageSync('self_info') || {
             company: '',
             name: '',
@@ -386,7 +391,7 @@ export default {
     position: relative;
     min-height: 100vh;
     background: linear-gradient(180deg, #2F3FCF 0%, #465CFF 160rpx, #D8E0F6 340rpx, #E9EEF8 520rpx, #F2F4FA 100%);
-    padding-bottom: 48rpx;
+    padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
     overflow: hidden;
 }

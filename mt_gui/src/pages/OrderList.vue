@@ -210,6 +210,13 @@
 
     <fui-message ref="po_msg"></fui-message>
     <fui-toast ref="toast"></fui-toast>
+    <fui-bottom-popup :show="show_approver_pick" v-if="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
+        <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
+        <fui-list>
+            <fui-list-cell v-for="(n, idx) in approver_pick_names" :key="idx" arrow @click="confirm_approver_pick(n)">{{n}}</fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
+    <app-tab-bar :selected="1" />
 </view>
 </template>
 
@@ -217,11 +224,14 @@
 import ListShow from '../components/ListShow.vue';
 import utils from '@/components/firstui/fui-utils';
 import ModuleFilterVue from '../components/ModuleFilter.vue';
+import AppTabBar from '../components/AppTabBar.vue';
+import { setTabBarSelected } from '@/utils/setTabBarSelected';
 export default {
     name: 'OrderList',
     components: {
         "list-show": ListShow,
         "module-filter": ModuleFilterVue,
+        "app-tab-bar": AppTabBar,
     },
     data: function () {
         return {
@@ -998,6 +1008,7 @@ export default {
         this.get_hide_order_detail_price_config();
     },
     onShow() {
+        setTabBarSelected();
         this.refresh_plans();
     },
 }
@@ -1008,7 +1019,7 @@ export default {
     min-height: 100vh;
     background: #F2F4FA;
     box-sizing: border-box;
-    padding-bottom: 32rpx;
+    padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
 }
 
 .hero {

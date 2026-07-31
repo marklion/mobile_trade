@@ -17,7 +17,9 @@
 		{
 			"path": "pages/Export",
 			"style": {
-				"enablePullDownRefresh": true
+				"enablePullDownRefresh": true,
+				"navigationBarBackgroundColor": "#2F3FCF",
+				"navigationBarTextStyle": "white"
 			}
 		},
 		{
@@ -244,9 +246,9 @@
 	},
 	"tabBar": {
 		"color": "#8A94A6",
-		"selectedColor": "#465CFF",
+		"selectedColor": "#2F3FCF",
 		"borderStyle": "white",
-		"backgroundColor": "#ffffff",
+		"backgroundColor": "#F7F8FC",
 		"list": [
 			{
 				"pagePath": "pages/Home",

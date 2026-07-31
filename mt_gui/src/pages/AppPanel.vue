@@ -115,10 +115,14 @@
             <text class="empty-text">{{ keyword ? '未找到匹配应用' : '暂无可用应用' }}</text>
         </view>
     </view>
+    <app-tab-bar :selected="2" />
 </view>
 </template>
 
 <script>
+import AppTabBar from '../components/AppTabBar.vue';
+import { setTabBarSelected } from '@/utils/setTabBarSelected';
+
 const RECENT_KEY = 'workbench_recent_apps';
 const ICON_THEMES = [
     { color: '#465CFF', bg: 'rgba(70, 92, 255, 0.12)', spotlight_bg: 'linear-gradient(145deg, #465CFF, #2F3FCF)' },
@@ -138,6 +142,9 @@ const GROUP_META = {
 
 export default {
     name: 'AppPanel',
+    components: {
+        "app-tab-bar": AppTabBar,
+    },
     data: function () {
         return {
             keyword: '',
@@ -417,6 +424,7 @@ export default {
         },
     },
     onShow() {
+        setTabBarSelected();
         this.self_info = uni.getStorageSync('self_info') || {
             name: '',
             company: '',
@@ -431,7 +439,7 @@ export default {
     min-height: 100vh;
     background: #F2F4FA;
     box-sizing: border-box;
-    padding-bottom: 48rpx;
+    padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
 }
 
 .hero {
