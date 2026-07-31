@@ -186,7 +186,12 @@
 					"path": "SysNotice"
 				},
 				{
-					"path": "OrderCreate"
+					"path": "OrderCreate",
+					"style": {
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理"
+					}
 				},
 				{
 					"path": "Stuff",
