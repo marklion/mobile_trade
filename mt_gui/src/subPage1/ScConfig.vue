@@ -1,6 +1,6 @@
 <template>
 <view>
-    <fui-segmented-control :values="segs" @click="change_seg"></fui-segmented-control>
+    <fui-segmented-control :values="segs" :current="cur_seg" @click="change_seg"></fui-segmented-control>
     <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
     <list-show ref="sc_config" v-model="data2show" :fetch_function="get_sc_config" height="80vh" :fetch_params="[focus_stuff_id, cur_get_url, cur_content_name]">
         <view v-if="cur_get_url == segs[0].url">
@@ -169,6 +169,7 @@ export default {
                 url: '/sc/get_all_fc_table',
                 content_name: 'fc_table',
             }],
+            cur_seg: 0,
             cur_get_url: '/sc/get_req',
             cur_content_name: 'reqs',
             data2show: [],
@@ -344,9 +345,17 @@ export default {
             this.show_fc_item_delete = true;
         },
         change_seg: function (e) {
+            this.cur_seg = e.index;
             this.cur_get_url = e.url;
             this.cur_content_name = e.content_name;
             uni.startPullDownRefresh();
+        },
+        apply_seg: function (index) {
+            const seg = this.segs[index];
+            if (!seg) return;
+            this.cur_seg = index;
+            this.cur_get_url = seg.url;
+            this.cur_content_name = seg.content_name;
         },
         delete_req: async function (e) {
             if (e.index == 1) {
@@ -472,7 +481,13 @@ export default {
         this.$refs.sc_config.refresh()
         uni.stopPullDownRefresh()
     },
-    onLoad: async function () {
+    onLoad: async function (options) {
+        if (options && options.tab != null && options.tab !== '') {
+            const tab = Number(options.tab);
+            if (!Number.isNaN(tab) && tab >= 0 && tab < this.segs.length) {
+                this.apply_seg(tab);
+            }
+        }
         let stuff = [];
         let index = 0;
         while (true) {
