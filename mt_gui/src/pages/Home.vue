@@ -167,17 +167,15 @@
                         </view>
                     </view>
                     <view class="section-body">
-                        <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="40vh" v-model="stuff2buy">
+                        <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="48vh" v-model="stuff2buy">
                             <view class="stuff-item" v-for="item in stuff2buy" :key="item.id">
                                 <view class="stuff-accent"></view>
-                                <view class="stuff-row">
-                                    <view class="stuff-main">
-                                        <text class="stuff-title">{{ item.name }}</text>
-                                        <text class="stuff-company">{{ item.company.name }}</text>
-                                        <text class="stuff-desc" v-if="item.comment">{{ item.comment }}</text>
-                                    </view>
-                                    <view class="stuff-side">
-                                        <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
+                                <view class="stuff-body">
+                                    <text class="stuff-title">{{ item.name }}</text>
+                                    <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
+                                    <text class="stuff-company">{{ item.company.name }}</text>
+                                    <view class="stuff-foot">
+                                        <text class="stuff-desc">{{ item.comment || '暂无备注' }}</text>
                                         <fui-button btnSize="mini" text="下单" background="#465CFF" color="#FFFFFF"
                                             radius="28rpx" width="120rpx" height="56rpx" size="24"
                                             @click="start_plan_creation(item)"></fui-button>
@@ -201,18 +199,18 @@
                         </view>
                     </view>
                     <view class="section-body">
-                        <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="40vh" v-model="stuff2sale">
+                        <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="48vh" v-model="stuff2sale">
                             <view class="stuff-item" v-for="(item, index) in stuff2sale" :key="index">
                                 <view class="stuff-accent"></view>
-                                <view class="stuff-row">
-                                    <view class="stuff-main">
-                                        <text class="stuff-title">{{ item.name }}</text>
-                                        <text class="stuff-company">{{ item.company.name }}</text>
-                                        <text class="stuff-desc" v-if="item.comment">{{ item.comment }}</text>
-                                    </view>
-                                    <view class="stuff-side" v-if="item.price != -1">
-                                        <fui-button btnSize="mini" text="下单" background="#465CFF" color="#FFFFFF"
-                                            radius="28rpx" width="120rpx" height="56rpx" size="24"
+                                <view class="stuff-body">
+                                    <text class="stuff-title">{{ item.name }}</text>
+                                    <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
+                                    <text class="stuff-company">{{ item.company.name }}</text>
+                                    <view class="stuff-foot">
+                                        <text class="stuff-desc">{{ item.comment || '暂无备注' }}</text>
+                                        <fui-button v-if="item.price != -1" btnSize="mini" text="下单"
+                                            background="#465CFF" color="#FFFFFF" radius="28rpx" width="120rpx"
+                                            height="56rpx" size="24"
                                             @click="start_plan_creation(item, true)"></fui-button>
                                     </view>
                                 </view>
@@ -1230,7 +1228,7 @@ export default {
 .stuff-item {
     position: relative;
     margin: 0 0 18rpx;
-    padding: 28rpx 24rpx 28rpx 28rpx;
+    padding: 24rpx 24rpx 24rpx 28rpx;
     background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FD 100%);
     border-radius: 20rpx;
     border: 1rpx solid #E8ECF6;
@@ -1252,63 +1250,62 @@ export default {
     background: linear-gradient(180deg, #465CFF, #8BA0FF);
 }
 
-.stuff-row {
+.stuff-body {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+    flex-direction: column;
     width: 100%;
-}
-
-.stuff-main {
-    flex: 1;
-    overflow: hidden;
-    margin-right: 16rpx;
 }
 
 .stuff-title {
     display: block;
     font-size: 30rpx;
     color: #1A1F36;
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1.35;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-
-.stuff-company {
-    display: block;
-    margin-top: 8rpx;
-    font-size: 22rpx;
-    color: #6B7280;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.stuff-desc {
-    display: block;
-    margin-top: 8rpx;
-    font-size: 22rpx;
-    color: #8A94A6;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.stuff-side {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    flex-shrink: 0;
 }
 
 .stuff-price {
-    margin-bottom: 14rpx;
+    display: block;
+    margin-top: 10rpx;
     font-size: 30rpx;
     color: #465CFF;
     font-weight: 700;
     letter-spacing: 0.5rpx;
+    line-height: 1.3;
+}
+
+.stuff-company {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 24rpx;
+    color: #6B7280;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.stuff-foot {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    margin-top: 12rpx;
+}
+
+.stuff-desc {
+    flex: 1;
+    min-width: 0;
+    font-size: 22rpx;
+    color: #8A94A6;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .notice-actions {
