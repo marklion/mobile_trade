@@ -325,6 +325,10 @@ export default {
             this.show_sc_in_field = (await this.$send_req('/global/get_show_sc_in_field', {})).show_sc_in_field;
             this.$refs.sc_confirm.refresh();
         },
+        show_image: function (attachment) {
+            this.show_one_att = true;
+            this.one_att = [this.$convert_attach_url(attachment)];
+        },
     },
     onPullDownRefresh: function () {
         if (this.$refs.plans) {
@@ -339,10 +343,6 @@ export default {
         this.init_stamp_pic();
         this.init_dev();
         this.init_sc_show_switch();
-    },
-    show_image: function (attachment) {
-        this.show_one_att = true;
-        this.one_att = [this.$convert_attach_url(attachment)];
     },
 }
 </script>
