@@ -26,6 +26,9 @@
 
 <script>
 import PinyinMatch from 'pinyin-match'
+
+let list_show_search_id_seq = 0;
+
 export default {
     name: 'ListShow',
     model: {
@@ -34,7 +37,7 @@ export default {
     },
     data: function () {
         return {
-            search_input_id: 'list-show-search-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
+            search_input_id: 'list-show-search-' + (++list_show_search_id_seq),
             search_condition: '',
             all_data: [],
             page: 0,
