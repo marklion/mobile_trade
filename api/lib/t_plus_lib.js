@@ -73,7 +73,7 @@ async function private_req2tplus(method, url, params, body, company) {
         }
     });
     let resp;
-    console.log(`call ${method} ${url}?idMarketingOrgan=${company.tplus_market_oid}`);
+    console.log(`call ${method} ${url}?idMarketingOrgan=${company.tplus_market_oid}\nreq:${body}`);
     try {
         resp = await axios_instance({
             method: method,
@@ -232,8 +232,6 @@ async function push_buy_settle(buy_groups, host_company) {
                 },
                 VoucherDate: moment().format('YYYY-MM-DD'),
                 RDRecordDetails: [],
-                //DynamicPropertyKeys: ["pubuserdefdecm1", "pubuserdefdecm2"],
-                //DynamicPropertyValues: [enter_count, real_count-enter_count],
             }
         }
         for (let plan of one_company_group.plans) {
@@ -246,6 +244,9 @@ async function push_buy_settle(buy_groups, host_company) {
                 },
                 Quantity: plan.count * 1450,
                 TaxRate: '0.09',
+                Price: plan.unit_price,
+                DynamicPropertyKeys: ["pubuserdefnvc1","pubuserdefnvc2", "pubuserdefnvc3","pubuserdefnvc4","pubuserdefnvc5","pubuserdefdecm1"],
+                DynamicPropertyValues: [plan.main_vehicle.plate,plan.plan_time, plan.m_time, plan.p_time, plan.behind_vehicle.plate, plan.enter_count],
             });
         }
         try {
@@ -269,7 +270,7 @@ async function push_buy_settle(buy_groups, host_company) {
 
     }
 }
-function make_sale_body(sale_company, partner_code, plans, is_direct = false, inv_code = '') {
+function make_sale_body(sale_company, partner_code, plans, is_direct = false, inv_code = '', dep_code = '') {
     let ret = {
         dto: {
             ExternalCode: `${sale_company.id}_${partner_code}_${moment().format('YYYYMMDDHHmmss')}`,
@@ -289,6 +290,11 @@ function make_sale_body(sale_company, partner_code, plans, is_direct = false, in
             DynamicPropertyValues: [plans[0].stuff.company.name],
             VoucherDate: moment().format('YYYY-MM-DD'),
             RDRecordDetails: [],
+        }
+    }
+    if (dep_code) {
+        ret.dto.Department = {
+            Code: dep_code,
         }
     }
     for (let plan of plans) {
@@ -316,7 +322,7 @@ function make_sale_body(sale_company, partner_code, plans, is_direct = false, in
     }
     return ret;
 }
-function make_buy_body(buy_company, partner_code, plans) {
+function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
     let ret = {
         dto: {
             ExternalCode: `${buy_company.id}_${partner_code}_${moment().format('YYYYMMDDHHmmss')}`,
@@ -336,6 +342,12 @@ function make_buy_body(buy_company, partner_code, plans) {
             RDRecordDetails: [],
         }
     };
+
+    if (dep_code) {
+        ret.dto.Department = {
+            Code: dep_code,
+        }
+    }
     for (let plan of plans) {
         if (normalize_stuff_code(plan.stuff.stuff_code).length > 0) {
             ret.dto.RDRecordDetails.push({
@@ -395,14 +407,14 @@ async function push_sale_settle(sale_groups, host_company) {
                     "POST",
                     "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
                     {},
-                    make_buy_body(parent_comapny, f2s_buy_pc, one_company_group.plans),
+                    make_buy_body(parent_comapny, f2s_buy_pc, one_company_group.plans, host_company.tplus_dep_code),
                     parent_comapny
                 );
                 let third_resp = await private_req2tplus(
                     "POST",
                     "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
                     {},
-                    make_sale_body(parent_comapny, s2c_sale_pc, one_company_group.plans),
+                    make_sale_body(parent_comapny, s2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_dep_code),
                     parent_comapny
                 );
                 one_company_group.plans.forEach(plan => {
@@ -574,7 +586,7 @@ module.exports = {
         return record;
     },
     should_auto_settle: function (last_settle_time, settle_time, cycle_days) {
-        if (!settle_time) {
+        if (!settle_time || settle_time === '00:00:00') {
             return false;
         }
         const now = moment();

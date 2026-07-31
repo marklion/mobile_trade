@@ -114,7 +114,7 @@
     </fui-bottom-popup>
     <fui-modal :zIndex="1003" width="600" v-if="show_upload_enter" :show="show_upload_enter" @click="upload_enter_weight">
         <fui-form ref="uew" top="100">
-            <fui-input label="重量" borderTop placeholder="请输入内容" v-model="enter_weight.weight"></fui-input>
+            <fui-input label="装车量" borderTop placeholder="请输入进厂前装车量" v-model="enter_weight.weight"></fui-input>
             <fui-form-item label="磅单">
                 <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url" ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error" @complete="after_other_action"></fui-upload>
             </fui-form-item>

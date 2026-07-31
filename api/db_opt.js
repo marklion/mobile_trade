@@ -147,6 +147,7 @@ let db_opt = {
             tplus_market_code: { type: DataTypes.TEXT },
             tplus_buy_inv_code: { type: DataTypes.TEXT },
             tplus_sale_inv_code: { type: DataTypes.TEXT },
+            tplus_dep_code: { type: DataTypes.TEXT },
         },
         group_member_data_grant: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

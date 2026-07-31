@@ -22,6 +22,7 @@
                         <fui-text v-if="item.call_time" type="success" :text="'叫号时间：' + item.call_time" size="24"></fui-text>
                         <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + (item.seal_no?item.seal_no:'') + '-' + (item.drop_take_zone_name?item.drop_take_zone_name:'')" size="24"></fui-text>
                         <fui-text v-if="item.enter_time" type="purple" :text="'一次重量:' + item.p_weight" size="24"></fui-text>
+                        <fui-text v-if="item.enter_count" type="warning" :text="'进厂前装车量:' + item.enter_count" size="24"></fui-text>
                     </view>
                     <view slot="value" style="display:flex; flex-direction: column;">
                         <fui-text :text="item.driver.name" size="24"></fui-text>
@@ -50,6 +51,7 @@
                 <view style="display: flex;  padding: 10rpx;">
                     <fui-button btnSize="mini" text="审批" type="primary" @click="prepare_sc_confirm(item)"></fui-button>
                     <fui-button btnSize="mini" text="检查" type="warning" @click="nav_to_fc(item)"></fui-button>
+                    <fui-button v-if="item.enter_attachment" btnSize="mini" text="查看入厂前磅单" type="success" @click="show_image(item.enter_attachment)"></fui-button>
                 </view>
             </view>
         </list-show>
@@ -90,6 +92,18 @@
     <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
         <sc-execute v-if="show_sc_confirm" ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
     </fui-bottom-popup>
+    <fui-backdrop :zIndex="8888" :show="show_one_att" @click="show_one_att = false">
+        <view class="image-viewer-container" @click.stop>
+            <movable-area scale-area class="movable-area">
+                <movable-view class="movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
+                    <image class="lookimg" :src="one_att.length>0?one_att[0]:''" mode="aspectFit"></image>
+                </movable-view>
+            </movable-area>
+            <view class="close-button-container">
+                <fui-icon @click="show_one_att=false" name="close" size="80" color="white"></fui-icon>
+            </view>
+        </view>
+    </fui-backdrop>
 </view>
 </template>
 
@@ -131,6 +145,8 @@ export default {
             focus_plan: {},
             show_sc_in_field: false,
             only_show_uncalled: false,
+            show_one_att: false,
+            one_att: [''],
         };
     },
     methods: {
@@ -284,6 +300,9 @@ export default {
             if (this.$refs.plans) {
                 this.$refs.plans.refresh();
             }
+
+            this.show_one_att = false;
+            this.one_att = [''];
         },
         copy_text: function (e) {
             $fui.getClipboardData(e, res => {
@@ -320,6 +339,10 @@ export default {
         this.init_stamp_pic();
         this.init_dev();
         this.init_sc_show_switch();
+    },
+    show_image: function (attachment) {
+        this.show_one_att = true;
+        this.one_att = [this.$convert_attach_url(attachment)];
     },
 }
 </script>
