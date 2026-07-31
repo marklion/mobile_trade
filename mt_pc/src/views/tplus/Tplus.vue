@@ -254,8 +254,8 @@ export default {
             }
             try {
                 await this.save_config()
-                const resp = await this.$send_req('/tplus/direct_settle', { is_buy: is_buy })
-                this.$message.success(resp.status || '结算完成')
+                await this.$send_req('/tplus/direct_settle', { is_buy: is_buy })
+                this.$message.success('结算完成')
                 this.records_ready = true
             } finally {
                 if (is_buy) {

@@ -87,13 +87,12 @@ module.exports = {
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true },
-                status: { type: String, mean: '结算状态', example: '结算成功' },
             },
             func: async function (body, token) {
                 const user = await rbac_lib.get_user_by_token(token);
                 const company = await rbac_lib.get_company_by_token(token);
-                const record = await t_plus_lib.do_settle(company, !!body.is_buy, user.name);
-                return { result: true, status: record.status };
+                t_plus_lib.do_settle(company, !!body.is_buy, user.name);
+                return { result: true };
             },
         },
         settle_records_get: {
