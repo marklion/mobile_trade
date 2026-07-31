@@ -2,8 +2,10 @@
 <view class="list-show">
     <view class="list-search" v-if="search_key">
         <view class="list-search-box">
+            <label class="list-search-label" :for="search_input_id">搜索</label>
             <fui-icon name="search" size="32" color="#8A94A6"></fui-icon>
             <input class="list-search-input" type="text" confirm-type="search"
+                :id="search_input_id" :name="search_input_id"
                 placeholder="请输入搜索关键词" placeholder-class="list-search-ph"
                 :value="search_condition" @input="on_search_input" @confirm="on_search_confirm" />
             <fui-icon v-if="search_condition" name="close" size="28" color="#C5CAD5"
@@ -32,6 +34,7 @@ export default {
     },
     data: function () {
         return {
+            search_input_id: 'list-show-search-' + Date.now() + '-' + Math.floor(Math.random() * 10000),
             search_condition: '',
             all_data: [],
             page: 0,
@@ -173,6 +176,19 @@ export default {
     border-radius: 12rpx;
     background: #FFFFFF;
     box-sizing: border-box;
+    position: relative;
+}
+
+.list-search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .list-search-input {
