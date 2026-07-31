@@ -85,7 +85,8 @@ Vue.prototype.$init_self = async function () {
   }
 };
 Vue.prototype.$has_module = function (mod_name) {
-  let mods = (uni.getStorageSync('self_info').modules || []).map(ele => ele.name)
+  let self_info = uni.getStorageSync('self_info') || {};
+  let mods = (self_info.modules || []).map(ele => ele && ele.name).filter(Boolean)
   if (mods.indexOf(mod_name) != -1) {
     return true
   }
