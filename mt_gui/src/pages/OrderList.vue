@@ -1,133 +1,215 @@
 <template>
-<view>
+<view class="order-page">
     <logo-loading />
-    <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
-    <fui-tabs scroll alignLeft :current="tab_current" :tabs="tabs" @change="change_tab"></fui-tabs>
-    <view style="padding: 10rpx;">
-        <fui-row :gutter="20">
-            <fui-col :span="16" v-if="!select_active">
-                <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <fui-tag theme="plain" type="purple" @click="open_stuff_filter" marginLeft="20">
-                        {{stuff_filter.name}}
-                        <fui-icon v-if="!stuff_filter.id" name="arrowright" size="32"></fui-icon>
-                        <fui-icon v-else name="close" size="32" @click.native.stop="reset_stuff_filter"></fui-icon>
-                    </fui-tag>
-                    <fui-tag theme="plain" type="success" @click="open_company_filter" marginLeft="20">
-                        {{company_filter.name}}
-                        <fui-icon v-if="!company_filter.id" name="arrowright" size="32"></fui-icon>
-                        <fui-icon v-else name="close" size="32" @click.native.stop="reset_company_filter"></fui-icon>
-                    </fui-tag>
-                </module-filter>
-            </fui-col>
-            <fui-col :span="8">
-                <fui-tag v-if="!select_active" type="purple" text="多选" @click="select_active = true">
-                </fui-tag>
-                <view v-else style="display:flex; align-items: center;">
-                    <fui-tag type="warning" text="关闭多选" @click="select_active = false">
-                    </fui-tag>
-                    <fui-tag type="success" text="全选" @click="select_all">
-                    </fui-tag>
-                    <fui-tag type="danger" text="反选" @click="select_other">
-                    </fui-tag>
-                    <fui-tag type="primary" v-if="plan_selected.length > 0" :text="plan_selected.length + '项批量操作'" @click="action_show = true">
-                    </fui-tag>
-                </view>
-            </fui-col>
-        </fui-row>
-    </view>
-    <fui-actionsheet :zIndex="1004" :show="action_show" :isCancel="false" v-if="action_show" maskClosable :itemList="action_list()" @click="do_action" @cancel="action_show = false"></fui-actionsheet>
-    <u-cell title="计划时间" :value="begin_time + '~' + end_time">
-        <view slot="right-icon" style="display:flex;">
-            <fui-button text="选择日期" @click="show_pick_plan_date" btnSize="mini" type="warning"></fui-button>
-            <fui-button text="恢复默认" @click="reset_order_date" btnSize="mini" type="primary"></fui-button>
-        </view>
-    </u-cell>
-    <u-cell v-if="show_sale_scope_switch && stat_scopes.length > 1" title="操作主体" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
-    <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time" @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
-    <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
-        <fui-list>
-            <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
-                <view class="scope-row">
-                    <view class="scope-name">{{ s.name }}</view>
-                    <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#1E9FFF"></fui-icon>
-                </view>
-            </fui-list-cell>
-        </fui-list>
-    </fui-bottom-popup>
-    <u-checkbox-group v-model="plan_selected" placement="column">
-        <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="70vh" search_key="search_cond" :fetch_params="[plan_filter, cur_get_url, cur_is_motion, make_context_req, show_sale_scope_switch, stat_context_company_id]">
-            <view v-for="item in sp_data2show" :key="item.id">
-                <u-cell :title="item.company_show + '-' + item.stuff.name + (is_the_order_display_price && !hide_order_detail_price && item.unit_price ? '-' + '( 单价:' + item.unit_price + (item.count != 0 ? ',总价:' + (item.unit_price * item.count).toFixed(2) : '') + ')' : '')" clickable @click="go_to_order_detail(item)">
-                    <view slot="icon" style="display:flex;">
-                        <u-checkbox :name="item.id" shape="circle" v-if="select_active" size="25">
-                        </u-checkbox>
-                        <u-icon :name="get_status_icon(item)"></u-icon>
-                    </view>
-                    <view slot="value" style="display:flex; flex-direction: column;">
-                        <fui-tag theme="plain" :text="'计划:' + item.plan_time" :scaleRatio="0.8" type="danger"></fui-tag>
-                        <fui-tag v-if="item.is_repeat" theme="plain" text="连续派车" :scaleRatio="0.8" type="warning"></fui-tag>
-                        <fui-tag v-if="item.register_time && item.status != 3" theme="plain" text="已排号" :scaleRatio="0.8" type="primary"></fui-tag>
-                        <fui-tag v-if="item.m_time" theme="plain" :text="'发车:' + item.m_time" :scaleRatio="0.8" type="primary"></fui-tag>
-                        <fui-tag v-if="item.count && item.count != 0" theme="plain" :text="'装车量' + item.count" :scaleRatio="0.8" type="success"></fui-tag>
-                        <fui-tag v-if="item.status == 1 && item.arrears > 0" theme="plain" :text="'欠款额:' + item.arrears + '需付'+ item.outstanding_vehicles + '车'" :scaleRatio="0.8" type="warning"></fui-tag>
-                    </view>
-                    <template slot="label">
-                        <view>
-                            <fui-text size="24" type="success" :text="item.main_vehicle.plate + ' ' + item.behind_vehicle.plate">
-                            </fui-text>
-                            <image v-if="item.enter_time" :src="require('../static/enter.png')" style="width: 24px; height: 24px;"></image>
-                            <image v-else :src="require('../static/miss.png')" style="width: 24px; height: 24px;"></image>
-                        </view>
-                        <view>
-                            <fui-text size="22" type="gray" v-if="item.comment" :text="item.comment">
-                            </fui-text>
-                            <fui-text size="22" :type="item.fapiao_delivered?'primary':'danger'" v-if="item.stuff.concern_fapiao" :text="' 发票' + (item.fapiao_delivered?'已开':'未开')">
-                            </fui-text>
-                        </view>
-                        <view v-if="item.duplicateInfo&&item.duplicateInfo.isDuplicate">
-                            <fui-text size="22" type="danger" :text="item.duplicateInfo.message"></fui-text>
-                        </view>
-                    </template>
 
-                </u-cell>
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+        </view>
+        <view class="hero-top">
+            <view class="hero-copy">
+                <text class="hero-hello">订单中心</text>
+                <text class="hero-sub">{{ current_seg_name || '订单协同' }}</text>
             </view>
-        </list-show>
-    </u-checkbox-group>
+        </view>
+    </view>
+
+    <view class="body">
+        <view class="filter-shell">
+            <view class="seg-wrap" v-if="seg.length > 1">
+                <fui-segmented-control :values="seg" color="#465CFF" @click="change_seg"></fui-segmented-control>
+            </view>
+            <view class="seg-wrap" v-else-if="seg.length === 1">
+                <text class="seg-single">{{ seg[0].name }}</text>
+            </view>
+
+            <view class="tab-scroll-wrap">
+                <scroll-view scroll-x class="tab-scroll" :show-scrollbar="false">
+                    <view class="tab-list">
+                        <view class="tab-pill" v-for="(tab, index) in tabs" :key="tab.name"
+                            :class="{ on: tab_current === index }" @click="pick_tab(index)">
+                            <text class="tab-name">{{ tab.name }}</text>
+                            <text class="tab-badge" v-if="tab.badge !== undefined">{{ tab.badge }}</text>
+                        </view>
+                    </view>
+                </scroll-view>
+            </view>
+
+            <view class="tool-row">
+                <view class="filter-chips">
+                    <module-filter :rm_array="['sale_management', 'buy_management']">
+                        <view class="chip" :class="{ on: !!stuff_filter.id }" @click="open_stuff_filter">
+                            <text class="chip-text">{{ stuff_filter.name }}</text>
+                            <fui-icon v-if="!stuff_filter.id" name="arrowright" size="28" color="#8A94A6"></fui-icon>
+                            <fui-icon v-else name="close" size="28" color="#465CFF"
+                                @click.native.stop="reset_stuff_filter"></fui-icon>
+                        </view>
+                        <view class="chip" :class="{ on: !!company_filter.id }" @click="open_company_filter">
+                            <text class="chip-text">{{ company_filter.name }}</text>
+                            <fui-icon v-if="!company_filter.id" name="arrowright" size="28" color="#8A94A6"></fui-icon>
+                            <fui-icon v-else name="close" size="28" color="#465CFF"
+                                @click.native.stop="reset_company_filter"></fui-icon>
+                        </view>
+                    </module-filter>
+                </view>
+            </view>
+
+            <view class="meta-card">
+                <view class="meta-row">
+                    <view class="meta-left">
+                        <view class="meta-icon">
+                            <fui-icon name="calendar" size="30" color="#465CFF"></fui-icon>
+                        </view>
+                        <view class="meta-copy">
+                            <text class="meta-label">计划日期</text>
+                            <text class="meta-value">{{ begin_time }} ~ {{ end_time }}</text>
+                        </view>
+                    </view>
+                    <view class="meta-actions">
+                        <view class="mini-btn warn" @click="show_pick_plan_date">选择</view>
+                        <view class="mini-btn" @click="reset_order_date">默认</view>
+                    </view>
+                </view>
+                <view class="meta-row meta-row-border" v-if="show_sale_scope_switch && stat_scopes.length > 1"
+                    @click="open_stat_company_picker">
+                    <view class="meta-left">
+                        <view class="meta-icon">
+                            <fui-icon name="community" size="30" color="#465CFF"></fui-icon>
+                        </view>
+                        <view class="meta-copy">
+                            <text class="meta-label">操作主体</text>
+                            <text class="meta-value">{{ current_scope_name || '请选择公司' }}</text>
+                        </view>
+                    </view>
+                    <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
+                </view>
+            </view>
+        </view>
+
+        <fui-date-picker range :show="show_plan_date" type="3" :value="begin_time" :valueEnd="end_time"
+            @change="choose_date" @cancel="close_pick_plan_date"></fui-date-picker>
+        <fui-bottom-popup :show="show_scope_picker" @close="close_stat_company_picker" z-index="1100">
+            <view class="picker-title">选择操作主体</view>
+            <scroll-view scroll-y class="scope-scroll" :show-scrollbar="true">
+                <fui-list>
+                    <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow
+                        @click="choose_stat_company(s.id)">
+                        <view class="scope-row">
+                            <view class="scope-name">{{ s.name }}</view>
+                            <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30"
+                                color="#465CFF"></fui-icon>
+                        </view>
+                    </fui-list-cell>
+                </fui-list>
+                <view class="scope-scroll-tail"></view>
+            </scroll-view>
+        </fui-bottom-popup>
+
+        <view class="list-shell">
+            <view class="section-head">
+                <view class="section-head-left">
+                    <view class="section-bar"></view>
+                    <view class="section-titles">
+                        <text class="section-title">订单列表</text>
+                        <text class="section-en">ORDERS</text>
+                    </view>
+                </view>
+                <text class="list-hint">点选查看详情</text>
+            </view>
+
+            <list-show v-model="sp_data2show" ref="sold_plans" :fetch_function="get_sold_plans" height="62vh"
+                search_key="search_cond"
+                :fetch_params="[plan_filter, cur_get_url, cur_is_motion, make_context_req, show_sale_scope_switch, stat_context_company_id]">
+                <view class="order-card" v-for="item in sp_data2show" :key="item.id"
+                    @click="go_to_order_detail(item)">
+                    <view class="order-accent" :class="'accent-' + status_key(item)"></view>
+                    <view class="order-main">
+                        <view class="order-top">
+                            <view class="order-top-left">
+                                <view class="order-title-wrap">
+                                    <view class="title-line">
+                                        <text class="order-title">{{ item.company_show }}</text>
+                                        <text class="status-pill" :class="'st-' + status_key(item)">
+                                            {{ status_label(item) }}
+                                        </text>
+                                    </view>
+                                    <view class="stuff-price-row">
+                                        <text class="order-stuff">{{ item.stuff.name }}</text>
+                                        <text class="order-price" v-if="price_text(item)">{{ price_text(item) }}</text>
+                                    </view>
+                                </view>
+                            </view>
+                            <fui-icon name="arrowright" size="24" color="#C5CAD5"></fui-icon>
+                        </view>
+
+                            <view class="plate-row">
+                                <view class="plate-box">
+                                    <text class="plate-text">
+                                        {{ item.main_vehicle.plate }} {{ item.behind_vehicle.plate }}
+                                    </text>
+                                </view>
+                                <image class="enter-flag" v-if="item.enter_time" :src="require('../static/enter.png')"
+                                    mode="aspectFit"></image>
+                                <image class="enter-flag" v-else :src="require('../static/miss.png')"
+                                    mode="aspectFit"></image>
+                            </view>
+
+                            <view class="tag-row">
+                                <text class="tag danger">计划 {{ item.plan_time }}</text>
+                                <text class="tag warn" v-if="item.is_repeat">连续派车</text>
+                                <text class="tag primary" v-if="item.register_time && item.status != 3">已排号</text>
+                                <text class="tag primary" v-if="item.m_time">发车 {{ item.m_time }}</text>
+                                <text class="tag success" v-if="item.count && item.count != 0">
+                                    装车量 {{ item.count }}
+                                </text>
+                                <text class="tag warn" v-if="item.status == 1 && item.arrears > 0">
+                                    欠款 {{ item.arrears }} · 需付 {{ item.outstanding_vehicles }} 车
+                                </text>
+                            </view>
+
+                            <view class="order-foot"
+                                v-if="item.comment || item.stuff.concern_fapiao || (item.duplicateInfo && item.duplicateInfo.isDuplicate)">
+                                <text class="foot-comment" v-if="item.comment">{{ item.comment }}</text>
+                                <text class="foot-fapiao" :class="item.fapiao_delivered ? 'ok' : 'no'"
+                                    v-if="item.stuff.concern_fapiao">
+                                    发票{{ item.fapiao_delivered ? '已开' : '未开' }}
+                                </text>
+                                <text class="foot-dup" v-if="item.duplicateInfo && item.duplicateInfo.isDuplicate">
+                                    {{ item.duplicateInfo.message }}
+                                </text>
+                            </view>
+                    </view>
+                </view>
+            </list-show>
+        </view>
+    </view>
+
     <module-filter require_module="stuff">
-        <fui-bottom-popup :show="show_stuff_list" @close="show_stuff_list = false">
-            <fui-list>
-                <list-show ref="stuff_filter_list" v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[show_sale_scope_switch, stat_context_company_id]" search_key="name" height="40vh">
+        <fui-bottom-popup :show="show_stuff_list" @close="close_stuff_list">
+            <fui-list v-if="show_stuff_list">
+                <list-show ref="stuff_filter_list" v-model="stuff_data2show" :fetch_function="get_stuff"
+                    :fetch_params="[show_sale_scope_switch, stat_context_company_id]" search_key="name" height="40vh">
                     <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="choose_stuff(item)">
-                        {{item.name}}
+                        {{ item.name }}
                     </fui-list-cell>
                 </list-show>
             </fui-list>
         </fui-bottom-popup>
-        <fui-bottom-popup :show="show_company_filter" @close="show_company_filter= false">
-            <fui-list>
-                <list-show ref="company_filter_list" v-model="customer_data2show" :fetch_function="get_customers" search_key="search_cond" height="40vh" :fetch_params="[make_context_req, show_sale_scope_switch, stat_context_company_id]">
+        <fui-bottom-popup :show="show_company_filter" @close="close_company_filter">
+            <fui-list v-if="show_company_filter">
+                <list-show ref="company_filter_list" v-model="customer_data2show" :fetch_function="get_customers"
+                    search_key="search_cond" height="40vh"
+                    :fetch_params="[make_context_req, show_sale_scope_switch, stat_context_company_id]">
                     <fui-list-cell arrow v-for="item in customer_data2show" :key="item.id" @click="choose_company(item)">
-                        {{item.company.name}}
+                        {{ item.company.name }}
                     </fui-list-cell>
                 </list-show>
             </fui-list>
         </fui-bottom-popup>
     </module-filter>
 
-    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
-        <fui-form ref="new_stuff_price_form" top="100">
-            <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
-            <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
-        </fui-form>
-    </fui-modal>
     <fui-message ref="po_msg"></fui-message>
     <fui-toast ref="toast"></fui-toast>
-    <fui-bottom-popup :show="show_approver_pick" v-if="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
-        <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
-        <fui-list>
-            <fui-list-cell v-for="(n, idx) in approver_pick_names" :key="idx" arrow @click="confirm_approver_pick(n)">{{n}}</fui-list-cell>
-        </fui-list>
-    </fui-bottom-popup>
 </view>
 </template>
 
@@ -229,6 +311,10 @@ export default {
             const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
             return current ? current.name : '';
         },
+        current_seg_name: function () {
+            const hit = (this.seg || []).find(item => item.url === this.cur_get_url);
+            return hit ? hit.name : '';
+        },
         plan_filter: function () {
             const ret = {
                 start_time: this.begin_time,
@@ -246,6 +332,34 @@ export default {
 
     },
     methods: {
+        status_key: function (item) {
+            if (!item) return 'info';
+            if (item.manual_close) return 'close';
+            const map = { 0: 'info', 1: 'pay', 2: 'wait', 3: 'done' };
+            return map[item.status] || 'info';
+        },
+        status_label: function (item) {
+            if (!item) return '';
+            if (item.manual_close) return '已取消';
+            if (item.status == 0) return '未确认';
+            if (item.status == 1) return this.cur_is_buy ? '待处理' : '未付款';
+            if (item.status == 2) return item.enter_time ? '已入场' : '未入场';
+            if (item.status == 3) return '已完成';
+            return '进行中';
+        },
+        pick_tab: function (index) {
+            this.change_tab({ index: index });
+        },
+        price_text: function (item) {
+            if (!this.is_the_order_display_price || this.hide_order_detail_price || !item.unit_price) {
+                return '';
+            }
+            let text = '单价 ' + item.unit_price;
+            if (item.count != 0) {
+                text += ' · 总价 ' + (item.unit_price * item.count).toFixed(2);
+            }
+            return text;
+        },
         load_self_info: async function () {
             try {
                 const info = await this.$send_req('/global/self_info', {});
@@ -265,8 +379,17 @@ export default {
                 this.stat_scopes = [];
             }
         },
-        open_scope_picker: function () {
+        open_stat_company_picker: function () {
             this.show_scope_picker = true;
+        },
+        close_stat_company_picker: function () {
+            this.show_scope_picker = false;
+        },
+        close_stuff_list: function () {
+            this.show_stuff_list = false;
+        },
+        close_company_filter: function () {
+            this.show_company_filter = false;
         },
         open_stuff_filter: function () {
             this.show_stuff_list = true;
@@ -284,7 +407,7 @@ export default {
                 }
             });
         },
-        choose_stat_scope: function (company_id) {
+        choose_stat_company: function (company_id) {
             if (this.stat_context_company_id === company_id) {
                 this.show_scope_picker = false;
                 return;
@@ -454,7 +577,6 @@ export default {
             this.show_plan_date = false;
         },
         show_pick_plan_date: function () {
-            console.log('test_click');
             this.show_plan_date = true;
         },
         get_status_icon: function (item) {
@@ -634,6 +756,8 @@ export default {
             this.cur_update_url = e.update_url;
             this.cur_close_url = e.close_url;
             this.cur_cancel_url = e.cancel_url;
+            this.tab_current = 0;
+            this.focus_status = undefined;
             this.init_tabs();
             this.refresh_plans();
         },
@@ -880,32 +1004,570 @@ export default {
 </script>
 
 <style scoped>
-.group_sep:nth-child(odd) {
-    background-color: #ffffff;
-    /* 更深的颜色 */
+.order-page {
+    min-height: 100vh;
+    background: #F2F4FA;
+    box-sizing: border-box;
+    padding-bottom: 32rpx;
 }
 
-.group_sep:nth-child(even) {
-    background-color: #f1f1f1;
-    /* 更浅的颜色 */
+.hero {
+    position: relative;
+    padding: 20rpx 28rpx 36rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
+    overflow: hidden;
 }
 
-.lookimg {
-    width: 100%;
-    height: 100%;
-}
-
-.imagecontent {
-    width: 50%;
-    height: 100vh;
-    margin: 0 40rpx;
-}
-
-.downloadBtn {
+.hero-logo-bg {
     position: absolute;
-    z-index: 2000;
-    top: 20rpx;
-    right: 20rpx;
+    top: 0;
+    right: 0;
+    width: 280rpx;
+    height: 280rpx;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.hero-logo-img {
+    width: 280rpx;
+    height: 280rpx;
+    opacity: 0.34;
+    /* 右上角溢出裁剪，约露出四分之一 */
+    transform: translate(36%, -24%);
+}
+
+.hero-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.hero-hello {
+    display: block;
+    font-size: 32rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.hero-sub {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.body {
+    position: relative;
+    z-index: 2;
+    margin-top: -28rpx;
+    padding: 0 20rpx;
+}
+
+.filter-shell {
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    padding: 18rpx 18rpx 16rpx;
+    box-shadow: 0 12rpx 32rpx rgba(40, 58, 120, 0.1);
+    margin-bottom: 16rpx;
+}
+
+.seg-wrap {
+    margin-bottom: 10rpx;
+}
+
+.seg-single {
+    display: block;
+    text-align: center;
+    font-size: 28rpx;
+    color: #465CFF;
+    font-weight: 700;
+    padding: 8rpx 0;
+}
+
+.tab-scroll-wrap {
+    margin: 4rpx 0 8rpx;
+}
+
+.tab-scroll {
+    width: 100%;
+    white-space: nowrap;
+}
+
+.tab-list {
+    display: inline-flex;
+    flex-direction: row;
+    padding: 4rpx 0;
+}
+
+.tab-pill {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 12rpx 22rpx;
+    margin-right: 12rpx;
+    border-radius: 999rpx;
+    background: #F3F5FF;
+    border: 1rpx solid #E8ECF6;
+}
+
+.tab-pill.on {
+    background: #465CFF;
+    border-color: #465CFF;
+}
+
+.tab-name {
+    font-size: 24rpx;
+    color: #4A5568;
+    font-weight: 500;
+}
+
+.tab-pill.on .tab-name {
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.tab-badge {
+    margin-left: 8rpx;
+    min-width: 28rpx;
+    padding: 0 8rpx;
+    height: 28rpx;
+    line-height: 28rpx;
+    text-align: center;
+    border-radius: 999rpx;
+    background: rgba(70, 92, 255, 0.15);
+    color: #465CFF;
+    font-size: 18rpx;
+}
+
+.tab-pill.on .tab-badge {
+    background: rgba(255, 255, 255, 0.22);
+    color: #FFFFFF;
+}
+
+.tool-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8rpx;
+}
+
+.filter-chips {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    flex: 1;
+}
+
+.filter-chips .chip {
+    margin-right: 12rpx;
+    margin-bottom: 4rpx;
+}
+
+.chip {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: #F3F5FF;
+    border: 1rpx solid #E8ECF6;
+}
+
+.chip.on {
+    background: rgba(70, 92, 255, 0.12);
+    border-color: rgba(70, 92, 255, 0.35);
+}
+
+.chip-text {
+    font-size: 22rpx;
+    color: #2D3748;
+    margin-right: 4rpx;
+    max-width: 220rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta-card {
+    margin-top: 14rpx;
+    background: linear-gradient(135deg, #F7F8FE 0%, #EEF1FB 100%);
+    border: 1rpx solid #E8ECF6;
+    border-radius: 20rpx;
+    padding: 4rpx 16rpx;
+}
+
+.meta-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16rpx 0;
+}
+
+.meta-row-border {
+    border-top: 1rpx solid #E8ECF6;
+}
+
+.meta-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.meta-icon {
+    width: 52rpx;
+    height: 52rpx;
+    border-radius: 14rpx;
+    background: rgba(70, 92, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 14rpx;
+    flex-shrink: 0;
+}
+
+.meta-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.meta-label {
+    display: block;
+    font-size: 20rpx;
+    color: #8A94A6;
+}
+
+.meta-value {
+    display: block;
+    margin-top: 4rpx;
+    font-size: 24rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.meta-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.mini-btn {
+    padding: 8rpx 18rpx;
+    border-radius: 999rpx;
+    background: #465CFF;
+    color: #FFFFFF;
+    font-size: 22rpx;
+    margin-left: 10rpx;
+}
+
+.mini-btn.warn {
+    background: #FF8A2B;
+}
+
+.list-shell {
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.06);
+    overflow: hidden;
+    padding-bottom: 8rpx;
+}
+
+.section-head {
+    padding: 16rpx 18rpx 10rpx;
+    background: linear-gradient(90deg, #F3F5FF 0%, #FFFFFF 70%);
+    border-bottom: 1rpx solid #EEF1F8;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.section-head-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.section-bar {
+    width: 8rpx;
+    height: 34rpx;
+    border-radius: 8rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    margin-right: 14rpx;
+}
+
+.section-titles {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-title {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.section-en {
+    margin-top: 2rpx;
+    font-size: 16rpx;
+    color: #9AA3B8;
+    letter-spacing: 2rpx;
+}
+
+.list-hint {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+
+.order-card {
+    position: relative;
+    margin: 10rpx 12rpx 0;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F7F8FE 100%);
+    border: 1rpx solid #E8ECF6;
+    border-radius: 16rpx;
+    overflow: hidden;
+    box-shadow: 0 4rpx 16rpx rgba(40, 58, 120, 0.04);
+}
+
+.order-accent {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    border-radius: 0 6rpx 6rpx 0;
+}
+
+.accent-info { background: linear-gradient(180deg, #465CFF, #8BA0FF); }
+.accent-pay { background: linear-gradient(180deg, #FF8A2B, #FFB06B); }
+.accent-wait { background: linear-gradient(180deg, #13C2C2, #5AD8D8); }
+.accent-done { background: linear-gradient(180deg, #2DBE6C, #6FDB9A); }
+.accent-close { background: linear-gradient(180deg, #FF4D4F, #FF8A8B); }
+
+.order-main {
+    padding: 14rpx 16rpx 12rpx 20rpx;
+}
+
+.order-top {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.order-top-left {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    flex: 1;
+    min-width: 0;
+    margin-right: 8rpx;
+}
+
+.order-title-wrap {
+    flex: 1;
+    min-width: 0;
+}
+
+.title-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.order-title {
+    flex: 1;
+    min-width: 0;
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 12rpx;
+}
+
+.status-pill {
+    flex-shrink: 0;
+    font-size: 18rpx;
+    padding: 2rpx 12rpx;
+    border-radius: 999rpx;
+    background: #F3F5FF;
+    color: #465CFF;
+}
+
+.status-pill.st-info { background: rgba(70, 92, 255, 0.12); color: #465CFF; }
+.status-pill.st-pay { background: rgba(255, 138, 43, 0.14); color: #FF8A2B; }
+.status-pill.st-wait { background: rgba(19, 194, 194, 0.14); color: #13C2C2; }
+.status-pill.st-done { background: rgba(45, 190, 108, 0.14); color: #2DBE6C; }
+.status-pill.st-close { background: rgba(255, 77, 79, 0.14); color: #FF4D4F; }
+
+.stuff-price-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-top: 6rpx;
+}
+
+.order-stuff {
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    margin-right: 16rpx;
+}
+
+.order-price {
+    font-size: 24rpx;
+    color: #2F3FCF;
+    font-weight: 700;
+}
+
+.plate-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10rpx;
+}
+
+.plate-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.plate-text {
+    font-size: 22rpx;
+    color: #1A1A1A;
+    font-weight: 700;
+    letter-spacing: 1rpx;
+    padding: 4rpx 10rpx;
+    border-radius: 4rpx;
+    border: 2rpx solid #1A1A1A;
+    background: #F5D000;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+}
+
+.enter-flag {
+    width: 36rpx;
+    height: 36rpx;
+    margin-left: 10rpx;
+    flex-shrink: 0;
+}
+
+.tag-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 8rpx;
+}
+
+.tag {
+    font-size: 18rpx;
+    padding: 4rpx 10rpx;
+    border-radius: 999rpx;
+    background: #F3F5FF;
+    color: #465CFF;
+    border: 1rpx solid #E0E6FF;
+    margin-right: 8rpx;
+    margin-bottom: 4rpx;
+}
+
+.tag.danger {
+    background: rgba(255, 77, 79, 0.1);
+    color: #FF4D4F;
+    border-color: rgba(255, 77, 79, 0.22);
+}
+
+.tag.warn {
+    background: rgba(255, 138, 43, 0.12);
+    color: #FF8A2B;
+    border-color: rgba(255, 138, 43, 0.28);
+}
+
+.tag.primary {
+    background: rgba(70, 92, 255, 0.1);
+    color: #465CFF;
+    border-color: rgba(70, 92, 255, 0.22);
+}
+
+.tag.success {
+    background: rgba(45, 190, 108, 0.12);
+    color: #2DBE6C;
+    border-color: rgba(45, 190, 108, 0.28);
+}
+
+.order-foot {
+    margin-top: 4rpx;
+    padding-top: 8rpx;
+    border-top: 1rpx dashed #E8ECF6;
+}
+
+.foot-comment {
+    display: block;
+    font-size: 20rpx;
+    color: #8A94A6;
+    line-height: 1.35;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.foot-fapiao {
+    display: inline-block;
+    margin-top: 4rpx;
+    font-size: 20rpx;
+    margin-right: 12rpx;
+}
+
+.foot-fapiao.ok { color: #465CFF; }
+.foot-fapiao.no { color: #FF4D4F; }
+
+.foot-dup {
+    display: block;
+    margin-top: 4rpx;
+    font-size: 20rpx;
+    color: #FF4D4F;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.picker-title {
+    padding: 24rpx 28rpx 12rpx;
+    font-size: 28rpx;
+    font-weight: 700;
+    color: #1A1F36;
+}
+
+.scope-scroll {
+    max-height: 50vh;
+    padding-bottom: 24rpx;
+}
+
+.scope-scroll-tail {
+    height: 48rpx;
 }
 
 .scope-row {
