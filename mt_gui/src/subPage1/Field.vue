@@ -369,4 +369,38 @@ export default {
     border-bottom: none;
     /* 隐藏相邻框框的底部边框 */
 }
+.image-viewer-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    padding-bottom: 200rpx;
+    box-sizing: border-box;
+}
+
+.movable-view {
+    height: 100%;
+    width: 100%;
+}
+
+.movable-area {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    z-index: 9999;
+}
+.lookimg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.close-button-container {
+    position: absolute;
+    bottom: 40rpx;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 8889;
+}
 </style>
