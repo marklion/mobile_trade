@@ -17,8 +17,9 @@
     <view class="body">
         <view class="search-bar">
             <fui-icon name="search" size="30" color="#8A94A6"></fui-icon>
-            <input class="search-input" type="text" confirm-type="search" placeholder="搜索应用名称"
-                :value="keyword" @input="on_search" />
+            <label class="search-label" for="workbench-search-input">搜索应用名称</label>
+            <input id="workbench-search-input" class="search-input" type="text" confirm-type="search"
+                placeholder="搜索应用名称" :value="keyword" @input="on_search" />
             <text v-if="keyword" class="search-clear" @click="clear_search">清除</text>
         </view>
 
@@ -298,7 +299,7 @@ export default {
         filtered_apps: function () {
             const key = (this.keyword || '').trim();
             if (!key) return this.show_apps;
-            return this.show_apps.filter(item => item.name.indexOf(key) >= 0 || (item.desc && item.desc.indexOf(key) >= 0));
+            return this.show_apps.filter(item => item.name.includes(key) || (item.desc && item.desc.includes(key)));
         },
         group_list: function () {
             const map = {};
@@ -371,7 +372,7 @@ export default {
                 if (ok) {
                     const theme = ICON_THEMES[theme_index % ICON_THEMES.length];
                     theme_index += 1;
-                    const app = Object.assign({}, item, theme);
+                    const app = { ...item, ...theme };
                     app.app_key = this.make_app_key(app);
                     this.show_apps.push(app);
                 }
@@ -408,7 +409,7 @@ export default {
                 url = '/' + sub_page_name + '/' + _path;
             }
             if (query) {
-                url += (url.indexOf('?') >= 0 ? '&' : '?') + query;
+                url += (url.includes('?') ? '&' : '?') + query;
             }
             uni.navigateTo({
                 url: url,
@@ -501,6 +502,19 @@ export default {
     border-radius: 999rpx;
     box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.08);
     margin-bottom: 24rpx;
+    position: relative;
+}
+
+.search-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .search-input {
