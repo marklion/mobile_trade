@@ -8,15 +8,11 @@
 
         <view class="home-hero">
             <view class="company-card">
-                <view class="hero-orb hero-orb-1"></view>
-                <view class="hero-orb hero-orb-2"></view>
-                <view class="hero-orb hero-orb-3"></view>
+                <view class="hero-logo-bg">
+                    <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+                </view>
                 <view class="hero-top">
                     <text class="hero-greeting">欢迎回来</text>
-                    <view class="hero-badge">
-                        <view class="hero-badge-dot"></view>
-                        <text class="hero-badge-text">经营看板</text>
-                    </view>
                 </view>
                 <view class="company-row">
                     <view v-if="self_info.company_logo" class="company-logo-wrap">
@@ -725,34 +721,26 @@ export default {
     overflow: hidden;
 }
 
-.hero-orb {
+.hero-logo-bg {
     position: absolute;
-    border-radius: 50%;
+    top: 0;
+    right: 0;
+    width: 58%;
+    height: 70%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
     pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+    border-radius: 0 32rpx 0 0;
 }
 
-.hero-orb-1 {
-    top: -70rpx;
-    right: -30rpx;
+.hero-logo-img {
     width: 240rpx;
     height: 240rpx;
-    background: rgba(255, 255, 255, 0.16);
-}
-
-.hero-orb-2 {
-    bottom: -90rpx;
-    left: 20rpx;
-    width: 220rpx;
-    height: 220rpx;
-    background: rgba(255, 255, 255, 0.08);
-}
-
-.hero-orb-3 {
-    top: 40%;
-    right: 30%;
-    width: 90rpx;
-    height: 90rpx;
-    background: rgba(255, 255, 255, 0.1);
+    opacity: 0.34;
+    transform: translate(28%, -22%);
 }
 
 .hero-top {
@@ -770,31 +758,6 @@ export default {
     color: rgba(255, 255, 255, 0.82);
     letter-spacing: 4rpx;
     font-weight: 500;
-}
-
-.hero-badge {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    padding: 8rpx 18rpx;
-    border-radius: 24rpx;
-    background: rgba(255, 255, 255, 0.16);
-    border: 1rpx solid rgba(255, 255, 255, 0.3);
-}
-
-.hero-badge-dot {
-    width: 10rpx;
-    height: 10rpx;
-    border-radius: 50%;
-    background: #7DFFB3;
-    margin-right: 10rpx;
-    box-shadow: 0 0 10rpx rgba(125, 255, 179, 0.8);
-}
-
-.hero-badge-text {
-    font-size: 20rpx;
-    color: #FFFFFF;
-    letter-spacing: 1rpx;
 }
 
 .company-row {

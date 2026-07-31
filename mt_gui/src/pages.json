@@ -21,7 +21,11 @@
 			}
 		},
 		{
-			"path": "pages/Myself"
+			"path": "pages/Myself",
+			"style": {
+				"navigationBarBackgroundColor": "#2F3FCF",
+				"navigationBarTextStyle": "white"
+			}
 		},
 		{
 			"path": "pages/AppPanel"
