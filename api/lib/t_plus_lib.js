@@ -298,8 +298,13 @@ function make_sale_body(sale_company, partner_code, plans, is_direct = false, in
         }
     }
     for (let plan of plans) {
+        let self_define_body = {
+            DynamicPropertyKeys: ["pubuserdefnvc1","pubuserdefnvc3", "pubuserdefnvc4", "pubuserdefdecm5", "pubuserdefdecm6", "pubuserdefnvc5"],
+            DynamicPropertyValues: [plan.main_vehicle.plate, plan.p_time, plan.m_time, plan.m_weight, plan.p_weight, plan.behind_vehicle.plate],
+        }
         if (is_direct) {
             ret.dto.RDRecordDetails.push({
+                ...self_define_body,
                 Inventory: {
                     Code: normalize_stuff_code(plan.stuff.stuff_code),
                 },
@@ -308,6 +313,7 @@ function make_sale_body(sale_company, partner_code, plans, is_direct = false, in
         }
         else {
             ret.dto.RDRecordDetails.push({
+                ...self_define_body,
                 Inventory: {
                     Code: normalize_stuff_code(plan.stuff.stuff_code),
                 },
@@ -359,6 +365,8 @@ function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
                 Unit: {
                     Name: '吨'
                 },
+                DynamicPropertyKeys: ["pubuserdefnvc1","pubuserdefnvc2", "pubuserdefnvc3","pubuserdefnvc4","pubuserdefnvc5"],
+                DynamicPropertyValues: [plan.main_vehicle.plate,plan.plan_time, plan.m_time, plan.p_time, plan.behind_vehicle.plate],
             })
         }
     }
@@ -367,9 +375,9 @@ function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
 }
 async function push_sale_settle(sale_groups, host_company) {
     const sq = db_opt.get_sq();
-    let parent_comapny = await host_company.getParent_group_company();
-    let f2s_sale_pc = await get_partner_code(host_company, parent_comapny);
-    let f2s_buy_pc = await get_partner_code(parent_comapny, host_company);
+    let parent_company = await host_company.getParent_group_company();
+    let f2s_sale_pc = await get_partner_code(host_company, parent_company);
+    let f2s_buy_pc = await get_partner_code(parent_company, host_company);
     for (let one_company_group of sale_groups) {
         let customer_company = await sq.models.company.findByPk(one_company_group.company_id);
         if (one_company_group.is_direct) {
@@ -394,28 +402,28 @@ async function push_sale_settle(sale_groups, host_company) {
             }
         }
         else {
-            let s2c_sale_pc = await get_partner_code(parent_comapny, customer_company);
+            let s2c_sale_pc = await get_partner_code(parent_company, customer_company);
             try {
                 let first_resp = await private_req2tplus(
                     "POST",
                     "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
                     {},
-                    make_sale_body(host_company, f2s_sale_pc, one_company_group.plans),
+                    make_sale_body(host_company, f2s_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code),
                     host_company
                 );
                 let second_resp = await private_req2tplus(
                     "POST",
                     "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
                     {},
-                    make_buy_body(parent_comapny, f2s_buy_pc, one_company_group.plans, host_company.tplus_dep_code),
-                    parent_comapny
+                    make_buy_body(parent_company, f2s_buy_pc, one_company_group.plans, host_company.tplus_dep_code),
+                    parent_company
                 );
                 let third_resp = await private_req2tplus(
                     "POST",
                     "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
                     {},
-                    make_sale_body(parent_comapny, s2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_dep_code),
-                    parent_comapny
+                    make_sale_body(parent_company, s2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_dep_code),
+                    parent_company
                 );
                 one_company_group.plans.forEach(plan => {
                     plan.tplus_success = true;
@@ -492,8 +500,10 @@ module.exports = {
             sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`),
         ];
         const start_date = moment().subtract(opts.cycle_days || 5, 'days').format('YYYY-MM-DD');
+        const today = moment().format('YYYY-MM-DD');
         and_conditions[0].plan_time = {
             [db_opt.Op.gte]: start_date,
+            [db_opt.Op.lt]: today,
         };
         return await sq.models.plan.findAll({
             where: {

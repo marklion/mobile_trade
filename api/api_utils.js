@@ -178,7 +178,7 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
             ret.push({ p: ((is_write && need_rbac && module != 'global') ? '需要' : '不需要') + '写权限验证' });
             ret.push({ h2: '参数' });
             ret = ret.concat(make_params_help_info(this.params));
-            ret.push({ h2: '返回值' });
+            ret.push({ h2: '返回' });
             ret = ret.concat(make_params_help_info(this.result, false));
             ret.push({ h2: '举例' });
             ret.push({ h3: '请求' });
