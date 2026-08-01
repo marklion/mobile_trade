@@ -1,267 +1,498 @@
 <template>
-<view>
-    <scroll-view style="height: 100vh;" show-scrollbar scroll-y>
-        <view class="group_sep">
-            <u-cell-group title="计划信息">
-                <u-cell :title="comp_title(focus_plan.is_buy).a_title" :value="focus_plan.company.name">
-                    <view slot="label">
-                        <fui-text :text="focus_plan.rbac_user.name" size="24"></fui-text>
-                        <fui-text type="primary" :text="focus_plan.rbac_user.phone" size="24" textType="mobile" @click="copy_text(focus_plan.rbac_user.phone)"></fui-text>
+    <view class="detail-panel">
+        <scroll-view class="detail-scroll" show-scrollbar scroll-y>
+            <view class="hero">
+                <view class="hero-logo-bg">
+                    <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+                </view>
+                <view class="hero-top">
+                    <view class="hero-copy">
+                        <text class="hero-label">订单详情</text>
+                        <text class="hero-stuff">{{ focus_plan.stuff.name }}</text>
                     </view>
-                    <view slot="right-icon">
-                        <module-filter v-if="focus_plan.is_buy" require_module="buy_management">
-                            <fui-button v-if="focus_plan.company.id == undefined" type="primary" btnSize="mini" text="指定" @click="prepare_choose_company"></fui-button>
-                            <fui-button v-else type="warning" btnSize="mini" text="重新指定" @click="show_reassign_prompt = true"></fui-button>
-                        </module-filter>
+                    <view class="status-pill" :class="'st-' + (focus_plan.manual_close ? 'close' : focus_plan.status)">
+                        <text class="status-pill-text">{{ focus_plan.manual_close ? '已关闭' : plan_status }}</text>
                     </view>
-                </u-cell>
-                <u-cell :title="comp_title(focus_plan.is_buy).b_title" :value="focus_plan.stuff.company.name">
-                    <view slot="label">
-                        <view style="display:flex;align-items: center">
-                            <view style="font-size: 25rpx;">{{ focus_plan.stuff.name + '-单价-' + (hide_order_detail_price ? '***' : focus_plan.unit_price) }}</view>
-                            <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
-                                <fui-button btnSize="mini" @click="new_stuff_price.show=true">调价</fui-button>
-                            </module-filter>
+                </view>
+                <view class="process-panel">
+                    <view class="process-flow">
+                        <view class="process-track">
+                            <view class="process-track-fill" :style="{ width: process_progress }"></view>
+                        </view>
+                        <view class="process-step" v-for="(step, index) in process_steps" :key="'ps-' + index">
+                            <view class="process-dot" :class="step.state">
+                                <view class="process-dot-ring" v-if="step.state === 'current'"></view>
+                                <text class="process-dot-text" v-if="step.state === 'done'">✓</text>
+                                <text class="process-dot-text" v-else-if="step.state === 'fail'">×</text>
+                                <text class="process-dot-text" v-else>{{ index + 1 }}</text>
+                            </view>
+                            <text class="process-name" :class="step.state">{{ step.name }}</text>
                         </view>
                     </view>
-                </u-cell>
-                <u-cell title="双方资质" is-link @click="open_attach_pics"></u-cell>
-                <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <u-cell title="合同有效期">
-                        <view slot="value">
-                            <fui-text :type="cur_contract.nearlyExpired?'warning':'black'" :size="26" :text="cur_contract.begin_time + '-' + cur_contract.end_time"></fui-text>
+                </view>
+                <view class="hero-links"
+                    v-if="(focus_plan.status == 3 || (focus_plan.checkout_delay && focus_plan.status == 2)) && !focus_plan.manual_close">
+                    <text class="hero-link" @click="go_to_ticket(false)">查看磅单</text>
+                    <text class="hero-link" v-if="focus_plan.delegate" @click="go_to_ticket(true)">内部磅单</text>
+                </view>
+            </view>
+
+            <view class="body">
+                <view class="section-card">
+                    <view class="section-head">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">计划信息</text>
+                            <text class="section-en">PLAN</text>
                         </view>
-                    </u-cell>
-                </module-filter>
-                <u-cell v-if="focus_plan.trans_company_name" title="承运公司" :value="focus_plan.trans_company_name"></u-cell>
-                <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
-                    <u-cell title="余额" :label="user_authorize">
-                        <view slot="value">
-                            <module-filter require_module="cash">
-                                {{cur_contract.balance?cur_contract.balance.toFixed(2):0}}
-                            </module-filter>
-                            <fui-tag v-if="focus_plan.status == 1 && focus_plan.arrears > 0" theme="plain" :text="'欠款额:' + focus_plan.arrears + '需付' + focus_plan.outstanding_vehicles + '车'" :scaleRatio="0.8" type="warning"></fui-tag>
-                        </view>
-                        <view slot="right-icon">
-                            <fui-button type="success" btnSize="mini" text="授权" v-if="user_authorize == '未授权'" @click="authorize_user"></fui-button>
-                        </view>
-                    </u-cell>
-                </module-filter>
-                <u-cell title="计划时间" :value="focus_plan.plan_time">
-                    <view slot="label">
-                        <fui-text v-if="focus_plan.bidding_item" type="primary" :text="focus_plan.bidding_item.time + '出价' + focus_plan.bidding_item.price.toFixed(2) + '中标'" size="24"></fui-text>
                     </view>
-                </u-cell>
-                <u-cell :title="'当前状态：' + plan_status">
-                    <view slot="value" style="display:flex;">
-                        <fui-tag v-if="focus_plan.register_time && focus_plan.status != 3" theme="plain" text="已排号" :scaleRatio="0.8" type="primary"></fui-tag>
-                        <module-filter :rm_array="['customer', 'supplier']"></module-filter>
-                        <fui-button v-if="focus_plan.status != 3 && plan_owner" btnSize="mini" text="取消" type="danger" @click="prepare_xxx_confirm(cur_cancel_url, '取消')"></fui-button>
-                        <module-filter :rm_array="['sale_management', 'buy_management']" style="display:flex;">
-                            <fui-button v-if="focus_plan.status == 0" btnSize="mini" type="success" text="确认" @click="prepare_xxx_confirm(cur_confirm_url, '确认')"></fui-button>
-                            <fui-button v-if="focus_plan.status != 0 && is_allowed_order_return" btnSize="mini" type="warning" text="回退" @click="show_rollback_confirm = true;"></fui-button>
-                            <fui-button v-if="focus_plan.status != 3" btnSize="mini" type="danger" text="关闭" @click="prepare_xxx_confirm(cur_close_url, '关闭')"></fui-button>
-                            <fui-button v-if="(focus_plan.status == 1 && !focus_plan.is_buy)" btnSize="mini" type="success" text="验款" @click="prepare_pay_confirm('验款')"></fui-button>
-                        </module-filter>
-                        <module-filter require_module="scale">
-                            <fui-button v-if="can_pass_vehicle" btnSize="mini" type="danger" text="过号" @click="prepare_xxx_confirm('/scale/cancel_check_in', '过号')"></fui-button>
-                            <fui-button v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight" btnSize="mini" type="success" text="计量" @click="show_scale_input = true"></fui-button>
-                        </module-filter>
-                    </view>
-                    <view slot="label">
-                        <div v-if="(focus_plan.status == 3 || (focus_plan.checkout_delay && focus_plan.status == 2)) && !focus_plan.manual_close">
-                            <fui-text type="primary" text="查看磅单" :size="28" decoration="underline" @click="go_to_ticket(false)"></fui-text>
-                            <fui-text v-if="focus_plan.delegate" type="primary" text="内部磅单" :size="28" decoration="underline" @click="go_to_ticket(true)"></fui-text>
-                        </div>
-                    </view>
-                </u-cell>
-            </u-cell-group>
-        </view>
-        <view class="group_sep" v-if="focus_plan.stuff.concern_fapiao">
-            <u-cell title="发票信息" :value="(focus_plan.fapiao_delivered?'已开':'未开')">
-                <view slot="right-icon">
-                    <module-filter :require_module="'sale_management'">
-                        <fui-button v-if="focus_plan.status != -1" btnSize="mini" type="primary" :text="'标记' + (focus_plan.fapiao_delivered?'未开':'已开')" @click="mark_fapiao_deliver"></fui-button>
-                    </module-filter>
-                </view>
-            </u-cell>
-        </view>
-        <view class="group_sep">
-            <u-cell title="车辆信息">
-                <view slot="right-icon">
-                    <fui-button v-if="focus_plan.status != 3" type="warning" btnSize="mini" text="修改" @click="prepare_update"></fui-button>
-                </view>
-            </u-cell>
-            <u-cell title="主车">
-                <view slot="value">
-                    <view style="display:flex;justify-content: space-between;">
-                        <fui-text size="26" :text="focus_plan.main_vehicle.plate"></fui-text>
-                        <module-filter require_module="stuff">
-                            <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.main_vehicle.id, 'vehicle')"></fui-button>
-                        </module-filter>
-                    </view>
-                </view>
-            </u-cell>
-            <u-cell title="挂车">
-                <view slot="value">
-                    <view style="display:flex;justify-content: space-between;">
-                        <fui-text size="26" :text="focus_plan.behind_vehicle.plate"></fui-text>
-                        <module-filter require_module="stuff">
-                            <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.behind_vehicle.id, 'vehicle')"></fui-button>
-                        </module-filter>
-                    </view>
-                </view>
-            </u-cell>
-            <u-cell :title="'司机:' + focus_plan.driver.name" clickable @click="copy_text(focus_plan.driver.phone)">
-                <view slot="value">
-                    <view style="display:flex;justify-content: space-between;">
-                        <fui-text size="26" :text="focus_plan.driver.phone"></fui-text>
-                        <module-filter require_module="stuff">
-                            <fui-button btnSize="mini" text="加入黑名单" @click="add_to_blacklist(focus_plan.driver.id, 'driver')"></fui-button>
-                        </module-filter>
-                    </view>
-                </view>
-            </u-cell>
-            <u-cell title="用途" :value="focus_plan.use_for" :label="'备注：' + focus_plan.comment"></u-cell>
-        </view>
-        <view class="group_sep">
-            <u-cell-group title="出入信息">
-                <u-cell title="是否已经进场" :value="focus_plan.enter_time?'是':'否'" :label="focus_plan.enter_time"></u-cell>
-                <u-cell v-if="focus_plan.register_time" title="排队序号" :value="focus_plan.register_number" :label="focus_plan.register_time">
-                </u-cell>
-                <module-filter require_module="scale">
-                    <u-cell title="代替司机操作" isLink :url="'/subPage1/Driver?driver_phone=' + focus_plan.driver.phone"></u-cell>
-                </module-filter>
-            </u-cell-group>
-        </view>
-        <view class="group_sep">
-            <u-cell-group v-if="focus_plan.sc_info" title="安检信息">
-                <view v-if="focus_plan.status == 3 ">
-                    <u-cell v-for="(sc_node, index) in focus_plan.sc_info" :key="index" :title="sc_node.name" :label="sc_node.sc_content?('到期时间：' + sc_node.sc_content.expired_time):''">
-                        <view slot="value">
-                            <view v-if="sc_node.sc_content">
-                                <view>
-                                    {{sc_node.sc_content.input}}
-                                </view>
-                                <fui-avatar v-if="sc_node.sc_content.attachment" :src="$convert_attach_url(sc_node.sc_content.attachment)" @click="show_sc_image(index)"></fui-avatar>
+                    <view class="info-row">
+                        <view class="info-main">
+                            <text class="info-label">{{ comp_title(focus_plan.is_buy).a_title }}</text>
+                            <text class="info-value">{{ focus_plan.company.name }}</text>
+                            <view class="info-sub">
+                                <text class="info-sub-text">{{ focus_plan.rbac_user.name }}</text>
+                                <text class="info-link" @click="copy_text(focus_plan.rbac_user.phone)">{{
+                                    focus_plan.rbac_user.phone }}</text>
                             </view>
                         </view>
-                    </u-cell>
+                        <module-filter v-if="focus_plan.is_buy" require_module="buy_management">
+                            <view class="mini-btn primary" v-if="focus_plan.company.id == undefined"
+                                @click="prepare_choose_company">
+                                <text class="mini-btn-text">指定</text>
+                            </view>
+                            <view class="mini-btn warn" v-else @click="show_reassign_prompt = true">
+                                <text class="mini-btn-text">重新指定</text>
+                            </view>
+                        </module-filter>
+                    </view>
+                    <view class="info-row">
+                        <view class="info-main">
+                            <text class="info-label">{{ comp_title(focus_plan.is_buy).b_title }}</text>
+                            <text class="info-value">{{ focus_plan.stuff.company.name }}</text>
+                            <view class="info-sub">
+                                <text class="info-sub-text">{{ focus_plan.stuff.name }} · 单价 {{ hide_order_detail_price
+                                    ? '***' : focus_plan.unit_price }}</text>
+                                <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
+                                    <view class="mini-btn primary" @click="new_stuff_price.show = true">
+                                        <text class="mini-btn-text">调价</text>
+                                    </view>
+                                </module-filter>
+                            </view>
+                        </view>
+                    </view>
+                    <view class="info-row linkable" @click="open_attach_pics">
+                        <text class="info-label">双方资质</text>
+                        <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
+                    </view>
+                    <module-filter :rm_array="['sale_management', 'buy_management']">
+                        <view class="info-row">
+                            <text class="info-label">合同有效期</text>
+                            <text class="info-value sm" :class="{ warn: cur_contract.nearlyExpired }">
+                                {{ cur_contract.begin_time && cur_contract.end_time
+                                    ? (cur_contract.begin_time + '-' + cur_contract.end_time)
+                                    : '暂无合同' }}
+                            </text>
+                        </view>
+                    </module-filter>
+                    <view class="info-row" v-if="focus_plan.trans_company_name">
+                        <text class="info-label">承运公司</text>
+                        <text class="info-value sm">{{ focus_plan.trans_company_name }}</text>
+                    </view>
+                    <module-filter require_module="sale_management" v-if="!focus_plan.is_buy">
+                        <view class="info-row">
+                            <view class="info-main">
+                                <text class="info-label">余额</text>
+                                <view class="info-sub">
+                                    <module-filter require_module="cash">
+                                        <text class="info-value">{{ cur_contract.balance ?
+                                            cur_contract.balance.toFixed(2) : 0 }}</text>
+                                    </module-filter>
+                                    <text class="info-sub-text">{{ user_authorize }}</text>
+                                </view>
+                                <text class="arrears-tag" v-if="focus_plan.status == 1 && focus_plan.arrears > 0">
+                                    欠款额:{{ focus_plan.arrears }} 需付{{ focus_plan.outstanding_vehicles }}车
+                                </text>
+                            </view>
+                            <view class="mini-btn success" v-if="user_authorize == '未授权'" @click="authorize_user">
+                                <text class="mini-btn-text">授权</text>
+                            </view>
+                        </view>
+                    </module-filter>
+                    <view class="info-row last">
+                        <view class="info-main">
+                            <text class="info-label">计划时间</text>
+                            <text class="info-value sm">{{ focus_plan.plan_time }}</text>
+                            <text class="info-sub-text" v-if="focus_plan.bidding_item">
+                                {{ focus_plan.bidding_item.time }}出价{{ focus_plan.bidding_item.price.toFixed(2) }}中标
+                            </text>
+                        </view>
+                        <text class="tag-plain" v-if="focus_plan.register_time && focus_plan.status != 3">已排号</text>
+                    </view>
                 </view>
-            </u-cell-group>
-            <module-filter v-else require_module="sc">
-                <u-cell title="安检执行">
-                    <view slot="right-icon">
-                        <fui-button btnSize="mini" type="primary" text="审批" @click="prepare_sc_confirm"></fui-button>
-                        <fui-button btnSize="mini" type="warning" text="检查" @click="nav_to_fc"></fui-button>
-                    </view>
-                </u-cell>
-            </module-filter>
-            <module-filter require_module="exam">
-                <u-cell title="查看考试结果" isLink :url="'/subPage1/PlanExam?plan_id=' + focus_plan.id"></u-cell>
-            </module-filter>
-        </view>
-        <view class="group_sep">
-            <u-cell-group title="装卸信息">
-                <u-cell title="计量信息">
-                    <view slot="right-icon">
-                        <fui-button v-if="focus_plan.stuff.manual_weight" btnSize="mini" type="primary" text="查看" @click="show_manual_weight"></fui-button>
-                    </view>
-                </u-cell>
-                <u-cell title="卸货地址" :value="focus_plan.drop_address"></u-cell>
-                <u-cell title="装卸量" :value="focus_plan.count"></u-cell>
-                <u-cell v-if="focus_plan.p_time" title="皮重" :value="focus_plan.p_weight" :label="focus_plan.p_time"></u-cell>
-                <u-cell v-if="focus_plan.m_time" title="毛重" :value="focus_plan.m_weight" :label="focus_plan.m_time"></u-cell>
-            </u-cell-group>
-        </view>
-        <view class="group_sep">
-            <u-cell-group title="操作历史">
-                <u-cell v-for="(node, index) in focus_plan.plan_histories" :key="index" :title="node.action_type" :value="node.operator" :label="node.time"></u-cell>
-            </u-cell-group>
-        </view>
-    </scroll-view>
 
-    <fui-backdrop :zIndex="8888" :show="show_sc" @click="show_sc = false">
-        <view class="sc-image-viewer" @click.stop>
-            <swiper class="sc-swiper" :current="sc_current_index" @change="on_sc_swiper_change" :indicator-dots="sc_attach_urls.length > 1" :indicator-color="'rgba(255,255,255,0.5)'" :indicator-active-color="'#ffffff'">
-                <swiper-item v-for="(item, index) in sc_attach_urls" :key="index">
-                    <movable-area scale-area class="sc-movable-area">
-                        <movable-view class="sc-movable-view" direction="all" inertia scale scale-min="1" scale-max="6">
-                            <image class="sc-lookimg" :src="item.src" mode="aspectFit"></image>
-                        </movable-view>
-                    </movable-area>
-                </swiper-item>
-            </swiper>
-            <view class="sc-close-button-container">
-                <fui-icon @click="show_sc = false" name="close" size="80" color="white"></fui-icon>
+                <view class="section-card" v-if="focus_plan.stuff.concern_fapiao">
+                    <view class="info-row last">
+                        <view class="info-main">
+                            <text class="info-label">发票信息</text>
+                            <text class="info-value sm">{{ focus_plan.fapiao_delivered ? '已开' : '未开' }}</text>
+                        </view>
+                        <module-filter :require_module="'sale_management'">
+                            <view class="mini-btn primary" v-if="focus_plan.status != -1" @click="mark_fapiao_deliver">
+                                <text class="mini-btn-text">标记{{ focus_plan.fapiao_delivered ? '未开' : '已开' }}</text>
+                            </view>
+                        </module-filter>
+                    </view>
+                </view>
+
+                <view class="section-card trip-card">
+                    <view class="section-head">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">车辆运单</text>
+                            <text class="section-en">TRIP</text>
+                        </view>
+                        <view class="mini-btn warn" v-if="focus_plan.status != 3" @click="prepare_update">
+                            <text class="mini-btn-text">修改</text>
+                        </view>
+                    </view>
+
+                    <view class="trip-hero">
+                        <view class="trip-plates">
+                            <text class="plate-tag">{{ focus_plan.main_vehicle.plate }}</text>
+                            <text class="plate-tag" v-if="focus_plan.behind_vehicle.plate">{{
+                                focus_plan.behind_vehicle.plate }}</text>
+                        </view>
+                        <text class="gate-status-tag" :class="focus_plan.enter_time ? 'on' : 'off'">
+                            {{ focus_plan.enter_time ? '已进场' : '未进场' }}
+                        </text>
+                    </view>
+
+                    <view class="trip-driver" @click="copy_text(focus_plan.driver.phone)">
+                        <view class="trip-driver-avatar">
+                            <u-icon name="account-fill" color="#465CFF" size="20"></u-icon>
+                        </view>
+                        <view class="trip-driver-copy">
+                            <text class="trip-driver-name">{{ focus_plan.driver.name || '司机' }}</text>
+                            <text class="trip-driver-phone">{{ focus_plan.driver.phone }}</text>
+                        </view>
+                        <module-filter require_module="stuff">
+                            <text class="info-link danger"
+                                @click.stop="add_to_blacklist(focus_plan.driver.id, 'driver')">拉黑</text>
+                        </module-filter>
+                    </view>
+
+                    <view class="trip-stats">
+                        <view class="trip-stat">
+                            <text class="trip-stat-label">主车</text>
+                            <text class="trip-stat-value">{{ focus_plan.main_vehicle.plate || '-' }}</text>
+                            <module-filter require_module="stuff">
+                                <text class="trip-stat-link"
+                                    @click="add_to_blacklist(focus_plan.main_vehicle.id, 'vehicle')">拉黑</text>
+                            </module-filter>
+                        </view>
+                        <view class="trip-stat">
+                            <text class="trip-stat-label">挂车</text>
+                            <text class="trip-stat-value">{{ focus_plan.behind_vehicle.plate || '-' }}</text>
+                            <module-filter require_module="stuff" v-if="focus_plan.behind_vehicle.plate">
+                                <text class="trip-stat-link"
+                                    @click="add_to_blacklist(focus_plan.behind_vehicle.id, 'vehicle')">拉黑</text>
+                            </module-filter>
+                        </view>
+                        <view class="trip-stat">
+                            <text class="trip-stat-label">排队</text>
+                            <text class="trip-stat-value">{{ focus_plan.register_time ? focus_plan.register_number : '-'
+                                }}</text>
+                            <text class="trip-stat-sub" v-if="focus_plan.register_time">已排号</text>
+                        </view>
+                    </view>
+
+                    <view class="trip-divider"></view>
+
+                    <view class="trip-meta-grid">
+                        <view class="trip-meta">
+                            <text class="trip-meta-label">用途</text>
+                            <text class="trip-meta-value">{{ focus_plan.use_for || '-' }}</text>
+                        </view>
+                        <view class="trip-meta">
+                            <text class="trip-meta-label">装卸量</text>
+                            <text class="trip-meta-value accent">{{ focus_plan.count != null ? focus_plan.count : '-'
+                                }}</text>
+                        </view>
+                        <view class="trip-meta full" v-if="focus_plan.drop_address">
+                            <text class="trip-meta-label">卸货地址</text>
+                            <text class="trip-meta-value">{{ focus_plan.drop_address }}</text>
+                        </view>
+                        <view class="trip-meta full" v-if="focus_plan.comment">
+                            <text class="trip-meta-label">备注</text>
+                            <text class="trip-meta-value">{{ focus_plan.comment }}</text>
+                        </view>
+                        <view class="trip-meta" v-if="focus_plan.enter_time">
+                            <text class="trip-meta-label">进场时间</text>
+                            <text class="trip-meta-value">{{ focus_plan.enter_time }}</text>
+                        </view>
+                        <view class="trip-meta" v-if="focus_plan.register_time">
+                            <text class="trip-meta-label">排号时间</text>
+                            <text class="trip-meta-value">{{ focus_plan.register_time }}</text>
+                        </view>
+                        <view class="trip-meta" v-if="focus_plan.p_time">
+                            <text class="trip-meta-label">皮重</text>
+                            <text class="trip-meta-value">{{ focus_plan.p_weight }}</text>
+                            <text class="trip-meta-sub">{{ focus_plan.p_time }}</text>
+                        </view>
+                        <view class="trip-meta" v-if="focus_plan.m_time">
+                            <text class="trip-meta-label">毛重</text>
+                            <text class="trip-meta-value">{{ focus_plan.m_weight }}</text>
+                            <text class="trip-meta-sub">{{ focus_plan.m_time }}</text>
+                        </view>
+                    </view>
+
+                    <view class="trip-actions">
+                        <view class="trip-action-btn" v-if="focus_plan.stuff.manual_weight" @click="show_manual_weight">
+                            <text class="trip-action-text">计量信息</text>
+                        </view>
+                        <view class="trip-action-btn primary" v-if="$has_module('scale')" @click="go_proxy_driver">
+                            <u-icon name="car-fill" color="#FFFFFF" size="18"></u-icon>
+                            <text class="trip-action-text light">代替司机操作</text>
+                        </view>
+                    </view>
+                </view>
+
+                <view class="section-card">
+                    <view class="section-head">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">安检考试</text>
+                            <text class="section-en">SAFE</text>
+                        </view>
+                        <text class="sc-count" v-if="focus_plan.sc_info && focus_plan.status == 3">
+                            {{ sc_uploaded_count }}/{{ focus_plan.sc_info.length }}
+                        </text>
+                        <module-filter require_module="sc">
+                            <view class="row-actions">
+                                <view class="mini-btn primary" @click="prepare_sc_confirm">
+                                    <text class="mini-btn-text">审批</text>
+                                </view>
+                                <view class="mini-btn warn" @click="nav_to_fc">
+                                    <text class="mini-btn-text">检查</text>
+                                </view>
+                            </view>
+                        </module-filter>
+                    </view>
+                    <view class="sc-grid" v-if="focus_plan.sc_info && focus_plan.status == 3">
+                        <view class="sc-card" v-for="(sc_node, index) in focus_plan.sc_info" :key="'sc-' + index"
+                            @click="sc_node.sc_content && sc_node.sc_content.attachment && show_sc_image(index)">
+                            <view class="sc-thumb-wrap">
+                                <image v-if="sc_node.sc_content && sc_node.sc_content.attachment" class="sc-thumb"
+                                    :src="$convert_attach_url(sc_node.sc_content.attachment)" mode="aspectFill"></image>
+                                <view class="sc-thumb sc-thumb-empty" v-else>
+                                    <text class="sc-thumb-empty-text">无图</text>
+                                </view>
+                            </view>
+                            <text class="sc-card-name">{{ sc_node.name }}</text>
+                            <text class="sc-card-expire" v-if="sc_node.sc_content && sc_node.sc_content.expired_time">
+                                {{ sc_node.sc_content.expired_time }}
+                            </text>
+                            <text class="sc-card-expire muted" v-else>未上传</text>
+                        </view>
+                    </view>
+                    <view class="sc-empty" v-else-if="!focus_plan.sc_info">
+                        <text class="sc-empty-text">点击上方「审批」查看/处理安检项</text>
+                    </view>
+                    <module-filter require_module="exam">
+                        <view class="info-row last linkable" @click="go_exam">
+                            <text class="info-label">查看考试结果</text>
+                            <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
+                        </view>
+                    </module-filter>
+                </view>
+
+                <view class="section-card last-card">
+                    <view class="section-head">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">操作历史</text>
+                            <text class="section-en">HISTORY</text>
+                        </view>
+                        <text class="history-count" v-if="history_list.length">{{ history_list.length }}条</text>
+                    </view>
+                    <view class="history-timeline" v-if="history_list.length">
+                        <view class="history-item" v-for="(node, index) in history_visible" :key="'h-' + index"
+                            :class="{ last: index === history_visible.length - 1 }">
+                            <view class="history-rail">
+                                <view class="history-dot" :class="'a-' + history_action_tone(node.action_type)"></view>
+                                <view class="history-line" v-if="index !== history_visible.length - 1"></view>
+                            </view>
+                            <view class="history-body">
+                                <view class="history-top">
+                                    <text class="history-action">{{ node.action_type }}</text>
+                                    <text class="history-op">{{ node.operator }}</text>
+                                </view>
+                                <text class="history-time">{{ node.time }}</text>
+                            </view>
+                        </view>
+                    </view>
+                <view class="history-more" v-if="history_list.length > history_limit"
+                    @click="history_expanded = !history_expanded">
+                    <text class="history-more-text">{{ history_more_text }}</text>
+                    <view class="history-more-icon" :class="{ up: history_expanded }">
+                        <fui-icon name="arrowdown" size="28" color="#465CFF"></fui-icon>
+                    </view>
+                </view>
+                    <view class="history-empty" v-if="!history_list.length">
+                        <text class="info-sub-text">暂无操作记录</text>
+                    </view>
+                </view>
             </view>
-            <view class="sc-index-wrap" v-if="sc_attach_urls.length > 1">
-                <text class="sc-index">{{sc_current_index + 1}}/{{sc_attach_urls.length}}</text>
+        </scroll-view>
+
+        <view class="bottom-actions" v-if="focus_plan.status != 3 || plan_owner || can_pass_vehicle">
+            <view class="bottom-actions-inner">
+                <view class="action-chip danger" v-if="focus_plan.status != 3 && plan_owner"
+                    @click="prepare_xxx_confirm(cur_cancel_url, '取消')">
+                    <text class="action-chip-text">取消</text>
+                </view>
+                <module-filter :rm_array="['sale_management', 'buy_management']">
+                    <view class="action-chip success" v-if="focus_plan.status == 0"
+                        @click="prepare_xxx_confirm(cur_confirm_url, '确认')">
+                        <text class="action-chip-text">确认</text>
+                    </view>
+                </module-filter>
+                <module-filter :rm_array="['sale_management', 'buy_management']">
+                    <view class="action-chip warn" v-if="focus_plan.status != 0 && is_allowed_order_return"
+                        @click="show_rollback_confirm = true;">
+                        <text class="action-chip-text">回退</text>
+                    </view>
+                </module-filter>
+                <module-filter :rm_array="['sale_management', 'buy_management']">
+                    <view class="action-chip danger" v-if="focus_plan.status != 3"
+                        @click="prepare_xxx_confirm(cur_close_url, '关闭')">
+                        <text class="action-chip-text">关闭</text>
+                    </view>
+                </module-filter>
+                <module-filter :rm_array="['sale_management', 'buy_management']">
+                    <view class="action-chip success" v-if="(focus_plan.status == 1 && !focus_plan.is_buy)"
+                        @click="prepare_pay_confirm('验款')">
+                        <text class="action-chip-text">验款</text>
+                    </view>
+                </module-filter>
+                <module-filter require_module="scale">
+                    <view class="action-chip danger" v-if="can_pass_vehicle"
+                        @click="prepare_xxx_confirm('/scale/cancel_check_in', '过号')">
+                        <text class="action-chip-text">过号</text>
+                    </view>
+                </module-filter>
+                <module-filter require_module="scale">
+                    <view class="action-chip success"
+                        v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight"
+                        @click="show_scale_input = true">
+                        <text class="action-chip-text">计量</text>
+                    </view>
+                </module-filter>
             </view>
         </view>
-    </fui-backdrop>
 
-    <fui-bottom-popup :show="choose_company_show" @close="choose_company_show= false" z-index="1002">
-        <fui-list>
-            <list-show v-model="supplier_list" :fetch_function="get_buy_contracts" search_key="cond" height="40vh">
-                <fui-list-cell v-for="item in supplier_list" :key="item.id" arrow @click="assign_supplier(item.company.id)">
-                    {{item.company.name}}
-                </fui-list-cell>
-            </list-show>
-        </fui-list>
-    </fui-bottom-popup>
-    <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm= false" z-index="1002">
-        <sc-execute v-if="show_sc_confirm" ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
-    </fui-bottom-popup>
-    <fui-modal :zIndex="1002" width="600" :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate +'吗？' + (focus_plan.status == 1?'余额可能不足':'')" :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm" @click="do_rollback">
-        <fui-form ref="rollback_form" top="100">
-            <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
-        <fui-form ref="deliver" top="100">
-            <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
-            <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time" @click="prepare_deliver_date_pick('p_time')"></fui-input>
-            <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
-            <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time" @click="prepare_deliver_date_pick('m_time')"></fui-input>
-            <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量" v-model="deliver_req.count">
-                <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
-            </fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time" @change="choose_deliver_date" @cancel="show_deliver_date= false"></fui-date-picker>
-    <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt" @click="reassign_supplier">
-    </fui-modal>
-    <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
-        <fui-form ref="plan_update" :model="update_req">
-            <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
-            <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
-            <fui-input label="司机姓名" v-model="update_req.driver_name"></fui-input>
-            <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
-            <fui-input label="承运公司" v-model="update_req.trans_company_name"></fui-input>
-            <fui-input label="备注" v-model="update_req.comment"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show" @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
-        <fui-form ref="new_stuff_price_form" top="100">
-            <fui-input required label="新单价" borderTop placeholder="请输入新单价" v-model="new_stuff_price.price"></fui-input>
-            <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
-        </fui-form>
-    </fui-modal>
-    <fui-toast ref="toast"></fui-toast>
-    <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
-    <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
-    <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示" :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`" @click="confirm_add_to_blacklist"></fui-modal>
-    <measurement ref="measurement" :focus_plan="focus_plan" @refresh="refresh_detail"></measurement>
-    <fui-bottom-popup :show="show_approver_pick" v-if="show_approver_pick" @close="close_approver_pick_cancel" z-index="1005">
-        <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
-        <fui-list>
-            <fui-list-cell v-for="(n, idx) in approver_pick_names" :key="idx" arrow @click="confirm_approver_pick(n)">{{n}}</fui-list-cell>
-        </fui-list>
-    </fui-bottom-popup>
-</view>
+        <fui-backdrop :zIndex="8888" :show="show_sc" @click="show_sc = false">
+            <view class="sc-image-viewer" @click.stop>
+                <swiper class="sc-swiper" :current="sc_current_index" @change="on_sc_swiper_change"
+                    :indicator-dots="sc_attach_urls.length > 1" :indicator-color="'rgba(255,255,255,0.5)'"
+                    :indicator-active-color="'#ffffff'">
+                    <swiper-item v-for="(item, index) in sc_attach_urls" :key="index">
+                        <movable-area scale-area class="sc-movable-area">
+                            <movable-view class="sc-movable-view" direction="all" inertia scale scale-min="1"
+                                scale-max="6">
+                                <image class="sc-lookimg" :src="item.src" mode="aspectFit"></image>
+                            </movable-view>
+                        </movable-area>
+                    </swiper-item>
+                </swiper>
+                <view class="sc-close-button-container">
+                    <fui-icon @click="show_sc = false" name="close" size="80" color="white"></fui-icon>
+                </view>
+                <view class="sc-index-wrap" v-if="sc_attach_urls.length > 1">
+                    <text class="sc-index">{{ sc_current_index + 1 }}/{{ sc_attach_urls.length }}</text>
+                </view>
+            </view>
+        </fui-backdrop>
+
+        <fui-bottom-popup :show="choose_company_show" v-if="choose_company_show" @close="choose_company_show = false"
+            z-index="1002">
+            <fui-list>
+                <list-show v-model="supplier_list" :fetch_function="get_buy_contracts" search_key="cond" height="40vh">
+                    <fui-list-cell v-for="item in supplier_list" :key="item.id" arrow
+                        @click="assign_supplier(item.company.id)">
+                        {{ item.company.name }}
+                    </fui-list-cell>
+                </list-show>
+            </fui-list>
+        </fui-bottom-popup>
+        <fui-bottom-popup :show="show_sc_confirm" @close="show_sc_confirm = false" z-index="1002">
+            <sc-execute v-if="show_sc_confirm" ref="sc_confirm" :focus_plan="focus_plan"></sc-execute>
+        </fui-bottom-popup>
+        <fui-modal :zIndex="1002" width="600"
+            :descr="'确定要' + confirm_info + focus_plan.main_vehicle.plate + '吗？' + (focus_plan.status == 1 ? '余额可能不足' : '')"
+            :show="show_xxx_confirm" v-if="show_xxx_confirm" @click="do_xxx">
+        </fui-modal>
+        <fui-modal :zIndex="1002" width="600" title="回退原因" :show="show_rollback_confirm" v-if="show_rollback_confirm"
+            @click="do_rollback">
+            <fui-form ref="rollback_form" top="100">
+                <fui-input required label="原因" borderTop placeholder="请输入原因" v-model="rollback_msg"></fui-input>
+            </fui-form>
+        </fui-modal>
+        <fui-modal :zIndex="1002" width="600" v-if="show_scale_input" :show="show_scale_input" @click="deliver">
+            <fui-form ref="deliver" top="100">
+                <fui-input label="皮重" borderTop placeholder="请输入重量" v-model="deliver_req.p_weight"></fui-input>
+                <fui-input label="过皮时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.p_time"
+                    @click="prepare_deliver_date_pick('p_time')"></fui-input>
+                <fui-input label="毛重" borderTop placeholder="请输入重量" v-model="deliver_req.m_weight"></fui-input>
+                <fui-input label="过毛时间" disabled borderTop placeholder="请输入时间" v-model="deliver_req.m_time"
+                    @click="prepare_deliver_date_pick('m_time')"></fui-input>
+                <fui-input required label="装载量" type="number" borderTop placeholder="请输入装载量"
+                    v-model="deliver_req.count">
+                    <fui-button type="purple" btnSize="mini" text="计算" @click="calc_count"></fui-button>
+                </fui-input>
+            </fui-form>
+        </fui-modal>
+        <fui-date-picker zIndex="1003" :show="show_deliver_date" type="5" :value="deliver_time"
+            @change="choose_deliver_date" @cancel="show_deliver_date = false"></fui-date-picker>
+        <fui-modal :zIndex="1003" width="600" descr="确定要重新指定吗？" v-if="show_reassign_prompt" :show="show_reassign_prompt"
+            @click="reassign_supplier">
+        </fui-modal>
+        <fui-modal :zIndex="1004" width="600" v-if="show_update" :show="show_update" @click="update_plan">
+            <fui-form ref="plan_update" :model="update_req">
+                <fui-input label="主车号" v-model="update_req.main_vehicle_plate"></fui-input>
+                <fui-input label="挂车号" v-model="update_req.behind_vehicle_plate"></fui-input>
+                <fui-input label="司机姓名" v-model="update_req.driver_name"></fui-input>
+                <fui-input label="司机电话" v-model="update_req.driver_phone"></fui-input>
+                <fui-input label="承运公司" v-model="update_req.trans_company_name"></fui-input>
+                <fui-input label="备注" v-model="update_req.comment"></fui-input>
+            </fui-form>
+        </fui-modal>
+        <fui-modal :zIndex="1002" width="600" v-if="new_stuff_price.show" title="调价" :show="new_stuff_price.show"
+            @cancel="cancel_new_stuff_price" @click="do_new_stuff_pirce">
+            <fui-form ref="new_stuff_price_form" top="100">
+                <fui-input required label="新单价" borderTop placeholder="请输入新单价"
+                    v-model="new_stuff_price.price"></fui-input>
+                <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
+            </fui-form>
+        </fui-modal>
+        <fui-toast ref="toast"></fui-toast>
+        <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false"
+            @change="change_index"></fui-gallery>
+        <fui-button v-if="show_attach" class="downloadBtn" type="link" text="下载" @click="download_img"></fui-button>
+        <fui-modal :zIndex="1002" :show="show_blackList_confirm" title="提示"
+            :descr="`确定将${focus_blackList.type === 'vehicle' ? '车辆' : '司机'}添加到黑名单吗？`"
+            @click="confirm_add_to_blacklist"></fui-modal>
+        <measurement ref="measurement" :focus_plan="focus_plan" @refresh="refresh_detail"></measurement>
+        <fui-bottom-popup :show="show_approver_pick" v-if="show_approver_pick" @close="close_approver_pick_cancel"
+            z-index="1005">
+            <view style="padding: 20rpx;font-weight:bold;">选择审批人</view>
+            <fui-list>
+                <fui-list-cell v-for="(n, idx) in approver_pick_names" :key="idx" arrow
+                    @click="confirm_approver_pick(n)">{{ n }}</fui-list-cell>
+            </fui-list>
+        </fui-bottom-popup>
+    </view>
 </template>
 
 <script>
@@ -381,6 +612,8 @@ export default {
             },
             deliver_time: utils.dateFormatter(new Date(), 'y-m-d h:i:s', 4, false),
             deliver_time_type: '',
+            history_expanded: false,
+            history_limit: 3,
             comp_title: function (is_buy) {
                 if (is_buy) {
                     return { a_title: '卖方', b_title: '买方' };
@@ -425,7 +658,68 @@ export default {
         },
         plan_status: function () {
             const status_map = ['未确认', '未付款', '未发车', '已关闭'];
+            if (this.focus_plan.is_buy && this.focus_plan.status == 1) {
+                return '待处理';
+            }
+            if (this.focus_plan.status == 2) {
+                return this.focus_plan.enter_time ? '已入场' : '未入场';
+            }
+            if (this.focus_plan.status == 3 && !this.focus_plan.manual_close) {
+                return '已完成';
+            }
             return status_map[this.focus_plan.status] || '';
+        },
+        process_steps: function () {
+            const p = this.focus_plan || {};
+            const status = Number(p.status);
+            const is_buy = !!p.is_buy;
+            const entered = !!p.enter_time;
+            const closed = !!p.manual_close;
+
+            const step_state = (done, current) => {
+                if (done) return 'done';
+                if (current) return 'current';
+                return 'todo';
+            };
+
+            let enter_name = '入场';
+            let enter_state = 'todo';
+            if (status === 2) {
+                enter_name = entered ? '已入场' : '未入场';
+                enter_state = closed ? 'done' : 'current';
+            } else if (status > 2) {
+                enter_name = entered ? '已入场' : '入场';
+                enter_state = 'done';
+            }
+
+            return [{
+                name: status > 0 ? '已确认' : '确认',
+                state: step_state(status > 0, !closed && status === 0),
+            }, {
+                name: is_buy
+                    ? (status > 1 ? '已处理' : '处理')
+                    : (status > 1 ? '已付款' : '付款'),
+                state: step_state(status > 1, !closed && status === 1),
+            }, {
+                name: enter_name,
+                state: enter_state,
+            }, {
+                name: closed ? '已关闭' : (status === 3 ? '已完成' : '完成'),
+                state: closed ? 'fail' : step_state(status === 3, false),
+            }];
+        },
+        process_progress: function () {
+            const steps = this.process_steps;
+            if (!steps.length) return '0%';
+            let idx = 0;
+            steps.forEach((step, i) => {
+                if (step.state === 'done' || step.state === 'fail') {
+                    idx = i;
+                } else if (step.state === 'current') {
+                    idx = Math.max(idx, i - 0.15);
+                }
+            });
+            return ((idx / (steps.length - 1)) * 100) + '%';
         },
         sc_attach_urls: function () {
             let ret = [];
@@ -440,6 +734,26 @@ export default {
                 });
             }
             return ret;
+        },
+        sc_uploaded_count: function () {
+            if (!this.focus_plan.sc_info) {
+                return 0;
+            }
+            return this.focus_plan.sc_info.filter(ele => ele.sc_content && ele.sc_content.attachment).length;
+        },
+        history_list: function () {
+            const list = (this.focus_plan && this.focus_plan.plan_histories) || [];
+            // 最新在前，折叠时优先展示最近操作
+            return list.slice().reverse();
+        },
+        history_visible: function () {
+            if (this.history_expanded || this.history_list.length <= this.history_limit) {
+                return this.history_list;
+            }
+            return this.history_list.slice(0, this.history_limit);
+        },
+        history_more_text: function () {
+            return this.history_expanded ? '收起' : ('展开全部 ' + this.history_list.length + ' 条');
         },
         plan_owner: function () {
             let self = uni.getStorageSync('self_info');
@@ -477,28 +791,42 @@ export default {
             return ret;
         },
         load_contract: async function (plan) {
-            if ((this.$has_module('sale_management') || this.$has_module('buy_management')) && plan.company && plan.company.id) {
-                try {
-                    let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
-                    let contract_req = {};
-                    if (this.cur_is_buy) {
-                        contract_req.supplier_id = plan.company.id;
-                    } else {
-                        contract_req.customer_id = plan.company.id;
-                        contract_req.supply_company_id = plan.stuff.company.id;
+            // 仅管理端角色拉合同；买方/供应商身份有销售模块时误调会报「无权限」
+            if (!plan || !plan.company || !plan.company.id) {
+                return;
+            }
+            if (this.role !== 'sale_management' && this.role !== 'buy_management') {
+                return;
+            }
+            try {
+                let url = this.cur_is_buy ? '/buy_management/get_contract_by_supplier' : '/sale_management/get_contract_by_customer';
+                let contract_req = {};
+                if (this.cur_is_buy) {
+                    contract_req.supplier_id = plan.company.id;
+                } else {
+                    contract_req.customer_id = plan.company.id;
+                    // 普通公司不传 supply_company_id，避免与本公司不一致时后端直接报「无权限」
+                    // 仅集团销售主体切换时需要带上物料归属公司
+                    const self_info = uni.getStorageSync('self_info') || {};
+                    const supply_id = plan.stuff && plan.stuff.company && plan.stuff.company.id;
+                    if (supply_id && self_info.company_is_group === true) {
+                        contract_req.supply_company_id = supply_id;
                     }
-                    let resp = await this.$send_req(url, this.make_context_req(contract_req));
-                    const oneMonthFromNow = moment().add(1, 'month');
-                    const contractEndDate = moment(resp.end_time);
-                    const monthsDifference = contractEndDate.diff(moment(), 'months', true);
-                    const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
-                    if (diffOneMonth) {
-                        resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
-                    }
-                    this.cur_contract = resp;
-                } catch (error) {
-                    console.log(error);
                 }
+                contract_req = this.make_context_req(contract_req);
+                // 合同为辅助信息，失败不弹「无权限」打断详情页
+                let resp = await this.$send_req(url, contract_req, true, true);
+                const oneMonthFromNow = moment().add(1, 'month');
+                const contractEndDate = moment(resp.end_time);
+                const monthsDifference = contractEndDate.diff(moment(), 'months', true);
+                const diffOneMonth = monthsDifference > 0 && monthsDifference <= 1;
+                if (diffOneMonth) {
+                    resp.nearlyExpired = contractEndDate.isBefore(oneMonthFromNow);
+                }
+                this.cur_contract = resp;
+            } catch (error) {
+                this.cur_contract = { balance: 0, rbac_users: [], begin_time: '', end_time: '' };
+                console.warn('load_contract failed', error);
             }
         },
         refresh_detail: function () {
@@ -847,6 +1175,29 @@ export default {
         show_manual_weight: function () {
             this.$refs.measurement.show();
         },
+        go_proxy_driver: function () {
+            uni.navigateTo({
+                url: '/subPage1/Driver?driver_phone=' + this.focus_plan.driver.phone
+            });
+        },
+        go_exam: function () {
+            uni.navigateTo({
+                url: '/subPage1/PlanExam?plan_id=' + this.focus_plan.id
+            });
+        },
+        history_action_tone: function (action) {
+            const text = String(action || '');
+            if (text.indexOf('关闭') !== -1 || text.indexOf('取消') !== -1 || text.indexOf('删除') !== -1) {
+                return 'danger';
+            }
+            if (text.indexOf('确认') !== -1 || text.indexOf('验款') !== -1 || text.indexOf('通过') !== -1) {
+                return 'success';
+            }
+            if (text.indexOf('回退') !== -1 || text.indexOf('调价') !== -1 || text.indexOf('修改') !== -1) {
+                return 'warn';
+            }
+            return 'primary';
+        },
     },
     watch: {
         plan: {
@@ -874,18 +1225,994 @@ export default {
 </script>
 
 <style scoped>
-.group_sep:nth-child(odd) {
-    background-color: #ffffff;
+.detail-panel {
+    min-height: 100vh;
+    background: #F2F4FA;
 }
-.group_sep:nth-child(even) {
-    background-color: #f1f1f1;
+
+.detail-scroll {
+    height: 100vh;
+    box-sizing: border-box;
+    padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 }
+
+.hero {
+    position: relative;
+    padding: 28rpx 28rpx 36rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
+    overflow: hidden;
+}
+
+.hero-logo-bg {
+    position: absolute;
+    top: -20rpx;
+    right: -10rpx;
+    width: 260rpx;
+    height: 260rpx;
+    opacity: 0.16;
+    pointer-events: none;
+}
+
+.hero-logo-img {
+    width: 100%;
+    height: 100%;
+}
+
+.hero-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16rpx;
+}
+
+.hero-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.hero-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 2rpx;
+}
+
+.hero-stuff {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 40rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.process-panel {
+    position: relative;
+    z-index: 1;
+    margin-top: 28rpx;
+    padding: 28rpx 16rpx 22rpx;
+    border-radius: 20rpx;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1rpx solid rgba(255, 255, 255, 0.22);
+    box-shadow: inset 0 1rpx 0 rgba(255, 255, 255, 0.18);
+}
+
+.process-flow {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.process-track {
+    position: absolute;
+    left: 12.5%;
+    right: 12.5%;
+    top: 22rpx;
+    height: 4rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.22);
+    overflow: hidden;
+}
+
+.process-track-fill {
+    height: 100%;
+    border-radius: 999rpx;
+    background: linear-gradient(90deg, #FFFFFF 0%, #FFE0C2 100%);
+    transition: width 0.35s ease;
+}
+
+.process-step {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.process-dot {
+    width: 44rpx;
+    height: 44rpx;
+    border-radius: 50%;
+    background: rgba(36, 56, 180, 0.45);
+    border: 2rpx solid rgba(255, 255, 255, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    position: relative;
+}
+
+.process-dot.done {
+    background: #FFFFFF;
+    border-color: #FFFFFF;
+    box-shadow: 0 4rpx 12rpx rgba(20, 30, 90, 0.18);
+}
+
+.process-dot.current {
+    background: linear-gradient(145deg, #FFC48A 0%, #FF8F3F 100%);
+    border-color: #FFFFFF;
+    box-shadow: 0 6rpx 16rpx rgba(255, 143, 63, 0.45);
+}
+
+.process-dot.fail {
+    background: linear-gradient(145deg, #FF8A8A 0%, #FF4D4F 100%);
+    border-color: #FFFFFF;
+}
+
+.process-dot-ring {
+    position: absolute;
+    left: -8rpx;
+    top: -8rpx;
+    right: -8rpx;
+    bottom: -8rpx;
+    border-radius: 50%;
+    border: 2rpx solid rgba(255, 176, 107, 0.55);
+    animation: process-pulse 1.6s ease-out infinite;
+}
+
+.process-dot-text {
+    font-size: 20rpx;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 700;
+    line-height: 1;
+}
+
+.process-dot.done .process-dot-text {
+    color: #3D52F0;
+    font-size: 22rpx;
+}
+
+.process-dot.current .process-dot-text,
+.process-dot.fail .process-dot-text {
+    color: #FFFFFF;
+}
+
+.process-name {
+    margin-top: 14rpx;
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.55);
+    text-align: center;
+    line-height: 1.2;
+    letter-spacing: 1rpx;
+}
+
+.process-name.done {
+    color: rgba(255, 255, 255, 0.92);
+    font-weight: 600;
+}
+
+.process-name.current {
+    color: #FFE4C8;
+    font-weight: 700;
+}
+
+.process-name.fail {
+    color: #FFD0D0;
+    font-weight: 700;
+}
+
+@keyframes process-pulse {
+    0% {
+        transform: scale(0.92);
+        opacity: 0.9;
+    }
+
+    70% {
+        transform: scale(1.18);
+        opacity: 0;
+    }
+
+    100% {
+        transform: scale(1.18);
+        opacity: 0;
+    }
+}
+
+.status-pill {
+    flex-shrink: 0;
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.status-pill-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.status-pill.st-0 {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+.status-pill.st-1 {
+    background: rgba(255, 138, 43, 0.95);
+}
+
+.status-pill.st-2 {
+    background: rgba(19, 194, 194, 0.95);
+}
+
+.status-pill.st-3 {
+    background: rgba(45, 190, 108, 0.95);
+}
+
+.status-pill.st-close {
+    background: rgba(255, 77, 79, 0.95);
+}
+
+.hero-links {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    gap: 24rpx;
+    margin-top: 18rpx;
+}
+
+.hero-link {
+    font-size: 24rpx;
+    color: #FFFFFF;
+    text-decoration: underline;
+}
+
+.bottom-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 980;
+    background: #FFFFFF;
+    border-top: 1rpx solid #EEF1F8;
+    box-shadow: 0 -8rpx 24rpx rgba(40, 58, 120, 0.08);
+    padding: 16rpx 20rpx calc(16rpx + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
+
+.bottom-actions-inner {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 12rpx;
+}
+
+.bottom-actions-inner>.action-chip {
+    flex: 1;
+    min-width: 0;
+}
+
+.bottom-actions-inner>view {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+}
+
+.bottom-actions-inner>view:empty {
+    display: none;
+    flex: none;
+    width: 0;
+    margin: 0;
+    padding: 0;
+}
+
+.bottom-actions-inner>view .action-chip {
+    flex: 1;
+    width: 100%;
+}
+
+.action-chip {
+    height: 72rpx;
+    padding: 0 12rpx;
+    border-radius: 16rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.action-chip-text {
+    font-size: 26rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.action-chip.success {
+    background: linear-gradient(145deg, #6FDB9A 0%, #2DBE6C 100%);
+}
+
+.action-chip.warn {
+    background: linear-gradient(145deg, #FFB06B 0%, #FF8A2B 100%);
+}
+
+.action-chip.danger {
+    background: linear-gradient(145deg, #FF8A8B 0%, #FF4D4F 100%);
+}
+
+.body {
+    margin-top: -16rpx;
+    padding: 0 24rpx 48rpx;
+    position: relative;
+    z-index: 2;
+}
+
+.section-card {
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.06);
+    margin-bottom: 20rpx;
+    overflow: hidden;
+}
+
+.section-card.last-card {
+    margin-bottom: 0;
+}
+
+.section-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 22rpx 24rpx 8rpx;
+    background: linear-gradient(90deg, #F3F5FF 0%, #FFFFFF 70%);
+    gap: 12rpx;
+}
+
+.section-bar {
+    width: 8rpx;
+    height: 34rpx;
+    border-radius: 8rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    flex-shrink: 0;
+}
+
+.section-titles {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.section-title {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+
+.section-en {
+    margin-top: 2rpx;
+    font-size: 16rpx;
+    color: #9AA3B8;
+    letter-spacing: 2rpx;
+}
+
+.info-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    padding: 22rpx 24rpx;
+    border-top: 1rpx solid #EEF1F8;
+}
+
+.info-row.last {
+    border-bottom: none;
+}
+
+.info-row.tight {
+    padding-top: 12rpx;
+}
+
+.info-row.linkable:active {
+    background: #F7F8FE;
+}
+
+.gate-status-tag {
+    flex-shrink: 0;
+    padding: 8rpx 16rpx;
+    border-radius: 999rpx;
+    font-size: 22rpx;
+    font-weight: 700;
+}
+
+.gate-status-tag.on {
+    background: rgba(45, 190, 108, 0.14);
+    color: #1FA85A;
+}
+
+.gate-status-tag.off {
+    background: rgba(138, 148, 166, 0.14);
+    color: #5E6A82;
+}
+
+.trip-card {
+    overflow: hidden;
+}
+
+.trip-hero {
+    margin: 0 20rpx;
+    padding: 22rpx 20rpx;
+    border-radius: 18rpx;
+    background: linear-gradient(135deg, #EEF1FF 0%, #F7F8FE 55%, #FFFFFF 100%);
+    border: 1rpx solid rgba(70, 92, 255, 0.14);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+}
+
+.trip-plates {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10rpx;
+}
+
+.plate-tag {
+    padding: 8rpx 14rpx;
+    border-radius: 8rpx;
+    background: #F5D000;
+    color: #1A1A1A;
+    font-size: 26rpx;
+    font-weight: 700;
+    border: 2rpx solid #1A1A1A;
+}
+
+.trip-driver {
+    margin: 16rpx 20rpx 0;
+    padding: 16rpx 18rpx;
+    border-radius: 16rpx;
+    background: #F7F8FE;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 14rpx;
+}
+
+.trip-driver-avatar {
+    width: 56rpx;
+    height: 56rpx;
+    border-radius: 50%;
+    background: rgba(70, 92, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.trip-driver-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+}
+
+.trip-driver-name {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+
+.trip-driver-phone {
+    font-size: 22rpx;
+    color: #465CFF;
+    font-weight: 600;
+}
+
+.trip-stats {
+    margin: 16rpx 20rpx 0;
+    display: flex;
+    flex-direction: row;
+    gap: 12rpx;
+}
+
+.trip-stat {
+    flex: 1;
+    min-width: 0;
+    padding: 16rpx 12rpx;
+    border-radius: 14rpx;
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6rpx;
+}
+
+.trip-stat-label {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+
+.trip-stat-value {
+    width: 100%;
+    font-size: 24rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.trip-stat-sub {
+    font-size: 18rpx;
+    color: #6B7CFF;
+}
+
+.trip-stat-link {
+    font-size: 18rpx;
+    color: #FF4D4F;
+    font-weight: 600;
+}
+
+.trip-divider {
+    margin: 20rpx 24rpx 0;
+    height: 1rpx;
+    background: #EEF1F8;
+}
+
+.trip-meta-grid {
+    margin: 8rpx 12rpx 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 0 4rpx;
+}
+
+.trip-meta {
+    width: 50%;
+    box-sizing: border-box;
+    padding: 14rpx 12rpx;
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+}
+
+.trip-meta.full {
+    width: 100%;
+}
+
+.trip-meta-label {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+
+.trip-meta-value {
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    word-break: break-all;
+    line-height: 1.35;
+}
+
+.trip-meta-value.accent {
+    color: #2F3FCF;
+    font-size: 30rpx;
+    font-weight: 700;
+}
+
+.trip-meta-sub {
+    font-size: 18rpx;
+    color: #9AA3B8;
+}
+
+.trip-actions {
+    margin: 8rpx 20rpx 20rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12rpx;
+}
+
+.trip-action-btn {
+    flex: 1;
+    min-width: 0;
+    height: 72rpx;
+    padding: 0 18rpx;
+    border-radius: 16rpx;
+    background: #F1F3FF;
+    border: 1rpx solid rgba(70, 92, 255, 0.16);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    box-sizing: border-box;
+}
+
+.trip-action-btn.primary {
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+    border-color: transparent;
+    box-shadow: 0 8rpx 18rpx rgba(47, 63, 207, 0.22);
+}
+
+.trip-action-text {
+    font-size: 24rpx;
+    color: #2F3FCF;
+    font-weight: 700;
+}
+
+.trip-action-text.light {
+    color: #FFFFFF;
+}
+
+.info-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6rpx;
+}
+
+.info-label {
+    font-size: 22rpx;
+    color: #8A94A6;
+}
+
+.info-value {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.info-value.sm {
+    font-size: 26rpx;
+    font-weight: 500;
+}
+
+.info-value.warn {
+    color: #FF8A2B;
+}
+
+.info-sub {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12rpx;
+}
+
+.info-sub-text {
+    font-size: 22rpx;
+    color: #8A94A6;
+}
+
+.info-link {
+    font-size: 22rpx;
+    color: #465CFF;
+    font-weight: 600;
+}
+
+.info-link.danger {
+    color: #FF4D4F;
+}
+
+.mini-btn {
+    flex-shrink: 0;
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+}
+
+.mini-btn-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.mini-btn.primary {
+    background: #465CFF;
+}
+
+.mini-btn.warn {
+    background: #FF8A2B;
+}
+
+.mini-btn.success {
+    background: #2DBE6C;
+}
+
+.row-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 12rpx;
+}
+
+.arrears-tag {
+    margin-top: 4rpx;
+    font-size: 20rpx;
+    color: #FF8A2B;
+}
+
+.tag-plain {
+    flex-shrink: 0;
+    padding: 6rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba(70, 92, 255, 0.12);
+    color: #465CFF;
+    font-size: 20rpx;
+    font-weight: 600;
+}
+
+.history-count {
+    flex-shrink: 0;
+    font-size: 22rpx;
+    color: #465CFF;
+    font-weight: 700;
+    padding: 6rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba(70, 92, 255, 0.1);
+}
+
+.history-timeline {
+    padding: 8rpx 24rpx 8rpx 28rpx;
+}
+
+.history-item {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 16rpx;
+    min-height: 72rpx;
+}
+
+.history-rail {
+    width: 20rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.history-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    margin-top: 10rpx;
+    background: #465CFF;
+    box-shadow: 0 0 0 6rpx rgba(70, 92, 255, 0.12);
+    flex-shrink: 0;
+}
+
+.history-dot.a-success {
+    background: #2DBE6C;
+    box-shadow: 0 0 0 6rpx rgba(45, 190, 108, 0.14);
+}
+
+.history-dot.a-warn {
+    background: #FF8A2B;
+    box-shadow: 0 0 0 6rpx rgba(255, 138, 43, 0.14);
+}
+
+.history-dot.a-danger {
+    background: #FF4D4F;
+    box-shadow: 0 0 0 6rpx rgba(255, 77, 79, 0.14);
+}
+
+.history-dot.a-primary {
+    background: #465CFF;
+    box-shadow: 0 0 0 6rpx rgba(70, 92, 255, 0.12);
+}
+
+.history-line {
+    flex: 1;
+    width: 2rpx;
+    margin-top: 6rpx;
+    background: #E6EAF5;
+}
+
+.history-body {
+    flex: 1;
+    min-width: 0;
+    padding: 4rpx 0 18rpx;
+}
+
+.history-item.last .history-body {
+    padding-bottom: 8rpx;
+}
+
+.history-top {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12rpx;
+}
+
+.history-action {
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+
+.history-op {
+    flex-shrink: 0;
+    font-size: 22rpx;
+    color: #5A6478;
+    max-width: 240rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.history-time {
+    margin-top: 4rpx;
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+
+.history-more {
+    margin: 0 20rpx 18rpx;
+    height: 64rpx;
+    border-radius: 14rpx;
+    background: #F7F8FE;
+    border: 1rpx solid #EEF1F8;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 6rpx;
+}
+
+.history-more:active {
+    background: #EEF1FF;
+}
+
+.history-more-text {
+    font-size: 24rpx;
+    color: #465CFF;
+    font-weight: 600;
+}
+
+.history-more-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease;
+}
+
+.history-more-icon.up {
+    transform: rotate(180deg);
+}
+
+.history-empty {
+    padding: 28rpx 24rpx;
+    text-align: center;
+}
+
 .downloadBtn {
     position: absolute;
     z-index: 2000;
     top: 20rpx;
     right: 20rpx;
 }
+
+.sc-count {
+    flex-shrink: 0;
+    font-size: 22rpx;
+    color: #465CFF;
+    font-weight: 700;
+    padding: 6rpx 14rpx;
+    border-radius: 999rpx;
+    background: rgba(70, 92, 255, 0.1);
+}
+
+.sc-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 4rpx 12rpx 16rpx;
+}
+
+.sc-card {
+    width: 33.33%;
+    box-sizing: border-box;
+    padding: 8rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    border-radius: 14rpx;
+}
+
+.sc-card:active .sc-thumb-wrap {
+    opacity: 0.85;
+}
+
+.sc-card:active .sc-card-name {
+    color: #2F3FCF;
+}
+
+.sc-thumb-wrap {
+    width: 100%;
+    height: 140rpx;
+    border-radius: 10rpx;
+    overflow: hidden;
+    background: #E8ECF5;
+}
+
+.sc-thumb {
+    width: 100%;
+    height: 140rpx;
+    display: block;
+}
+
+.sc-thumb-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sc-thumb-empty-text {
+    font-size: 22rpx;
+    color: #9AA3B8;
+}
+
+.sc-card-name {
+    margin-top: 10rpx;
+    font-size: 22rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    line-height: 1.3;
+    height: 56rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-all;
+}
+
+.sc-card-expire {
+    margin-top: 4rpx;
+    font-size: 18rpx;
+    color: #6B7CFF;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sc-card-expire.muted {
+    color: #9AA3B8;
+}
+
+.sc-empty {
+    padding: 20rpx 24rpx 28rpx;
+}
+
+.sc-empty-text {
+    font-size: 22rpx;
+    color: #9AA3B8;
+}
+
 .sc-image-viewer {
     width: 100%;
     height: 100%;
@@ -893,23 +2220,28 @@ export default {
     padding-bottom: 200rpx;
     box-sizing: border-box;
 }
+
 .sc-swiper {
     width: 100%;
     height: 100%;
 }
+
 .sc-movable-area {
     height: 100%;
     width: 100%;
     overflow: hidden;
 }
+
 .sc-movable-view {
     height: 100%;
     width: 100%;
 }
+
 .sc-lookimg {
     width: 100%;
     height: 100%;
 }
+
 .sc-close-button-container {
     position: absolute;
     bottom: 40rpx;
@@ -920,6 +2252,7 @@ export default {
     align-items: center;
     z-index: 8889;
 }
+
 .sc-index-wrap {
     position: absolute;
     top: 40rpx;
@@ -930,6 +2263,7 @@ export default {
     align-items: center;
     z-index: 8889;
 }
+
 .sc-index {
     color: white;
     font-size: 32rpx;

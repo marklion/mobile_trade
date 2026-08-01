@@ -1,54 +1,68 @@
 <template>
 <div class="sc_execute_show">
-    <u-cell title="安检结果">
-        <view slot="value">
-            <fui-text v-if="(sc_data2show.length > 0 && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
-            <fui-text v-else type="danger" text="未通过"></fui-text>
+    <view class="sc-head">
+        <view class="sc-head-left">
+            <text class="sc-head-title">安检审批</text>
+            <text class="sc-head-count" v-if="sc_data2show.length">{{ passed_count }}/{{ sc_data2show.length }}</text>
         </view>
-    </u-cell>
-    <list-show ref="sc_confirm" v-model="sc_data2show" :fetch_function="get_plan_sc" height="70vh" :fetch_params="[focus_plan.id]">
-        <view v-for="item in sc_data2show" :key="item.id">
-            <u-cell>
-                <view slot="icon">
-                    <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="代传" @click="prepare_upload_sc(item)"></fui-button>
-                    <fui-button v-else-if="!item.sc_content.passed" type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
-                </view>
-                <view slot="label" style="font-size:14px;color:gray;">
-                    <view v-if="item.sc_content">
-                        <view>
-                            {{item.need_expired?('到期时间：' + item.sc_content.expired_time):'长期有效'}}
+        <text
+            class="sc-head-status"
+            :class="(sc_data2show.length > 0 && sc_data2show[0].passed_total) ? 'ok' : 'bad'"
+        >
+            {{ (sc_data2show.length > 0 && sc_data2show[0].passed_total) ? '通过' : '未通过' }}
+        </text>
+    </view>
+    <list-show ref="sc_confirm" v-model="sc_data2show" :fetch_function="get_plan_sc" height="62vh" :fetch_params="[focus_plan.id]">
+        <view class="sc-grid">
+            <view class="sc-card" v-for="item in sc_data2show" :key="item.id">
+                <view class="sc-card-top" @click="item.sc_content && item.sc_content.attachment && show_image(item.sc_content.attachment)">
+                    <view class="sc-thumb-wrap">
+                        <image
+                            v-if="item.sc_content && item.sc_content.attachment"
+                            class="sc-thumb"
+                            :src="$convert_attach_url(item.sc_content.attachment)"
+                            mode="aspectFill"
+                        ></image>
+                        <view class="sc-thumb sc-thumb-empty" v-else>
+                            <text class="sc-thumb-empty-text">无</text>
                         </view>
-                        <view v-if="item.sc_content">
-                            <view v-if="item.sc_content.checker">
-                                审批人：{{item.sc_content.checker}}
-                            </view>
-                            <view v-if="item.sc_content.comment">
-                                附言：{{item.sc_content.comment}}
-                            </view>
-                            <view v-if="item.sc_content.check_time">
-                                审批时间：{{item.sc_content.check_time}}
-                            </view>
+                        <view class="sc-status-dot" :class="'d-' + sc_status_string(item.sc_content).type"></view>
+                    </view>
+                    <view class="sc-card-copy">
+                        <text class="sc-card-name">{{ item.name }}</text>
+                        <text class="sc-card-meta" v-if="item.sc_content">
+                            {{ item.need_expired ? item.sc_content.expired_time : '长期' }}
+                            <text v-if="item.sc_content.checker"> · {{ item.sc_content.checker }}</text>
+                        </text>
+                        <text class="sc-card-meta muted" v-else>待上传</text>
+                        <text class="sc-card-comment" v-if="item.sc_content && item.sc_content.comment">{{ item.sc_content.comment }}</text>
+                    </view>
+                </view>
+                <view class="sc-card-actions">
+                    <text class="sc-tag" :class="'t-' + sc_status_string(item.sc_content).type">
+                        {{ sc_status_string(item.sc_content).text }}
+                    </text>
+                    <view class="sc-act-group">
+                        <view class="sc-act primary" v-if="!item.sc_content" @click="prepare_upload_sc(item)">
+                            <text class="sc-act-text">代传</text>
                         </view>
+                        <template v-else-if="item.sc_content">
+                            <view class="sc-act danger" v-if="!item.sc_content.passed" @click="prepare_delete_sc(item)">
+                                <text class="sc-act-text">删除</text>
+                            </view>
+                            <view class="sc-act success" v-if="!item.sc_content.passed" @click="pass_sc(item.sc_content.id)">
+                                <text class="sc-act-text">通过</text>
+                            </view>
+                            <view class="sc-act danger" v-else @click="prepare_reject_sc(item)">
+                                <text class="sc-act-text">反审</text>
+                            </view>
+                            <view class="sc-act warn" v-if="!item.sc_content.passed" @click="prepare_reject_sc(item)">
+                                <text class="sc-act-text">附言</text>
+                            </view>
+                        </template>
                     </view>
                 </view>
-                <view slot="title">
-                    {{item.name}}
-                    <fui-tag theme="plain" :text="sc_status_string(item.sc_content).text" :scaleRatio="0.8" :type="sc_status_string(item.sc_content).type"></fui-tag>
-                </view>
-                <view slot="value">
-                    <view v-if="item.sc_content">
-                        {{item.sc_content.input}}
-                        <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_image(item.sc_content.attachment)"></fui-avatar>
-                    </view>
-                </view>
-                <view slot="right-icon">
-                    <view v-if="item.sc_content">
-                        <fui-button type="success" v-if="!item.sc_content.passed" btnSize="mini" text="通过" @click="pass_sc(item.sc_content.id)"></fui-button>
-                        <fui-button type="danger" v-else btnSize="mini" text="反审" @click="prepare_reject_sc(item)"></fui-button>
-                        <fui-button type="warning" v-if="!item.sc_content.passed" btnSize="mini" text="附言" @click="prepare_reject_sc(item)"></fui-button>
-                    </view>
-                </view>
-            </u-cell>
+            </view>
         </view>
     </list-show>
     <sc-upload ref="sc_up" @uploaded="refresh" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
@@ -109,6 +123,11 @@ export default {
             focus_sc_content_id: 0,
             reject_sc_comment: '',
         };
+    },
+    computed: {
+        passed_count: function () {
+            return (this.sc_data2show || []).filter(item => item.sc_content && item.sc_content.passed).length;
+        },
     },
     methods: {
         refresh: function () {
@@ -210,6 +229,203 @@ export default {
 </script>
 
 <style scoped>
+.sc_execute_show {
+    height: 100%;
+    width: 100%;
+    background: #F2F4FA;
+}
+.sc-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22rpx 24rpx 16rpx;
+    background: #FFFFFF;
+    border-bottom: 1rpx solid #EEF1F8;
+}
+.sc-head-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12rpx;
+    min-width: 0;
+}
+.sc-head-title {
+    font-size: 32rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+.sc-head-count {
+    font-size: 22rpx;
+    color: #465CFF;
+    font-weight: 700;
+    padding: 4rpx 12rpx;
+    border-radius: 999rpx;
+    background: rgba(70, 92, 255, 0.1);
+}
+.sc-head-status {
+    font-size: 24rpx;
+    font-weight: 700;
+    padding: 6rpx 16rpx;
+    border-radius: 999rpx;
+}
+.sc-head-status.ok {
+    color: #1FA85A;
+    background: rgba(45, 190, 108, 0.12);
+}
+.sc-head-status.bad {
+    color: #FF4D4F;
+    background: rgba(255, 77, 79, 0.12);
+}
+.sc-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12rpx 12rpx 24rpx;
+}
+.sc-card {
+    width: 50%;
+    box-sizing: border-box;
+    padding: 8rpx;
+}
+.sc-card-top {
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    border-bottom: none;
+    border-radius: 14rpx 14rpx 0 0;
+    padding: 14rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12rpx;
+}
+.sc-thumb-wrap {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 10rpx;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #E8ECF5;
+    position: relative;
+}
+.sc-thumb {
+    width: 72rpx;
+    height: 72rpx;
+    display: block;
+}
+.sc-thumb-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+.sc-thumb-empty-text {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+.sc-status-dot {
+    position: absolute;
+    right: 4rpx;
+    bottom: 4rpx;
+    width: 14rpx;
+    height: 14rpx;
+    border-radius: 50%;
+    border: 2rpx solid #FFFFFF;
+    box-sizing: border-box;
+}
+.sc-status-dot.d-success { background: #2DBE6C; }
+.sc-status-dot.d-danger { background: #FF4D4F; }
+.sc-status-dot.d-warning { background: #FF8A2B; }
+.sc-card-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+}
+.sc-card-name {
+    font-size: 22rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    line-height: 1.3;
+    height: 56rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-all;
+}
+.sc-card-meta {
+    font-size: 18rpx;
+    color: #6B7CFF;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sc-card-meta.muted {
+    color: #9AA3B8;
+}
+.sc-card-comment {
+    font-size: 18rpx;
+    color: #FF8A2B;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.sc-card-actions {
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    border-top: 1rpx solid #F2F4FA;
+    border-radius: 0 0 14rpx 14rpx;
+    padding: 8rpx 12rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8rpx;
+    min-height: 56rpx;
+}
+.sc-tag {
+    flex-shrink: 0;
+    font-size: 18rpx;
+    font-weight: 700;
+    padding: 2rpx 10rpx;
+    border-radius: 6rpx;
+}
+.sc-tag.t-success {
+    color: #1FA85A;
+    background: rgba(45, 190, 108, 0.12);
+}
+.sc-tag.t-danger {
+    color: #FF4D4F;
+    background: rgba(255, 77, 79, 0.12);
+}
+.sc-tag.t-warning {
+    color: #FF8A2B;
+    background: rgba(255, 138, 43, 0.12);
+}
+.sc-act-group {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8rpx;
+}
+.sc-act {
+    padding: 6rpx 14rpx;
+    border-radius: 999rpx;
+}
+.sc-act-text {
+    font-size: 20rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.sc-act.primary { background: #465CFF; }
+.sc-act.success { background: #2DBE6C; }
+.sc-act.warn { background: #FF8A2B; }
+.sc-act.danger { background: #FF4D4F; }
+
 .close-button-container {
     position: absolute;
     bottom: 40rpx;
@@ -239,11 +455,6 @@ export default {
     width: 100%;
     overflow: hidden;
     z-index: 9999;
-}
-
-.sc_execute_show {
-    height: 100%;
-    width: 100%;
 }
 
 .lookimg {

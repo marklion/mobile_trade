@@ -45,49 +45,51 @@
             <fui-button type="primary" open-type="getPhoneNumber" text="绑定" @getphonenumber="update_driver"></fui-button>
         </fui-form>
     </fui-modal>
-    <fui-bottom-popup :show="show_sc" @close="show_sc= false">
-        <u-cell title="安检结果">
-            <view slot="value">
-                <fui-text v-if="(sc_data2show.length > 0 && sc_data2show[0].passed_total)" type="success" text="通过"></fui-text>
-                <fui-text v-else type="danger" text="未通过"></fui-text>
-            </view>
-        </u-cell>
+    <fui-bottom-popup :show="show_sc" v-if="show_sc" @close="show_sc= false">
+        <view class="driver-sc-head">
+            <text class="driver-sc-title">安检结果</text>
+            <text class="driver-sc-status" :class="(sc_data2show.length > 0 && sc_data2show[0].passed_total) ? 'ok' : 'bad'">
+                {{ (sc_data2show.length > 0 && sc_data2show[0].passed_total) ? '通过' : '未通过' }}
+            </text>
+        </view>
         <list-show ref="sc_confirm" v-model="sc_data2show" :fetch_function="get_plan_sc" height="70vh" :fetch_params="[focus_plan.id, driver_self.open_id]">
-            <view v-for="item in sc_data2show" :key="item.id">
-                <u-cell>
-                    <view slot="right-icon">
-                        <fui-button v-if="!item.sc_content" type="primary" btnSize="mini" text="上传" @click="prepare_upload_sc(item)"></fui-button>
-                        <fui-button v-else-if="!item.sc_content.passed" type="danger" btnSize="mini" text="删除" @click="prepare_delete_sc(item)"></fui-button>
-                    </view>
-                    <view slot="label" style="font-size:14px;color:gray;">
-                        <view v-if="item.sc_content">
-                            <view>
-                                {{item.need_expired?('到期时间：' + item.sc_content.expired_time):'长期有效'}}
-                            </view>
-                            <view v-if="item.sc_content">
-                                <view v-if="item.sc_content.checker">
-                                    审批人：{{item.sc_content.checker}}
-                                </view>
-                                <view v-if="item.sc_content.comment">
-                                    附言：{{item.sc_content.comment}}
-                                </view>
-                                <view v-if="item.sc_content.check_time">
-                                    审批时间：{{item.sc_content.check_time}}
-                                </view>
+            <view class="driver-sc-grid">
+                <view class="driver-sc-card" v-for="item in sc_data2show" :key="item.id">
+                    <view class="driver-sc-top" @click="preview_sc_attach(item)">
+                        <view class="driver-sc-thumb-wrap">
+                            <image
+                                v-if="item.sc_content && item.sc_content.attachment"
+                                class="driver-sc-thumb"
+                                :src="$convert_attach_url(item.sc_content.attachment)"
+                                mode="aspectFill"
+                            ></image>
+                            <view class="driver-sc-thumb driver-sc-thumb-empty" v-else>
+                                <text class="driver-sc-thumb-empty-text">无</text>
                             </view>
                         </view>
-                    </view>
-                    <view slot="title">
-                        {{item.name}}
-                        <fui-tag theme="plain" :text="sc_status_string(item.sc_content).text" :scaleRatio="0.8" :type="sc_status_string(item.sc_content).type"></fui-tag>
-                    </view>
-                    <view slot="value">
-                        <view v-if="item.sc_content">
-                            {{item.sc_content.input}}
-                            <fui-avatar v-if="item.sc_content.attachment" :src="$convert_attach_url(item.sc_content.attachment)" @click="show_one_att = true;one_att=[$convert_attach_url( item.sc_content.attachment)]"></fui-avatar>
+                        <view class="driver-sc-copy">
+                            <text class="driver-sc-name">{{ item.name }}</text>
+                            <text class="driver-sc-meta" v-if="item.sc_content">
+                                {{ item.need_expired ? item.sc_content.expired_time : '长期有效' }}
+                            </text>
+                            <text class="driver-sc-meta muted" v-else>待上传</text>
+                            <text class="driver-sc-meta dim" v-if="item.sc_content && item.sc_content.checker">
+                                {{ item.sc_content.checker }}
+                            </text>
                         </view>
                     </view>
-                </u-cell>
+                    <view class="driver-sc-actions">
+                        <text class="driver-sc-tag" :class="'t-' + sc_status_string(item.sc_content).type">
+                            {{ sc_status_string(item.sc_content).text }}
+                        </text>
+                        <view class="driver-sc-act primary" v-if="!item.sc_content" @click="prepare_upload_sc(item)">
+                            <text class="driver-sc-act-text">上传</text>
+                        </view>
+                        <view class="driver-sc-act danger" v-else-if="!item.sc_content.passed" @click="prepare_delete_sc(item)">
+                            <text class="driver-sc-act-text">删除</text>
+                        </view>
+                    </view>
+                </view>
             </view>
         </list-show>
     </fui-bottom-popup>
@@ -105,7 +107,7 @@
         </view>
     </fui-backdrop>
     <sc-upload ref="sc_up" @uploaded="prepare_sc_confirm" :prompt="upload_sc.prompt" :title="upload_sc.name" :open_id="upload_sc.open_id" :plan_id="upload_sc.plan_id" :req_id="upload_sc.req_id" :need_attach="upload_sc.need_attach" :need_expired="upload_sc.need_expired" :need_input="upload_sc.need_input"></sc-upload>
-    <fui-bottom-popup :show="show_company_select" @close="show_company_select= false">
+    <fui-bottom-popup :show="show_company_select" v-if="show_company_select" @close="show_company_select= false">
         <list-show ref="cp" v-model="company_list" :fetch_function="get_company4select" :fetch_params="[focus_plan, driver_self.open_id]" height="45vh" search_key="cond">
             <view v-for="item in company_list" :key="item.id">
                 <u-cell :title="item.name" @click="select_company(item)" is-link></u-cell>
@@ -473,6 +475,12 @@ export default {
                 this.$refs.sc_confirm.refresh();
             });
         },
+        preview_sc_attach: function (item) {
+            if (item && item.sc_content && item.sc_content.attachment) {
+                this.one_att = [this.$convert_attach_url(item.sc_content.attachment)];
+                this.show_one_att = true;
+            }
+        },
         delete_sc_content: async function (e) {
             if (e.index == 1) {
                 await this.$send_req('/global/driver_delete_sc_content', {
@@ -820,4 +828,151 @@ export default {
     align-items: center;
     z-index: 8889;
 }
+.driver-sc-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22rpx 24rpx 16rpx;
+    background: #FFFFFF;
+    border-bottom: 1rpx solid #EEF1F8;
+}
+.driver-sc-title {
+    font-size: 32rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+.driver-sc-status {
+    font-size: 24rpx;
+    font-weight: 700;
+    padding: 6rpx 16rpx;
+    border-radius: 999rpx;
+}
+.driver-sc-status.ok {
+    color: #1FA85A;
+    background: rgba(45, 190, 108, 0.12);
+}
+.driver-sc-status.bad {
+    color: #FF4D4F;
+    background: rgba(255, 77, 79, 0.12);
+}
+.driver-sc-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 12rpx 12rpx 24rpx;
+}
+.driver-sc-card {
+    width: 50%;
+    box-sizing: border-box;
+    padding: 8rpx;
+}
+.driver-sc-top {
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    border-bottom: none;
+    border-radius: 14rpx 14rpx 0 0;
+    padding: 14rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12rpx;
+}
+.driver-sc-thumb-wrap {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: 10rpx;
+    overflow: hidden;
+    flex-shrink: 0;
+    background: #E8ECF5;
+}
+.driver-sc-thumb {
+    width: 72rpx;
+    height: 72rpx;
+    display: block;
+}
+.driver-sc-thumb-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+}
+.driver-sc-thumb-empty-text {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+.driver-sc-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2rpx;
+}
+.driver-sc-name {
+    font-size: 22rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    line-height: 1.3;
+    height: 56rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-all;
+}
+.driver-sc-meta {
+    font-size: 18rpx;
+    color: #6B7CFF;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.driver-sc-meta.muted,
+.driver-sc-meta.dim {
+    color: #9AA3B8;
+}
+.driver-sc-actions {
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    border-top: 1rpx solid #F2F4FA;
+    border-radius: 0 0 14rpx 14rpx;
+    padding: 8rpx 12rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8rpx;
+    min-height: 56rpx;
+}
+.driver-sc-tag {
+    flex-shrink: 0;
+    font-size: 18rpx;
+    font-weight: 700;
+    padding: 2rpx 10rpx;
+    border-radius: 6rpx;
+}
+.driver-sc-tag.t-success {
+    color: #1FA85A;
+    background: rgba(45, 190, 108, 0.12);
+}
+.driver-sc-tag.t-danger {
+    color: #FF4D4F;
+    background: rgba(255, 77, 79, 0.12);
+}
+.driver-sc-tag.t-warning {
+    color: #FF8A2B;
+    background: rgba(255, 138, 43, 0.12);
+}
+.driver-sc-act {
+    padding: 6rpx 14rpx;
+    border-radius: 999rpx;
+}
+.driver-sc-act-text {
+    font-size: 20rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.driver-sc-act.primary { background: #465CFF; }
+.driver-sc-act.danger { background: #FF4D4F; }
 </style>
