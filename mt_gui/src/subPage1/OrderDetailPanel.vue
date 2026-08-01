@@ -114,7 +114,9 @@
                                         <text class="info-value">{{ cur_contract.balance ?
                                             cur_contract.balance.toFixed(2) : 0 }}</text>
                                     </module-filter>
-                                    <text class="info-sub-text">{{ user_authorize }}</text>
+                                    <text class="auth-tag" :class="user_authorize == '已授权' ? 'ok' : 'bad'">
+                                        {{ user_authorize }}
+                                    </text>
                                 </view>
                                 <text class="arrears-tag" v-if="focus_plan.status == 1 && focus_plan.arrears > 0">
                                     欠款额:{{ focus_plan.arrears }} 需付{{ focus_plan.outstanding_vehicles }}车
@@ -1983,6 +1985,21 @@ export default {
     margin-top: 4rpx;
     font-size: 20rpx;
     color: #FF8A2B;
+}
+.auth-tag {
+    flex-shrink: 0;
+    padding: 4rpx 14rpx;
+    border-radius: 999rpx;
+    font-size: 22rpx;
+    font-weight: 700;
+}
+.auth-tag.ok {
+    color: #1FA85A;
+    background: rgba(45, 190, 108, 0.14);
+}
+.auth-tag.bad {
+    color: #FF8A2B;
+    background: rgba(255, 138, 43, 0.14);
 }
 
 .tag-plain {
