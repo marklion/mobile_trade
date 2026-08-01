@@ -32,8 +32,14 @@
                 </view>
                 <view class="hero-links"
                     v-if="(focus_plan.status == 3 || (focus_plan.checkout_delay && focus_plan.status == 2)) && !focus_plan.manual_close">
-                    <text class="hero-link" @click="go_to_ticket(false)">查看磅单</text>
-                    <text class="hero-link" v-if="focus_plan.delegate" @click="go_to_ticket(true)">内部磅单</text>
+                    <view class="hero-ticket-btn" @click="go_to_ticket(false)">
+                        <text class="hero-ticket-btn-text">查看磅单</text>
+                        <fui-icon name="arrowright" size="28" color="#FFFFFF"></fui-icon>
+                    </view>
+                    <view class="hero-ticket-btn ghost" v-if="focus_plan.delegate" @click="go_to_ticket(true)">
+                        <text class="hero-ticket-btn-text ghost">内部磅单</text>
+                        <fui-icon name="arrowright" size="28" color="#FFFFFF"></fui-icon>
+                    </view>
                 </view>
             </view>
 
@@ -1471,14 +1477,40 @@ export default {
     z-index: 1;
     display: flex;
     flex-direction: row;
-    gap: 24rpx;
-    margin-top: 18rpx;
+    flex-wrap: wrap;
+    gap: 16rpx;
+    margin-top: 22rpx;
 }
-
-.hero-link {
-    font-size: 24rpx;
+.hero-ticket-btn {
+    flex: 1;
+    min-width: 240rpx;
+    height: 72rpx;
+    padding: 0 24rpx;
+    border-radius: 16rpx;
+    background: #2DBE6C;
+    box-shadow: 0 8rpx 20rpx rgba(45, 190, 108, 0.35);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    box-sizing: border-box;
+}
+.hero-ticket-btn:active {
+    opacity: 0.92;
+}
+.hero-ticket-btn.ghost {
+    background: rgba(45, 190, 108, 0.22);
+    border: 2rpx solid rgba(255, 255, 255, 0.9);
+    box-shadow: none;
+}
+.hero-ticket-btn-text {
+    font-size: 28rpx;
     color: #FFFFFF;
-    text-decoration: underline;
+    font-weight: 700;
+}
+.hero-ticket-btn-text.ghost {
+    color: #FFFFFF;
 }
 
 .bottom-actions {
