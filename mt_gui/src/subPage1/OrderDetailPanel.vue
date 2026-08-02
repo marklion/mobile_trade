@@ -356,47 +356,40 @@
 
         <view class="bottom-actions" v-if="focus_plan.status != 3 || plan_owner || can_pass_vehicle">
             <view class="bottom-actions-inner">
+                <!-- 底部栏不要包 module-filter：小程序额外 view 会把 flex 按钮挤成小方块 -->
                 <view class="action-chip danger" v-if="focus_plan.status != 3 && plan_owner"
                     @click="prepare_xxx_confirm(cur_cancel_url, '取消')">
                     <text class="action-chip-text">取消</text>
                 </view>
-                <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <view class="action-chip success" v-if="focus_plan.status == 0"
-                        @click="prepare_xxx_confirm(cur_confirm_url, '确认')">
-                        <text class="action-chip-text">确认</text>
-                    </view>
-                </module-filter>
-                <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <view class="action-chip warn" v-if="focus_plan.status != 0 && is_allowed_order_return"
-                        @click="show_rollback_confirm = true;">
-                        <text class="action-chip-text">回退</text>
-                    </view>
-                </module-filter>
-                <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <view class="action-chip danger" v-if="focus_plan.status != 3"
-                        @click="prepare_xxx_confirm(cur_close_url, '关闭')">
-                        <text class="action-chip-text">关闭</text>
-                    </view>
-                </module-filter>
-                <module-filter :rm_array="['sale_management', 'buy_management']">
-                    <view class="action-chip success" v-if="(focus_plan.status == 1 && !focus_plan.is_buy)"
-                        @click="prepare_pay_confirm('验款')">
-                        <text class="action-chip-text">验款</text>
-                    </view>
-                </module-filter>
-                <module-filter require_module="scale">
-                    <view class="action-chip danger" v-if="can_pass_vehicle"
-                        @click="prepare_xxx_confirm('/scale/cancel_check_in', '过号')">
-                        <text class="action-chip-text">过号</text>
-                    </view>
-                </module-filter>
-                <module-filter require_module="scale">
-                    <view class="action-chip success"
-                        v-if="((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight"
-                        @click="show_scale_input = true">
-                        <text class="action-chip-text">计量</text>
-                    </view>
-                </module-filter>
+                <view class="action-chip success"
+                    v-if="focus_plan.status == 0 && ($has_module('sale_management') || $has_module('buy_management'))"
+                    @click="prepare_xxx_confirm(cur_confirm_url, '确认')">
+                    <text class="action-chip-text">确认</text>
+                </view>
+                <view class="action-chip warn"
+                    v-if="focus_plan.status != 0 && is_allowed_order_return && ($has_module('sale_management') || $has_module('buy_management'))"
+                    @click="show_rollback_confirm = true">
+                    <text class="action-chip-text">回退</text>
+                </view>
+                <view class="action-chip danger"
+                    v-if="focus_plan.status != 3 && ($has_module('sale_management') || $has_module('buy_management'))"
+                    @click="prepare_xxx_confirm(cur_close_url, '关闭')">
+                    <text class="action-chip-text">关闭</text>
+                </view>
+                <view class="action-chip success"
+                    v-if="focus_plan.status == 1 && !focus_plan.is_buy && ($has_module('sale_management') || $has_module('buy_management'))"
+                    @click="prepare_pay_confirm('验款')">
+                    <text class="action-chip-text">验款</text>
+                </view>
+                <view class="action-chip danger" v-if="can_pass_vehicle && $has_module('scale')"
+                    @click="prepare_xxx_confirm('/scale/cancel_check_in', '过号')">
+                    <text class="action-chip-text">过号</text>
+                </view>
+                <view class="action-chip success"
+                    v-if="$has_module('scale') && ((focus_plan.status == 2) || (focus_plan.status == 1 && focus_plan.is_buy)) && focus_plan.stuff.manual_weight"
+                    @click="show_scale_input = true">
+                    <text class="action-chip-text">计量</text>
+                </view>
             </view>
         </view>
 
@@ -1533,35 +1526,21 @@ export default {
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: stretch;
-    gap: 12rpx;
-}
-
-.bottom-actions-inner>.action-chip {
-    flex: 1;
-    min-width: 0;
-}
-
-.bottom-actions-inner>view {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-}
-
-.bottom-actions-inner>view:empty {
-    display: none;
-    flex: none;
-    width: 0;
-    margin: 0;
-    padding: 0;
-}
-
-.bottom-actions-inner>view .action-chip {
-    flex: 1;
     width: 100%;
 }
 
+.bottom-actions-inner .action-chip {
+    flex: 1;
+    min-width: 0;
+    margin-right: 12rpx;
+}
+
+.bottom-actions-inner .action-chip:last-child {
+    margin-right: 0;
+}
+
 .action-chip {
-    height: 72rpx;
+    height: 80rpx;
     padding: 0 12rpx;
     border-radius: 16rpx;
     display: flex;
