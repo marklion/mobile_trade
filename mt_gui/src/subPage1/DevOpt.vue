@@ -84,8 +84,9 @@
 
     <fui-modal width="600" v-if="show_cap" :show="show_cap" @click="on_cap_modal">
         <view class="cap-form">
-            <text class="cap-title">请输入车牌号</text>
-            <input class="cap-input" type="text" :value="focus_plate" placeholder="不输入即直接抓拍识别"
+            <label class="cap-title" for="dev-cap-plate">请输入车牌号</label>
+            <input id="dev-cap-plate" name="dev-cap-plate" class="cap-input" type="text"
+                :value="focus_plate" placeholder="不输入即直接抓拍识别"
                 placeholder-class="cap-ph" @input="on_plate_input" />
         </view>
     </fui-modal>
