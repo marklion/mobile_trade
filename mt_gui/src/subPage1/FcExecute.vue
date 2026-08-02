@@ -37,9 +37,10 @@
                 </view>
 
                 <view class="item-input" v-else-if="item.field_check_item.need_input">
-                    <text class="item-label">{{ item.field_check_item.name }}</text>
+                    <label class="item-label" :for="'fc-input-' + item.id">{{ item.field_check_item.name }}</label>
                     <view class="item-input-row">
-                        <input class="item-input-field" type="text" :value="item.input || ''"
+                        <input class="item-input-field" type="text" :id="'fc-input-' + item.id"
+                            :name="'fc-input-' + item.id" :value="item.input || ''"
                             placeholder="请输入内容" placeholder-class="item-input-ph"
                             @input="on_item_input($event, item)" />
                         <view class="item-save" @click="input_fc(item.input || '', item)">
@@ -128,7 +129,7 @@ export default {
             await this.load_tables();
         },
         on_item_input: function (e, item) {
-            var val = (e && e.detail && e.detail.value != null) ? e.detail.value : '';
+            const val = (e && e.detail && e.detail.value != null) ? e.detail.value : '';
             this.$set(item, 'input', val);
         },
         input_fc: async function (value, item) {
@@ -140,7 +141,7 @@ export default {
             uni.showToast({ title: '已保存', icon: 'success' });
         },
         on_switch_change: function (e, item) {
-            var value = !!(e && e.detail && e.detail.value);
+            const value = !!(e && e.detail && e.detail.value);
             this.pass_fc(value, item);
         },
         pass_fc: async function (value, item) {
@@ -151,20 +152,19 @@ export default {
             item.checked = value;
         },
         decorate_tables: function (list) {
-            var vue_this = this;
-            (list || []).forEach(function (table) {
-                table.fc_plan_table.fc_check_results.forEach(function (item) {
+            for (const table of (list || [])) {
+                for (const item of table.fc_plan_table.fc_check_results) {
                     item.checked = item.pass_time && item.pass_time.length > 0;
                     if (item.input == null) {
                         item.input = '';
                     }
                     if (item.field_check_item.need_photo && item.input) {
-                        item.photo_file_list = [vue_this.$convert_attach_url(item.input)];
+                        item.photo_file_list = [this.$convert_attach_url(item.input)];
                     } else {
                         item.photo_file_list = [];
                     }
-                });
-            });
+                }
+            }
             return list || [];
         },
         load_tables: async function () {
@@ -174,14 +174,14 @@ export default {
             }
             this.loading = true;
             try {
-                var all = [];
-                var pageNo = 0;
+                let all = [];
+                let pageNo = 0;
                 while (pageNo < 20) {
-                    var resp = await this.$send_req('/sc/get_fc_plan_table', {
+                    const resp = await this.$send_req('/sc/get_fc_plan_table', {
                         plan_id: this.plan_id,
                         pageNo: pageNo,
                     });
-                    var chunk = resp.fc_plan_tables || [];
+                    const chunk = resp.fc_plan_tables || [];
                     if (!chunk.length) {
                         break;
                     }

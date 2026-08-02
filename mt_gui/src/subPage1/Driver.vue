@@ -501,8 +501,8 @@ export default {
             return (item && item.stuff && item.stuff.name) ? item.stuff.name : '-';
         },
         yard_of: function (item) {
-            var a = (item && item.stuff && item.stuff.company && item.stuff.company.name) ? item.stuff.company.name : '';
-            var b = (item && item.company && item.company.name) ? item.company.name : '';
+            const a = (item && item.stuff && item.stuff.company && item.stuff.company.name) ? item.stuff.company.name : '';
+            const b = (item && item.company && item.company.name) ? item.company.name : '';
             if (a && b) {
                 return a + ' · ' + b;
             }
@@ -512,7 +512,7 @@ export default {
             if (!item || !item.plan_time) {
                 return false;
             }
-            var today_date = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
+            const today_date = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
             return today_date == item.plan_time.substr(0, 10);
         },
         plan_day: function (item) {
@@ -525,7 +525,7 @@ export default {
             if (!item || !item.stuff) {
                 return false;
             }
-            var enter_permit = false;
+            let enter_permit = false;
             if (item.stuff.no_need_register) {
                 enter_permit = true;
                 if (item.stuff.need_enter_weight && item.enter_count <= 0) {
@@ -544,29 +544,29 @@ export default {
             if (!item) {
                 return [];
             }
-            var raw = this.plan_show(item).buttons || [];
-            var out = [];
-            for (var i = 0; i < raw.length; i++) {
+            const raw = this.plan_show(item).buttons || [];
+            const out = [];
+            for (const btn of raw) {
                 out.push({
-                    text: raw[i].text,
-                    cls: 'c-' + (raw[i].color || 'blue')
+                    text: btn.text,
+                    cls: 'c-' + (btn.color || 'blue')
                 });
             }
             return out;
         },
         // 点击只传 id + 索引，再现场用 plan_show 还原原事件（含 item）
         tap_plan_btn: function (plan_id, bi) {
-            var item = null;
-            for (var i = 0; i < this.data2show.length; i++) {
-                if (this.data2show[i].id == plan_id) {
-                    item = this.data2show[i];
+            let item = null;
+            for (const plan of this.data2show) {
+                if (plan.id == plan_id) {
+                    item = plan;
                     break;
                 }
             }
             if (!item) {
                 return;
             }
-            var buttons = this.plan_show(item).buttons || [];
+            const buttons = this.plan_show(item).buttons || [];
             if (buttons[bi]) {
                 this.view_notice_first(buttons[bi]);
             }
@@ -733,7 +733,6 @@ export default {
             this.driver_notice_show = false;
         },
         handle_button: async function (e) {
-            let vue_this = this;
             console.log(e);
             const need_protocol = !!(e.item.stuff && e.item.stuff.protocol_doc_path);
             if (need_protocol && !e.item.protocol_signed) {
@@ -754,64 +753,64 @@ export default {
             } else if (e.text == '排号') {
                 uni.authorize({
                     scope: 'scope.userLocation',
-                    success() {
+                    success: () => {
                         uni.getLocation({
-                            success: async function (res) {
-                                await vue_this.$send_req('/global/driver_checkin', {
+                            success: async (res) => {
+                                await this.$send_req('/global/driver_checkin', {
                                     plan_id: e.item.id,
-                                    open_id: vue_this.driver_self.open_id,
+                                    open_id: this.driver_self.open_id,
                                     lat: res.latitude,
                                     lon: res.longitude
                                 });
                                 uni.startPullDownRefresh();
                             },
-                            fail: function (err) {
+                            fail: (err) => {
                                 console.log(err);
                                 uni.showToast({
                                     title: '获取位置失败',
                                     icon: 'none'
-                                })
+                                });
                             }
                         });
                     },
-                    fail() {
+                    fail: () => {
                         uni.showToast({
                             title: '获取位置失败',
                             icon: 'none'
-                        })
+                        });
                     }
-                })
+                });
             } else if (e.text == "传磅单") {
-                vue_this.show_upload_enter = true;
-                vue_this.focus_plan = e.item;
+                this.show_upload_enter = true;
+                this.focus_plan = e.item;
             } else if (e.text == "选择货源") {
-                vue_this.focus_plan = e.item;
-                vue_this.show_company_select = true;
-                vue_this.$nextTick(() => {
-                    vue_this.$refs.cp.refresh();
+                this.focus_plan = e.item;
+                this.show_company_select = true;
+                this.$nextTick(() => {
+                    this.$refs.cp.refresh();
                 });
             } else if (e.text == '考试') {
                 uni.navigateTo({
                     url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id + '&driver_name=' + this.driver_self.name,
                 });
             } else if (e.text == '期望重量') {
-                vue_this.focus_plan = e.item;
-                vue_this.show_expect_weight = true;
+                this.focus_plan = e.item;
+                this.show_expect_weight = true;
             } else if (e.text == '签名') {
                 uni.navigateTo({
                     url: '/subPage1/DriverSign?open_id=' + this.driver_self.open_id,
                 });
             } else if (e.text == '确认要出厂') {
-                await vue_this.$send_req('/global/driver_confirm', {
+                await this.$send_req('/global/driver_confirm', {
                     plan_id: e.item.id,
-                    open_id: vue_this.driver_self.open_id,
+                    open_id: this.driver_self.open_id,
                     is_confirm: true,
                 });
                 uni.startPullDownRefresh();
             } else if (e.text == '取消确认出厂') {
-                await vue_this.$send_req('/global/driver_confirm', {
+                await this.$send_req('/global/driver_confirm', {
                     plan_id: e.item.id,
-                    open_id: vue_this.driver_self.open_id,
+                    open_id: this.driver_self.open_id,
                     is_confirm: false,
                 });
                 uni.startPullDownRefresh();
