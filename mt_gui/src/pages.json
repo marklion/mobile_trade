@@ -61,18 +61,27 @@
 			"root": "subPage2",
 			"pages": [
 				{
-					"path": "ProtocolSignPad"
+					"path": "ProtocolSignPad",
+					"style": {
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理"
+					}
 				},
 				{
 					"path": "ProtocolSign",
 					"style": {
-						"navigationBarTitleText": "协议签署"
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理"
 					}
 				},
 				{
 					"path": "ProtocolView",
 					"style": {
-						"navigationBarTitleText": "协议签署"
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理"
 					}
 				}
 			]
@@ -81,12 +90,19 @@
 			"root": "subPage1",
 			"pages": [
 				{
-					"path": "Ticket"
+					"path": "Ticket",
+					"style": {
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理"
+					}
 				},
 				{
 					"path": "TicketVerify",
 					"style": {
-						"navigationBarTitleText": "磅单验证"
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理"
 					}
 				},
 				{
