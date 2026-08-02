@@ -16,7 +16,7 @@ Vue.prototype.$remote_url = function () {
     return process.env.REMOTE_HOST;
   }
 };
-Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
+Vue.prototype.$send_req = function (_url, _data, noneed_loading = false, silent_error = false) {
   return new Promise((resolve, reject) => {
     if (!noneed_loading) {
       uni.showLoading({ title: '加载中', mask: true });
@@ -31,6 +31,10 @@ Vue.prototype.$send_req = function (_url, _data, noneed_loading = false) {
       success: async (res) => {
         let data = res.data;
         if ((data.err_msg || '').length > 0) {
+          if (silent_error) {
+            reject(data.err_msg);
+            return;
+          }
           uni.showToast({
             title: data.err_msg,
             icon: 'none',

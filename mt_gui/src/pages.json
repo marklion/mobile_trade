@@ -92,7 +92,10 @@
 				{
 					"path": "order_detail",
 					"style": {
-						"navigationBarTitleText": "订单详情",
+						"navigationStyle": "custom",
+						"navigationBarTitleText": "掌易助理",
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
 						"enablePullDownRefresh": true
 					}
 				},

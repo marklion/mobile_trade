@@ -366,7 +366,6 @@ module.exports = {
             },
             result: common.contract_res_detail_define,
             func: async function (body, token) {
-                const sq = db_opt.get_sq();
                 let company = await resolve_contract_context_company(token, body.stat_context_company_id, false);
                 if (!company) {
                     throw { err_msg: '无权限' };
@@ -375,16 +374,18 @@ module.exports = {
                 if (body.supply_company_id !== undefined && body.supply_company_id !== null && body.supply_company_id !== '') {
                     const supply_id = Number(body.supply_company_id);
                     if (Number.isFinite(supply_id)) {
-                        if (supply_id !== company.id) {
-                            const supply_company = await sq.models.company.findByPk(supply_id);
+                        if (supply_id === company.id) {
+                            supply_company_id = supply_id;
+                        } else {
                             const home_company = await rbac_lib.get_company_by_token(token);
                             const user = await rbac_lib.get_user_by_token(token);
-                            if (!supply_company || !home_company || !home_company.is_group || !user
-                                || !(await group_lib.user_can_use_group_member_stuff(user.id, home_company, supply_id, false))) {
-                                throw { err_msg: '无权限' };
+                            if (home_company && home_company.is_group && user
+                                && await group_lib.user_can_use_group_member_stuff(user.id, home_company, supply_id, false)) {
+                                supply_company_id = supply_id;
+                            } else if (home_company && supply_id === home_company.id) {
+                                supply_company_id = supply_id;
                             }
                         }
-                        supply_company_id = supply_id;
                     }
                 }
                 let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(
