@@ -1,16 +1,16 @@
 <template>
-<view>
-    <view v-if="!loaded" style="padding: 40rpx;text-align:center;color:#999;">加载中...</view>
-    <order-detail-panel
-        v-else
-        :plan="focus_plan"
-        :role="role"
-        :stat-context-company-id="stat_context_company_id"
-        :hide-order-detail-price="hide_order_detail_price"
-        :is-allowed-order-return="is_allowed_order_return"
-        @refresh="reload_plan"
-    ></order-detail-panel>
-</view>
+    <view class="detail-page">
+        <fui-nav-bar title="掌易助理" background="#2F3FCF" color="#FFFFFF" :statusBar="true" :isFixed="true"
+            :isOccupy="true" @leftClick="go_back">
+            <fui-icon name="arrowleft" color="#FFFFFF" :size="54"></fui-icon>
+        </fui-nav-bar>
+        <view v-if="!loaded" class="detail-loading">
+            <text class="detail-loading-text">加载中...</text>
+        </view>
+        <order-detail-panel v-else :plan="focus_plan" :role="role" :stat-context-company-id="stat_context_company_id"
+            :hide-order-detail-price="hide_order_detail_price" :is-allowed-order-return="is_allowed_order_return"
+            @refresh="reload_plan"></order-detail-panel>
+    </view>
 </template>
 
 <script>
@@ -42,12 +42,16 @@ export default {
         };
     },
     methods: {
+        go_back: function () {
+            uni.switchTab({ url: '/pages/OrderList' });
+        },
         detect_roles: function () {
+            // 管理端优先，避免同时有 customer/sale 时先打 customer 接口弹出「无权限」
             const roles = [];
-            if (this.$has_module('customer')) roles.push('customer');
             if (this.$has_module('sale_management')) roles.push('sale_management');
-            if (this.$has_module('supplier')) roles.push('supplier');
             if (this.$has_module('buy_management')) roles.push('buy_management');
+            if (this.$has_module('customer')) roles.push('customer');
+            if (this.$has_module('supplier')) roles.push('supplier');
             return roles;
         },
         reload_plan: async function () {
@@ -56,13 +60,14 @@ export default {
         },
         load_plan: async function () {
             const roles = this.role ? [this.role] : this.detect_roles();
+            const silent = roles.length > 1;
             for (const role of roles) {
                 try {
                     const body = { plan_id: this.plan_id };
                     if (role === 'sale_management' && this.stat_context_company_id != null) {
                         body.stat_context_company_id = this.stat_context_company_id;
                     }
-                    const resp = await this.$send_req('/' + role + '/get_order_by_id', body);
+                    const resp = await this.$send_req('/' + role + '/get_order_by_id', body, silent, silent);
                     if (resp && resp.plan) {
                         this.role = role;
                         this.focus_plan = resp.plan;
@@ -109,5 +114,26 @@ export default {
         await this.reload_plan();
         uni.stopPullDownRefresh();
     },
+    onBackPress: function () {
+        this.go_back();
+        return true;
+    },
 }
 </script>
+
+<style scoped>
+.detail-page {
+    min-height: 100vh;
+    background: #F2F4FA;
+}
+
+.detail-loading {
+    padding: 120rpx 40rpx;
+    text-align: center;
+}
+
+.detail-loading-text {
+    font-size: 28rpx;
+    color: #9AA3B8;
+}
+</style>

@@ -1,139 +1,252 @@
 <template>
-<view>
-    <fui-white-space size="large"></fui-white-space>
-    <fui-section :title="stuff_name" size="50" isLine></fui-section>
-    <u-cell title="买方" :value="buyer_name" :label="(bidding_id == 0)?'':'竞价成功发起'"></u-cell>
-    <u-cell title="卖方" :is_link="saler_name == '(未指定)'" :value="saler_name?saler_name:'(未指定)'" @click="show_select_company= true"></u-cell>
-    <fui-divider></fui-divider>
-    <fui-form ref="plan_form" :model="plan">
-        <fui-form-item label="计划日期" :padding="[0,'18px']" asterisk prop="plan_time" @click="show_plan_time = true">
-            <fui-input placeholder="请输入计划日期" disabled v-model="plan.plan_time"></fui-input>
-        </fui-form-item>
-        <view v-if="type_define.is_sale">
-            <fui-form-item label="用途" :padding="[0,'18px']" asterisk prop="use_for" @click="show_use_for = true">
-                <fui-input placeholder="请输入用途" disabled v-model="plan.use_for"></fui-input>
-            </fui-form-item>
-            <pick-regions @getRegion="pick_address">
-                <fui-form-item label="卸车地点" :padding="[0,'18px']" asterisk prop="drop_address">
-                    <fui-input placeholder="请输入卸车地点" disabled v-model="plan.drop_address"></fui-input>
-                </fui-form-item>
-            </pick-regions>
-            <fui-form-item v-if="support_location_detail" label="详细地址" :padding="[0,'18px']" prop="location_detail">
-                <fui-input placeholder="请输入详细地址" v-model="plan.location_detail"></fui-input>
-            </fui-form-item>
+<view class="create-page">
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
         </view>
-        <view v-else>
-            <fui-form-item label="单价" :padding="[0,'18px']" prop="price">
-                <fui-input placeholder="请输入单价" v-model="plan.price"></fui-input>
-            </fui-form-item>
-            <fui-form-item label="连续派车" :padding="[0,'18px']" prop="is_repeat">
-                <u-switch v-model="plan.is_repeat"></u-switch>
-            </fui-form-item>
+        <view class="hero-copy">
+            <text class="hero-label">创建订单</text>
+            <text class="hero-title">{{ stuff_name }}</text>
+            <text class="hero-tag" v-if="bidding_id != 0">竞价成功发起</text>
         </view>
-        <fui-form-item label="承运公司" :padding="[0,'18px']" prop="trans_company_name">
-            <fui-input placeholder="请输入承运公司" v-model="plan.trans_company_name"></fui-input>
-        </fui-form-item>
-        <view style="display:flex; justify-content: center;">
-            <fui-button text="新增车辆" btnSize="mini" radius="0" type="success" @click="show_add_vehicle = true"></fui-button>
-            <fui-button text="选择车队" btnSize="mini" radius="0" type="warning" @click="show_add_vt = true"></fui-button>
-            <fui-button v-if="!type_define.is_sale" text="我要代提" btnSize="mini" radius="0" type="primary" @click="prepare_proxy_buy"></fui-button>
-            <fui-button text="导入" btnSize="mini" radius="0" type="purple" @click="show_import=true"></fui-button>
-        </view>
-        <scroll-view class="vehicle-list" scroll-x>
-            <view class="vehicle-container" :class="{ 'single-vehicle': vehicles.length === 1 }">
-                <view v-for="(single_v, index) in vehicles" :key="index" class="vehicle-card" :class="{ 'full-width': vehicles.length === 1 }">
-                    <fui-preview :previewData="make_vc_show(single_v)" @click="remove_vehicle(index)">
-                        <template #footer>
-                            <view class="vehicle-actions">
-                                <fui-button type="danger" size="mini" @click.stop="remove_vehicle(index)">
-                                    删除
-                                </fui-button>
-                            </view>
-                        </template>
-                    </fui-preview>
+    </view>
+
+    <view class="body">
+        <view class="party-card">
+            <view class="party-row">
+                <text class="party-label">买方</text>
+                <text class="party-value">{{ buyer_name }}</text>
+            </view>
+            <view class="party-row party-row-border linkable" @click="show_select_company = true">
+                <text class="party-label">卖方</text>
+                <view class="party-right">
+                    <text class="party-value">{{ saler_name ? saler_name : '(未指定)' }}</text>
+                    <fui-icon v-if="!saler_name || saler_name == '(未指定)'" name="arrowright" size="28"
+                        color="#C5CAD5"></fui-icon>
                 </view>
             </view>
-        </scroll-view>
-        <fui-divider></fui-divider>
-        <fui-button text="提交" bold @click="submit"></fui-button>
-    </fui-form>
-    <fui-date-picker :show="show_plan_time" type="3" :value="default_time" @change="fill_plan_time" @cancel="show_plan_time = false"></fui-date-picker>
+        </view>
+
+        <view class="form-shell">
+            <view class="section-head">
+                <view class="section-bar"></view>
+                <view class="section-titles">
+                    <text class="section-title">计划信息</text>
+                    <text class="section-en">PLAN</text>
+                </view>
+            </view>
+
+            <fui-form ref="plan_form" :model="plan">
+                <view class="form-block">
+                    <fui-form-item class="req-item" label="计划日期" :padding="[0,'18px',0,'88rpx']"
+                        asterisk asteriskColor="#FF8A2B" prop="plan_time" @click="show_plan_time = true">
+                        <fui-input placeholder="请输入计划日期" disabled v-model="plan.plan_time"></fui-input>
+                    </fui-form-item>
+                    <view v-if="type_define.is_sale">
+                        <fui-form-item class="req-item" label="用途" :padding="[0,'18px',0,'88rpx']"
+                            asterisk asteriskColor="#FF8A2B" prop="use_for" @click="show_use_for = true">
+                            <fui-input placeholder="请输入用途" disabled v-model="plan.use_for"></fui-input>
+                        </fui-form-item>
+                        <pick-regions @getRegion="pick_address">
+                            <fui-form-item class="req-item" label="卸车地点" :padding="[0,'18px',0,'88rpx']"
+                                asterisk asteriskColor="#FF8A2B" prop="drop_address">
+                                <fui-input placeholder="请输入卸车地点" disabled v-model="plan.drop_address"></fui-input>
+                            </fui-form-item>
+                        </pick-regions>
+                        <fui-form-item v-if="support_location_detail" label="详细地址"
+                            :padding="[0,'18px',0,'88rpx']" prop="location_detail">
+                            <fui-input placeholder="请输入详细地址" v-model="plan.location_detail"></fui-input>
+                        </fui-form-item>
+                    </view>
+                    <view v-else>
+                        <fui-form-item label="单价" :padding="[0,'18px',0,'88rpx']" prop="price">
+                            <fui-input placeholder="请输入单价" v-model="plan.price"></fui-input>
+                        </fui-form-item>
+                        <fui-form-item label="连续派车" :padding="[0,'18px',0,'88rpx']" prop="is_repeat">
+                            <u-switch v-model="plan.is_repeat"></u-switch>
+                        </fui-form-item>
+                    </view>
+                    <fui-form-item label="承运公司" :padding="[0,'18px',0,'88rpx']" prop="trans_company_name">
+                        <fui-input placeholder="请输入承运公司" v-model="plan.trans_company_name"></fui-input>
+                    </fui-form-item>
+                </view>
+
+                <view class="vehicle-section">
+                    <view class="section-head compact">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">车辆信息</text>
+                            <text class="section-en">VEHICLES</text>
+                        </view>
+                        <text class="vehicle-count" v-if="vehicles.length">已选 {{ vehicles.length }} 车</text>
+                    </view>
+
+                    <view class="action-row">
+                        <view class="action-chip success" @click="show_add_vehicle = true">
+                            <text class="action-chip-text">新增车辆</text>
+                        </view>
+                        <view class="action-chip warn" @click="show_add_vt = true">
+                            <text class="action-chip-text">选择车队</text>
+                        </view>
+                        <view class="action-chip primary" v-if="!type_define.is_sale" @click="prepare_proxy_buy">
+                            <text class="action-chip-text">我要代提</text>
+                        </view>
+                        <view class="action-chip purple" @click="show_import = true">
+                            <text class="action-chip-text">导入</text>
+                        </view>
+                    </view>
+
+                    <scroll-view class="vehicle-list" scroll-x enable-flex :show-scrollbar="false"
+                        v-if="vehicles.length">
+                        <view class="vehicle-container" :class="{ 'single-vehicle': vehicles.length === 1 }">
+                            <view v-for="(single_v, index) in vehicles" :key="index" class="vehicle-card"
+                                :class="{ 'full-width': vehicles.length === 1 }">
+                                <view class="vc-head">
+                                    <view class="vc-head-left">
+                                        <text class="vc-index">第{{ vehicles.length - index }}车</text>
+                                        <text class="vc-total">共{{ vehicles.length }}车</text>
+                                    </view>
+                                    <view class="vc-del" @click.stop="remove_vehicle(index)">
+                                        <text class="vc-del-text">删除</text>
+                                    </view>
+                                </view>
+                                <view class="vc-plate-row">
+                                    <text class="vc-plate">{{ single_v.main_vehicle.plate }}</text>
+                                    <text class="vc-plate sub" v-if="single_v.behind_vehicle.plate">
+                                        {{ single_v.behind_vehicle.plate }}
+                                    </text>
+                                </view>
+                                <view class="vc-meta">
+                                    <view class="vc-meta-item">
+                                        <text class="vc-meta-label">司机</text>
+                                        <text class="vc-meta-value">{{ single_v.driver.name }}</text>
+                                    </view>
+                                    <view class="vc-meta-item">
+                                        <text class="vc-meta-label">电话</text>
+                                        <text class="vc-meta-value">{{ single_v.driver.phone }}</text>
+                                    </view>
+                                </view>
+                                <view class="vc-comment" v-if="single_v.comment">
+                                    <text class="vc-comment-text">{{ single_v.comment }}</text>
+                                </view>
+                            </view>
+                        </view>
+                    </scroll-view>
+                    <view class="vehicle-empty" v-else>
+                        <text class="vehicle-empty-text">请添加车辆后再提交</text>
+                    </view>
+                </view>
+
+                <view class="submit-wrap">
+                    <fui-button text="提交" bold background="#465CFF" color="#FFFFFF" radius="44rpx" height="88rpx"
+                        @click="submit"></fui-button>
+                </view>
+            </fui-form>
+        </view>
+    </view>
+
+    <fui-date-picker :show="show_plan_time" type="3" :value="default_time" @change="fill_plan_time"
+        @cancel="show_plan_time = false"></fui-date-picker>
     <fui-bottom-popup :show="show_use_for" @close="show_use_for = false">
         <fui-list>
-            <fui-list-cell v-for="(single_uf, index) in use_for_array" :key="index" arrow @click="choose_use_for(single_uf)">
-                {{single_uf}}
+            <fui-list-cell v-for="(single_uf, index) in use_for_array" :key="index" arrow
+                @click="choose_use_for(single_uf)">
+                {{ single_uf }}
             </fui-list-cell>
         </fui-list>
     </fui-bottom-popup>
-    <fui-bottom-popup :show="show_add_vehicle" @close="show_add_vehicle= false">
+    <fui-bottom-popup :show="show_add_vehicle" @close="show_add_vehicle = false">
+        <view class="popup-title">新增车辆</view>
+        <view class="vehicle-popup-form">
         <fui-form ref="new_vehicle_form" :show="false" :model="new_vehicle">
-            <fui-form-item asterisk label="主车牌" :rules="rules[0]" prop="main_vehicle_plate">
+            <fui-form-item class="req-item" asterisk asteriskColor="#FF8A2B" label="主车牌"
+                :padding="['24rpx','32rpx','24rpx','88rpx']" :rules="rules[0]" prop="main_vehicle_plate">
                 <fui-input :padding="[0]" v-model="new_vehicle.main_vehicle_plate">
                     <fui-button btnSize="mini" type="purple" text="选择" @click="show_pick_vehicles = true"></fui-button>
                 </fui-input>
             </fui-form-item>
-            <fui-form-item label="挂车牌" :rules="rules[1]" prop="behind_vehicle_plate">
+            <fui-form-item label="挂车牌" :padding="['24rpx','32rpx','24rpx','88rpx']"
+                :rules="rules[1]" prop="behind_vehicle_plate">
                 <fui-input :padding="[0]" v-model="new_vehicle.behind_vehicle_plate">
-                    <fui-button btnSize="mini" type="purple" text="选择" @click="show_behind_vehicle_plate = true"></fui-button>
+                    <fui-button btnSize="mini" type="purple" text="选择"
+                        @click="show_behind_vehicle_plate = true"></fui-button>
                 </fui-input>
             </fui-form-item>
-            <fui-form-item asterisk label="司机姓名" :rules="rules[2]" prop="driver_name">
+            <fui-form-item class="req-item" asterisk asteriskColor="#FF8A2B" label="司机姓名"
+                :padding="['24rpx','32rpx','24rpx','88rpx']" :rules="rules[2]" prop="driver_name">
                 <fui-input :padding="[0]" v-model="new_vehicle.driver_name">
                     <fui-button btnSize="mini" type="purple" text="选择" @click="show_driver_info = true"></fui-button>
                 </fui-input>
             </fui-form-item>
-            <fui-form-item asterisk label="司机电话" :rules="rules[3]" prop="driver_phone">
+            <fui-form-item class="req-item" asterisk asteriskColor="#FF8A2B" label="司机电话"
+                :padding="['24rpx','32rpx','24rpx','88rpx']" :rules="rules[3]" prop="driver_phone">
                 <fui-input :padding="[0]" v-model="new_vehicle.driver_phone"></fui-input>
             </fui-form-item>
             <fui-input label="备注" v-model="new_vehicle.comment"></fui-input>
-            <fui-button type="success" text="添加" @click="add_vehicle"></fui-button>
+            <view class="popup-submit">
+                <fui-button type="success" text="添加" background="#465CFF" radius="40rpx"
+                    @click="add_vehicle"></fui-button>
+            </view>
         </fui-form>
+        </view>
     </fui-bottom-popup>
-    <fui-bottom-popup :show="show_add_vt" @close="show_add_vt= false">
+    <fui-bottom-popup :show="show_add_vt" @close="show_add_vt = false">
+        <view class="popup-title">选择车队</view>
         <list-show :fetch_function="get_vt_list" height="70vh" search_key="name" v-model="all_vt_list">
             <view v-for="item in all_vt_list" :key="item.id">
-                <u-cell :title="item.name" :value="'共' + (item.vehicle_sets?item.vehicle_sets.length:0) + '车'" isLink @click="choose_vt(item)"></u-cell>
+                <u-cell :title="item.name" :value="'共' + (item.vehicle_sets ? item.vehicle_sets.length : 0) + '车'"
+                    isLink @click="choose_vt(item)"></u-cell>
             </view>
         </list-show>
     </fui-bottom-popup>
-    <fui-bottom-popup :show="show_select_company" @close="show_select_company= false">
+    <fui-bottom-popup :show="show_select_company" @close="show_select_company = false">
+        <view class="popup-title">选择卖方</view>
         <fui-list>
-            <list-show v-model="copmany4select" :fetch_function="get_company4select" search_key="cond" height="40vh" :fetch_params="[company_id]">
-                <fui-list-cell v-for="item in copmany4select" :key="item.id" arrow @click="saler_name = item.name;show_select_company = false;">
-                    {{item.name}}
+            <list-show v-model="copmany4select" :fetch_function="get_company4select" search_key="cond" height="40vh"
+                :fetch_params="[company_id]">
+                <fui-list-cell v-for="item in copmany4select" :key="item.id" arrow
+                    @click="saler_name = item.name; show_select_company = false;">
+                    {{ item.name }}
                 </fui-list-cell>
             </list-show>
         </fui-list>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_pick_vehicles" @close="show_pick_vehicles = false">
         <fui-list>
-            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh" :fetch_params="[type_define.pair_get_url]">
+            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh"
+                :fetch_params="[type_define.pair_get_url]">
                 <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="choose_vehicles(item)">
-                    {{item.main_vehicle_plate}}-{{item.behind_vehicle_plate}}-{{item.driver_name}}-{{item.driver_phone}}
+                    {{ item.main_vehicle_plate }}-{{ item.behind_vehicle_plate }}-{{ item.driver_name }}-{{ item.driver_phone }}
                 </fui-list-cell>
             </list-show>
         </fui-list>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_behind_vehicle_plate" @close="show_behind_vehicle_plate = false">
         <fui-list>
-            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh" :fetch_params="[type_define.pair_get_url]">
-                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="choose_behind_vehicle(item)">
-                    挂车牌: {{item.behind_vehicle_plate}}
+            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh"
+                :fetch_params="[type_define.pair_get_url]">
+                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow
+                    @click="choose_behind_vehicle(item)">
+                    挂车牌: {{ item.behind_vehicle_plate }}
                 </fui-list-cell>
             </list-show>
         </fui-list>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_driver_info" @close="show_driver_info = false">
         <fui-list>
-            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh" :fetch_params="[type_define.pair_get_url]">
-                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow @click="choose_driver_info(item)">
-                    司机姓名: {{item.driver_name}}- 司机电话: {{item.driver_phone}}
+            <list-show v-model="data2show" :fetch_function="get_vehicles" search_key="search_cond" height="40vh"
+                :fetch_params="[type_define.pair_get_url]">
+                <fui-list-cell v-for="(item, index) in data2show" :key="index" arrow
+                    @click="choose_driver_info(item)">
+                    司机姓名: {{ item.driver_name }}- 司机电话: {{ item.driver_phone }}
                 </fui-list-cell>
             </list-show>
         </fui-list>
     </fui-bottom-popup>
-    <fui-modal :show="notice_show" v-if="notice_show" title="通知" :descr="notice" @click="notice_show = false" :buttons="[{text:'了解'}]"></fui-modal>
-    <fui-actionsheet v-if="show_import" :show="show_import" :tips="tips" :itemList="import_sheet" @cancel="show_import=false" @click="driver_import"></fui-actionsheet>
+    <fui-modal :show="notice_show" v-if="notice_show" title="通知" :descr="notice" @click="notice_show = false"
+        :buttons="[{ text: '了解' }]"></fui-modal>
+    <fui-actionsheet v-if="show_import" :show="show_import" :tips="tips" :itemList="import_sheet"
+        @cancel="show_import = false" @click="driver_import"></fui-actionsheet>
     <fui-message ref="msg"></fui-message>
 </view>
 </template>
@@ -284,37 +397,6 @@ export default {
         },
         remove_vehicle: function (_index) {
             this.vehicles.splice(_index, 1);
-        },
-        make_vc_show: function (_v) {
-            return {
-                value: '第' + (this.vehicles.length - this.vehicles.indexOf(_v)) + '车',
-                label: '共' + this.vehicles.length + '车',
-                list: [{
-                        label: '主车牌',
-                        value: _v.main_vehicle.plate
-                    },
-                    {
-                        label: '挂车牌',
-                        value: _v.behind_vehicle.plate
-                    },
-                    {
-                        label: '司机姓名',
-                        value: _v.driver.name
-                    },
-                    {
-                        label: '司机电话',
-                        value: _v.driver.phone
-                    },
-                    {
-                        label: '备注',
-                        value: _v.comment
-                    }
-                ],
-                buttons: [{
-                    text: '删除',
-                    color: 'red'
-                }],
-            }
         },
         add_vehicle: async function () {
             this.$refs.new_vehicle_form.validator(null, null, true).then(async res => {
@@ -664,30 +746,282 @@ export default {
 </script>
 
 <style scoped>
-.vehicle-list {
-    width: 100%;
-    white-space: nowrap;
-    padding: 10px 0;
+.create-page {
+    min-height: 100vh;
+    background: #F2F4FA;
+    box-sizing: border-box;
+    padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
 }
 
-.vehicle-container {
-    display: inline-flex;
-    padding: 0 10px;
-}
-
-.vehicle-card {
-    background-color: #ffffff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    margin-right: 10px;
-    width: 280px;
-    flex-shrink: 0;
+.hero {
+    position: relative;
+    padding: 28rpx 32rpx 48rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
     overflow: hidden;
 }
 
+.hero-logo-bg {
+    position: absolute;
+    top: -20rpx;
+    right: -10rpx;
+    width: 260rpx;
+    height: 260rpx;
+    opacity: 0.16;
+    pointer-events: none;
+}
+
+.hero-logo-img {
+    width: 100%;
+    height: 100%;
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.hero-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 2rpx;
+}
+
+.hero-title {
+    margin-top: 10rpx;
+    font-size: 44rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.hero-tag {
+    margin-top: 14rpx;
+    align-self: flex-start;
+    padding: 6rpx 16rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.18);
+    color: #FFFFFF;
+    font-size: 20rpx;
+}
+
+.body {
+    margin-top: -24rpx;
+    padding: 0 24rpx;
+    position: relative;
+    z-index: 2;
+}
+
+.party-card,
+.form-shell {
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.06);
+    overflow: hidden;
+}
+
+.party-card {
+    margin-bottom: 20rpx;
+    padding: 8rpx 0;
+}
+
+.party-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24rpx 28rpx;
+    gap: 20rpx;
+}
+
+.party-row-border {
+    border-top: 1rpx solid #EEF1F8;
+}
+
+.party-row.linkable:active {
+    background: #F7F8FE;
+}
+
+.party-label {
+    flex-shrink: 0;
+    font-size: 26rpx;
+    color: #8A94A6;
+}
+
+.party-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8rpx;
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.party-value {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.section-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 24rpx 28rpx 8rpx;
+    background: linear-gradient(90deg, #F3F5FF 0%, #FFFFFF 70%);
+}
+
+.section-head.compact {
+    padding-top: 20rpx;
+}
+
+.section-bar {
+    width: 8rpx;
+    height: 34rpx;
+    border-radius: 8rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    margin-right: 14rpx;
+    flex-shrink: 0;
+}
+
+.section-titles {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.section-title {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.section-en {
+    margin-top: 2rpx;
+    font-size: 16rpx;
+    color: #9AA3B8;
+    letter-spacing: 2rpx;
+}
+
+.form-block {
+    padding-bottom: 8rpx;
+}
+
+/* 必填标记：放在标签左侧独立区域，避免和文字叠字 */
+.create-page ::v-deep .fui-form__asterisk {
+    left: 12rpx !important;
+    top: 50% !important;
+    transform: translateY(-50%);
+    height: auto !important;
+    line-height: 1 !important;
+    font-size: 0 !important;
+    color: transparent !important;
+    width: auto;
+    z-index: 2;
+}
+
+.create-page ::v-deep .fui-form__asterisk::after {
+    content: '必填';
+    display: inline-block;
+    font-size: 18rpx;
+    line-height: 1;
+    color: #FF8A2B;
+    background: rgba(255, 138, 43, 0.12);
+    border-radius: 6rpx;
+    padding: 4rpx 8rpx;
+    font-weight: 600;
+}
+
+.vehicle-section {
+    border-top: 1rpx solid #EEF1F8;
+    padding-bottom: 8rpx;
+}
+
+.vehicle-count {
+    flex-shrink: 0;
+    font-size: 22rpx;
+    color: #465CFF;
+    font-weight: 600;
+}
+
+.action-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    padding: 16rpx 24rpx 8rpx;
+}
+
+.action-chip {
+    padding: 14rpx 22rpx;
+    border-radius: 999rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-chip-text {
+    font-size: 24rpx;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.action-chip.success {
+    background: linear-gradient(145deg, #6FDB9A 0%, #2DBE6C 100%);
+}
+
+.action-chip.warn {
+    background: linear-gradient(145deg, #FFB06B 0%, #FF8A2B 100%);
+}
+
+.action-chip.primary {
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 100%);
+}
+
+.action-chip.purple {
+    background: linear-gradient(145deg, #A78BFA 0%, #7C5CFC 100%);
+}
+
+.vehicle-list {
+    width: 100%;
+    height: 320rpx;
+    white-space: nowrap;
+    padding: 12rpx 0 8rpx;
+    box-sizing: border-box;
+}
+
+.vehicle-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    padding: 0 24rpx;
+    box-sizing: border-box;
+}
+
+.vehicle-card {
+    background: linear-gradient(145deg, #FFFFFF 0%, #F7F8FE 100%);
+    border-radius: 20rpx;
+    border: 1rpx solid #E8ECF6;
+    box-shadow: 0 8rpx 20rpx rgba(40, 58, 120, 0.06);
+    margin-right: 16rpx;
+    width: 560rpx;
+    flex-shrink: 0;
+    overflow: hidden;
+    padding: 22rpx 24rpx 20rpx;
+    box-sizing: border-box;
+}
+
 .single-vehicle {
-    display: block;
-    padding: 0;
+    display: flex;
+    padding: 0 24rpx;
 }
 
 .full-width {
@@ -695,9 +1029,142 @@ export default {
     margin-right: 0;
 }
 
-.vehicle-actions {
+.vc-head {
     display: flex;
-    justify-content: flex-end;
-    padding: 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16rpx;
+}
+
+.vc-head-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12rpx;
+}
+
+.vc-index {
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+
+.vc-total {
+    font-size: 20rpx;
+    color: #8A94A6;
+}
+
+.vc-del {
+    padding: 8rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 77, 79, 0.1);
+    border: 1rpx solid rgba(255, 77, 79, 0.28);
+}
+
+.vc-del-text {
+    font-size: 22rpx;
+    color: #FF4D4F;
+    font-weight: 600;
+}
+
+.vc-plate-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10rpx;
+    margin-bottom: 16rpx;
+}
+
+.vc-plate {
+    padding: 8rpx 16rpx;
+    border-radius: 8rpx;
+    background: #F5D000;
+    color: #1A1A1A;
+    font-size: 28rpx;
+    font-weight: 700;
+    letter-spacing: 1rpx;
+    border: 2rpx solid #1A1A1A;
+}
+
+.vc-plate.sub {
+    background: #F5D000;
+    color: #1A1A1A;
+    font-weight: 700;
+}
+
+.vc-meta {
+    display: flex;
+    flex-direction: row;
+    gap: 24rpx;
+}
+
+.vc-meta-item {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.vc-meta-label {
+    font-size: 20rpx;
+    color: #9AA3B8;
+    margin-bottom: 4rpx;
+}
+
+.vc-meta-value {
+    font-size: 26rpx;
+    color: #2D3748;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vc-comment {
+    margin-top: 14rpx;
+    padding-top: 12rpx;
+    border-top: 1rpx solid #EEF1F8;
+}
+
+.vc-comment-text {
+    font-size: 22rpx;
+    color: #8A94A6;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.vehicle-empty {
+    margin: 12rpx 24rpx 20rpx;
+    padding: 36rpx 24rpx;
+    border-radius: 16rpx;
+    background: #F7F8FE;
+    border: 1rpx dashed #D7DCF0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.vehicle-empty-text {
+    font-size: 24rpx;
+    color: #9AA3B8;
+}
+
+.submit-wrap {
+    padding: 16rpx 24rpx 28rpx;
+}
+
+.popup-title {
+    padding: 28rpx 28rpx 12rpx;
+    font-size: 30rpx;
+    font-weight: 700;
+    color: #1A1F36;
+    text-align: center;
+}
+
+.popup-submit {
+    padding: 16rpx 24rpx 32rpx;
 }
 </style>
