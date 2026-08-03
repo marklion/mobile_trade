@@ -21,8 +21,13 @@
                                 <div class="buy-top">
                                     <span class="field-label">结算周期</span>
                                     <div class="cycle-wrap">
+                                        <span class="unit-text">自前</span>
                                         <el-input-number v-model="config.buy_settle_cycle" :min="1" :max="365"
-                                            @change="save_config"></el-input-number>
+                                            @change="on_cycle_change('buy')"></el-input-number>
+                                        <span class="unit-text">天到前</span>
+                                        <el-input-number v-model="config.buy_settle_cycle_end" :min="0"
+                                            :max="Math.max(0, config.buy_settle_cycle - 1)"
+                                            @change="on_cycle_change('buy')"></el-input-number>
                                         <span class="unit-text">天</span>
                                     </div>
                                 </div>
@@ -76,11 +81,16 @@
                                         placeholder="选择时间" :clearable="false" class="time-picker"
                                         @change="save_config"></el-time-picker>
                                 </div>
-                                <div class="sale-field">
+                                <div class="sale-field sale-cycle-field">
                                     <div class="field-label">结算周期</div>
                                     <div class="cycle-wrap">
+                                        <span class="unit-text">自前</span>
                                         <el-input-number v-model="config.sale_settle_cycle" :min="1" :max="365"
-                                            @change="save_config"></el-input-number>
+                                            @change="on_cycle_change('sale')"></el-input-number>
+                                        <span class="unit-text">天到前</span>
+                                        <el-input-number v-model="config.sale_settle_cycle_end" :min="0"
+                                            :max="Math.max(0, config.sale_settle_cycle - 1)"
+                                            @change="on_cycle_change('sale')"></el-input-number>
                                         <span class="unit-text">天</span>
                                     </div>
                                 </div>
@@ -142,8 +152,10 @@ export default {
             records_ready: false,
             config: {
                 buy_settle_cycle: 5,
+                buy_settle_cycle_end: 0,
                 sale_settle_time: '00:00:00',
                 sale_settle_cycle: 5,
+                sale_settle_cycle_end: 0,
             },
             sale_settle_time_value: '00:00:00',
             buy_stuff_prices: [],
@@ -219,13 +231,38 @@ export default {
                 this.buy_stuff_options = stuff_list
             }
         },
+        normalize_cycle_range: function (prefix) {
+            const begin_key = prefix + '_settle_cycle'
+            const end_key = prefix + '_settle_cycle_end'
+            let begin = Number(this.config[begin_key])
+            let end = Number(this.config[end_key])
+            if (Number.isNaN(begin) || begin < 1) {
+                begin = 1
+            }
+            if (Number.isNaN(end) || end < 0) {
+                end = 0
+            }
+            if (end >= begin) {
+                end = begin - 1
+            }
+            this.config[begin_key] = begin
+            this.config[end_key] = end
+        },
+        on_cycle_change: async function (prefix) {
+            this.normalize_cycle_range(prefix)
+            await this.save_config()
+        },
         init_config: async function () {
             const resp = await this.$send_req('/tplus/config_get', {})
             this.config = {
                 buy_settle_cycle: resp.buy_settle_cycle || 5,
+                buy_settle_cycle_end: resp.buy_settle_cycle_end != null ? resp.buy_settle_cycle_end : 0,
                 sale_settle_time: resp.sale_settle_time || '00:00:00',
                 sale_settle_cycle: resp.sale_settle_cycle || 5,
+                sale_settle_cycle_end: resp.sale_settle_cycle_end != null ? resp.sale_settle_cycle_end : 0,
             }
+            this.normalize_cycle_range('buy')
+            this.normalize_cycle_range('sale')
             this.sale_settle_time_value = this.config.sale_settle_time
             this.buy_stuff_prices = this.normalize_buy_stuff_prices(resp.buy_stuff_prices)
         },
@@ -235,11 +272,15 @@ export default {
             }
             this.saving = true
             try {
+                this.normalize_cycle_range('buy')
+                this.normalize_cycle_range('sale')
                 await this.$send_req('/tplus/config_set', {
                     buy_settle_cycle: this.config.buy_settle_cycle,
+                    buy_settle_cycle_end: this.config.buy_settle_cycle_end,
                     buy_stuff_prices: this.get_valid_buy_stuff_prices(),
                     sale_settle_time: this.sale_settle_time_value || '00:00:00',
                     sale_settle_cycle: this.config.sale_settle_cycle,
+                    sale_settle_cycle_end: this.config.sale_settle_cycle_end,
                 })
                 this.config.sale_settle_time = this.sale_settle_time_value
             } finally {
@@ -452,6 +493,11 @@ export default {
     width: 180px;
 }
 
+.sale-cycle-field {
+    width: auto;
+    min-width: 180px;
+}
+
 .sale-field .time-picker {
     width: 100%;
 }
@@ -459,7 +505,35 @@ export default {
 .cycle-wrap {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cycle-wrap /deep/ .el-input-number {
+    width: 148px;
+}
+
+.cycle-wrap /deep/ .el-input-number .el-input__inner {
+    padding-left: 42px;
+    padding-right: 42px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: #1f2d3d;
+    letter-spacing: 0.5px;
+}
+
+.cycle-wrap /deep/ .el-input-number__decrease,
+.cycle-wrap /deep/ .el-input-number__increase {
+    width: 36px;
+    background: #f5f7fb;
+    color: #6f7d90;
+}
+
+.cycle-wrap /deep/ .el-input-number__decrease:hover,
+.cycle-wrap /deep/ .el-input-number__increase:hover {
+    color: #3a7afe;
+    background: #eef4ff;
 }
 
 .unit-text {

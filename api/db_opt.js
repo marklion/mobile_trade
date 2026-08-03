@@ -465,10 +465,12 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             buy_settle_time: { type: DataTypes.STRING, defaultValue: '00:00:00' },
             buy_settle_cycle: { type: DataTypes.INTEGER, defaultValue: 5 },
+            buy_settle_cycle_end: { type: DataTypes.INTEGER, defaultValue: 0 },
             buy_stuff_prices: { type: DataTypes.TEXT, defaultValue: '[]' },
             buy_last_settle_time: { type: DataTypes.STRING },
             sale_settle_time: { type: DataTypes.STRING, defaultValue: '00:00:00' },
             sale_settle_cycle: { type: DataTypes.INTEGER, defaultValue: 5 },
+            sale_settle_cycle_end: { type: DataTypes.INTEGER, defaultValue: 0 },
             sale_last_settle_time: { type: DataTypes.STRING },
         },
         tplus_settle_record: {
