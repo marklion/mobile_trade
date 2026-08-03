@@ -462,9 +462,11 @@ module.exports = {
             config = await company.createTplus_config({
                 buy_settle_time: '00:00:00',
                 buy_settle_cycle: 5,
+                buy_settle_cycle_end: 0,
                 buy_stuff_prices: '[]',
                 sale_settle_time: '00:00:00',
                 sale_settle_cycle: 5,
+                sale_settle_cycle_end: 0,
             });
         }
         return config;
@@ -499,11 +501,13 @@ module.exports = {
             // 推送成功过的计划不再推；无日志或失败可推
             sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`),
         ];
-        const start_date = moment().subtract(opts.cycle_days || 5, 'days').format('YYYY-MM-DD');
-        const today = moment().format('YYYY-MM-DD');
+        const cycle_begin = opts.cycle_days != null ? opts.cycle_days : 5;
+        const cycle_end = opts.cycle_days_end != null ? opts.cycle_days_end : 0;
+        const start_date = moment().subtract(cycle_begin, 'days').format('YYYY-MM-DD');
+        const end_date = moment().subtract(cycle_end, 'days').format('YYYY-MM-DD');
         and_conditions[0].plan_time = {
             [db_opt.Op.gte]: start_date,
-            [db_opt.Op.lt]: today,
+            [db_opt.Op.lt]: end_date,
         };
         return await sq.models.plan.findAll({
             where: {
@@ -518,9 +522,13 @@ module.exports = {
         const filter_opts = is_buy
             ? {
                 stuff_ids: buy_prices.map((item) => item.stuff_id),
-                cycle_days: config.buy_settle_cycle || 5,
+                cycle_days: config.buy_settle_cycle != null ? config.buy_settle_cycle : 5,
+                cycle_days_end: config.buy_settle_cycle_end != null ? config.buy_settle_cycle_end : 0,
             }
-            : { cycle_days: config.sale_settle_cycle || 5 };
+            : {
+                cycle_days: config.sale_settle_cycle != null ? config.sale_settle_cycle : 5,
+                cycle_days_end: config.sale_settle_cycle_end != null ? config.sale_settle_cycle_end : 0,
+            };
         let plans = await this.filter_unsettled_plans(company, is_buy, filter_opts);
         if (is_buy) {
             plans = apply_buy_stuff_prices(plans, buy_prices);
