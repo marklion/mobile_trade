@@ -1,14 +1,65 @@
 <template>
-<view>
-    <fui-section :title="title" size="50" class="centered-title"></fui-section>
-    <fui-preview :previewData="ticket_content"></fui-preview>
-    <view style="display:flex; justify-content: center;">
-        <fui-qrcode width="240" height="240" :value="qr_path()"></fui-qrcode>
-        <fui-avatar mode="widthFix" shape="square" background="white" :width="400" v-if="stamp_path" :src="$convert_attach_url(stamp_path)"></fui-avatar>
+<view class="ticket-page">
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+        </view>
+        <view class="hero-top">
+            <view class="hero-copy">
+                <text class="hero-label">磅单详情</text>
+                <text class="hero-title">{{ title || '称重单' }}</text>
+                <view class="hero-plates" v-if="main_vehicle_plate">
+                    <text class="plate-tag">{{ main_vehicle_plate }}</text>
+                    <text class="plate-tag" v-if="behind_plate">{{ behind_plate }}</text>
+                </view>
+            </view>
+            <view class="hero-qr" v-if="ticket_ready">
+                <fui-qrcode width="180" height="180" :value="qr_path()"></fui-qrcode>
+                <text class="hero-qr-tip">扫码核验</text>
+            </view>
+        </view>
     </view>
-    <fui-button v-if="need_protocol" text="协议签署" @click="view_protocol" type="warning"></fui-button>
-    <fui-button text="下载磅单图片" @click="download_pic" type="primary"></fui-button>
-    <fui-button text="转发给好友" type="success" open-type="share"></fui-button>
+
+    <view class="shell" v-if="ticket_ready">
+        <view class="count-card">
+            <text class="count-label">{{ ticket_content.label }}</text>
+            <text class="count-value">{{ ticket_content.value }}</text>
+        </view>
+
+        <view class="info-card">
+            <view class="info-row" v-for="(row, idx) in ticket_rows" :key="idx">
+                <text class="info-label">{{ row.label }}</text>
+                <text class="info-value plate" v-if="is_plate_row(row)">{{ row.value || '-' }}</text>
+                <text class="info-value" v-else>{{ row.value == null || row.value === '' ? '-' : row.value }}</text>
+            </view>
+        </view>
+
+        <view class="media-card" v-if="stamp_path">
+            <view class="media-block">
+                <text class="media-title">电子印章</text>
+                <image class="stamp-img" :src="$convert_attach_url(stamp_path)" mode="aspectFit"></image>
+            </view>
+        </view>
+    </view>
+
+    <view class="actions" v-if="ticket_ready">
+        <view class="action-btn warn" v-if="need_protocol" @click="view_protocol">
+            <text class="action-btn-text">协议签署</text>
+        </view>
+        <view class="action-btn primary" @click="download_pic">
+            <text class="action-btn-text">下载磅单</text>
+        </view>
+        <!-- #ifdef MP-WEIXIN -->
+        <button class="action-btn success share-btn" open-type="share">
+            <text class="action-btn-text">转发</text>
+        </button>
+        <!-- #endif -->
+        <!-- #ifndef MP-WEIXIN -->
+        <view class="action-btn success">
+            <text class="action-btn-text">转发</text>
+        </view>
+        <!-- #endif -->
+    </view>
 </view>
 </template>
 
@@ -19,20 +70,37 @@ export default {
     data: function () {
         return {
             title: '',
-            ticket_content: {},
-            global_replace: {},
-            qr_code: '',
+            ticket_content: {
+                label: '',
+                value: '',
+                list: [],
+            },
+            ticket_ready: false,
             stamp_path: '',
             id: 0,
             need_protocol: false,
             main_vehicle_plate: '',
-            qr_path: function () {
-                let ret = process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + this.id
-                return ret;
-            },
+            behind_plate: '',
         }
     },
+    computed: {
+        ticket_rows: function () {
+            const list = (this.ticket_content && this.ticket_content.list) ? this.ticket_content.list : [];
+            return list.filter(function (row) {
+                return row && typeof row === 'object' && row.label;
+            });
+        },
+    },
     methods: {
+        qr_path: function () {
+            return process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + this.id;
+        },
+        is_plate_row: function (row) {
+            if (!row || !row.label) {
+                return false;
+            }
+            return row.label.indexOf('车号') !== -1;
+        },
         view_protocol: function () {
             uni.navigateTo({
                 url: '/subPage2/ProtocolView?plan_id=' + this.id,
@@ -74,7 +142,7 @@ export default {
         if (options.id) {
             plan_id = parseInt(options.id)
         } else if (options.scene) {
-            plan_id = parseInt(decodeURIComponent(query.scene))
+            plan_id = parseInt(decodeURIComponent(options.scene))
         }
 
         this.id = plan_id;
@@ -84,6 +152,9 @@ export default {
         });
         if (ticket.plan_sct_infos == undefined) {
             ticket.plan_sct_infos = [];
+        }
+        if (!ticket.extra_infos) {
+            ticket.extra_infos = [];
         }
         this.need_protocol = !!ticket.need_protocol;
         this.stamp_path = ticket.stamp_path;
@@ -95,12 +166,12 @@ export default {
                 this.stamp_path = ticket.delegate_stamp_path;
             }
         }
-        this.main_vehicle_plate = ticket.plate;
+        this.main_vehicle_plate = ticket.plate || '';
+        this.behind_plate = ticket.behind_plate || '';
         let dec_title = '出厂';
         if (ticket.is_buy) {
             dec_title = '入厂';
         }
-        this.qr_code = ticket.qr_code;
         this.title = ticket.order_company_name + dec_title + (ticket.replace_weighingSheet || '称重单');
         this.ticket_content = {
             label: ticket.replace_count || '装载量',
@@ -133,7 +204,7 @@ export default {
             let su_decimal = ticket.second_unit_decimal;
             su_value = parseFloat(su_value).toFixed(su_decimal);
             this.ticket_content.value = su_value + ticket.second_unit;
-            this.ticket_content.list.unshift(0, {
+            this.ticket_content.list.unshift({
                 label: '原始计量',
                 value: ticket.count,
             });
@@ -185,7 +256,7 @@ export default {
                 value: ticket.trans_company_name,
             })
         }
-        if(ticket.drop_address) {
+        if (ticket.drop_address) {
             this.ticket_content.list.push({
                 label: '卸货地址',
                 value: ticket.drop_address,
@@ -206,6 +277,7 @@ export default {
             }
 
         });
+        this.ticket_ready = true;
     },
     onShareAppMessage: function () {
         return {
@@ -217,8 +289,232 @@ export default {
 </script>
 
 <style scoped>
-.centered-title {
+.ticket-page {
+    min-height: 100vh;
+    background: #F4F6FB;
+    padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
+.hero {
+    position: relative;
+    padding: 28rpx 28rpx 48rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
+    overflow: hidden;
+}
+.hero-logo-bg {
+    position: absolute;
+    top: -20rpx;
+    right: -10rpx;
+    width: 240rpx;
+    height: 240rpx;
+    opacity: 0.16;
+    pointer-events: none;
+}
+.hero-logo-img {
+    width: 100%;
+    height: 100%;
+}
+.hero-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16rpx;
+}
+.hero-copy {
+    flex: 1;
+    min-width: 0;
+    padding-right: 8rpx;
+}
+.hero-qr {
+    flex-shrink: 0;
+    width: 212rpx;
+    padding: 14rpx 14rpx 12rpx;
+    border-radius: 16rpx;
+    background: #FFFFFF;
+    box-shadow: 0 8rpx 20rpx rgba(20, 30, 90, 0.18);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6rpx;
+}
+.hero-qr-tip {
+    font-size: 18rpx;
+    color: #6B7280;
+    font-weight: 600;
+}
+.hero-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 2rpx;
+}
+.hero-title {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 30rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    line-height: 1.35;
+    word-break: break-all;
+}
+.hero-plates {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10rpx;
+    margin-top: 16rpx;
+}
+.plate-tag {
+    padding: 6rpx 14rpx;
+    border-radius: 6rpx;
+    background: #F5D000;
+    color: #111111;
+    font-size: 26rpx;
+    font-weight: 800;
+    letter-spacing: 2rpx;
+    border: 2rpx solid #111111;
+    line-height: 1.2;
+}
+.shell {
+    margin: -24rpx 20rpx 0;
+}
+.count-card {
+    background: #FFFFFF;
+    border-radius: 20rpx;
+    border: 1rpx solid #EEF1F8;
+    box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.06);
+    padding: 28rpx 24rpx;
+    margin-bottom: 16rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.count-label {
+    font-size: 24rpx;
+    color: #9AA3B8;
+    font-weight: 600;
+}
+.count-value {
+    margin-top: 8rpx;
+    font-size: 56rpx;
+    color: #2F3FCF;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.info-card {
+    background: #FFFFFF;
+    border-radius: 20rpx;
+    border: 1rpx solid #EEF1F8;
+    box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.06);
+    padding: 8rpx 20rpx;
+    margin-bottom: 16rpx;
+    overflow: hidden;
+}
+.info-row {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20rpx;
+    padding: 18rpx 4rpx;
+    border-bottom: 1rpx solid #F5F7FC;
+}
+.info-row:last-child {
+    border-bottom: none;
+}
+.info-label {
+    flex-shrink: 0;
+    max-width: 40%;
+    font-size: 24rpx;
+    color: #9AA3B8;
+}
+.info-value {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    word-break: break-all;
+}
+.info-value.plate {
+    color: #111111;
+    font-weight: 800;
+    letter-spacing: 1rpx;
+}
+.media-card {
+    background: #FFFFFF;
+    border-radius: 20rpx;
+    border: 1rpx solid #EEF1F8;
+    box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.06);
+    padding: 24rpx 20rpx;
+    margin-bottom: 16rpx;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    gap: 24rpx;
+}
+.media-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12rpx;
+}
+.media-title {
+    font-size: 22rpx;
+    color: #6B7280;
+    font-weight: 600;
+}
+.stamp-img {
+    width: 220rpx;
+    height: 220rpx;
+    background: #FFFFFF;
+}
+.actions {
+    margin: 8rpx 20rpx 0;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    gap: 12rpx;
+}
+.action-btn {
+    flex: 1;
+    min-width: 0;
+    height: 80rpx;
+    border-radius: 14rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: none;
+    padding: 0 8rpx;
+    margin: 0;
+    line-height: normal;
+}
+.action-btn::after {
+    border: none;
+}
+.action-btn.primary {
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+    box-shadow: 0 8rpx 16rpx rgba(47, 63, 207, 0.22);
+}
+.action-btn.success {
+    background: linear-gradient(145deg, #6FDB9A 0%, #2DBE6C 100%);
+}
+.action-btn.warn {
+    background: linear-gradient(145deg, #FFB06B 0%, #FF8A2B 100%);
+}
+.action-btn-text {
+    font-size: 24rpx;
+    color: #FFFFFF;
+    font-weight: 700;
     text-align: center;
-    /* 让标题居中 */
+}
+.share-btn {
+    flex: 1;
+    width: auto;
 }
 </style>
