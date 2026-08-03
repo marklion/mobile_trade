@@ -244,7 +244,7 @@ async function push_buy_settle(buy_groups, host_company) {
                 },
                 Quantity: plan.count * 1450,
                 TaxRate: '0.09',
-                Price: plan.unit_price,
+                Price: plan.unit_price / 1.09,
                 DynamicPropertyKeys: ["pubuserdefnvc1","pubuserdefnvc2", "pubuserdefnvc3","pubuserdefnvc4","pubuserdefnvc5","pubuserdefdecm1"],
                 DynamicPropertyValues: [plan.main_vehicle.plate,plan.plan_time, plan.m_time, plan.p_time, plan.behind_vehicle.plate, plan.enter_count],
             });
@@ -357,7 +357,7 @@ function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
     for (let plan of plans) {
         if (normalize_stuff_code(plan.stuff.stuff_code).length > 0) {
             ret.dto.RDRecordDetails.push({
-                Price: plan.unit_price,
+                Price: plan.unit_price / 1.09,
                 Quantity: plan.count,
                 Inventory: {
                     Code: normalize_stuff_code(plan.stuff.stuff_code),
@@ -735,7 +735,7 @@ module.exports = {
                             Code: "997"
                         },
                         BankAccount: {
-                            Name: '建设银行',
+                            Name: '鄂尔多斯银行',
                         },
                         OrigAmount: cash,
                         Memo: `掌易助理充值:${cash}`,
