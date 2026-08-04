@@ -516,7 +516,7 @@ module.exports = {
             include: util_lib.plan_detail_include(),
         });
     },
-    do_settle: async function (company, is_buy, operator) {
+    do_settle: async function (company, is_buy, operator, input_plans = []) {
         const config = await this.get_or_create_config(company);
         const buy_prices = parse_buy_stuff_prices(config.buy_stuff_prices);
         const filter_opts = is_buy
@@ -529,9 +529,9 @@ module.exports = {
                 cycle_days: config.sale_settle_cycle != null ? config.sale_settle_cycle : 5,
                 cycle_days_end: config.sale_settle_cycle_end != null ? config.sale_settle_cycle_end : 0,
             };
-        let plans = await this.filter_unsettled_plans(company, is_buy, filter_opts);
-        if (is_buy) {
-            plans = apply_buy_stuff_prices(plans, buy_prices);
+        let plans = input_plans;
+        if (plans.length == 0) {
+            plans = await this.filter_unsettled_plans(company, is_buy, filter_opts);
         }
         const settle_type = is_buy ? 'buy' : 'sale';
         const settle_time = moment().format('YYYY-MM-DD HH:mm:ss');

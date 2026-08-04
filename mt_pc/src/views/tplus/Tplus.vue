@@ -1,153 +1,126 @@
 <template>
-    <div class="tplus-page">
-        <div class="page-header card">
-            <div class="header-left">
-                <img src="@/assets/tpluslogo.png" class="tplus-logo" alt="Tplus">
-                <div class="panel-title">Tplus 对接系统</div>
-            </div>
-        </div>
-
-        <div class="main-card card">
-            <el-tabs v-model="active_tab" @tab-click="on_tab_click">
-                <el-tab-pane label="结算" name="settle">
-                    <div class="config-area">
-                        <div class="config-block">
-                            <div class="panel-header">
-                                <span class="section-title">采购结算</span>
-                                <el-button type="primary" class="action-btn" :disabled="!can_buy_settle"
-                                    :loading="buy_settling" @click="direct_settle(true)">直接结算</el-button>
-                            </div>
-                            <div class="buy-body">
-                                <div class="buy-top">
-                                    <span class="field-label">结算周期</span>
-                                    <div class="cycle-wrap">
-                                        <span class="unit-text">自前</span>
-                                        <el-input-number v-model="config.buy_settle_cycle" :min="1" :max="365"
-                                            @change="on_cycle_change('buy')"></el-input-number>
-                                        <span class="unit-text">天到前</span>
-                                        <el-input-number v-model="config.buy_settle_cycle_end" :min="0"
-                                            :max="Math.max(0, config.buy_settle_cycle - 1)"
-                                            @change="on_cycle_change('buy')"></el-input-number>
-                                        <span class="unit-text">天</span>
-                                    </div>
-                                </div>
-                                <div class="buy-prices">
-                                    <div class="field-bar">
-                                        <span class="field-label">物料价格</span>
-                                        <el-button type="text" icon="el-icon-plus"
-                                            @click="add_buy_stuff_price">添加</el-button>
-                                    </div>
-                                    <el-table :data="buy_stuff_prices" size="small" border class="stuff-table"
-                                        empty-text="暂无物料，点击添加">
-                                        <el-table-column label="物料" min-width="160">
-                                            <template slot-scope="scope">
-                                                <el-select :key="'buy-stuff-' + scope.$index + '-' + selected_stuff_key"
-                                                    v-model="scope.row.stuff_id" filterable clearable placeholder="选择物料"
-                                                    size="small" style="width: 100%" @change="save_config">
-                                                    <el-option v-for="item in get_stuff_options_for_row(scope.$index)"
-                                                        :key="item.id" :label="item.name + ' (#' + item.id + ')'"
-                                                        :value="item.id"></el-option>
-                                                </el-select>
-                                            </template>
-                                        </el-table-column>
-                                        <el-table-column label="价格" width="150" align="center">
-                                            <template slot-scope="scope">
-                                                <el-input-number v-model="scope.row.price" :min="0" :precision="2"
-                                                    size="small" controls-position="right" class="price-input"
-                                                    @change="save_config"></el-input-number>
-                                            </template>
-                                        </el-table-column>
-                                        <el-table-column label="操作" width="64" align="center">
-                                            <template slot-scope="scope">
-                                                <el-button type="text" icon="el-icon-delete" class="remove-btn"
-                                                    @click="remove_buy_stuff_price(scope.$index)"></el-button>
-                                            </template>
-                                        </el-table-column>
-                                    </el-table>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="config-block">
-                            <div class="panel-header">
-                                <span class="section-title">销售结算</span>
-                                <el-button type="primary" class="action-btn" :loading="sale_settling"
-                                    @click="direct_settle(false)">直接结算</el-button>
-                            </div>
-                            <div class="sale-body">
-                                <div class="sale-field">
-                                    <div class="field-label">结算时间点</div>
-                                    <el-time-picker v-model="sale_settle_time_value" value-format="HH:mm:ss"
-                                        placeholder="选择时间" :clearable="false" class="time-picker"
-                                        @change="save_config"></el-time-picker>
-                                </div>
-                                <div class="sale-field sale-cycle-field">
-                                    <div class="field-label">结算周期</div>
-                                    <div class="cycle-wrap">
-                                        <span class="unit-text">自前</span>
-                                        <el-input-number v-model="config.sale_settle_cycle" :min="1" :max="365"
-                                            @change="on_cycle_change('sale')"></el-input-number>
-                                        <span class="unit-text">天到前</span>
-                                        <el-input-number v-model="config.sale_settle_cycle_end" :min="0"
-                                            :max="Math.max(0, config.sale_settle_cycle - 1)"
-                                            @change="on_cycle_change('sale')"></el-input-number>
-                                        <span class="unit-text">天</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </el-tab-pane>
-
-                <el-tab-pane label="结算记录" name="records">
-                    <div class="record-box">
-                        <div class="record-toolbar">
-                            <el-button class="export-btn" type="primary" icon="el-icon-refresh"
-                                @click="refresh_records">刷新</el-button>
-                        </div>
-                        <page-content v-if="records_ready" ref="records" body_key="records" enable
-                            req_url="/tplus/settle_records_get" :req_body="{}">
-                            <template v-slot:default="slotProps">
-                                <div class="record-table-wrap">
-                                    <el-table :data="slotProps.content" style="width: 100%" height="100%"
-                                        class="record-table">
-                                        <el-table-column prop="settle_time" label="结算时间"
-                                            min-width="180"></el-table-column>
-                                        <el-table-column prop="settle_type" label="类型" min-width="100">
-                                            <template slot-scope="scope">
-                                                {{ scope.row.settle_type === 'buy' ? '采购' : '销售' }}
-                                            </template>
-                                        </el-table-column>
-                                        <el-table-column prop="status" label="结算状态" min-width="140"></el-table-column>
-                                        <el-table-column prop="plate_summary" label="车号"
-                                            min-width="140"></el-table-column>
-                                        <el-table-column prop="operator" label="操作人" min-width="120"></el-table-column>
-                                        <el-table-column label="操作" width="120" fixed="right">
-                                            <template slot-scope="scope">
-                                                <el-button type="text" :loading="exporting_id === scope.row.id"
-                                                    @click="export_record_detail(scope.row)">导出详情</el-button>
-                                            </template>
-                                        </el-table-column>
-                                    </el-table>
-                                </div>
-                            </template>
-                        </page-content>
-                    </div>
-                </el-tab-pane>
-            </el-tabs>
+<div class="tplus-page">
+    <div class="page-header card">
+        <div class="header-left">
+            <img src="@/assets/tpluslogo.png" class="tplus-logo" alt="Tplus">
+            <div class="panel-title">Tplus 对接系统</div>
         </div>
     </div>
+
+    <div class="main-card card">
+        <el-tabs v-model="active_tab" @tab-click="on_tab_click">
+            <el-tab-pane label="结算" name="settle">
+                <div class="config-area">
+                    <div class="config-block">
+                        <div class="panel-header">
+                            <span class="section-title">采购结算</span>
+                            <el-button type="primary" class="action-btn" @click="fetch_count">刷新数据</el-button>
+                        </div>
+                        <div class="buy-body">
+                            <div class="buy-top">
+                                <span class="field-label">划价周期</span>
+                                <div class="cycle-wrap">
+                                    <div class="block">
+                                        <el-date-picker v-model="price_cycle" type="datetimerange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" :default-time="['08:00:00', '08:00:00']">
+                                        </el-date-picker>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="buy-prices">
+                                <div class="field-bar">
+                                    <span class="field-label">物料选择</span>
+                                    <select-search body_key="stuff" first_item="所有物料" get_url="/stuff/get_all" :req_body="{}" item_label="name" item_value="id" :permission_array="['tplus']" v-model="stuff_id"></select-search>
+                                </div>
+                                <el-table :data="price_company_map" size="small" border class="stuff-table" empty-text="暂无数据，请先刷新">
+                                    <el-table-column label="公司" min-width="160" prop="company_name">
+                                    </el-table-column>
+                                    <el-table-column label="订单数" width="150" align="center" prop="order_count">
+                                    </el-table-column>
+                                    <el-table-column label="操作" width="120" align="center">
+                                        <template slot-scope="scope">
+                                            <el-button type="text" @click="price_settle(scope.row)">定价并推送</el-button>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="config-block">
+                        <div class="panel-header">
+                            <span class="section-title">销售结算</span>
+                            <el-button type="primary" class="action-btn" :loading="sale_settling" @click="direct_settle(false)">直接结算</el-button>
+                        </div>
+                        <div class="sale-body">
+                            <div class="sale-field">
+                                <div class="field-label">结算时间点</div>
+                                <el-time-picker v-model="sale_settle_time_value" value-format="HH:mm:ss" placeholder="选择时间" :clearable="false" class="time-picker" @change="save_config"></el-time-picker>
+                            </div>
+                            <div class="sale-field sale-cycle-field">
+                                <div class="field-label">结算周期</div>
+                                <div class="cycle-wrap">
+                                    <span class="unit-text">自前</span>
+                                    <el-input-number v-model="config.sale_settle_cycle" :min="1" :max="365" @change="on_cycle_change('sale')"></el-input-number>
+                                    <span class="unit-text">天到前</span>
+                                    <el-input-number v-model="config.sale_settle_cycle_end" :min="0" :max="Math.max(0, config.sale_settle_cycle - 1)" @change="on_cycle_change('sale')"></el-input-number>
+                                    <span class="unit-text">天</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </el-tab-pane>
+
+            <el-tab-pane label="结算记录" name="records">
+                <div class="record-box">
+                    <div class="record-toolbar">
+                        <el-button class="export-btn" type="primary" icon="el-icon-refresh" @click="refresh_records">刷新</el-button>
+                    </div>
+                    <page-content v-if="records_ready" ref="records" body_key="records" enable req_url="/tplus/settle_records_get" :req_body="{}">
+                        <template v-slot:default="slotProps">
+                            <div class="record-table-wrap">
+                                <el-table :data="slotProps.content" style="width: 100%" height="100%" class="record-table">
+                                    <el-table-column prop="settle_time" label="结算时间" min-width="180"></el-table-column>
+                                    <el-table-column prop="settle_type" label="类型" min-width="100">
+                                        <template slot-scope="scope">
+                                            {{ scope.row.settle_type === 'buy' ? '采购' : '销售' }}
+                                        </template>
+                                    </el-table-column>
+                                    <el-table-column prop="status" label="结算状态" min-width="140"></el-table-column>
+                                    <el-table-column prop="plate_summary" label="车号" min-width="140"></el-table-column>
+                                    <el-table-column prop="operator" label="操作人" min-width="120"></el-table-column>
+                                    <el-table-column label="操作" width="120" fixed="right">
+                                        <template slot-scope="scope">
+                                            <el-button type="text" :loading="exporting_id === scope.row.id" @click="export_record_detail(scope.row)">导出详情</el-button>
+                                        </template>
+                                    </el-table-column>
+                                </el-table>
+                            </div>
+                        </template>
+                    </page-content>
+                </div>
+            </el-tab-pane>
+        </el-tabs>
+    </div>
+</div>
 </template>
 
 <script>
 import PageContent from '../../components/PageContent.vue'
+import moment from 'moment'
+import SelectSearch from '../../components/SelectSearch.vue'
+import {
+    Message
+} from 'element-ui';
 export default {
     name: 'Tplus',
     components: {
         'page-content': PageContent,
+        'select-search': SelectSearch,
     },
     data: function () {
         return {
+            price_cycle: [],
             active_tab: 'settle',
             records_ready: false,
             config: {
@@ -164,6 +137,8 @@ export default {
             sale_settling: false,
             saving: false,
             exporting_id: null,
+            stuff_id: 0,
+            price_company_map: [],
         }
     },
     computed: {
@@ -175,6 +150,46 @@ export default {
         },
     },
     methods: {
+        fetch_count: async function () {
+            if (this.price_cycle.length == 2 && this.stuff_id != 0) {
+                let resp = await this.$send_req('/tplus/get_statistics_group_by_company', {
+                    start_time: moment(this.price_cycle[0]).format('YYYY-MM-DD HH:mm:ss'),
+                    end_time: moment(this.price_cycle[1]).format('YYYY-MM-DD HH:mm:ss'),
+                    stuff_id: this.stuff_id,
+                });
+                this.price_company_map = resp.statistics.map(item => {
+                    return {
+                        company_id: item.company.id,
+                        company_name: item.company.name,
+                        order_count: item.order_count,
+                    }
+                });
+            } else {
+                Message.error('请选择划价周期和物料');
+            }
+        },
+        price_settle: async function (row) {
+            try {
+                let {
+                    value
+                } = await this.$prompt('请输入划价价格', '划价', {
+                    inputPattern: /^[0-9]+(\.[0-9]{1,2})?$/,
+                    inputErrorMessage: '请输入有效的价格',
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                });
+                await this.$send_req('/tplus/price_and_settle', {
+                    company_id: row.company_id,
+                    stuff_id: this.stuff_id,
+                    price: Number(value),
+                    start_time: moment(this.price_cycle[0]).format('YYYY-MM-DD HH:mm:ss'),
+                    end_time: moment(this.price_cycle[1]).format('YYYY-MM-DD HH:mm:ss'),
+                });
+            } catch (error) {
+
+            }
+
+        },
         on_tab_click: function (tab) {
             if (tab.name === 'records') {
                 this.records_ready = true
@@ -193,9 +208,8 @@ export default {
             return rows
                 .map((item) => ({
                     stuff_id: item.stuff_id ? Number(item.stuff_id) : null,
-                    price: item.price === undefined || item.price === null || item.price === ''
-                        ? undefined
-                        : Number(item.price),
+                    price: item.price === undefined || item.price === null || item.price === '' ?
+                        undefined : Number(item.price),
                 }))
                 .filter((item) => item.stuff_id)
         },
@@ -295,7 +309,9 @@ export default {
             }
             try {
                 await this.save_config()
-                await this.$send_req('/tplus/direct_settle', { is_buy: is_buy })
+                await this.$send_req('/tplus/direct_settle', {
+                    is_buy: is_buy
+                })
                 this.$message.success('结算完成')
                 this.records_ready = true
             } finally {
@@ -309,7 +325,9 @@ export default {
         export_record_detail: async function (row) {
             this.exporting_id = row.id
             try {
-                await this.$send_req('/tplus/export_settle_detail', { record_id: row.id })
+                await this.$send_req('/tplus/export_settle_detail', {
+                    record_id: row.id
+                })
                 this.$message.success('导出成功,请到导出记录中查看')
             } finally {
                 this.exporting_id = null
