@@ -1,34 +1,126 @@
 <template>
-<view>
-    <view class="status_bar">
-    </view>
-    <view class="status_bar">
-    </view>
-    <view class="status_bar">
-    </view>
-    <fui-button v-if="need_return" type="danger" text="关闭" @click="return_to_ol"></fui-button>
-    <fui-preview v-if="driver_self.id" :previewData="previewData" @click="rebind_info"></fui-preview>
-    <!--  #ifdef  H5 -->
-    <fui-button type="primary" text="司机手机登录" @click="phone_login_show = true"></fui-button>
-    <!--  #endif -->
-    <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
-    <view v-if="cur_page == 0">
-        <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="65vh" :fetch_params="[is_online, driver_self.open_id]">
-            <view v-for="item in data2show" :key="item.id">
-                <fui-preview bdSize="26" :previewData="plan_show(item)" @click="view_notice_first"></fui-preview>
+<view class="driver-page" :class="page_extra_class">
+    <fui-nav-bar title="掌易助理" background="#2F3FCF" color="#FFFFFF" :statusBar="true" :isFixed="true"
+        :isOccupy="true" @leftClick="on_nav_back">
+        <fui-icon v-if="need_return" name="arrowleft" color="#FFFFFF" :size="54"></fui-icon>
+    </fui-nav-bar>
+
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+        </view>
+        <view class="hero-top">
+            <view class="hero-copy">
+                <text class="hero-label">{{ need_return ? '代替司机操作' : '司机工作台' }}</text>
+                <text class="hero-name">{{ driver_self.name || '未绑定' }}</text>
+                <text class="hero-sub" v-if="driver_self.phone">{{ driver_self.phone }}</text>
             </view>
-        </list-show>
-    </view>
-    <view v-if="cur_page == 1">
-        <u-cell title="时间段" :value="begin_date+ '~' + end_date">
-            <fui-button slot="right-icon" text="选择日期" @click="show_plan_date = true" btnSize="mini" type="warning"></fui-button>
-        </u-cell>
-        <fui-date-picker range :show="show_plan_date" type="3" :value="begin_date" :valueEnd="end_date" @change="choose_date" @cancel="show_plan_date = false"></fui-date-picker>
-        <list-show ref="ticket" v-model="all_ticket" :fetch_function="get_all_ticket" height="60vh" :fetch_params="[driver_self.open_id, begin_date, end_date]">
-            <view v-for="item in all_ticket" :key="item.id">
-                <u-cell :title="item.order_company_name" :label="item.p_time + '-->' + item.stuff_name" :value="item.count" isLink :url="'/subPage1/Ticket?id='+item.id"></u-cell>
+            <view class="hero-actions" v-if="driver_self.id && !need_return">
+                <view class="hero-chip" @click="rebind_info">
+                    <text class="hero-chip-text">修改身份</text>
+                </view>
             </view>
-        </list-show>
+        </view>
+        <!--  #ifdef  H5 -->
+        <view class="hero-h5" v-if="!need_return" @click="phone_login_show = true">
+            <text class="hero-h5-text">司机手机登录</text>
+        </view>
+        <!--  #endif -->
+    </view>
+
+    <view class="shell">
+        <view class="tabs">
+            <view class="tab-item" :class="{ active: cur_page === 0 }" @click="sectionChange(0)">
+                <text class="tab-text">当前承运</text>
+                <text class="tab-count" v-if="cur_page === 0 && data2show.length">{{ data2show.length }}</text>
+            </view>
+            <view class="tab-item" :class="{ active: cur_page === 1 }" @click="sectionChange(1)">
+                <text class="tab-text">历史磅单</text>
+            </view>
+        </view>
+
+        <view class="body" v-if="cur_page == 0">
+            <list-show ref="plan" v-model="data2show" :fetch_function="get_self_plan" height="68vh"
+                :fetch_params="[is_online, driver_self.open_id]">
+                <view class="plan-card" v-for="item in data2show" :key="item.id">
+                    <view class="plan-plates">
+                        <text class="plate-tag">{{ plate_of(item) }}</text>
+                        <text class="plate-tag" v-if="behind_of(item)">{{ behind_of(item) }}</text>
+                        <view class="enter-tag ok" v-if="enter_ok(item)">
+                            <text class="enter-tag-text">可进厂</text>
+                        </view>
+                        <view class="enter-tag bad" v-else>
+                            <text class="enter-tag-text">不可进</text>
+                        </view>
+                    </view>
+                    <view class="plan-titles">
+                        <text class="plan-stuff">{{ stuff_of(item) }}</text>
+                        <text class="plan-yard">{{ yard_of(item) }}</text>
+                    </view>
+                    <view class="plan-stats">
+                        <view class="plan-stat">
+                            <text class="plan-stat-label">排队</text>
+                            <text class="plan-stat-value">{{ item.register_time ? item.register_number : '-' }}</text>
+                            <text class="plan-stat-sub" v-if="item.register_time">已排号</text>
+                            <text class="plan-stat-sub muted" v-else-if="item.stuff && !item.stuff.no_need_register">未排号</text>
+                            <text class="plan-stat-sub muted" v-else>免排号</text>
+                        </view>
+                        <view class="plan-stat">
+                            <text class="plan-stat-label">计划日</text>
+                            <text class="plan-stat-value ok" v-if="is_today_plan(item)">今天</text>
+                            <text class="plan-stat-value" v-else>{{ plan_day(item) }}</text>
+                        </view>
+                        <view class="plan-stat">
+                            <text class="plan-stat-label">叫号</text>
+                            <text class="plan-stat-value ok" v-if="item.call_time">已叫</text>
+                            <text class="plan-stat-value" v-else>未叫</text>
+                        </view>
+                    </view>
+                    <view class="plan-actions" v-if="show_card_actions">
+                        <view class="plan-btn" :class="btn.cls" v-for="(btn, bi) in plan_action_btns(item)" :key="bi"
+                            @click="tap_plan_btn(item.id, bi)">
+                            <text class="plan-btn-text">{{ btn.text }}</text>
+                        </view>
+                    </view>
+                </view>
+            </list-show>
+        </view>
+
+        <view class="body" v-if="cur_page == 1">
+            <view class="date-bar" @click="show_plan_date = true">
+                <view class="date-copy">
+                    <text class="date-label">查询时间段</text>
+                    <text class="date-range">{{ begin_date }} ~ {{ end_date }}</text>
+                </view>
+                <view class="date-btn">
+                    <text class="date-btn-text">改期</text>
+                </view>
+            </view>
+            <fui-date-picker range :show="show_plan_date" type="3" :value="begin_date" :valueEnd="end_date"
+                @change="choose_date" @cancel="show_plan_date = false"></fui-date-picker>
+            <list-show ref="ticket" v-model="all_ticket" :fetch_function="get_all_ticket" height="62vh"
+                :fetch_params="[driver_self.open_id, begin_date, end_date]">
+                <view class="ticket-card" v-for="item in all_ticket" :key="item.id" @click="go_ticket(item.id)">
+                    <view class="ticket-main">
+                        <text class="ticket-company">{{ item.order_company_name }}</text>
+                        <text class="ticket-meta">{{ item.p_time }}</text>
+                        <text class="ticket-stuff">{{ item.stuff_name }}</text>
+                    </view>
+                    <view class="ticket-right">
+                        <text class="ticket-count">{{ item.count }}</text>
+                        <text class="ticket-unit">吨</text>
+                        <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
+                    </view>
+                </view>
+            </list-show>
+        </view>
+    </view>
+
+    <view class="bottom-bar" v-if="show_bottom_actions">
+        <view class="bottom-btn" :class="btn.cls" v-for="(btn, bi) in bottom_action_btns" :key="bi"
+            @click="tap_plan_btn(data2show[0].id, bi)">
+            <text class="bottom-btn-text">{{ btn.text }}</text>
+        </view>
     </view>
 
     <fui-modal width="600" :show="phone_login_show" v-if="phone_login_show" @click="do_phone_login">
@@ -48,9 +140,8 @@
     <fui-bottom-popup :show="show_sc" v-if="show_sc" @close="show_sc= false">
         <view class="driver-sc-head">
             <text class="driver-sc-title">安检结果</text>
-            <text class="driver-sc-status" :class="(sc_data2show.length > 0 && sc_data2show[0].passed_total) ? 'ok' : 'bad'">
-                {{ (sc_data2show.length > 0 && sc_data2show[0].passed_total) ? '通过' : '未通过' }}
-            </text>
+            <text class="driver-sc-status ok" v-if="sc_data2show.length > 0 && sc_data2show[0].passed_total">通过</text>
+            <text class="driver-sc-status bad" v-else>未通过</text>
         </view>
         <list-show ref="sc_confirm" v-model="sc_data2show" :fetch_function="get_plan_sc" height="70vh" :fetch_params="[focus_plan.id, driver_self.open_id]">
             <view class="driver-sc-grid">
@@ -79,9 +170,9 @@
                         </view>
                     </view>
                     <view class="driver-sc-actions">
-                        <text class="driver-sc-tag" :class="'t-' + sc_status_string(item.sc_content).type">
-                            {{ sc_status_string(item.sc_content).text }}
-                        </text>
+                        <text class="driver-sc-tag t-success" v-if="item.sc_content && item.sc_content.passed">已通过</text>
+                        <text class="driver-sc-tag t-danger" v-else-if="item.sc_content">未通过</text>
+                        <text class="driver-sc-tag t-warning" v-else>未上传</text>
                         <view class="driver-sc-act primary" v-if="!item.sc_content" @click="prepare_upload_sc(item)">
                             <text class="driver-sc-act-text">上传</text>
                         </view>
@@ -146,23 +237,20 @@ export default {
         "sc-upload": ScUpload,
     },
     computed: {
-        previewData: function () {
-            return {
-                label: '司机信息',
-                value: this.driver_self.name,
-                list: [{
-                        label: '手机号',
-                        value: this.driver_self.phone
-                    },
-                    {
-                        label: '身份证号',
-                        value: this.driver_self.id_card
-                    }
-                ],
-                buttons: [{
-                    text: '修改身份信息'
-                }]
+        page_extra_class: function () {
+            return this.show_bottom_actions ? 'has-bottom' : '';
+        },
+        show_card_actions: function () {
+            return !(this.need_return && this.data2show.length === 1);
+        },
+        show_bottom_actions: function () {
+            return this.need_return && this.cur_page === 0 && this.data2show.length === 1 && this.bottom_action_btns.length > 0;
+        },
+        bottom_action_btns: function () {
+            if (!(this.need_return && this.data2show.length === 1)) {
+                return [];
             }
+            return this.plan_action_btns(this.data2show[0]);
         },
     },
     data: function () {
@@ -398,6 +486,96 @@ export default {
         };
     },
     methods: {
+        on_nav_back: function () {
+            if (this.need_return) {
+                this.return_to_ol();
+            }
+        },
+        plate_of: function (item) {
+            return (item && item.main_vehicle && item.main_vehicle.plate) ? item.main_vehicle.plate : '-';
+        },
+        behind_of: function (item) {
+            return (item && item.behind_vehicle && item.behind_vehicle.plate) ? item.behind_vehicle.plate : '';
+        },
+        stuff_of: function (item) {
+            return (item && item.stuff && item.stuff.name) ? item.stuff.name : '-';
+        },
+        yard_of: function (item) {
+            const a = (item && item.stuff && item.stuff.company && item.stuff.company.name) ? item.stuff.company.name : '';
+            const b = (item && item.company && item.company.name) ? item.company.name : '';
+            if (a && b) {
+                return a + ' · ' + b;
+            }
+            return a || b || '-';
+        },
+        is_today_plan: function (item) {
+            if (!item || !item.plan_time) {
+                return false;
+            }
+            const today_date = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
+            return today_date == item.plan_time.substr(0, 10);
+        },
+        plan_day: function (item) {
+            if (!item || !item.plan_time) {
+                return '-';
+            }
+            return item.plan_time.length >= 10 ? item.plan_time.substr(5, 5) : item.plan_time;
+        },
+        enter_ok: function (item) {
+            if (!item || !item.stuff) {
+                return false;
+            }
+            let enter_permit = false;
+            if (item.stuff.no_need_register) {
+                enter_permit = true;
+                if (item.stuff.need_enter_weight && item.enter_count <= 0) {
+                    enter_permit = false;
+                }
+                if (item.company && item.company.id == 0) {
+                    enter_permit = false;
+                }
+            } else if (item.call_time) {
+                enter_permit = true;
+            }
+            return enter_permit;
+        },
+        // 只返回 text/cls，不把 item 挂到按钮上（避免小程序 setData 循环引用）
+        plan_action_btns: function (item) {
+            if (!item) {
+                return [];
+            }
+            const raw = this.plan_show(item).buttons || [];
+            const out = [];
+            for (const btn of raw) {
+                out.push({
+                    text: btn.text,
+                    cls: 'c-' + (btn.color || 'blue')
+                });
+            }
+            return out;
+        },
+        // 点击只传 id + 索引，再现场用 plan_show 还原原事件（含 item）
+        tap_plan_btn: function (plan_id, bi) {
+            let item = null;
+            for (const plan of this.data2show) {
+                if (plan.id == plan_id) {
+                    item = plan;
+                    break;
+                }
+            }
+            if (!item) {
+                return;
+            }
+            const buttons = this.plan_show(item).buttons || [];
+            if (buttons[bi]) {
+                this.view_notice_first(buttons[bi]);
+            }
+        },
+        go_ticket: function (id) {
+            uni.navigateTo({
+                url: '/subPage1/Ticket?id=' + id
+            });
+        },
         do_phone_login: async function (e) {
             if (e.index == 1) {
                 this.driver_self = await this.$send_req("/global/driver_phone_online", this.phone_login_req);
@@ -555,7 +733,6 @@ export default {
             this.driver_notice_show = false;
         },
         handle_button: async function (e) {
-            let vue_this = this;
             console.log(e);
             const need_protocol = !!(e.item.stuff && e.item.stuff.protocol_doc_path);
             if (need_protocol && !e.item.protocol_signed) {
@@ -576,64 +753,64 @@ export default {
             } else if (e.text == '排号') {
                 uni.authorize({
                     scope: 'scope.userLocation',
-                    success() {
+                    success: () => {
                         uni.getLocation({
-                            success: async function (res) {
-                                await vue_this.$send_req('/global/driver_checkin', {
+                            success: async (res) => {
+                                await this.$send_req('/global/driver_checkin', {
                                     plan_id: e.item.id,
-                                    open_id: vue_this.driver_self.open_id,
+                                    open_id: this.driver_self.open_id,
                                     lat: res.latitude,
                                     lon: res.longitude
                                 });
                                 uni.startPullDownRefresh();
                             },
-                            fail: function (err) {
+                            fail: (err) => {
                                 console.log(err);
                                 uni.showToast({
                                     title: '获取位置失败',
                                     icon: 'none'
-                                })
+                                });
                             }
                         });
                     },
-                    fail() {
+                    fail: () => {
                         uni.showToast({
                             title: '获取位置失败',
                             icon: 'none'
-                        })
+                        });
                     }
-                })
+                });
             } else if (e.text == "传磅单") {
-                vue_this.show_upload_enter = true;
-                vue_this.focus_plan = e.item;
+                this.show_upload_enter = true;
+                this.focus_plan = e.item;
             } else if (e.text == "选择货源") {
-                vue_this.focus_plan = e.item;
-                vue_this.show_company_select = true;
-                vue_this.$nextTick(() => {
-                    vue_this.$refs.cp.refresh();
+                this.focus_plan = e.item;
+                this.show_company_select = true;
+                this.$nextTick(() => {
+                    this.$refs.cp.refresh();
                 });
             } else if (e.text == '考试') {
                 uni.navigateTo({
                     url: '/subPage1/Exam?plan_id=' + e.item.id + '&open_id=' + this.driver_self.open_id + '&driver_name=' + this.driver_self.name,
                 });
             } else if (e.text == '期望重量') {
-                vue_this.focus_plan = e.item;
-                vue_this.show_expect_weight = true;
+                this.focus_plan = e.item;
+                this.show_expect_weight = true;
             } else if (e.text == '签名') {
                 uni.navigateTo({
                     url: '/subPage1/DriverSign?open_id=' + this.driver_self.open_id,
                 });
             } else if (e.text == '确认要出厂') {
-                await vue_this.$send_req('/global/driver_confirm', {
+                await this.$send_req('/global/driver_confirm', {
                     plan_id: e.item.id,
-                    open_id: vue_this.driver_self.open_id,
+                    open_id: this.driver_self.open_id,
                     is_confirm: true,
                 });
                 uni.startPullDownRefresh();
             } else if (e.text == '取消确认出厂') {
-                await vue_this.$send_req('/global/driver_confirm', {
+                await this.$send_req('/global/driver_confirm', {
                     plan_id: e.item.id,
-                    open_id: vue_this.driver_self.open_id,
+                    open_id: this.driver_self.open_id,
                     is_confirm: false,
                 });
                 uni.startPullDownRefresh();
@@ -781,9 +958,401 @@ export default {
 </script>
 
 <style scoped>
-.status_bar {
-    height: var(--status-bar-height);
+.driver-page {
+    min-height: 100vh;
+    background: #F4F6FB;
+    box-sizing: border-box;
+    padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+}
+.driver-page.has-bottom {
+    padding-bottom: calc(160rpx + env(safe-area-inset-bottom));
+}
+.driver-page.has-bottom .shell {
+    min-height: 62vh;
+}
+.hero {
+    position: relative;
+    padding: 28rpx 28rpx 48rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
+    overflow: hidden;
+}
+.hero-logo-bg {
+    position: absolute;
+    top: -20rpx;
+    right: -10rpx;
+    width: 260rpx;
+    height: 260rpx;
+    opacity: 0.16;
+    pointer-events: none;
+}
+.hero-logo-img {
     width: 100%;
+    height: 100%;
+}
+.hero-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16rpx;
+}
+.hero-copy {
+    flex: 1;
+    min-width: 0;
+}
+.hero-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 2rpx;
+}
+.hero-name {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 40rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    line-height: 1.25;
+}
+.hero-sub {
+    display: block;
+    margin-top: 8rpx;
+    font-size: 26rpx;
+    color: rgba(255, 255, 255, 0.88);
+}
+.hero-actions {
+    flex-shrink: 0;
+    padding-top: 4rpx;
+}
+.hero-chip {
+    padding: 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1rpx solid rgba(255, 255, 255, 0.28);
+}
+.hero-chip-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+.hero-h5 {
+    position: relative;
+    z-index: 1;
+    margin-top: 18rpx;
+    display: inline-flex;
+    padding: 12rpx 22rpx;
+    border-radius: 12rpx;
+    background: rgba(255, 255, 255, 0.18);
+}
+.hero-h5-text {
+    font-size: 24rpx;
+    color: #FFFFFF;
+    font-weight: 600;
+}
+.shell {
+    position: relative;
+    z-index: 2;
+    margin: -24rpx 20rpx 12rpx;
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.08);
+    overflow: hidden;
+    min-height: 72vh;
+}
+.tabs {
+    padding: 10rpx;
+    display: flex;
+    flex-direction: row;
+    border-bottom: 1rpx solid #F2F4FA;
+}
+.tab-item {
+    flex: 1;
+    height: 68rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 8rpx;
+    border-radius: 14rpx;
+}
+.tab-item.active {
+    background: rgba(70, 92, 255, 0.1);
+}
+.tab-text {
+    font-size: 28rpx;
+    color: #6B7280;
+    font-weight: 600;
+}
+.tab-item.active .tab-text {
+    color: #2F3FCF;
+}
+.tab-count {
+    min-width: 32rpx;
+    height: 32rpx;
+    padding: 0 8rpx;
+    border-radius: 999rpx;
+    background: #465CFF;
+    color: #FFFFFF;
+    font-size: 20rpx;
+    font-weight: 700;
+    line-height: 32rpx;
+    text-align: center;
+}
+.body {
+    padding: 16rpx 16rpx 20rpx;
+}
+.plan-card {
+    background: #F8F9FD;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 20rpx;
+    padding: 20rpx;
+    margin-bottom: 14rpx;
+}
+.plan-plates {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10rpx;
+    margin-bottom: 14rpx;
+}
+.plate-tag {
+    padding: 6rpx 14rpx;
+    border-radius: 6rpx;
+    background: #F5D000;
+    color: #111111;
+    font-size: 26rpx;
+    font-weight: 800;
+    letter-spacing: 2rpx;
+    border: 2rpx solid #111111;
+    line-height: 1.2;
+}
+.enter-tag {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 6rpx 14rpx;
+    border-radius: 999rpx;
+}
+.enter-tag.ok {
+    background: rgba(45, 190, 108, 0.12);
+}
+.enter-tag.bad {
+    background: rgba(255, 77, 79, 0.12);
+}
+.enter-tag-text {
+    font-size: 22rpx;
+    font-weight: 700;
+}
+.enter-tag.ok .enter-tag-text {
+    color: #1FA85A;
+}
+.enter-tag.bad .enter-tag-text {
+    color: #FF4D4F;
+}
+.plan-titles {
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+    margin-bottom: 16rpx;
+}
+.plan-stuff {
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.plan-yard {
+    font-size: 22rpx;
+    color: #6B7280;
+    line-height: 1.4;
+}
+.plan-stats {
+    display: flex;
+    flex-direction: row;
+    background: #FFFFFF;
+    border-radius: 14rpx;
+    border: 1rpx solid #EEF1F8;
+}
+.plan-stat {
+    flex: 1;
+    padding: 16rpx 10rpx 14rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rpx;
+    border-right: 1rpx solid #F2F4FA;
+    box-sizing: border-box;
+}
+.plan-stat:last-child {
+    border-right: none;
+}
+.plan-stat-label {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+.plan-stat-value {
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.3;
+}
+.plan-stat-value.ok {
+    color: #1FA85A;
+}
+.plan-stat-sub {
+    font-size: 18rpx;
+    color: #6B7CFF;
+}
+.plan-stat-sub.muted {
+    color: #9AA3B8;
+}
+.plan-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    margin-top: 16rpx;
+}
+.plan-btn,
+.bottom-btn {
+    flex: 1 1 40%;
+    min-width: 40%;
+    height: 72rpx;
+    padding: 0 12rpx;
+    border-radius: 14rpx;
+    background: #465CFF;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+.plan-btn-text,
+.bottom-btn-text {
+    font-size: 24rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.plan-btn.c-green,
+.bottom-btn.c-green { background: #2DBE6C; }
+.plan-btn.c-blue,
+.bottom-btn.c-blue { background: #465CFF; }
+.plan-btn.c-purple,
+.bottom-btn.c-purple { background: #7B61FF; }
+.plan-btn.c-orange,
+.bottom-btn.c-orange { background: #FF8A2B; }
+.plan-btn.c-red,
+.bottom-btn.c-red { background: #FF4D4F; }
+.plan-btn.c-brown,
+.bottom-btn.c-brown { background: #A67C52; }
+.plan-btn.c-black,
+.bottom-btn.c-black { background: #3A4256; }
+.bottom-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12rpx;
+    padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+    background: #FFFFFF;
+    border-top: 1rpx solid #EEF1F8;
+    box-shadow: 0 -8rpx 24rpx rgba(26, 31, 54, 0.06);
+}
+.bottom-btn {
+    flex: 1 1 30%;
+    min-width: 30%;
+    height: 76rpx;
+}
+.date-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    background: #F8F9FD;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 16rpx;
+    padding: 18rpx 20rpx;
+    margin-bottom: 14rpx;
+}
+.date-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+}
+.date-label {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+.date-range {
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 600;
+}
+.date-btn {
+    flex-shrink: 0;
+    padding: 12rpx 20rpx;
+    border-radius: 999rpx;
+    background: rgba(70, 92, 255, 0.1);
+}
+.date-btn-text {
+    font-size: 24rpx;
+    color: #2F3FCF;
+    font-weight: 700;
+}
+.ticket-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    background: #F8F9FD;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 16rpx;
+    padding: 20rpx 18rpx;
+    margin-bottom: 12rpx;
+}
+.ticket-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4rpx;
+}
+.ticket-company {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+.ticket-meta {
+    font-size: 22rpx;
+    color: #9AA3B8;
+}
+.ticket-stuff {
+    font-size: 24rpx;
+    color: #6B7280;
+}
+.ticket-right {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 4rpx;
+}
+.ticket-count {
+    font-size: 36rpx;
+    color: #2F3FCF;
+    font-weight: 700;
+}
+.ticket-unit {
+    font-size: 20rpx;
+    color: #9AA3B8;
 }
 
 .image-viewer-container {

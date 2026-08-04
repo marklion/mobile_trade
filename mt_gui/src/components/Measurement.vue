@@ -1,35 +1,65 @@
 <template>
 <fui-modal :zIndex="1002" :buttons="[]" v-if="show_manual_weight" :show="show_manual_weight">
-    <div class="scrollable-container">
-        <fui-form ref="form" :disabled="plan_owner">
-            <fui-form-item label="一次计量" v-if="!has_sct">
-                <fui-input v-model="form_data.first_weight" placeholder="请输入一次计量">
-                </fui-input>
-            </fui-form-item>
-            <fui-form-item label="附件一">
-                <fui-upload max="4" width="160" height="160" :fileList="first_weight_fileUrl" immediate :url="upload_url" :sizeType="['compressed']" ref="first_weight_upload" @success="handleFirstWeightSuccess" @complete="handleFirstWeightComplete" />
-            </fui-form-item>
-            <fui-form-item label="二次计量" v-if="!has_sct">
-                <fui-input v-model="form_data.second_weight" placeholder="请输入二次计量">
-                </fui-input>
-            </fui-form-item>
-            <fui-form-item label="附件二">
-                <fui-upload max="4" width="160" height="160" :fileList="second_weight_fileUrl" immediate :url="upload_url" :sizeType="['compressed']" ref="second_weight_upload" @success="handleSecondWeightSuccess" @complete="handleSecondWeightComplete"></fui-upload>
-            </fui-form-item>
-            <fui-form-item v-for="psi in focus_plan.plan_sct_infos" :key="psi.id" :label="psi.sct_scale_item.name" @click="prepare_input_datetime(psi)">
-                <fui-input :disabled="psi.sct_scale_item.type == 'datetime'" v-model="psi.value"></fui-input>
-            </fui-form-item>
-            <fui-form-item label="装卸量">
-                <fui-input v-model="form_data.count" placeholder="请输入装卸量,非0即关闭订单"></fui-input>
-            </fui-form-item>
-        </fui-form>
-        <view style="display: flex; justify-content: space-between;">
-            <fui-button btnSize="small" text="取消" @click="hide"></fui-button>
-            <fui-button v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && plan_owner && focus_plan.count > 0" btnSize="small" type="success" text="结算" @click="checkout_plan"></fui-button>
-            <fui-button v-if="!focus_plan.is_buy && !plan_owner" btnSize="small" type="success" text="提交" @click="confirm_manual_weight"></fui-button>
+    <view class="mw-panel">
+        <view class="mw-head">
+            <text class="mw-title">计量信息</text>
+            <text class="mw-sub" v-if="focus_plan && focus_plan.stuff">{{ focus_plan.stuff.name }}</text>
         </view>
-    </div>
-    <fui-date-picker :show="show_psi_datetime" type="5" :value="default_time" @change="confirm_psi_datetime" @cancel="show_psi_datetime = false"></fui-date-picker>
+        <scroll-view class="mw-scroll" scroll-y>
+            <fui-form ref="form" :disabled="plan_owner">
+                <view class="mw-section" v-if="!has_sct">
+                    <text class="mw-section-title">一次计量</text>
+                    <fui-form-item label="重量">
+                        <fui-input v-model="form_data.first_weight" placeholder="请输入一次计量"></fui-input>
+                    </fui-form-item>
+                    <fui-form-item label="附件">
+                        <fui-upload max="4" width="160" height="160" :fileList="first_weight_fileUrl" immediate
+                            :url="upload_url" :sizeType="['compressed']" ref="first_weight_upload"
+                            @success="handleFirstWeightSuccess" @complete="handleFirstWeightComplete" />
+                    </fui-form-item>
+                </view>
+                <view class="mw-section" v-if="!has_sct">
+                    <text class="mw-section-title">二次计量</text>
+                    <fui-form-item label="重量">
+                        <fui-input v-model="form_data.second_weight" placeholder="请输入二次计量"></fui-input>
+                    </fui-form-item>
+                    <fui-form-item label="附件">
+                        <fui-upload max="4" width="160" height="160" :fileList="second_weight_fileUrl" immediate
+                            :url="upload_url" :sizeType="['compressed']" ref="second_weight_upload"
+                            @success="handleSecondWeightSuccess" @complete="handleSecondWeightComplete"></fui-upload>
+                    </fui-form-item>
+                </view>
+                <view class="mw-section" v-if="has_sct">
+                    <text class="mw-section-title">扩展计量</text>
+                    <fui-form-item v-for="psi in focus_plan.plan_sct_infos" :key="psi.id"
+                        :label="psi.sct_scale_item.name" @click="prepare_input_datetime(psi)">
+                        <fui-input :disabled="psi.sct_scale_item.type == 'datetime'" v-model="psi.value"></fui-input>
+                    </fui-form-item>
+                </view>
+                <view class="mw-section">
+                    <text class="mw-section-title">装卸量</text>
+                    <fui-form-item label="数量">
+                        <fui-input v-model="form_data.count" placeholder="请输入装卸量,非0即关闭订单"></fui-input>
+                    </fui-form-item>
+                </view>
+            </fui-form>
+        </scroll-view>
+        <view class="mw-actions">
+            <view class="mw-btn ghost" @click="hide">
+                <text class="mw-btn-text ghost">取消</text>
+            </view>
+            <view class="mw-btn success"
+                v-if="focus_plan.stuff.checkout_delay && focus_plan.status != 3 && plan_owner && focus_plan.count > 0"
+                @click="checkout_plan">
+                <text class="mw-btn-text">结算</text>
+            </view>
+            <view class="mw-btn primary" v-if="!focus_plan.is_buy && !plan_owner" @click="confirm_manual_weight">
+                <text class="mw-btn-text">提交</text>
+            </view>
+        </view>
+    </view>
+    <fui-date-picker :show="show_psi_datetime" type="5" :value="default_time" @change="confirm_psi_datetime"
+        @cancel="show_psi_datetime = false"></fui-date-picker>
 </fui-modal>
 </template>
 
@@ -241,10 +271,80 @@ export default {
 </script>
 
 <style scoped>
-.scrollable-container {
-    max-height: 75vh;
-    /* 最大高度为 75% 的视口高度 */
-    overflow-y: auto;
-    /* 超出时允许垂直滚动 */
+.mw-panel {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8rpx 8rpx 0;
+}
+.mw-head {
+    padding: 8rpx 16rpx 20rpx;
+    border-bottom: 1rpx solid #EEF1F8;
+}
+.mw-title {
+    display: block;
+    font-size: 34rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+.mw-sub {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 24rpx;
+    color: #6B7280;
+}
+.mw-scroll {
+    max-height: 58vh;
+    width: 100%;
+    box-sizing: border-box;
+}
+.mw-section {
+    margin-top: 16rpx;
+    padding: 16rpx 12rpx 8rpx;
+    background: #F8F9FD;
+    border-radius: 16rpx;
+    border: 1rpx solid #EEF1F8;
+}
+.mw-section-title {
+    display: block;
+    margin: 0 8rpx 8rpx;
+    font-size: 24rpx;
+    color: #2F3FCF;
+    font-weight: 700;
+}
+.mw-actions {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16rpx;
+    padding: 20rpx 8rpx 8rpx;
+}
+.mw-btn {
+    min-width: 160rpx;
+    height: 72rpx;
+    padding: 0 28rpx;
+    border-radius: 14rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+.mw-btn.ghost {
+    background: #FFFFFF;
+    border: 1rpx solid #D8DEEA;
+}
+.mw-btn.primary {
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+}
+.mw-btn.success {
+    background: #2DBE6C;
+}
+.mw-btn-text {
+    font-size: 28rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.mw-btn-text.ghost {
+    color: #6B7280;
 }
 </style>
