@@ -32,7 +32,7 @@
                     <fui-switch :checked="only_show_uncalled" color="#465CFF" @change="on_uncalled_change"></fui-switch>
                 </view>
 
-                <view class="plan-card" v-for="item in plans" :key="item.id">
+                <view class="plan-card" v-for="(item, p_index) in plans" :key="item.id">
                     <view class="plan-top">
                         <view class="plan-plates">
                             <text class="plate-tag">{{ plate_of(item) }}</text>
@@ -49,91 +49,67 @@
                         </view>
                     </view>
 
-                    <text class="plan-company">{{ company_of(item) }}</text>
-                    <text class="plan-stuff" v-if="stuff_of(item)">{{ stuff_of(item) }}</text>
-
-                    <view class="plan-stats">
-                        <view class="plan-stat">
-                            <text class="plan-stat-label">序号</text>
-                            <text class="plan-stat-value">{{ item.register_number != null ? item.register_number : '-' }}</text>
-                        </view>
-                        <view class="plan-stat">
-                            <text class="plan-stat-label">司机</text>
-                            <text class="plan-stat-value">{{ driver_name(item) }}</text>
-                        </view>
-                        <view class="plan-stat link" @click="copy_text(driver_phone(item))">
-                            <text class="plan-stat-label">电话</text>
-                            <text class="plan-stat-value phone">{{ driver_phone(item) }}</text>
-                        </view>
+                    <view class="plan-title-row">
+                        <text class="plan-company">{{ company_of(item) }}</text>
+                        <text class="plan-stuff" v-if="stuff_of(item)">{{ stuff_of(item) }}</text>
                     </view>
 
-                    <view class="plan-rows">
-                        <view class="plan-row" v-if="item.register_time">
-                            <text class="plan-row-label">排号时间</text>
-                            <text class="plan-row-value">{{ item.register_time }}</text>
-                        </view>
-                        <view class="plan-row" v-if="item.call_time">
-                            <text class="plan-row-label">叫号时间</text>
-                            <text class="plan-row-value ok">{{ item.call_time }}</text>
-                        </view>
-                        <view class="plan-row" v-if="item.enter_time">
-                            <text class="plan-row-label">一次重量</text>
-                            <text class="plan-row-value">{{ item.p_weight }}</text>
-                        </view>
-                        <view class="plan-row" v-if="item.enter_count">
-                            <text class="plan-row-label">进厂前装车</text>
-                            <text class="plan-row-value">{{ item.enter_count }}</text>
-                        </view>
-                        <view class="plan-row" v-if="item.expect_weight > 0">
-                            <text class="plan-row-label">期望重量</text>
-                            <text class="plan-row-value">{{ item.expect_weight }}</text>
-                        </view>
-                        <view class="plan-row" v-if="item.confirmed">
-                            <text class="plan-row-label">装卸确认</text>
-                            <text class="plan-row-value warn">
-                                {{ item.seal_no || '已确认' }}{{ item.drop_take_zone_name ? (' · ' + item.drop_take_zone_name) : '' }}
-                            </text>
-                        </view>
+                    <view class="plan-meta">
+                        <text class="meta-item">{{ driver_name(item) }}</text>
+                        <text class="meta-sep">·</text>
+                        <text class="meta-item phone" :data-phone="driver_phone(item)" @click="on_copy_phone">{{ driver_phone(item) }}</text>
+                    </view>
+
+                    <view class="plan-facts">
+                        <text class="fact no" v-if="item.register_number != null">No.{{ item.register_number }}</text>
+                        <text class="fact" v-if="item.register_time">排号 {{ short_time(item.register_time) }}</text>
+                        <text class="fact ok" v-if="item.call_time">叫号 {{ short_time(item.call_time) }}</text>
+                        <text class="fact" v-if="item.enter_time">一次重 {{ item.p_weight }}</text>
+                        <text class="fact" v-if="item.enter_count">进厂前 {{ item.enter_count }}</text>
+                        <text class="fact" v-if="item.expect_weight > 0">期望 {{ item.expect_weight }}</text>
+                        <text class="fact warn" v-if="item.confirmed">
+                            {{ item.seal_no || '已确认' }}{{ item.drop_take_zone_name ? ('·' + item.drop_take_zone_name) : '' }}
+                        </text>
                     </view>
 
                     <view class="plan-actions" v-if="item.register_time">
                         <template v-if="!item.call_time">
-                            <view class="act success" @click="call_vehicle(item)">
+                            <view class="act success" :data-pindex="p_index" @click="on_call_vehicle">
                                 <text class="act-text">叫号</text>
                             </view>
-                            <view class="act danger" @click="prepare_pass_vehicle(item)">
+                            <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
                                 <text class="act-text">过号</text>
                             </view>
                         </template>
                         <template v-else-if="!item.enter_time">
-                            <view class="act danger" @click="prepare_pass_vehicle(item)">
+                            <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
                                 <text class="act-text">过号</text>
                             </view>
                             <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
-                                @click="prepare_enter_vehicle(item)">
+                                :data-pindex="p_index" @click="on_enter_vehicle">
                                 <text class="act-text">进厂</text>
                             </view>
                         </template>
                         <template v-else>
-                            <view class="act warn" @click="prepare_confirm_vehicle(item)">
+                            <view class="act warn" :data-pindex="p_index" @click="on_confirm_vehicle">
                                 <text class="act-text">装卸货</text>
                             </view>
-                            <view class="act danger" @click="prepare_enter_vehicle(item, true)">
+                            <view class="act danger" :data-pindex="p_index" data-exit="1" @click="on_enter_vehicle">
                                 <text class="act-text">撤销进厂</text>
                             </view>
                             <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
-                                @click="prepare_manual_weight(item)">
+                                :data-pindex="p_index" @click="on_manual_weight">
                                 <text class="act-text">计量</text>
                             </view>
                         </template>
-                        <view class="act primary" @click="prepare_sc_confirm(item)">
+                        <view class="act primary" :data-pindex="p_index" @click="on_sc_confirm">
                             <text class="act-text">审批</text>
                         </view>
-                        <view class="act warn" @click="nav_to_fc(item)">
+                        <view class="act warn" :data-pindex="p_index" @click="on_nav_fc">
                             <text class="act-text">检查</text>
                         </view>
                         <view class="act success" v-if="item.enter_attachment"
-                            @click="show_image(item.enter_attachment)">
+                            :data-pindex="p_index" @click="on_show_attach">
                             <text class="act-text">磅单</text>
                         </view>
                     </view>
@@ -191,8 +167,8 @@
     </fui-modal>
     <fui-bottom-popup :show="show_zone_select" @close="show_zone_select = false" z-index="1002">
         <fui-list>
-            <fui-list-cell v-for="item in zones" :key="item.id" arrow
-                @click="zone_name = item.name; show_zone_select = false">
+            <fui-list-cell v-for="(item, index) in zones" :key="item.id" :index="index" arrow
+                @click="on_pick_zone">
                 {{ item.name }}
             </fui-list-cell>
         </fui-list>
@@ -277,6 +253,96 @@ export default {
         },
         driver_phone: function (item) {
             return (item && item.driver && item.driver.phone) ? item.driver.phone : '-';
+        },
+        short_time: function (val) {
+            if (!val) {
+                return '-';
+            }
+            const text = String(val);
+            if (text.length >= 16) {
+                return text.slice(5, 16);
+            }
+            return text;
+        },
+        get_plan_by_event: function (e) {
+            const pindex = Number(e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.pindex
+                : -1);
+            const item = (this.plans || [])[pindex];
+            if (!item) {
+                uni.showToast({ title: '未找到车辆，请重试', icon: 'none' });
+                return null;
+            }
+            return item;
+        },
+        on_copy_phone: function (e) {
+            const phone = e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.phone
+                : '';
+            if (!phone || phone === '-') {
+                return;
+            }
+            this.copy_text(phone);
+        },
+        on_call_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.call_vehicle(item);
+            }
+        },
+        on_pass_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_pass_vehicle(item);
+            }
+        },
+        on_enter_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (!item) {
+                return;
+            }
+            const is_exit = !!(e && e.currentTarget && e.currentTarget.dataset
+                && (e.currentTarget.dataset.exit === '1' || e.currentTarget.dataset.exit === 1));
+            this.prepare_enter_vehicle(item, is_exit);
+        },
+        on_confirm_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_confirm_vehicle(item);
+            }
+        },
+        on_manual_weight: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_manual_weight(item);
+            }
+        },
+        on_sc_confirm: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_sc_confirm(item);
+            }
+        },
+        on_nav_fc: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.nav_to_fc(item);
+            }
+        },
+        on_show_attach: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item && item.enter_attachment) {
+                this.show_image(item.enter_attachment);
+            }
+        },
+        on_pick_zone: function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const item = (this.zones || [])[index];
+            if (!item) {
+                return;
+            }
+            this.zone_name = item.name;
+            this.show_zone_select = false;
         },
         on_uncalled_change: function (e) {
             this.only_show_uncalled = !!(e && e.detail && e.detail.value);
@@ -574,30 +640,29 @@ export default {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 16rpx 18rpx;
-    margin-bottom: 12rpx;
+    padding: 10rpx 14rpx;
+    margin-bottom: 8rpx;
     background: #F8F9FD;
     border: 1rpx solid #EEF1F8;
-    border-radius: 14rpx;
+    border-radius: 12rpx;
 }
 .filter-label {
-    font-size: 26rpx;
+    font-size: 24rpx;
     color: #3A4256;
     font-weight: 600;
 }
 .plan-card {
     background: #F8F9FD;
     border: 1rpx solid #EEF1F8;
-    border-radius: 18rpx;
-    padding: 18rpx;
-    margin-bottom: 12rpx;
+    border-radius: 14rpx;
+    padding: 10rpx 12rpx 8rpx;
+    margin-bottom: 8rpx;
 }
 .plan-top {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 10rpx;
-    margin-bottom: 12rpx;
+    margin-bottom: 4rpx;
 }
 .plan-plates {
     flex: 1;
@@ -605,22 +670,22 @@ export default {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 8rpx;
 }
 .plate-tag {
-    padding: 4rpx 12rpx;
-    border-radius: 6rpx;
+    padding: 2rpx 10rpx;
+    margin-right: 6rpx;
+    border-radius: 4rpx;
     background: #F5D000;
     color: #111111;
-    font-size: 24rpx;
+    font-size: 22rpx;
     font-weight: 800;
     letter-spacing: 1rpx;
     border: 2rpx solid #111111;
-    line-height: 1.2;
+    line-height: 1.25;
 }
 .status-tag {
     flex-shrink: 0;
-    padding: 6rpx 12rpx;
+    padding: 2rpx 10rpx;
     border-radius: 999rpx;
 }
 .status-tag.wait {
@@ -633,7 +698,7 @@ export default {
     background: rgba(70, 92, 255, 0.12);
 }
 .status-tag-text {
-    font-size: 20rpx;
+    font-size: 18rpx;
     font-weight: 700;
 }
 .status-tag.wait .status-tag-text {
@@ -645,130 +710,117 @@ export default {
 .status-tag.enter .status-tag-text {
     color: #2F3FCF;
 }
-.plan-company {
-    display: block;
-    font-size: 28rpx;
-    color: #1A1F36;
-    font-weight: 700;
-    line-height: 1.3;
-}
-.plan-stuff {
-    display: block;
-    margin-top: 4rpx;
-    font-size: 22rpx;
-    color: #6B7280;
-}
-.plan-stats {
+.plan-title-row {
     display: flex;
     flex-direction: row;
-    margin-top: 14rpx;
-    background: #FFFFFF;
-    border-radius: 14rpx;
-    border: 1rpx solid #EEF1F8;
-    overflow: hidden;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 2rpx;
 }
-.plan-stat {
-    flex: 1;
-    min-width: 0;
-    padding: 14rpx 8rpx;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4rpx;
-    border-right: 1rpx solid #F2F4FA;
-}
-.plan-stat:last-child {
-    border-right: none;
-}
-.plan-stat.link:active {
-    background: #F5F7FC;
-}
-.plan-stat-label {
-    font-size: 20rpx;
-    color: #9AA3B8;
-}
-.plan-stat-value {
+.plan-company {
     font-size: 24rpx;
     color: #1A1F36;
     font-weight: 700;
-    max-width: 100%;
+    line-height: 1.25;
+    max-width: 70%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.plan-stat-value.phone {
-    color: #465CFF;
+.plan-stuff {
+    margin-left: 10rpx;
+    font-size: 20rpx;
+    color: #6B7280;
+    line-height: 1.25;
 }
-.plan-rows {
-    margin-top: 12rpx;
-    padding: 4rpx 4rpx 0;
-}
-.plan-row {
+.plan-meta {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16rpx;
-    padding: 8rpx 2rpx;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 2rpx;
 }
-.plan-row-label {
-    flex-shrink: 0;
-    font-size: 22rpx;
-    color: #9AA3B8;
-}
-.plan-row-value {
-    flex: 1;
-    min-width: 0;
-    text-align: right;
-    font-size: 22rpx;
-    color: #3A4256;
+.meta-item {
+    font-size: 20rpx;
+    color: #4A5568;
     font-weight: 600;
-    word-break: break-all;
+    line-height: 1.3;
 }
-.plan-row-value.ok {
+.meta-item.phone {
+    color: #465CFF;
+}
+.meta-sep {
+    margin: 0 6rpx;
+    color: #C5CAD5;
+    font-size: 20rpx;
+}
+.plan-facts {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 4rpx;
+}
+.fact {
+    margin: 2rpx 8rpx 2rpx 0;
+    padding: 2rpx 8rpx;
+    border-radius: 6rpx;
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    font-size: 18rpx;
+    color: #6B7280;
+    line-height: 1.3;
+}
+.fact.no {
+    padding: 0 4rpx 0 0;
+    background: transparent;
+    border: none;
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 800;
+    letter-spacing: 0.5rpx;
+    line-height: 1.2;
+}
+.fact.ok {
     color: #1FA85A;
+    border-color: rgba(45, 190, 108, 0.25);
+    background: rgba(45, 190, 108, 0.08);
 }
-.plan-row-value.warn {
+.fact.warn {
     color: #FF4D4F;
+    border-color: rgba(255, 77, 79, 0.25);
+    background: rgba(255, 77, 79, 0.06);
 }
 .plan-actions {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 10rpx;
-    margin-top: 14rpx;
-    padding-top: 14rpx;
+    margin-top: 6rpx;
+    padding-top: 6rpx;
     border-top: 1rpx solid #EEF1F8;
 }
 .act {
-    flex: 1 1 28%;
-    min-width: 28%;
-    height: 64rpx;
-    padding: 0 12rpx;
-    border-radius: 12rpx;
+    width: 20%;
+    box-sizing: border-box;
+    padding: 3rpx;
+    height: 54rpx;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-sizing: border-box;
-}
-.act.success { background: #2DBE6C; }
-.act.danger { background: #FF4D4F; }
-.act.primary { background: #465CFF; }
-.act.warn { background: #FF8A2B; }
-.act.ghost {
-    flex: 0 0 auto;
-    min-width: 0;
-    background: #FFFFFF;
-    border: 1rpx solid #D8DEEA;
 }
 .act-text {
-    font-size: 24rpx;
+    width: 100%;
+    height: 48rpx;
+    line-height: 48rpx;
+    text-align: center;
+    border-radius: 8rpx;
+    font-size: 20rpx;
     color: #FFFFFF;
     font-weight: 700;
 }
-.act-text.ghost {
-    color: #6B7280;
-}
+.act.success .act-text { background: #2DBE6C; }
+.act.danger .act-text { background: #FF4D4F; }
+.act.primary .act-text { background: #465CFF; }
+.act.warn .act-text { background: #FF8A2B; }
 .stamp-card {
     background: #F8F9FD;
     border: 1rpx solid #EEF1F8;
