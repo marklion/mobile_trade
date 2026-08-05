@@ -862,8 +862,12 @@ export default {
             this.refresh_detail();
         },
         refresh_approval_projects: async function () {
+            if (!this.$has_module('approval')) {
+                this.approval_projects = [];
+                return;
+            }
             try {
-                const ret = await this.$send_req('/approval/get_approval_projects', {});
+                const ret = await this.$send_req('/approval/get_approval_projects', {}, false, true);
                 this.approval_projects = ret.projects || [];
             } catch (err) {
                 console.warn('refresh_approval_projects failed', err);
