@@ -2,7 +2,6 @@
 <view class="list-show">
     <view class="list-search" v-if="search_key && !hide_search">
         <view class="list-search-box">
-            <label class="list-search-label" :for="search_input_id">搜索</label>
             <fui-icon name="search" size="32" color="#8A94A6"></fui-icon>
             <input class="list-search-input" type="text" confirm-type="search"
                 :id="search_input_id" :name="search_input_id"
@@ -173,6 +172,7 @@ export default {
 <style>
 .list-show {
     width: 100%;
+    height: 100%;
 }
 
 .list-search {
@@ -193,18 +193,6 @@ export default {
     box-shadow: 0 6rpx 18rpx rgba(40, 58, 120, 0.04);
     box-sizing: border-box;
     position: relative;
-}
-
-.list-search-label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
 }
 
 .list-search-input {
