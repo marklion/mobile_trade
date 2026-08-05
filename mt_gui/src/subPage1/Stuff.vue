@@ -1,10 +1,467 @@
 <template>
-<view>
-    <u-subsection :list="seg_list" :current="cur_seg" @change="seg_change"></u-subsection>
-    <u-cell v-if="cur_seg == 0 && show_scope_switch && stat_scopes.length > 1" title="操作主体" :value="current_scope_name || '请选择公司'" isLink @click="open_scope_picker"></u-cell>
+<view class="stuff-page" :class="{ 'has-fab': cur_seg == 0, 'has-bl-bar': cur_seg == 2, 'page-scroll': cur_seg !== 0 }">
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+        </view>
+        <view class="hero-top">
+            <view class="hero-copy">
+                <text class="hero-hello">物料管理</text>
+                <text class="hero-sub">{{ current_seg_name || '物料与策略' }}</text>
+            </view>
+        </view>
+    </view>
+
+    <view class="body">
+        <view class="filter-shell">
+            <view class="seg-wrap">
+                <fui-segmented-control :values="seg_list" :current="cur_seg" color="#465CFF" @click="seg_change"></fui-segmented-control>
+            </view>
+            <view class="meta-card" v-if="cur_seg == 0 && show_scope_switch">
+                <view class="meta-row" @click="open_scope_picker">
+                    <view class="meta-left">
+                        <view class="meta-icon">
+                            <fui-icon name="community" size="30" color="#465CFF"></fui-icon>
+                        </view>
+                        <view class="meta-copy">
+                            <text class="meta-label">操作主体公司</text>
+                            <text class="meta-value">{{ current_scope_name || '请选择公司' }}</text>
+                        </view>
+                    </view>
+                    <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
+                </view>
+            </view>
+        </view>
+
+        <view class="list-shell list-shell-fill" v-if="cur_seg == 0">
+            <view class="section-head section-head-stack">
+                <view class="section-head-left">
+                    <view class="section-bar"></view>
+                    <view class="section-titles">
+                        <text class="section-title">物料列表</text>
+                        <text class="section-en">MATERIALS</text>
+                    </view>
+                </view>
+                <view class="section-search">
+                    <view class="section-search-box">
+                        <fui-icon name="search" size="28" color="#8A94A6"></fui-icon>
+                        <input class="section-search-input" type="text" confirm-type="search"
+                            placeholder="请输入搜索关键词" placeholder-class="section-search-ph"
+                            :value="stuff_search_input" @input="on_stuff_search_input"
+                            @confirm="on_stuff_search_confirm" />
+                        <fui-icon v-if="stuff_search_input" name="close" size="26" color="#C5CAD5"
+                            @click="clear_stuff_search"></fui-icon>
+                        <view class="section-search-btn" @tap.stop="on_stuff_search_confirm">
+                            <text class="section-search-btn-text">搜索</text>
+                        </view>
+                    </view>
+                </view>
+            </view>
+
+            <view class="list-fill">
+                <list-show :key="'stuff-' + (stat_context_company_id || 'default')" ref="stuff_ref" v-model="data2show2"
+                    :fetch_function="get_all_stuff" :fetch_params="[stat_context_company_id]" search_key="name"
+                    :hide_search="true" height="100%">
+                <view class="stuff-card" v-for="(item, s_index) in data2show2" :key="item.id || s_index">
+                    <view class="card-head">
+                        <view class="card-head-left">
+                            <view class="title-line">
+                                <text class="stuff-title">{{ item.name }}</text>
+                                <text class="status-pill st-buy" v-if="item.use_for_buy">采购</text>
+                                <text class="status-pill st-sale" v-else>销售</text>
+                                <text class="status-pill st-fapiao" v-if="item.concern_fapiao">发票</text>
+                            </view>
+                            <view class="meta-line" v-if="item.comment">
+                                <text class="meta-line-text">{{ item.comment }}</text>
+                            </view>
+                            <view class="meta-line" v-if="item.expect_count">
+                                <text class="meta-line-text">期望装载 {{ item.expect_count }}</text>
+                            </view>
+                        </view>
+                        <view class="price-box">
+                            <text class="price-label">单价（元）</text>
+                            <text class="price-text">{{ format_price(item.price) }}</text>
+                        </view>
+                    </view>
+
+                    <view class="chip-row" v-if="has_stuff_chips(item)">
+                        <text class="chip soft" v-if="item.close_time">关闭 {{ item.close_time }}（{{ item.close_today ? '当日' : '前日' }}）</text>
+                        <text class="chip soft warn" v-if="item.delay_days">允许迟到 {{ item.delay_days }} 天</text>
+                        <text class="chip soft purple" v-if="item.change_last_minutes">{{ next_price_show(item) }}</text>
+                    </view>
+
+                    <view class="action-bar">
+                        <view class="action-grid">
+                            <view class="action-cell">
+                                <view class="action-btn purple" :data-sindex="s_index" @click="on_card_update">
+                                    <text class="action-btn-text">修改</text>
+                                </view>
+                            </view>
+                            <view class="action-cell">
+                                <view class="action-btn danger" :data-sindex="s_index" @click="on_card_delete">
+                                    <text class="action-btn-text">删除</text>
+                                </view>
+                            </view>
+                            <view class="action-cell">
+                                <view class="action-btn warn" :data-sindex="s_index" @click="on_card_change_price">
+                                    <text class="action-btn-text">调价</text>
+                                </view>
+                            </view>
+                            <view class="action-cell">
+                                <view class="action-btn primary" :data-sindex="s_index" @click="on_card_history">
+                                    <text class="action-btn-text">调价历史</text>
+                                </view>
+                            </view>
+                            <view class="action-cell" v-if="!item.change_last_minutes">
+                                <view class="action-btn success" :data-sindex="s_index" @click="on_card_next_price">
+                                    <text class="action-btn-text">定时调价</text>
+                                </view>
+                            </view>
+                            <view class="action-cell" v-else>
+                                <view class="action-btn success" :data-sindex="s_index" @click="on_card_cancel_next_price">
+                                    <text class="action-btn-text">取消定时</text>
+                                </view>
+                            </view>
+                            <view class="action-cell">
+                                <view class="action-btn primary" :data-sindex="s_index" @click="on_card_toggle_expand">
+                                    <text class="action-btn-text">{{ is_expanded(item.id) ? '收起配置' : '展开配置' }}</text>
+                                </view>
+                            </view>
+                        </view>
+                    </view>
+
+                    <view class="config-panel" v-if="is_expanded(item.id)">
+                        <view class="config-section">
+                            <view class="config-section-head">
+                                <view class="config-section-bar"></view>
+                                <text class="config-section-title">业务开关</text>
+                            </view>
+                            <view class="switch-grid">
+                                <view class="switch-item">
+                                    <text class="switch-label">需要安检</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.need_sc" @change="change_need_sc($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">进厂前重量</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.need_enter_weight" @change="change_need_enter_weight($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">需要考试</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.need_exam" @change="change_need_exam($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">不用排号</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.no_need_register" @change="change_no_need_register($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">延迟结算</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.checkout_delay" @change="change_checkout_delay($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">手动计量</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.manual_weight" @change="change_manual_weight($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">期望重量</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.need_expect_weight" @change="change_need_expect_weight($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">自动确认装卸</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.auto_confirm_goods" @change="change_auto_confirm_goods($event, item)"></fui-switch>
+                                </view>
+                                <view class="switch-item">
+                                    <text class="switch-label">司机签名</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="item.need_driver_sign" @change="change_need_driver_sign($event, item)"></fui-switch>
+                                </view>
+                            </view>
+                        </view>
+
+                        <view class="config-section" v-if="item.manual_weight">
+                            <view class="config-section-head">
+                                <view class="config-section-bar"></view>
+                                <text class="config-section-title">磅单号前缀</text>
+                            </view>
+                            <view class="field-card">
+                                <view class="field-row">
+                                    <fui-input v-model="item.ticket_prefix" placeholder="请输入磅单号前缀" background="transparent" :padding="['0', '0']"></fui-input>
+                                    <view class="field-btn" :data-sindex="s_index" @click="on_save_ticket_prefix">
+                                        <text class="field-btn-text">保存</text>
+                                    </view>
+                                </view>
+                            </view>
+                        </view>
+
+                        <view class="config-section">
+                            <view class="config-section-head">
+                                <view class="config-section-bar"></view>
+                                <text class="config-section-title">延迟结算</text>
+                            </view>
+                            <view class="field-card">
+                                <view class="field-row">
+                                    <view class="field-pick" :data-sindex="s_index" @click="on_open_delay_picker">
+                                        <text class="field-pick-label">结算时间点</text>
+                                        <text class="field-pick-value" :class="{ placeholder: !item.delay_checkout_time }">
+                                            {{ item.delay_checkout_time || '请选择时间' }}
+                                        </text>
+                                    </view>
+                                    <view class="field-btn success" :data-sindex="s_index" @click="on_batch_checkout">
+                                        <text class="field-btn-text">一键结算</text>
+                                    </view>
+                                </view>
+                            </view>
+                            <fui-date-picker :scaleRatio="0.7" :value="item.delay_checkout_time" type="7"
+                                :show="showDelayCheckoutPicker === item.id"
+                                @change="on_confirm_delay_time"
+                                @cancel="showDelayCheckoutPicker = null" />
+                        </view>
+
+                        <view class="config-section">
+                            <view class="config-section-head">
+                                <view class="config-section-bar"></view>
+                                <text class="config-section-title">第二单位</text>
+                            </view>
+                            <view class="field-card">
+                                <view class="unit-grid">
+                                    <view class="unit-cell">
+                                        <text class="unit-caption">单位</text>
+                                        <fui-input v-model="item.second_unit" placeholder="如吨" background="#F7F8FC" :padding="['12rpx', '16rpx']"></fui-input>
+                                    </view>
+                                    <view class="unit-cell">
+                                        <text class="unit-caption">系数</text>
+                                        <view class="unit-number">
+                                            <fui-input-number v-model="item.coefficient" :digit="2" :step="0.1" :value="1.00" :min="0" :max="999999"></fui-input-number>
+                                        </view>
+                                    </view>
+                                    <view class="unit-cell">
+                                        <text class="unit-caption">小数位</text>
+                                        <view class="unit-number">
+                                            <fui-input-number v-model="item.second_unit_decimal" :digit="0" :step="1" :value="2" :min="0" :max="6"></fui-input-number>
+                                        </view>
+                                    </view>
+                                </view>
+                                <view class="field-save" :data-sindex="s_index" @click="on_save_unit_config">
+                                    <text class="field-save-text">保存第二单位配置</text>
+                                </view>
+                            </view>
+                        </view>
+
+                        <view class="config-section">
+                            <view class="config-section-head">
+                                <view class="config-section-bar"></view>
+                                <text class="config-section-title">装卸区域</text>
+                                <view class="zone-add-link" :data-sindex="s_index" @click="on_add_zone">
+                                    <text class="zone-add-link-text">+ 添加</text>
+                                </view>
+                            </view>
+                            <view class="field-card">
+                                <view class="zone-wrap" v-if="item.drop_take_zones && item.drop_take_zones.length">
+                                    <view class="zone-chip" v-for="zone in item.drop_take_zones" :key="zone.id">
+                                        <text class="zone-chip-text">{{ zone.name }}</text>
+                                        <view class="zone-close" :data-zid="zone.id" @click.stop="on_del_zone">
+                                            <fui-icon name="close" size="22" color="#9AA3B8"></fui-icon>
+                                        </view>
+                                    </view>
+                                </view>
+                                <view class="zone-empty" v-else>
+                                    <text class="zone-empty-text">暂无装卸区域，点击右上角添加</text>
+                                </view>
+                            </view>
+                        </view>
+                    </view>
+                </view>
+            </list-show>
+            </view>
+        </view>
+
+        <view class="list-shell" v-else-if="cur_seg == 1">
+            <view class="section-head">
+                <view class="section-head-left">
+                    <view class="section-bar"></view>
+                    <view class="section-titles">
+                        <text class="section-title">全局策略</text>
+                        <text class="section-en">POLICIES</text>
+                    </view>
+                </view>
+            </view>
+            <view class="policy-body">
+                <view class="policy-group">
+                    <view class="policy-group-head">
+                        <view class="policy-group-bar"></view>
+                        <text class="policy-group-title">调价策略</text>
+                    </view>
+                    <view class="policy-card">
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">默认调价影响计划</text>
+                                <text class="policy-desc">调价时默认勾选影响未关闭订单</text>
+                            </view>
+                            <u-switch v-model="price_profile.default_impact_plan" @change="update_price_profile"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">隐藏调价影响计划开关</text>
+                                <text class="policy-desc">调价弹窗不再展示“影响计划”选项</text>
+                            </view>
+                            <u-switch v-model="price_profile.hide_impact_selector" @change="update_price_profile"></u-switch>
+                        </view>
+                        <view class="policy-row last">
+                            <view class="policy-copy">
+                                <text class="policy-title">允许已完成订单调价</text>
+                                <text class="policy-desc">开启后可对已完成订单修改单价</text>
+                            </view>
+                            <u-switch v-model="change_finished_order_price_switch" @change="set_change_finished_order_price_switch"></u-switch>
+                        </view>
+                    </view>
+                </view>
+
+                <view class="policy-group">
+                    <view class="policy-group-head">
+                        <view class="policy-group-bar"></view>
+                        <text class="policy-group-title">验款与资质</text>
+                    </view>
+                    <view class="policy-card">
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">检查对方资质</text>
+                                <text class="policy-desc">下单/操作时校验客商资质材料</text>
+                            </view>
+                            <u-switch v-model="qualification_check" @change="set_company_qualification"></u-switch>
+                        </view>
+                        <view class="policy-row last">
+                            <view class="policy-copy">
+                                <text class="policy-title">验款权限改为余额管理</text>
+                                <text class="policy-desc">验款能力与余额管理模块对齐</text>
+                            </view>
+                            <u-switch v-model="verify_pay_by_cash" @change="set_verify_pay_config"></u-switch>
+                        </view>
+                    </view>
+                </view>
+
+                <view class="policy-group">
+                    <view class="policy-group-head">
+                        <view class="policy-group-bar"></view>
+                        <text class="policy-group-title">现场与计量</text>
+                    </view>
+                    <view class="policy-card">
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">排队车辆界面操作安检</text>
+                                <text class="policy-desc">在排队车辆页直接处理安检</text>
+                            </view>
+                            <u-switch v-model="show_sc_in_field" @change="set_show_sc_in_field"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">采购严格模式</text>
+                                <text class="policy-desc">采购流程按更严格规则校验</text>
+                            </view>
+                            <u-switch v-model="buy_config_hard" @change="set_buy_config_hard"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">磅单显示装卸车地点</text>
+                                <text class="policy-desc">磅单打印/展示装卸位置信息</text>
+                            </view>
+                            <u-switch v-model="ticket_hasOrhasnt_place" @change="set_ticket_hasOrhasnt_place"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">关闭门禁权限</text>
+                                <text class="policy-desc">关闭后不再走门禁权限控制</text>
+                            </view>
+                            <u-switch v-model="access_control_permission" @change="set_access_control_permission"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">关闭磅上闸杆</text>
+                                <text class="policy-desc">关闭后不再控制磅上闸杆</text>
+                            </view>
+                            <u-switch v-model="barriergate_control_permission" @change="set_barriergate_control_permission"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">卸车地点支持细节输入</text>
+                                <text class="policy-desc">允许填写更细的卸车位置说明</text>
+                            </view>
+                            <u-switch v-model="support_location_detail" @change="set_support_location_detail"></u-switch>
+                        </view>
+                        <view class="policy-row last">
+                            <view class="policy-copy">
+                                <text class="policy-title">需要司机确认装卸货</text>
+                                <text class="policy-desc">装卸完成后需司机确认</text>
+                            </view>
+                            <u-switch v-model="need_driver_confirm" @change="set_need_driver_confirm"></u-switch>
+                        </view>
+                    </view>
+                </view>
+
+                <view class="policy-group">
+                    <view class="policy-group-head">
+                        <view class="policy-group-bar"></view>
+                        <text class="policy-group-title">订单与通知</text>
+                    </view>
+                    <view class="policy-card">
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">只推送消息给可写角色</text>
+                                <text class="policy-desc">消息仅发给具备写权限的角色</text>
+                            </view>
+                            <u-switch v-model="push_messages_writable_roles" @change="set_push_messages_writable_roles"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">允许订单回退</text>
+                                <text class="policy-desc">支持将订单状态回退到上一环节</text>
+                            </view>
+                            <u-switch v-model="is_allowed_order_return" @change="set_is_allowed_order_return"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">订单列表显示价格</text>
+                                <text class="policy-desc">列表页展示订单单价信息</text>
+                            </view>
+                            <u-switch v-model="is_the_order_display_price" @change="set_the_order_display_price"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
+                                <text class="policy-title">订单详情隐藏价格</text>
+                                <text class="policy-desc">详情页对价格做脱敏展示</text>
+                            </view>
+                            <u-switch v-model="hide_order_detail_price" @change="set_hide_order_detail_price"></u-switch>
+                        </view>
+                        <view class="policy-row last">
+                            <view class="policy-copy">
+                                <text class="policy-title">限制重复订单</text>
+                                <text class="policy-desc">相同条件下禁止重复创建订单</text>
+                            </view>
+                            <u-switch v-model="dup_not_permit" @change="set_dup_not_permit"></u-switch>
+                        </view>
+                    </view>
+                </view>
+            </view>
+        </view>
+
+        <view class="list-shell blacklist-shell" v-else-if="cur_seg == 2">
+            <view class="section-head">
+                <view class="section-head-left">
+                    <view class="section-bar"></view>
+                    <view class="section-titles">
+                        <text class="section-title">黑名单</text>
+                        <text class="section-en">BLACKLIST</text>
+                    </view>
+                </view>
+            </view>
+            <BlackList ref="blacklist_ref" />
+        </view>
+    </view>
+
+    <view class="fab-add" v-if="cur_seg == 0" @click="open_add_stuff">
+        <text class="fab-add-text">新增</text>
+    </view>
+
     <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
         <fui-list>
-            <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
+            <fui-list-cell v-for="(s, index) in stat_scopes" :key="s.id" :index="index" arrow @click="on_choose_scope">
                 <view class="scope-row">
                     <view class="scope-name">{{ s.name }}</view>
                     <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#1E9FFF"></fui-icon>
@@ -12,284 +469,7 @@
             </fui-list-cell>
         </fui-list>
     </fui-bottom-popup>
-    <view v-if="cur_seg == 0">
-        <view class="stuff-top-actions">
-            <fui-button type="success" text="新增" @click="show_stuff_fetch = true; is_update = false"></fui-button>
-        </view>
-        <list-show :key="`stuff-${stat_context_company_id || 'default'}`" style="background-color: aliceblue;" ref="stuff_ref" v-model="data2show2" :fetch_function="get_all_stuff" :fetch_params="[stat_context_company_id]" search_key="name" height="82vh">
-            <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="item.name" :tag="item.price + ''" v-for="(item, index) in data2show2" :key="index">
-                <view style="display:flex;flex-wrap: wrap; padding: 0 13rpx;">
-                    <fui-tag v-if="item.comment" :text="item.comment" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
-                    <fui-tag v-if="item.expect_count" :text="'期望单车装载量:' + item.expect_count" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.close_time" :text="'自动关闭时间点:' + item.close_time + '(' +(item.close_today?'当日':'前日') + ')'" theme="plain" originLeft :scaleRatio="0.8" type="warning"></fui-tag>
-                    <fui-tag v-if="item.delay_days" :text="'允许迟到' + item.delay_days + '天'" theme="plain" originLeft :scaleRatio="0.8" type="danger"></fui-tag>
-                    <fui-tag v-if="item.use_for_buy" text="用于采购" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
-                    <fui-tag v-if="item.change_last_minutes" :text="next_price_show(item)" theme="plain" originLeft :scaleRatio="0.8" type="purple"></fui-tag>
-                    <fui-tag v-else text="用于销售" theme="plain" originLeft :scaleRatio="0.8" type="success"></fui-tag>
-                    <fui-tag v-if="item.concern_fapiao" text="关注发票" theme="plain" originLeft :scaleRatio="0.8" type="primary"></fui-tag>
-                </view>
-                <fui-white-space size="large"></fui-white-space>
-                <view style="display:flex;justify-content: space-around;">
-                    <fui-button text="修改" btnSize="mini" radius="0" @click="prepare_update(item)"></fui-button>
-                    <fui-button text="删除" type="danger" radius="0" btnSize="mini" @click="prepare_delete(item)"></fui-button>
-                    <fui-button text="调价" type="warning" radius="0" btnSize="mini" @click="prepare_change_price(item)"></fui-button>
-                    <fui-button text="调价历史" type="purple" radius="0" btnSize="mini" @click="prepare_history(item)"></fui-button>
-                    <fui-button v-if="!item.change_last_minutes" text="定时调价" type="success" radius="0" btnSize="mini" @click="prepare_next_price(item)"></fui-button>
-                    <fui-button v-else text="取消定时调价" type="success" radius="0" btnSize="mini" @click="prepare_cancel_next_price(item)"></fui-button>
-                </view>
-                <fui-white-space size="large"></fui-white-space>
-                <u-collapse>
-                    <u-collapse-item title="点击展开" name="Docs guide">
-                        <view>
-                            <fui-row>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="需要安检"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.need_sc" @change="change_need_sc($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="需要进厂前重量"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.need_enter_weight" @change="change_need_enter_weight($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                            </fui-row>
-                            <fui-white-space size="large"></fui-white-space>
-                            <fui-row>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="需要考试"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.need_exam" @change="change_need_exam($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="不用排号"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.no_need_register" @change="change_no_need_register($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                            </fui-row>
-                            <fui-white-space size="large"></fui-white-space>
-                            <fui-row>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="延迟结算"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.checkout_delay" @change="change_checkout_delay($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="手动计量"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.manual_weight" @change="change_manual_weight($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                                <fui-col v-if="item.manual_weight" :span="24">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="磅单号前缀"></fui-text>
-                                                <fui-input v-model="item.ticket_prefix" placeholder="请输入磅单号前缀"></fui-input>
-                                                <fui-button text="保存" btnSize="mini" type="primary" @click="save_ticket_prefix(item)"></fui-button>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                            </fui-row>
-                            <fui-white-space size="large"></fui-white-space>
-                            <fui-row>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="需要填写期望重量"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.need_expect_weight" @change="change_need_expect_weight($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                            </fui-row>
-                            <fui-white-space size="large"></fui-white-space>
-                            <fui-row>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="自动确认装卸货"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.auto_confirm_goods" @change="change_auto_confirm_goods($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                            </fui-row>
-                            <fui-row>
-                                <fui-col :span="12">
-                                    <fui-label>
-                                        <fui-list-cell>
-                                            <view class="fui-list__cell">
-                                                <fui-text size="28" text="需要司机签名"></fui-text>
-                                                <fui-switch :scaleRatio="0.7" :checked="item.need_driver_sign" @change="change_need_driver_sign($event,item)"></fui-switch>
-                                            </view>
-                                        </fui-list-cell>
-                                    </fui-label>
-                                </fui-col>
-                            </fui-row>
-                            <fui-white-space size="large"></fui-white-space>
-                            <view>
-                                <fui-row>
-                                    <fui-col :span="24">
-                                        <fui-label>
-                                            <fui-list-cell>
-                                                <view class="fui-list__cell" @click="showDelayCheckoutPicker = item.id">
-                                                    <fui-text size="28">延迟结算时间点：
-                                                        <text style="font-size: 34rpx; color: #666;">{{ item.delay_checkout_time || '请选择时间' }}</text>
-                                                    </fui-text>
-                                                </view>
-                                                <fui-date-picker :scaleRatio="0.7" :value="item.delay_checkout_time" type="7" :show="showDelayCheckoutPicker === item.id" @change="confirm_checkout_delay_time($event, item)" @cancel="showDelayCheckoutPicker = null" />
-                                                <fui-button text="一键结算" btnSize="mini" type="success" @click="handleBatchCheckout(item)" />
-                                            </fui-list-cell>
-                                        </fui-label>
-                                    </fui-col>
-                                </fui-row>
-                            </view>
-                            <fui-white-space size="large"></fui-white-space>
-                            <view>
-                                <fui-row>
-                                    <fui-col :span="24">
-                                        <fui-label>
-                                            <fui-list-cell>
-                                                <view class="fui-list__cell">
-                                                    <fui-text size="28" text="第二单位配置"></fui-text>
-                                                    <fui-input v-model="item.second_unit" placeholder="请输入单位" style="flex: 1; margin-left: 20rpx;" />
-                                                </view>
-                                            </fui-list-cell>
-                                        </fui-label>
-                                    </fui-col>
-                                </fui-row>
-                                <fui-row>
-                                    <fui-col :span="24">
-                                        <fui-label>
-                                            <fui-list-cell>
-                                                <view class="fui-list__cell">
-                                                    <fui-text size="28" text="系数配置"></fui-text>
-                                                    <fui-input-number v-model="item.coefficient" :digit="2" :step="0.1" :value="1.00" :min="0" :max="999999" style="flex: 1; margin-left: 20rpx;" />
-                                                </view>
-                                            </fui-list-cell>
-                                        </fui-label>
-                                    </fui-col>
-                                </fui-row>
-                                <fui-row>
-                                    <fui-col :span="24">
-                                        <fui-label>
-                                            <fui-list-cell>
-                                                <view class="fui-list__cell">
-                                                    <fui-text size="28" text="小数位"></fui-text>
-                                                    <fui-input-number v-model="item.second_unit_decimal" :digit="0" :step="1" :value="2" :min="0" :max="6" style="flex: 1; margin-left: 20rpx;" />
-                                                </view>
-                                            </fui-list-cell>
-                                        </fui-label>
-                                    </fui-col>
-                                </fui-row>
-                                <view class="btn-wrapper">
-                                    <fui-button text="保存配置" type="primary" btnSize="medium" @click="set_scunit_coe_configuration(item)" />
-                                </view>
-                            </view>
-                            <fui-divider text="装卸区域配置"></fui-divider>
-                            <view style="display: flex; flex-wrap:wrap;">
-                                <fui-tag v-for="zone in item.drop_take_zones" :key="zone.id" :text="zone.name" theme="light" margin-right="24" :padding="['12rpx','20rpx']">
-                                    <view class="fui-close__icon">
-                                        <fui-icon name="close" color="#465CFF" :size="32" @click="prepare_del_zone(zone.id)"></fui-icon>
-                                    </view>
-                                </fui-tag>
-                                <fui-button text="添加" btnSize="mini" type="primary" @click="prepare_add_zone(item)"></fui-button>
-                            </view>
-                            <fui-white-space size="large"></fui-white-space>
-                        </view>
-                    </u-collapse-item>
-                </u-collapse>
-            </fui-card>
-        </list-show>
-    </view>
-    <view v-else-if="cur_seg == 1">
-        <u-cell title="默认调价影响计划">
-            <u-switch slot="value" v-model="price_profile.default_impact_plan" @change="update_price_profile"></u-switch>
-        </u-cell>
-        <u-cell title="隐藏调价影响计划开关">
-            <u-switch slot="value" v-model="price_profile.hide_impact_selector" @change="update_price_profile"></u-switch>
-        </u-cell>
-        <u-cell title="检查对方资质">
-            <u-switch slot="value" v-model="qualification_check" @change="set_company_qualification"></u-switch>
-        </u-cell>
-        <u-cell title="验款权限改为余额管理">
-            <u-switch slot="value" v-model="verify_pay_by_cash" @change="set_verify_pay_config"></u-switch>
-        </u-cell>
-        <u-cell title="排队车辆界面操作安检">
-            <u-switch slot="value" v-model="show_sc_in_field" @change="set_show_sc_in_field"></u-switch>
-        </u-cell>
-        <u-cell title="采购严格模式">
-            <u-switch slot="value" v-model="buy_config_hard" @change="set_buy_config_hard"></u-switch>
-        </u-cell>
-        <u-cell title="是否只推送消息给可写角色">
-            <u-switch slot="value" v-model="push_messages_writable_roles" @change="set_push_messages_writable_roles"></u-switch>
-        </u-cell>
-        <u-cell title="磅单上是否显示装卸车地点">
-            <u-switch slot="value" v-model="ticket_hasOrhasnt_place" @change="set_ticket_hasOrhasnt_place"></u-switch>
-        </u-cell>
-        <u-cell title="门禁权限是否关闭">
-            <u-switch slot="value" v-model="access_control_permission" @change="set_access_control_permission"></u-switch>
-        </u-cell>
-        <u-cell title="磅上闸杆是否关闭">
-            <u-switch slot="value" v-model="barriergate_control_permission" @change="set_barriergate_control_permission"></u-switch>
-        </u-cell>
-        <u-cell title="卸车地点支持细节输入">
-            <u-switch slot="value" v-model="support_location_detail" @change="set_support_location_detail"></u-switch>
-        </u-cell>
-        <u-cell title="是否允许订单回退">
-            <u-switch slot="value" v-model="is_allowed_order_return" @change="set_is_allowed_order_return"></u-switch>
-        </u-cell>
-        <u-cell title="订单列表是否显示价格">
-            <u-switch slot="value" v-model="is_the_order_display_price" @change="set_the_order_display_price"></u-switch>
-        </u-cell>
-        <u-cell title="订单详情是否隐藏价格">
-            <u-switch slot="value" v-model="hide_order_detail_price" @change="set_hide_order_detail_price"></u-switch>
-        </u-cell>
-        <u-cell title="是否允许已完成订单调价">
-            <u-switch slot="value" v-model="change_finished_order_price_switch" @change="set_change_finished_order_price_switch"></u-switch>
-        </u-cell>
-        <u-cell title="是否限制重复订单">
-            <u-switch slot="value" v-model="dup_not_permit" @change="set_dup_not_permit"></u-switch>
-        </u-cell>
-        <u-cell title="是否需要司机确认装卸货">
-            <u-switch slot="value" v-model="need_driver_confirm" @change="set_need_driver_confirm"></u-switch>
-        </u-cell>
-    </view>
-    <view v-else-if="cur_seg == 2">
-        <BlackList ref="blacklist_ref" />
-    </view>
+
     <fui-modal width="600" :show="show_zone_add" v-if="show_zone_add" @click="zone_add">
         <fui-form ref="zone_form" top="100">
             <fui-input required label="区域名称" borderTop placeholder="请输入区域名称" v-model="zone_req.zone_name"></fui-input>
@@ -308,9 +488,9 @@
             </fui-input>
             <fui-date-picker :show="show_close_time" type="6" @change="choose_time" @cancel="show_close_time = false"></fui-date-picker>
             <fui-form-item label="用于采购">
-                <view style="display: flex; align-items: center; gap: 20rpx;">
+                <view class="form-switch-row">
                     <u-switch v-model="stuff_ready_fetch.use_for_buy" @change="on_use_for_buy_change"></u-switch>
-                    <view v-if="stuff_ready_fetch.use_for_buy" style="display: flex; align-items: center; gap: 10rpx;">
+                    <view v-if="stuff_ready_fetch.use_for_buy" class="form-switch-extra">
                         <fui-text size="28" text="自动确认订单"></fui-text>
                         <u-switch v-model="stuff_ready_fetch.auto_confirm_order"></u-switch>
                     </view>
@@ -335,12 +515,11 @@
             <fui-form-item label="影响计划？" asterisk v-if="!price_profile.hide_impact_selector">
                 <u-switch v-model="stuff2change_price.to_plan"></u-switch>
             </fui-form-item>
-            <view v-if="stuff2change_price.to_plan"
-                style="margin: 8px 12px; padding: 10px; background: #FFF7E6; border: 1px solid #FFD591; border-radius: 4px; color: #874D00; font-size: 24rpx; line-height: 1.6;">
-                <view style="font-weight: bold; margin-bottom: 4px;">勾选"影响计划"后，未关闭订单的单价将按以下规则重算：</view>
-                <view>1. 合同已设置"一客一价"的订单：<text style="font-weight: bold;">保持原单价不变</text></view>
-                <view>2. 合同绑定了"优惠方案"的订单：按 <text style="font-weight: bold;">新价格 + 方案 delta</text> 重算</view>
-                <view>3. 其它订单：直接使用<text style="font-weight: bold;">新价格</text></view>
+            <view v-if="stuff2change_price.to_plan" class="price-tip">
+                <view class="price-tip-title">勾选"影响计划"后，未关闭订单的单价将按以下规则重算：</view>
+                <view>1. 合同已设置"一客一价"的订单：保持原单价不变</view>
+                <view>2. 合同绑定了"优惠方案"的订单：按 新价格 + 方案 delta 重算</view>
+                <view>3. 其它订单：直接使用新价格</view>
             </view>
         </fui-form>
     </fui-modal>
@@ -354,11 +533,11 @@
 
     <fui-date-picker :show="show_next_date" :minDate="today_date" :value="today_date" type="5" @change="set_next_date" @cancel="show_next_date = false"></fui-date-picker>
     <fui-bottom-popup :show="show_history" @close="show_history = false">
-        <view>
+        <view v-if="show_history">
             <list-show ref="history" v-model="data2show" :fetch_function="get_price_history" :fetch_params="[stuff_for_history.id, stat_context_company_id]" search_key="comment" height="40vh">
                 <u-cell v-for="(item, index) in data2show" :key="index" size="large" :title="item.operator" :value="item.new_price">
                     <template #label>
-                        <view style="display:flex;">
+                        <view class="history-tags">
                             <fui-tag :text="item.comment" theme="plain" :scaleRatio="0.8" type="purple"></fui-tag>
                             <fui-tag :text="item.time" theme="plain" :scaleRatio="0.8" type="danger"></fui-tag>
                         </view>
@@ -369,8 +548,6 @@
     </fui-bottom-popup>
 </view>
 </template>
-
-
 
 <script>
 import ListShow from '../components/ListShow.vue'
@@ -393,6 +570,8 @@ export default {
             showDelayCheckoutPicker: null,
             cur_seg: 0,
             seg_list: ['物料配置', '全局策略', '黑名单'],
+            expanded_ids: {},
+            stuff_search_input: '',
             stat_scopes: [],
             stat_context_company_id: null,
             show_scope_picker: false,
@@ -408,13 +587,6 @@ export default {
                 next_price: '',
                 next_comment: '',
                 next_time: '',
-            },
-            next_price_show: function (item) {
-                let ret = '';
-                let now = new Date();
-                now.setMinutes(now.getMinutes() + item.change_last_minutes);
-                ret = utils.dateFormatter(now, 'y-m-d h:i', 4, false) + '后，调价为' + item.next_price.toFixed(2);
-                return ret;
             },
             stuff_ready_fetch: {
                 name: '',
@@ -541,6 +713,9 @@ export default {
         }
     },
     computed: {
+        current_seg_name: function () {
+            return this.seg_list[this.cur_seg] || '';
+        },
         show_scope_switch: function () {
             return this.self_info
                 && this.self_info.company_is_group === true
@@ -558,6 +733,134 @@ export default {
         }
     },
     methods: {
+        format_price: function (price) {
+            const n = Number(price);
+            if (Number.isNaN(n)) {
+                return price == null ? '-' : String(price);
+            }
+            return n.toFixed(2);
+        },
+        has_stuff_chips: function (item) {
+            return !!(item && (item.close_time || item.delay_days || item.change_last_minutes));
+        },
+        next_price_show: function (item) {
+            let now = new Date();
+            now.setMinutes(now.getMinutes() + item.change_last_minutes);
+            return utils.dateFormatter(now, 'y-m-d h:i', 4, false) + '后，调价为' + Number(item.next_price).toFixed(2);
+        },
+        is_expanded: function (id) {
+            return !!this.expanded_ids[id];
+        },
+        get_stuff_by_event: function (e) {
+            const sindex = Number(e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.sindex
+                : -1);
+            const item = (this.data2show2 || [])[sindex];
+            if (!item) {
+                uni.showToast({ title: '未找到物料，请重试', icon: 'none' });
+                return null;
+            }
+            return item;
+        },
+        on_card_update: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.prepare_update(item);
+        },
+        on_card_delete: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.prepare_delete(item);
+        },
+        on_card_change_price: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.prepare_change_price(item);
+        },
+        on_card_history: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.prepare_history(item);
+        },
+        on_card_next_price: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.prepare_next_price(item);
+        },
+        on_card_cancel_next_price: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.prepare_cancel_next_price(item);
+        },
+        on_card_toggle_expand: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (!item) return;
+            this.$set(this.expanded_ids, item.id, !this.expanded_ids[item.id]);
+        },
+        on_save_ticket_prefix: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.save_ticket_prefix(item);
+        },
+        on_open_delay_picker: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.showDelayCheckoutPicker = item.id;
+        },
+        on_batch_checkout: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.handleBatchCheckout(item, e);
+        },
+        on_confirm_delay_time: function (event) {
+            const item = (this.data2show2 || []).find((row) => row.id === this.showDelayCheckoutPicker);
+            if (!item) return;
+            this.confirm_checkout_delay_time(event, item);
+        },
+        on_save_unit_config: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.set_scunit_coe_configuration(item);
+        },
+        on_add_zone: function (e) {
+            const item = this.get_stuff_by_event(e);
+            if (item) this.prepare_add_zone(item);
+        },
+        on_del_zone: function (e) {
+            const zid = Number(e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.zid
+                : 0);
+            if (zid) this.prepare_del_zone(zid);
+        },
+        on_choose_scope: function (e) {
+            const scope = (this.stat_scopes || [])[e.index];
+            if (scope) this.choose_stat_scope(scope.id);
+        },
+        open_add_stuff: function () {
+            this.is_update = false;
+            this.stuff_ready_fetch = {
+                name: '',
+                comment: undefined,
+                expect_count: undefined,
+                use_for_buy: false,
+                auto_confirm_order: false,
+                close_time: '',
+                delay_days: 0,
+                concern_fapiao: false,
+                close_today: false,
+            };
+            this.show_stuff_fetch = true;
+        },
+        on_stuff_search_input: function (e) {
+            this.stuff_search_input = e.detail.value;
+        },
+        on_stuff_search_confirm: function () {
+            const list = this.$refs.stuff_ref;
+            if (!list) {
+                return;
+            }
+            list.search_input = this.stuff_search_input;
+            list.search_condition = this.stuff_search_input;
+            list.refresh();
+        },
+        clear_stuff_search: function () {
+            this.stuff_search_input = '';
+            const list = this.$refs.stuff_ref;
+            if (!list) {
+                return;
+            }
+            list.cancel();
+        },
         make_scope_req: function (body = {}) {
             const req = { ...body };
             if (this.show_scope_switch && this.stat_context_company_id != null) {
@@ -743,7 +1046,7 @@ export default {
             this.qualification_check = ret.enable;
         },
         seg_change: function (e) {
-            this.cur_seg = e;
+            this.cur_seg = e.index;
         },
         set_next_date: function (e) {
             this.next_price_req.next_time = e.result;
@@ -1155,48 +1458,692 @@ export default {
         this.get_company_qualification();
         this.get_verify_pay_config();
         this.initAllGlobalConfigs();
-    },
-    onShow: function () {
-        this.init_scope_and_refresh();
     }
 }
 </script>
 
 
 <style scoped>
-.fui-list__cell {
-    width: 100%;
+.stuff-page {
+    height: 100vh;
+    background: #F2F4FA;
+    box-sizing: border-box;
     display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+}
+.stuff-page.has-fab {
+    padding-bottom: calc(16rpx + env(safe-area-inset-bottom));
+}
+.stuff-page.has-bl-bar {
+    padding-bottom: calc(300rpx + env(safe-area-inset-bottom));
+}
+.stuff-page.page-scroll {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    display: block;
+}
+.body {
+    position: relative;
+    z-index: 2;
+    margin-top: -28rpx;
+    padding: 0 20rpx;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+.stuff-page.page-scroll .body {
+    display: block;
+    flex: none;
+    min-height: 0;
+}
+.list-shell {
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.06);
+    overflow: hidden;
+    padding-bottom: 8rpx;
+}
+.list-shell-fill {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 0;
+}
+.list-fill {
+    flex: 1;
+    min-height: 0;
+    height: 0;
+    box-sizing: border-box;
+}
+.hero {
+    position: relative;
+    flex-shrink: 0;
+    padding: 20rpx 28rpx 36rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
+    overflow: hidden;
+}
+.hero-logo-bg {
+    position: absolute;
+    right: -20rpx;
+    top: -40rpx;
+    z-index: 0;
+    pointer-events: none;
+}
+.hero-logo-img {
+    width: 280rpx;
+    height: 280rpx;
+    opacity: 0.34;
+    transform: translate(36%, -24%);
+}
+.hero-top { position: relative; z-index: 1; }
+.hero-hello {
+    display: block;
+    font-size: 32rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.hero-sub {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.78);
+}
+.filter-shell {
+    flex-shrink: 0;
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    padding: 18rpx 18rpx 16rpx;
+    box-shadow: 0 12rpx 32rpx rgba(40, 58, 120, 0.1);
+    margin-bottom: 16rpx;
+}
+.seg-wrap { margin-bottom: 4rpx; }
+.meta-card {
+    margin-top: 14rpx;
+    background: linear-gradient(135deg, #F7F8FE 0%, #EEF1FB 100%);
+    border: 1rpx solid #E8ECF6;
+    border-radius: 20rpx;
+    padding: 4rpx 16rpx;
+}
+.meta-row {
+    display: flex;
+    flex-direction: row;
     align-items: center;
     justify-content: space-between;
+    padding: 16rpx 0;
 }
-
-.fui-close__icon {
+.meta-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+.meta-icon {
+    width: 52rpx;
+    height: 52rpx;
+    border-radius: 14rpx;
+    background: rgba(70, 92, 255, 0.12);
     display: flex;
     align-items: center;
-    padding: 6rpx 0 4rpx 24rpx;
+    justify-content: center;
+    margin-right: 14rpx;
+    flex-shrink: 0;
 }
-
-.btn-wrapper {
-    padding: 20rpx;
+.meta-copy { flex: 1; min-width: 0; }
+.meta-label {
+    display: block;
+    font-size: 20rpx;
+    color: #8A94A6;
+}
+.meta-value {
+    display: block;
+    margin-top: 4rpx;
+    font-size: 24rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.section-head {
+    padding: 16rpx 18rpx 12rpx;
+    background: linear-gradient(90deg, #F3F5FF 0%, #FFFFFF 70%);
+    border-bottom: 1rpx solid #EEF1F8;
     display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.section-head-stack {
+    flex-direction: column;
+    align-items: stretch;
+}
+.section-head-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+.section-search {
+    margin-top: 14rpx;
+    width: 100%;
+}
+.section-search-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    height: 64rpx;
+    padding: 0 8rpx 0 16rpx;
+    border-radius: 32rpx;
+    background: #FFFFFF;
+    border: 1rpx solid rgba(70, 92, 255, 0.08);
+    box-shadow: 0 4rpx 12rpx rgba(40, 58, 120, 0.04);
+    box-sizing: border-box;
+}
+.section-search-input {
+    flex: 1;
+    min-width: 0;
+    height: 64rpx;
+    padding: 0 10rpx;
+    font-size: 24rpx;
+    color: #181818;
+    background: transparent;
+}
+.section-search-ph {
+    color: #B2B2B2;
+    font-size: 22rpx;
+}
+.section-search-btn {
+    flex-shrink: 0;
+    margin-left: 6rpx;
+    min-width: 88rpx;
+    height: 48rpx;
+    padding: 0 18rpx;
+    border-radius: 24rpx;
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+    box-shadow: 0 6rpx 12rpx rgba(47, 63, 207, 0.24);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+.section-search-btn-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 1rpx;
+}
+.section-bar {
+    width: 8rpx;
+    height: 34rpx;
+    border-radius: 8rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    margin-right: 14rpx;
+}
+.section-titles { display: flex; flex-direction: column; }
+.section-title {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.2;
+}
+.section-en {
+    margin-top: 2rpx;
+    font-size: 16rpx;
+    color: #9AA3B8;
+    letter-spacing: 2rpx;
+}
+.stuff-card {
+    margin: 16rpx 16rpx 0;
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 22rpx;
+    overflow: hidden;
+    box-shadow: 0 8rpx 22rpx rgba(40, 58, 120, 0.05);
+}
+.stuff-card:last-child {
+    margin-bottom: 140rpx;
+}
+.card-head {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16rpx;
+    padding: 24rpx 24rpx 14rpx;
+}
+.card-head-left { flex: 1; min-width: 0; }
+.title-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10rpx;
+}
+.stuff-title {
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    max-width: 360rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.status-pill {
+    font-size: 18rpx;
+    padding: 4rpx 12rpx;
+    border-radius: 999rpx;
+    font-weight: 600;
+}
+.st-buy { color: #465CFF; background: rgba(70, 92, 255, 0.12); }
+.st-sale { color: #2DBE6C; background: rgba(45, 190, 108, 0.12); }
+.st-fapiao { color: #7B61FF; background: rgba(123, 97, 255, 0.12); }
+.meta-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8rpx;
+}
+.meta-line-text {
+    font-size: 22rpx;
+    color: #8A94A6;
+    line-height: 1.4;
+}
+.price-box {
+    flex-shrink: 0;
+    text-align: right;
+    padding-top: 2rpx;
+}
+.price-label {
+    display: block;
+    font-size: 18rpx;
+    color: #9AA3B8;
+    margin-bottom: 4rpx;
+}
+.price-text {
+    display: block;
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+.chip-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8rpx;
+    padding: 0 24rpx 14rpx;
+}
+.chip {
+    display: inline-flex;
+    padding: 6rpx 14rpx;
+    border-radius: 10rpx;
+    font-size: 20rpx;
+}
+.chip.soft { color: #465CFF; background: rgba(70, 92, 255, 0.08); }
+.chip.soft.warn { color: #FF8A2B; background: rgba(255, 138, 43, 0.1); }
+.chip.soft.purple { color: #7B61FF; background: rgba(123, 97, 255, 0.1); }
+.action-bar {
+    margin-top: 4rpx;
+    padding: 14rpx 12rpx 16rpx;
+    border-top: 1rpx solid #F0F2F7;
+    background: #FAFBFE;
+}
+.action-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.action-cell {
+    width: 25%;
+    box-sizing: border-box;
+    padding: 6rpx;
+}
+.action-btn {
+    width: 100%;
+    height: 64rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12rpx;
+    background: #FFFFFF;
+    border: 1rpx solid #E6EAF2;
+    box-sizing: border-box;
+}
+.action-btn-text {
+    font-size: 22rpx;
+    font-weight: 600;
+    color: #3D4656;
+    text-align: center;
+    line-height: 1.2;
+}
+.action-btn.primary { background: rgba(70, 92, 255, 0.1); border-color: rgba(70, 92, 255, 0.28); }
+.action-btn.primary .action-btn-text { color: #465CFF; }
+.action-btn.success { background: rgba(45, 190, 108, 0.1); border-color: rgba(45, 190, 108, 0.28); }
+.action-btn.success .action-btn-text { color: #2DBE6C; }
+.action-btn.warn { background: rgba(255, 138, 43, 0.1); border-color: rgba(255, 138, 43, 0.28); }
+.action-btn.warn .action-btn-text { color: #FF8A2B; }
+.action-btn.purple { background: rgba(123, 97, 255, 0.1); border-color: rgba(123, 97, 255, 0.28); }
+.action-btn.purple .action-btn-text { color: #7B61FF; }
+.action-btn.danger { background: rgba(255, 77, 79, 0.08); border-color: rgba(255, 77, 79, 0.28); }
+.action-btn.danger .action-btn-text { color: #FF4D4F; }
+.config-panel {
+    padding: 12rpx 16rpx 20rpx;
+    background: linear-gradient(180deg, #F5F7FC 0%, #EEF1F8 100%);
+    border-top: 1rpx solid #EEF1F8;
+}
+.config-section {
+    margin-top: 14rpx;
+}
+.config-section:first-child {
+    margin-top: 4rpx;
+}
+.config-section-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 4rpx 10rpx;
+}
+.config-section-bar {
+    width: 6rpx;
+    height: 22rpx;
+    border-radius: 6rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    margin-right: 10rpx;
+    flex-shrink: 0;
+}
+.config-section-title {
+    flex: 1;
+    font-size: 24rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+.switch-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    background: #FFFFFF;
+    border-radius: 16rpx;
+    border: 1rpx solid #E8ECF6;
+    overflow: hidden;
+    padding: 4rpx 0;
+}
+.switch-item {
+    width: 50%;
+    box-sizing: border-box;
+    padding: 18rpx 18rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1rpx solid #F0F2F7;
+}
+.switch-item:nth-last-child(1),
+.switch-item:nth-last-child(2):nth-child(odd) {
+    border-bottom: none;
+}
+.switch-label {
+    flex: 1;
+    min-width: 0;
+    font-size: 24rpx;
+    color: #3D4656;
+    margin-right: 10rpx;
+    line-height: 1.3;
+}
+.field-card {
+    background: #FFFFFF;
+    border-radius: 16rpx;
+    border: 1rpx solid #E8ECF6;
+    padding: 16rpx;
+}
+.field-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12rpx;
+}
+.field-pick {
+    flex: 1;
+    min-width: 0;
+    padding: 10rpx 16rpx;
+    background: #F7F8FC;
+    border-radius: 12rpx;
+}
+.field-pick-label {
+    display: block;
+    font-size: 18rpx;
+    color: #9AA3B8;
+    margin-bottom: 4rpx;
+}
+.field-pick-value {
+    display: block;
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 600;
+}
+.field-pick-value.placeholder {
+    color: #9AA3B8;
+    font-weight: 400;
+}
+.field-btn {
+    flex-shrink: 0;
+    height: 64rpx;
+    padding: 0 24rpx;
+    border-radius: 12rpx;
+    background: rgba(70, 92, 255, 0.12);
+    display: flex;
+    align-items: center;
     justify-content: center;
 }
-
-.stuff-top-actions {
-    padding: 12rpx 20rpx;
-    background: #fff;
+.field-btn.success {
+    background: rgba(45, 190, 108, 0.12);
 }
-
+.field-btn-text {
+    font-size: 22rpx;
+    font-weight: 600;
+    color: #465CFF;
+}
+.field-btn.success .field-btn-text {
+    color: #2DBE6C;
+}
+.unit-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin: 0 -6rpx;
+}
+.unit-cell {
+    width: 33.33%;
+    box-sizing: border-box;
+    padding: 0 6rpx 12rpx;
+}
+.unit-caption {
+    display: block;
+    font-size: 18rpx;
+    color: #9AA3B8;
+    margin-bottom: 8rpx;
+    padding-left: 4rpx;
+}
+.unit-number {
+    min-height: 64rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #F7F8FC;
+    border-radius: 12rpx;
+    padding: 4rpx;
+}
+.field-save {
+    margin-top: 4rpx;
+    height: 72rpx;
+    border-radius: 14rpx;
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.field-save-text {
+    font-size: 26rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.zone-add-link {
+    padding: 4rpx 8rpx;
+}
+.zone-add-link-text {
+    font-size: 22rpx;
+    color: #465CFF;
+    font-weight: 600;
+}
+.zone-wrap {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 10rpx;
+}
+.zone-chip {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 10rpx 10rpx 10rpx 18rpx;
+    border-radius: 999rpx;
+    background: rgba(70, 92, 255, 0.08);
+    border: 1rpx solid rgba(70, 92, 255, 0.16);
+}
+.zone-chip-text {
+    font-size: 22rpx;
+    color: #465CFF;
+    margin-right: 4rpx;
+    font-weight: 600;
+}
+.zone-close {
+    padding: 4rpx;
+    display: flex;
+    align-items: center;
+}
+.zone-empty {
+    padding: 18rpx 8rpx;
+}
+.zone-empty-text {
+    font-size: 22rpx;
+    color: #9AA3B8;
+    text-align: center;
+    display: block;
+}
+.policy-body {
+    padding: 8rpx 16rpx 24rpx;
+    box-sizing: border-box;
+}
+.policy-group {
+    margin-top: 16rpx;
+}
+.policy-group:first-child {
+    margin-top: 8rpx;
+}
+.policy-group-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 4rpx 10rpx;
+}
+.policy-group-bar {
+    width: 6rpx;
+    height: 22rpx;
+    border-radius: 6rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    margin-right: 10rpx;
+    flex-shrink: 0;
+}
+.policy-group-title {
+    font-size: 24rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+.policy-card {
+    background: #FFFFFF;
+    border-radius: 16rpx;
+    border: 1rpx solid #E8ECF6;
+    overflow: hidden;
+}
+.policy-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22rpx 20rpx;
+    border-bottom: 1rpx solid #F0F2F7;
+    background: #FFFFFF;
+}
+.policy-row.last {
+    border-bottom: none;
+}
+.policy-copy {
+    flex: 1;
+    min-width: 0;
+    margin-right: 16rpx;
+}
+.policy-title {
+    display: block;
+    font-size: 26rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    line-height: 1.35;
+}
+.policy-desc {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 20rpx;
+    color: #9AA3B8;
+    line-height: 1.4;
+}
+.blacklist-shell {
+    padding-bottom: 0;
+}
+.fab-add {
+    position: fixed;
+    right: 36rpx;
+    bottom: calc(48rpx + env(safe-area-inset-bottom));
+    z-index: 100;
+    min-width: 120rpx;
+    height: 88rpx;
+    padding: 0 36rpx;
+    border-radius: 999rpx;
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+    box-shadow: 0 12rpx 28rpx rgba(47, 63, 207, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fab-add-text {
+    font-size: 28rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 2rpx;
+}
 .scope-row {
-    width: 100%;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    width: 100%;
 }
-
-.scope-name {
-    font-size: 30rpx;
-    color: #333;
+.scope-name { font-size: 30rpx; color: #333; }
+.form-switch-row { display: flex; align-items: center; gap: 20rpx; }
+.form-switch-extra { display: flex; align-items: center; gap: 10rpx; }
+.price-tip {
+    margin: 8px 12px;
+    padding: 10px;
+    background: #FFF7E6;
+    border: 1px solid #FFD591;
+    border-radius: 4px;
+    color: #874D00;
+    font-size: 24rpx;
+    line-height: 1.6;
 }
+.price-tip-title { font-weight: bold; margin-bottom: 4px; }
+.history-tags { display: flex; }
 </style>

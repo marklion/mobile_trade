@@ -227,7 +227,10 @@
 				{
 					"path": "Stuff",
 					"style": {
-						"enablePullDownRefresh": true
+						"enablePullDownRefresh": true,
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "物料管理"
 					}
 				},
 				{
