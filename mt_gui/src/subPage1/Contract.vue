@@ -1,100 +1,208 @@
 <template>
-<view>
-    <fui-segmented-control :values="seg" @click="change_seg"></fui-segmented-control>
-    <fui-card v-if="show_scope_switch" title="操作主体公司" full color="black" size="32">
-        <view class="scope-picker-trigger" @click="open_scope_picker">
-            <view class="scope-picker-label">{{ current_scope_name || '请选择公司' }}</view>
-            <fui-icon name="arrowright" size="32" color="#999"></fui-icon>
+<view class="contract-page">
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
         </view>
-    </fui-card>
-    <fui-card v-if="show_scope_switch" title="价格策略" full color="black" size="32">
-        <view style="display:flex; flex-wrap: wrap;">
-            <fui-tag :scaleRatio="0.8" originLeft type="primary" text="优惠方案管理" @click="open_scheme_manager"></fui-tag>
+        <view class="hero-top">
+            <view class="hero-copy">
+                <text class="hero-hello">合同管理</text>
+                <text class="hero-sub">{{ current_seg_name || '合同协同' }}</text>
+            </view>
         </view>
-    </fui-card>
-    <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="85vh" style="background-color: aliceblue;" search_key="search_cond" :fetch_params="[cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]" v-if="cur_urls && cur_urls.get_url">
-        <fui-card full :margin="['20rpx', '0rpx']" v-for="item in data2show" :key="item.id" size="large" :class="[item.expired?'expired_line':'']" :title="item.company.name" color="black" :tag="'￥' + item.balance.toFixed(2)">
-            <view style="padding: 0 20rpx;position: relative;">
-                <view v-if="item.expired" class="expired_text">已过期</view>
-                <module-filter :rm_array="['buy_management','sale_management']">
-                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
-                        <fui-tag v-for="(single_stuff, index) in item.stuff" :key="index" theme="plain" originLeft :scaleRatio="0.8" type="purple">
-                            {{single_stuff.name}}
-                            <fui-icon name="close" size="32" @click="prepare_unstuff(item, single_stuff)"></fui-icon>
-                        </fui-tag>
-                        <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
-                            <fui-tag v-for="(single_user) in item.rbac_users" :key="single_user.id" theme="plain" originLeft :scaleRatio="0.8" type="success">
-                                {{single_user.name?single_user.name +'|'+single_user.phone: single_user.phone}}
-                                <fui-icon name="close" size="32" @click="prepare_unauth(item, single_user)"></fui-icon>
-                            </fui-tag>
-                        </view>
-                    </view>
-                    <view style="display:flex; flex-wrap: wrap;" v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)">
-                        <fui-tag text="新增物料" :scaleRatio="0.8" originLeft type="purple" @click="prepare_add_stuff(item)"></fui-tag>
-                        <fui-tag v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting)" :scaleRatio="0.8" originLeft type="success" text="新增授权" @click="prepare_auth(item)"></fui-tag>
-                    </view>
-                </module-filter>
-                <fui-tag text="查看资质" :scaleRatio="0.8" originLeft type="primary" @click="show_attach_pic(item)"></fui-tag>
-                <view>
-                    <view v-if="item.begin_time && item.end_time" style="color: blue;">
-                        {{item.begin_time}}至{{item.end_time}}
-                    </view>
-                    <view v-if="show_scope_switch" style="display:flex; flex-wrap: wrap; gap: 8rpx;">
-                        <template v-if="item.contract_stuff_schemes && item.contract_stuff_schemes.length > 0">
-                            <fui-tag
-                                v-for="scheme_row in item.contract_stuff_schemes"
-                                :key="scheme_row.id || (scheme_row.stuffId + '-' + scheme_row.discountSchemeId)"
-                                :scaleRatio="0.8"
-                                originLeft
-                                type="primary"
-                                :text="format_scheme_tag_text(scheme_row)"
-                            ></fui-tag>
-                        </template>
-                        <view v-else style="color: #8a2be2;">
-                            优惠方案: {{item.discount_scheme ? item.discount_scheme.name : '无'}}
-                        </view>
-                    </view>
-                    <view v-if="item.number" style="color: green;">
-                        合同编号: {{item.number}}
-                    </view>
-                    <view v-if="item.customer_code" style="color: red;">
-                        客商编码: {{item.customer_code}}
-                    </view>
+    </view>
 
+    <view class="body">
+        <view class="filter-shell">
+            <view class="seg-wrap" v-if="seg.length > 1">
+                <fui-segmented-control :values="seg" color="#465CFF" @click="change_seg"></fui-segmented-control>
+            </view>
+            <view class="seg-wrap" v-else-if="seg.length === 1">
+                <text class="seg-single">{{ seg[0].name }}</text>
+            </view>
+
+            <view class="meta-card" v-if="show_scope_switch">
+                <view class="meta-row" @click="open_scope_picker">
+                    <view class="meta-left">
+                        <view class="meta-icon">
+                            <fui-icon name="community" size="30" color="#465CFF"></fui-icon>
+                        </view>
+                        <view class="meta-copy">
+                            <text class="meta-label">操作主体公司</text>
+                            <text class="meta-value">{{ current_scope_name || '请选择公司' }}</text>
+                        </view>
+                    </view>
+                    <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
                 </view>
-                <view style="display:flex; flex-wrap: wrap;">
-                    <module-filter require_module="cash" v-if="cur_urls && cur_urls.need_su">
-                        <fui-tag :scaleRatio="0.8" originLeft type="primary" text="充值" @click="prepare_charge(item)"></fui-tag>
-                    </module-filter>
-                    <fui-tag v-if="cur_urls && (cur_urls.get_url === '/customer/contract_get' || cur_urls.need_su)" :scaleRatio="0.8" originLeft type="warning" text="充值记录" @click="prepare_charge_history(item)"></fui-tag>
-                    <fui-tag v-if="cur_urls && cur_urls.motive" :scaleRatio="0.8" originLeft type="purple" text="修改" @click="prepare_update(item)"></fui-tag>
-                    <fui-tag v-if="cur_urls && cur_urls.motive" :scaleRatio="0.8" originLeft type="danger" text="删除" @click="prepare_del(item)"></fui-tag>
-                    <fui-tag v-if="show_scope_switch" :scaleRatio="0.8" originLeft type="primary" text="设置方案" @click="prepare_set_contract_scheme(item)"></fui-tag>
-                    <fui-tag v-if="show_scope_switch" :scaleRatio="0.8" originLeft type="success" text="物料单价" @click="prepare_stuff_price(item)"></fui-tag>
+                <view class="meta-row meta-row-border" @click="open_scheme_manager">
+                    <view class="meta-left">
+                        <view class="meta-icon">
+                            <fui-icon name="coupon" size="30" color="#465CFF"></fui-icon>
+                        </view>
+                        <view class="meta-copy">
+                            <text class="meta-label">价格策略</text>
+                            <text class="meta-value">优惠方案管理</text>
+                        </view>
+                    </view>
+                    <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
                 </view>
             </view>
-            <fui-white-space size="large"></fui-white-space>
-        </fui-card>
-    </list-show>
+        </view>
+
+        <view class="list-shell">
+            <view class="section-head">
+                <view class="section-head-left">
+                    <view class="section-bar"></view>
+                    <view class="section-titles">
+                        <text class="section-title">合同列表</text>
+                        <text class="section-en">CONTRACTS</text>
+                    </view>
+                </view>
+            </view>
+
+            <list-show full ref="contracts" v-model="data2show" :fetch_function="get_sale_contract" height="68vh"
+                search_key="search_cond"
+                :fetch_params="[cur_urls, make_context_req, show_scope_switch, self_info && self_info.company_is_group, stat_context_company_id]"
+                v-if="cur_urls && cur_urls.get_url">
+                <view class="contract-card" :class="{ expired: item.expired }" v-for="(item, c_index) in data2show" :key="item.id">
+                    <view class="contract-main">
+                        <view class="card-head">
+                            <view class="card-head-left">
+                                <view class="title-line">
+                                    <text class="contract-title">{{ item.company.name }}</text>
+                                    <text class="status-pill st-expired" v-if="item.expired">已过期</text>
+                                    <text class="status-pill st-ok" v-else>有效</text>
+                                </view>
+                                <view class="meta-line" v-if="item.begin_time && item.end_time">
+                                    <text class="meta-line-text">{{ item.begin_time }} ~ {{ item.end_time }}</text>
+                                </view>
+                                <view class="meta-line" v-if="item.number || item.customer_code">
+                                    <text class="meta-line-text" v-if="item.number">编号 {{ item.number }}</text>
+                                    <text class="meta-dot" v-if="item.number && item.customer_code">·</text>
+                                    <text class="meta-line-text code" v-if="item.customer_code">编码 {{ item.customer_code }}</text>
+                                </view>
+                                <view class="meta-line" v-if="show_scope_switch && !(item.contract_stuff_schemes && item.contract_stuff_schemes.length)">
+                                    <text class="meta-line-text">方案 {{ item.discount_scheme ? item.discount_scheme.name : '无' }}</text>
+                                </view>
+                            </view>
+                            <view class="balance-box">
+                                <text class="balance-label">余额（元）</text>
+                                <text class="balance-text">{{ item.balance.toFixed(2) }}</text>
+                            </view>
+                        </view>
+
+                        <view class="scheme-row" v-if="show_scope_switch && item.contract_stuff_schemes && item.contract_stuff_schemes.length">
+                            <text class="chip soft" v-for="scheme_row in item.contract_stuff_schemes"
+                                :key="scheme_row.id || (scheme_row.stuffId + '-' + scheme_row.discountSchemeId)">
+                                {{ format_scheme_tag_text(scheme_row) }}
+                            </text>
+                        </view>
+
+                        <module-filter :rm_array="['buy_management','sale_management']">
+                            <view class="relation-block"
+                                v-if="cur_urls && (cur_urls.need_su || cur_urls.buy_setting) && ((item.stuff && item.stuff.length) || (item.rbac_users && item.rbac_users.length))">
+                                <view class="relation-group" v-if="item.stuff && item.stuff.length">
+                                    <text class="relation-label">物料</text>
+                                    <view class="chip-wrap">
+                                        <view class="chip removable" v-for="(single_stuff, s_index) in item.stuff" :key="'stuff-' + s_index">
+                                            <text class="chip-text">{{ single_stuff.name }}</text>
+                                            <view class="chip-close" :data-cindex="c_index" :data-sindex="s_index" @click.stop="on_chip_unstuff">
+                                                <fui-icon name="close" size="24" color="#9AA3B8"></fui-icon>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </view>
+                                <view class="relation-group" v-if="item.rbac_users && item.rbac_users.length">
+                                    <text class="relation-label">授权</text>
+                                    <view class="chip-wrap">
+                                        <view class="chip removable" v-for="(single_user, u_index) in item.rbac_users" :key="'user-' + single_user.id">
+                                            <text class="chip-text">{{ single_user.name ? single_user.name + '|' + single_user.phone : single_user.phone }}</text>
+                                            <view class="chip-close" :data-cindex="c_index" :data-uindex="u_index" @click.stop="on_chip_unauth">
+                                                <fui-icon name="close" size="24" color="#9AA3B8"></fui-icon>
+                                            </view>
+                                        </view>
+                                    </view>
+                                </view>
+                            </view>
+                        </module-filter>
+
+                        <view class="action-bar">
+                            <view class="action-grid">
+                                <view class="action-cell" v-if="can_manage_relation">
+                                    <view class="action-btn purple" :data-cindex="c_index" @click="on_card_add_stuff">
+                                        <text class="action-btn-text">新增物料</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell" v-if="can_manage_relation">
+                                    <view class="action-btn success" :data-cindex="c_index" @click="on_card_add_auth">
+                                        <text class="action-btn-text">新增授权</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell">
+                                    <view class="action-btn primary" :data-cindex="c_index" @click="on_card_attach">
+                                        <text class="action-btn-text">查看资质</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell" v-if="can_charge">
+                                    <view class="action-btn primary" :data-cindex="c_index" @click="on_card_charge">
+                                        <text class="action-btn-text">充值</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell" v-if="can_charge_history">
+                                    <view class="action-btn warn" :data-cindex="c_index" @click="on_card_charge_history">
+                                        <text class="action-btn-text">充值记录</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell" v-if="cur_urls && cur_urls.motive">
+                                    <view class="action-btn purple" :data-cindex="c_index" @click="on_card_update">
+                                        <text class="action-btn-text">修改</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell" v-if="cur_urls && cur_urls.motive">
+                                    <view class="action-btn danger" :data-cindex="c_index" @click="on_card_del">
+                                        <text class="action-btn-text">删除</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell" v-if="show_scope_switch">
+                                    <view class="action-btn primary" :data-cindex="c_index" @click="on_card_set_scheme">
+                                        <text class="action-btn-text">设置方案</text>
+                                    </view>
+                                </view>
+                                <view class="action-cell" v-if="show_scope_switch">
+                                    <view class="action-btn success" :data-cindex="c_index" @click="on_card_stuff_price">
+                                        <text class="action-btn-text">物料单价</text>
+                                    </view>
+                                </view>
+                            </view>
+                        </view>
+                    </view>
+                </view>
+            </list-show>
+        </view>
+    </view>
+
+    <view class="fab-add" v-if="cur_urls && cur_urls.motive" @click="open_add_contract">
+        <text class="fab-add-text">新增</text>
+    </view>
 
     <fui-gallery :urls="attach_url" v-if="show_attach" :show="show_attach" @hide="show_attach = false" @change="change_index"></fui-gallery>
     <view v-if="show_attach" class="download-button-container">
         <fui-text color="#fff" text="下载" @click="download_img"></fui-text>
     </view>
-    <fui-button v-if="cur_urls && cur_urls.motive" type="success" text="新增" @click="show_add_contract = true"></fui-button>
+
     <fui-modal width="600" :show="show_update_contract" @click="update_contract" v-if="show_update_contract">
         <fui-form ref="update_contract" top="100">
-            <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="show_date_range = true"></fui-input>
-            <fui-input label="结束时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.end_time" @click="show_date_range = true"></fui-input>
+            <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="open_date_range"></fui-input>
+            <fui-input label="结束时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.end_time" @click="open_date_range"></fui-input>
             <fui-input label="客商编码" borderTop placeholder="请输入客商编码" v-model="new_contract.customer_code"></fui-input>
             <fui-input label="合同编号" borderTop placeholder="请输入合同编号" v-model="new_contract.number"></fui-input>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :show="show_add_contract" @click="add_contract" v-if="show_add_contract">
         <fui-form ref="add_contract" top="100">
-            <fui-input label="客商" borderTop placeholder="点击选择客商" v-model="company_name" disabled @click="show_customers = true"></fui-input>
-            <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="show_date_range = true"></fui-input>
-            <fui-input label="结束时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.end_time" @click="show_date_range = true"></fui-input>
+            <fui-input label="客商" borderTop placeholder="点击选择客商" v-model="company_name" disabled @click="open_customers"></fui-input>
+            <fui-input label="开始时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.begin_time" @click="open_date_range"></fui-input>
+            <fui-input label="结束时间" borderTop disabled placeholder="点击选择时间范围" v-model="new_contract.end_time" @click="open_date_range"></fui-input>
             <fui-input label="客商编码" borderTop placeholder="请输入客商编码" v-model="new_contract.customer_code"></fui-input>
             <fui-input label="合同编号" borderTop placeholder="请输入合同编号" v-model="new_contract.number"></fui-input>
         </fui-form>
@@ -102,7 +210,7 @@
     <fui-bottom-popup :show="show_customers" @close="show_customers= false">
         <fui-list>
             <list-show v-if="show_customers" v-model="customers_data2show" :fetch_function="get_customers" search_key="name" server_search height="40vh">
-                <fui-list-cell arrow v-for="item in customers_data2show" :key="item.id" @click="select_company(item)">
+                <fui-list-cell arrow v-for="(item, index) in customers_data2show" :key="item.id" :index="index" @click="on_select_company">
                     {{item.name}}
                 </fui-list-cell>
             </list-show>
@@ -130,7 +238,7 @@
     </fui-modal>
     <fui-modal width="600" :descr="'确定要删除' + focus_item.company.name + '吗？'" :show="show_del" v-if="show_del" @click="del_contract">
     </fui-modal>
-    <fui-modal width="600" :show="show_charge" @click="charge" v-if="show_charge">
+    <fui-modal width="600" :show="show_charge" :buttons="charge_buttons" @click="charge" v-if="show_charge">
         <fui-form ref="charge" top="100">
             <fui-input required label="充值金额" borderTop placeholder="负值为扣款" v-model="cash"></fui-input>
             <fui-input required label="充值原因" borderTop placeholder="请输入充值原因" v-model="comment"></fui-input>
@@ -148,11 +256,12 @@
         </view>
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
+        <view class="picker-title">选择操作主体</view>
         <fui-list>
-            <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
+            <fui-list-cell v-for="(s, index) in stat_scopes" :key="s.id" :index="index" arrow @click="on_choose_stat_scope">
                 <view class="scope-row">
                     <view class="scope-name">{{ s.name }}</view>
-                    <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#1E9FFF"></fui-icon>
+                    <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#465CFF"></fui-icon>
                 </view>
             </fui-list-cell>
         </fui-list>
@@ -162,12 +271,12 @@
             <fui-list-cell arrow @click="open_new_scheme_modal">
                 新增优惠方案
             </fui-list-cell>
-            <fui-list-cell v-for="item in discount_schemes" :key="item.id">
-                <view style="display:flex;justify-content:space-between;align-items:center;width:100%;">
-                    <view>{{item.name}}（{{item.delta_price}}）</view>
-                    <view style="display:flex;">
-                        <fui-button btnSize="mini" text="编辑" type="primary" @click="open_edit_scheme_modal(item)"></fui-button>
-                        <fui-button btnSize="mini" text="删除" type="danger" @click="prepare_delete_scheme(item)"></fui-button>
+            <fui-list-cell v-for="(item, index) in discount_schemes" :key="item.id" :index="index">
+                <view class="scheme-row-manage">
+                    <view class="scheme-name">{{item.name}}（{{item.delta_price}}）</view>
+                    <view class="scheme-ops">
+                        <view class="mini-btn" :data-index="index" @click.stop="on_edit_scheme">编辑</view>
+                        <view class="mini-btn danger" :data-index="index" @click.stop="on_delete_scheme">删除</view>
                     </view>
                 </view>
             </fui-list-cell>
@@ -193,8 +302,8 @@
     </fui-bottom-popup>
     <fui-bottom-popup :show="show_contract_scheme_picker" @close="show_contract_scheme_picker = false">
         <fui-list>
-            <fui-list-cell arrow @click="set_contract_scheme(null)">清空方案</fui-list-cell>
-            <fui-list-cell v-for="item in discount_schemes" :key="item.id" arrow @click="set_contract_scheme(item.id)">
+            <fui-list-cell arrow @click="clear_contract_scheme">清空方案</fui-list-cell>
+            <fui-list-cell v-for="(item, index) in discount_schemes" :key="item.id" :index="index" arrow @click="on_pick_contract_scheme">
                 {{item.name}}（{{item.delta_price}}）
             </fui-list-cell>
         </fui-list>
@@ -234,6 +343,7 @@ export default {
             cash: '',
             comment: '',
             show_charge: false,
+            charging: false,
             show_del: false,
             phone: '',
             show_unauth: false,
@@ -319,6 +429,42 @@ export default {
         current_scope_name: function () {
             const current = this.stat_scopes.find(item => item.id === this.stat_context_company_id);
             return current ? current.name : '';
+        },
+        current_seg_name: function () {
+            const hit = (this.seg || []).find(item => item.get_url === (this.cur_urls && this.cur_urls.get_url));
+            return hit ? hit.name : '';
+        },
+        can_manage_relation: function () {
+            if (!this.cur_urls || !(this.cur_urls.need_su || this.cur_urls.buy_setting)) {
+                return false;
+            }
+            return this.$has_module('buy_management') || this.$has_module('sale_management');
+        },
+        can_charge: function () {
+            return !!(this.cur_urls && this.cur_urls.need_su && this.$has_module('cash'));
+        },
+        can_charge_history: function () {
+            return !!(this.cur_urls && (this.cur_urls.get_url === '/customer/contract_get' || this.cur_urls.need_su));
+        },
+        charge_buttons: function () {
+            if (this.charging) {
+                return [{
+                    text: '取消',
+                    plain: true,
+                    color: '#C5CAD5',
+                    background: '#E8ECF6',
+                }, {
+                    text: '提交中...',
+                    background: '#A8B3D1',
+                    color: '#FFFFFF',
+                }];
+            }
+            return [{
+                text: '取消',
+                plain: true,
+            }, {
+                text: '确定',
+            }];
         },
     },
     methods: {
@@ -561,8 +707,12 @@ export default {
             this.cur_urls.motive = e.motive;
             this.cur_urls.buy_setting = e.buy_setting;
             this.$nextTick(() => {
-                this.$refs.contracts.refresh();
-                this.$refs.stuff_got.refresh();
+                if (this.$refs.contracts) {
+                    this.$refs.contracts.refresh();
+                }
+                if (this.$refs.stuff_got) {
+                    this.$refs.stuff_got.refresh();
+                }
             });
         },
         init_top_seg: function () {
@@ -664,33 +814,50 @@ export default {
         },
         charge: async function (detail) {
             if (detail.index == 1) {
-                let rules = [{
-                    name: 'cash',
-                    rule: ['required', 'range:[-99999999999,99999999999]'],
-                    msg: ['请输入金额', '金额必须为数字']
-                }, {
-                    name: 'comment',
-                    rule: ['required'],
-                    msg: ['请填写备注']
-                }];
-                let val_ret = await this.$refs.charge.validator({
-                    cash: this.cash,
-                    comment: this.comment
-                }, rules);
-                if (!val_ret.isPassed) {
+                if (this.charging) {
                     return;
                 }
-                let charge_url = '/cash/charge';
-                await this.$send_req(charge_url, this.make_context_req({
-                    contract_id: this.focus_item.id,
-                    cash_increased: parseFloat(this.cash),
-                    comment: this.comment
-                }, charge_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
-                uni.startPullDownRefresh();
+                this.charging = true;
+                try {
+                    let rules = [{
+                        name: 'cash',
+                        rule: ['required', 'range:[-99999999999,99999999999]'],
+                        msg: ['请输入金额', '金额必须为数字']
+                    }, {
+                        name: 'comment',
+                        rule: ['required'],
+                        msg: ['请填写备注']
+                    }];
+                    let val_ret = await this.$refs.charge.validator({
+                        cash: this.cash,
+                        comment: this.comment
+                    }, rules);
+                    if (!val_ret.isPassed) {
+                        this.charging = false;
+                        return;
+                    }
+                    let charge_url = '/cash/charge';
+                    await this.$send_req(charge_url, this.make_context_req({
+                        contract_id: this.focus_item.id,
+                        cash_increased: parseFloat(this.cash),
+                        comment: this.comment
+                    }, charge_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
+                    uni.startPullDownRefresh();
+                    this.show_charge = false;
+                } catch (e) {
+                    this.charging = false;
+                    return;
+                }
+                this.charging = false;
+            } else {
+                if (this.charging) {
+                    return;
+                }
+                this.show_charge = false;
             }
-            this.show_charge = false;
         },
         prepare_charge: function (item) {
+            this.charging = false;
             this.show_charge = true;
             this.focus_item = item;
         },
@@ -897,6 +1064,154 @@ export default {
             this.focus_item = item;
             this.focus_user = single_user;
         },
+        get_card_item: function (e) {
+            const cindex = Number(e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.cindex
+                : -1);
+            const item = (this.data2show || [])[cindex];
+            if (!item) {
+                uni.showToast({ title: '未找到合同，请重试', icon: 'none' });
+                return null;
+            }
+            return item;
+        },
+        on_chip_unstuff: function (e) {
+            const item = this.get_card_item(e);
+            if (!item) {
+                return;
+            }
+            const sindex = Number(e.currentTarget.dataset.sindex);
+            const single_stuff = (item.stuff || [])[sindex];
+            if (!single_stuff) {
+                uni.showToast({ title: '未找到物料，请重试', icon: 'none' });
+                return;
+            }
+            this.prepare_unstuff(item, single_stuff);
+        },
+        on_chip_unauth: function (e) {
+            const item = this.get_card_item(e);
+            if (!item) {
+                return;
+            }
+            const uindex = Number(e.currentTarget.dataset.uindex);
+            const single_user = (item.rbac_users || [])[uindex];
+            if (!single_user) {
+                uni.showToast({ title: '未找到授权用户，请重试', icon: 'none' });
+                return;
+            }
+            this.prepare_unauth(item, single_user);
+        },
+        on_card_add_stuff: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_add_stuff(item);
+            }
+        },
+        on_card_add_auth: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_auth(item);
+            }
+        },
+        on_card_attach: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.show_attach_pic(item);
+            }
+        },
+        on_card_charge: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_charge(item);
+            }
+        },
+        on_card_charge_history: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_charge_history(item);
+            }
+        },
+        on_card_update: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_update(item);
+            }
+        },
+        on_card_del: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_del(item);
+            }
+        },
+        on_card_set_scheme: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_set_contract_scheme(item);
+            }
+        },
+        on_card_stuff_price: function (e) {
+            const item = this.get_card_item(e);
+            if (item) {
+                this.prepare_stuff_price(item);
+            }
+        },
+        open_add_contract: function () {
+            this.show_add_contract = true;
+        },
+        open_date_range: function () {
+            this.show_date_range = true;
+        },
+        open_customers: function () {
+            this.show_customers = true;
+        },
+        on_choose_stat_scope: function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const scope = (this.stat_scopes || [])[index];
+            if (!scope) {
+                return;
+            }
+            this.choose_stat_scope(scope.id);
+        },
+        clear_contract_scheme: function () {
+            this.set_contract_scheme(null);
+        },
+        on_pick_contract_scheme: function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const scheme = (this.discount_schemes || [])[index];
+            if (!scheme) {
+                return;
+            }
+            this.set_contract_scheme(scheme.id);
+        },
+        on_select_company: function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const item = (this.customers_data2show || [])[index];
+            if (!item) {
+                uni.showToast({ title: '未找到客商，请重试', icon: 'none' });
+                return;
+            }
+            this.select_company(item);
+        },
+        on_edit_scheme: function (e) {
+            const index = Number(e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.index
+                : -1);
+            const item = (this.discount_schemes || [])[index];
+            if (!item) {
+                return;
+            }
+            this.open_edit_scheme_modal(item);
+        },
+        on_delete_scheme: function (e) {
+            const index = Number(e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.index
+                : -1);
+            const item = (this.discount_schemes || [])[index];
+            if (!item) {
+                return;
+            }
+            this.prepare_delete_scheme(item);
+        },
         get_sale_contract: async function (pageNo, [cur_urls, make_context_req, show_scope_switch, company_is_group, stat_context_company_id]) {
             // 添加安全检查，防止访问未定义对象的属性
             if (!cur_urls || !cur_urls.get_url) {
@@ -914,17 +1229,16 @@ export default {
         
     },
     created: function () {
-        // 在组件创建时立即初始化，防止模板渲染时访问未定义属性
         this.init_top_seg();
-        this.load_self_info().then(() => {
-            this.load_stat_scopes();
-        });
+    },
+    onLoad: async function () {
+        await this.load_self_info();
+        await this.load_stat_scopes();
     },
     onShow: function () {
-        this.init_top_seg();
-        this.load_self_info().then(() => {
-            this.load_stat_scopes();
-        });
+        if (!this.seg.length || !this.cur_urls || !this.cur_urls.get_url) {
+            this.init_top_seg();
+        }
         this.new_contract.begin_time = utils.dateFormatter(new Date(), 'y-m-d', 4, false);
         let end_date = new Date();
         end_date.setMonth(end_date.getMonth() + 12);
@@ -940,19 +1254,489 @@ export default {
 </script>
 
 <style scoped>
-.expired_line {
-    text-decoration: line-through gray;
+.contract-page {
+    min-height: 100vh;
+    background: #F2F4FA;
+    box-sizing: border-box;
+    padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
 }
 
-.expired_text {
+.hero {
+    position: relative;
+    padding: 20rpx 28rpx 36rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
+    overflow: hidden;
+}
+
+.hero-logo-bg {
     position: absolute;
-    transform-origin: center;
-    transform: rotate(45deg);
-    right: 10rpx;
-    top: -30rpx;
-    border: solid 1px gray;
-    padding: 10rpx;
-    border-radius: 20%;
+    top: 0;
+    right: 0;
+    width: 280rpx;
+    height: 280rpx;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.hero-logo-img {
+    width: 280rpx;
+    height: 280rpx;
+    opacity: 0.34;
+    transform: translate(36%, -24%);
+}
+
+.hero-top {
+    position: relative;
+    z-index: 1;
+}
+
+.hero-hello {
+    display: block;
+    font-size: 32rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
+.hero-sub {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.78);
+}
+
+.body {
+    position: relative;
+    z-index: 2;
+    margin-top: -28rpx;
+    padding: 0 20rpx;
+}
+
+.filter-shell {
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    padding: 18rpx 18rpx 16rpx;
+    box-shadow: 0 12rpx 32rpx rgba(40, 58, 120, 0.1);
+    margin-bottom: 16rpx;
+}
+
+.seg-wrap {
+    margin-bottom: 4rpx;
+}
+
+.seg-single {
+    display: block;
+    text-align: center;
+    font-size: 28rpx;
+    color: #465CFF;
+    font-weight: 700;
+    padding: 8rpx 0;
+}
+
+.meta-card {
+    margin-top: 14rpx;
+    background: linear-gradient(135deg, #F7F8FE 0%, #EEF1FB 100%);
+    border: 1rpx solid #E8ECF6;
+    border-radius: 20rpx;
+    padding: 4rpx 16rpx;
+}
+
+.meta-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16rpx 0;
+}
+
+.meta-row-border {
+    border-top: 1rpx solid #E8ECF6;
+}
+
+.meta-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+}
+
+.meta-icon {
+    width: 52rpx;
+    height: 52rpx;
+    border-radius: 14rpx;
+    background: rgba(70, 92, 255, 0.12);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 14rpx;
+    flex-shrink: 0;
+}
+
+.meta-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.meta-label {
+    display: block;
+    font-size: 20rpx;
+    color: #8A94A6;
+}
+
+.meta-value {
+    display: block;
+    margin-top: 4rpx;
+    font-size: 24rpx;
+    color: #1A1F36;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list-shell {
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.06);
+    overflow: hidden;
+    padding-bottom: 8rpx;
+}
+
+.section-head {
+    padding: 16rpx 18rpx 12rpx;
+    background: linear-gradient(90deg, #F3F5FF 0%, #FFFFFF 70%);
+    border-bottom: 1rpx solid #EEF1F8;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.section-head-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.section-bar {
+    width: 8rpx;
+    height: 34rpx;
+    border-radius: 8rpx;
+    background: linear-gradient(180deg, #465CFF, #8BA0FF);
+    margin-right: 14rpx;
+}
+
+.section-titles {
+    display: flex;
+    flex-direction: column;
+}
+
+.section-title {
+    font-size: 28rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.section-en {
+    margin-top: 2rpx;
+    font-size: 16rpx;
+    color: #9AA3B8;
+    letter-spacing: 2rpx;
+}
+
+.contract-card {
+    position: relative;
+    margin: 16rpx 16rpx 0;
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 22rpx;
+    overflow: hidden;
+    box-shadow: 0 8rpx 22rpx rgba(40, 58, 120, 0.05);
+}
+
+.contract-card.expired {
+    opacity: 0.7;
+}
+
+.contract-main {
+    padding: 0;
+}
+
+.card-head {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16rpx;
+    padding: 24rpx 24rpx 18rpx;
+}
+
+.card-head-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.title-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10rpx;
+}
+
+.contract-title {
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    max-width: 360rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status-pill {
+    font-size: 18rpx;
+    padding: 4rpx 12rpx;
+    border-radius: 999rpx;
+    font-weight: 600;
+}
+
+.st-ok {
+    color: #2DBE6C;
+    background: rgba(45, 190, 108, 0.12);
+}
+
+.st-expired {
+    color: #8A94A6;
+    background: rgba(138, 148, 166, 0.16);
+}
+
+.meta-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 8rpx;
+}
+
+.meta-line-text {
+    font-size: 22rpx;
+    color: #8A94A6;
+    line-height: 1.4;
+}
+
+.meta-line-text.code {
+    color: #B45309;
+}
+
+.meta-dot {
+    margin: 0 8rpx;
+    color: #C5CAD5;
+    font-size: 22rpx;
+}
+
+.balance-box {
+    flex-shrink: 0;
+    text-align: right;
+    padding-top: 2rpx;
+}
+
+.balance-label {
+    display: block;
+    font-size: 18rpx;
+    color: #9AA3B8;
+    margin-bottom: 4rpx;
+}
+
+.balance-text {
+    display: block;
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    letter-spacing: 0.5rpx;
+    font-variant-numeric: tabular-nums;
+}
+
+.scheme-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8rpx;
+    padding: 0 24rpx 14rpx;
+}
+
+.relation-block {
+    margin: 0 24rpx 4rpx;
+    padding: 14rpx 16rpx 8rpx;
+    background: #F7F8FC;
+    border-radius: 16rpx;
+}
+
+.relation-group {
+    margin-bottom: 10rpx;
+}
+
+.relation-label {
+    display: block;
+    font-size: 18rpx;
+    color: #9AA3B8;
+    margin-bottom: 8rpx;
+    letter-spacing: 1rpx;
+}
+
+.chip-wrap {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8rpx;
+}
+
+.chip {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    max-width: 100%;
+    padding: 6rpx 14rpx;
+    border-radius: 10rpx;
+    background: #FFFFFF;
+    border: 1rpx solid #E8ECF6;
+}
+
+.chip.soft {
+    font-size: 20rpx;
+    color: #465CFF;
+    background: rgba(70, 92, 255, 0.08);
+    border-color: transparent;
+}
+
+.chip.removable {
+    padding-right: 8rpx;
+}
+
+.chip-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4rpx;
+}
+
+.chip-text {
+    font-size: 20rpx;
+    color: #4A5568;
+    margin-right: 4rpx;
+    max-width: 360rpx;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.action-bar {
+    margin-top: 8rpx;
+    padding: 14rpx 12rpx 16rpx;
+    border-top: 1rpx solid #F0F2F7;
+    background: #FAFBFE;
+}
+
+.action-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.action-cell {
+    width: 25%;
+    box-sizing: border-box;
+    padding: 6rpx;
+}
+
+.action-btn {
+    width: 100%;
+    height: 64rpx;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12rpx;
+    background: #FFFFFF;
+    border: 1rpx solid #E6EAF2;
+    box-sizing: border-box;
+}
+
+.action-btn-text {
+    font-size: 22rpx;
+    font-weight: 600;
+    color: #3D4656;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.action-btn.primary {
+    background: rgba(70, 92, 255, 0.1);
+    border-color: rgba(70, 92, 255, 0.28);
+}
+
+.action-btn.primary .action-btn-text {
+    color: #465CFF;
+}
+
+.action-btn.success {
+    background: rgba(45, 190, 108, 0.1);
+    border-color: rgba(45, 190, 108, 0.28);
+}
+
+.action-btn.success .action-btn-text {
+    color: #2DBE6C;
+}
+
+.action-btn.warn {
+    background: rgba(255, 138, 43, 0.1);
+    border-color: rgba(255, 138, 43, 0.28);
+}
+
+.action-btn.warn .action-btn-text {
+    color: #FF8A2B;
+}
+
+.action-btn.purple {
+    background: rgba(123, 97, 255, 0.1);
+    border-color: rgba(123, 97, 255, 0.28);
+}
+
+.action-btn.purple .action-btn-text {
+    color: #7B61FF;
+}
+
+.action-btn.danger {
+    background: rgba(255, 77, 79, 0.08);
+    border-color: rgba(255, 77, 79, 0.28);
+}
+
+.action-btn.danger .action-btn-text {
+    color: #FF4D4F;
+}
+
+.fab-add {
+    position: fixed;
+    right: 36rpx;
+    bottom: calc(48rpx + env(safe-area-inset-bottom));
+    z-index: 100;
+    min-width: 120rpx;
+    height: 88rpx;
+    padding: 0 36rpx;
+    border-radius: 999rpx;
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+    box-shadow: 0 12rpx 28rpx rgba(47, 63, 207, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab-add-text {
+    font-size: 28rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+    letter-spacing: 2rpx;
 }
 
 .download-button-container {
@@ -965,16 +1749,11 @@ export default {
     border-radius: 30rpx;
 }
 
-.scope-picker-trigger {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20rpx 10rpx;
-}
-
-.scope-picker-label {
-    font-size: 30rpx;
-    color: #333;
+.picker-title {
+    padding: 24rpx 28rpx 8rpx;
+    font-size: 28rpx;
+    font-weight: 700;
+    color: #1A1F36;
 }
 
 .scope-row {
@@ -987,5 +1766,40 @@ export default {
 .scope-name {
     font-size: 30rpx;
     color: #333;
+}
+
+.scheme-row-manage {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.scheme-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 28rpx;
+    color: #2D3748;
+    margin-right: 12rpx;
+}
+
+.scheme-ops {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.mini-btn {
+    padding: 8rpx 18rpx;
+    border-radius: 999rpx;
+    background: #465CFF;
+    color: #FFFFFF;
+    font-size: 22rpx;
+    margin-left: 10rpx;
+}
+
+.mini-btn.danger {
+    background: #FF4D4F;
 }
 </style>
