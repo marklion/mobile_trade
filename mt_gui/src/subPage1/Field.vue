@@ -1,76 +1,161 @@
 <template>
-<div class="sc_execute_show">
-    <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
-    <view v-if="cur_page == 0">
-        <list-show ref="plans" :fetch_function="get_wait_que" height="85vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field,only_show_uncalled]">
-            <view style="padding: 15rpx 20rpx; background-color: #f8f9fa; border-radius: 8rpx; margin: 10rpx; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.1);">
-                <view style="display: flex; align-items: center;">
-                    <fui-icon name="filter" size="32" color="#666"></fui-icon>
-                    <fui-text text="过滤选项" size="28" color="#666" style="margin-left: 15rpx;"></fui-text>
-                </view>
-                <view style="display: flex; align-items: center;">
-                    <fui-text text="仅显示未叫号" size="28" color="#333" style="margin-right: 15rpx;"></fui-text>
-                    <u-switch v-model="only_show_uncalled" @change="refresh_plans" active-color="#007aff" inactive-color="#e5e5e5">
-                    </u-switch>
-                </view>
+<view class="field-page">
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+        </view>
+        <view class="hero-copy">
+            <text class="hero-label">现场作业</text>
+            <text class="hero-title">{{ sub_pages[cur_page] }}</text>
+            <text class="hero-sub" v-if="cur_page === 0">当前排队 {{ plans.length }} 辆</text>
+        </view>
+    </view>
+
+    <view class="shell">
+        <view class="tabs">
+            <view class="tab-item" :class="{ active: cur_page === 0 }" @click="sectionChange(0)">
+                <text class="tab-text">排队车辆</text>
             </view>
-            <view v-for="item in plans" :key="item.id" class="single_card_show">
-                <u-cell :icon="icon_make(item)" :title="item.main_vehicle.plate + '-' + item.behind_vehicle.plate">
-                    <view slot="label" style="display:flex; flex-direction: column;">
-                        <fui-text :text="item.company.name" size="24"></fui-text>
-                        <fui-text v-if="item.register_time" type="primary" :text="'排号时间：' + item.register_time" size="24"></fui-text>
-                        <fui-text v-if="item.call_time" type="success" :text="'叫号时间：' + item.call_time" size="24"></fui-text>
-                        <fui-text v-if="item.confirmed" type="danger" :text="'已确认装卸货' + (item.seal_no?item.seal_no:'') + '-' + (item.drop_take_zone_name?item.drop_take_zone_name:'')" size="24"></fui-text>
-                        <fui-text v-if="item.enter_time" type="purple" :text="'一次重量:' + item.p_weight" size="24"></fui-text>
-                        <fui-text v-if="item.enter_count" type="warning" :text="'进厂前装车量:' + item.enter_count" size="24"></fui-text>
-                    </view>
-                    <view slot="value" style="display:flex; flex-direction: column;">
-                        <fui-text :text="item.driver.name" size="24"></fui-text>
-                        <fui-text type="primary" :text="item.driver.phone" size="24" textType="mobile" @click="copy_text(item.driver.phone)"></fui-text>
-                        <fui-text :text="'序号:' + item.register_number" size="24"></fui-text>
-                        <fui-text v-if="item.expect_weight > 0" size="24" :text="'期望重量:' + item.expect_weight"></fui-text>
-                    </view>
-                    <view slot="right-icon">
-                        <view v-if="item.register_time">
-                            <view v-if="!item.call_time">
-                                <fui-button btnSize="mini" text="叫号" type="success" @click="call_vehicle(item)"></fui-button>
-                                <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
-                            </view>
-                            <view v-else-if="!item.enter_time">
-                                <fui-button btnSize="mini" text="过号" type="danger" @click="prepare_pass_vehicle(item)"></fui-button>
-                                <fui-button v-if="item.stuff.manual_weight" btnSize="mini" text="进厂" type="primary" @click="prepare_enter_vehicle(item)"></fui-button>
-                            </view>
-                            <view v-else>
-                                <fui-button btnSize="mini" text="装卸货" type="warning" @click="prepare_confirm_vehicle(item)"></fui-button>
-                                <fui-button btnSize="mini" text="撤销进厂" type="danger" @click="prepare_enter_vehicle(item, true)"></fui-button>
-                                <fui-button btnSize="mini" v-if="item.stuff.manual_weight" text="计量" type="primary" @click="prepare_manual_weight(item)"></fui-button>
-                            </view>
+            <view class="tab-item" :class="{ active: cur_page === 1 }" @click="sectionChange(1)">
+                <text class="tab-text">设备管理</text>
+            </view>
+            <view class="tab-item" :class="{ active: cur_page === 2 }" @click="sectionChange(2)">
+                <text class="tab-text">磅单印章</text>
+            </view>
+        </view>
+
+        <view class="body" v-if="cur_page == 0">
+            <list-show ref="plans" :fetch_function="get_wait_que" height="62vh" search_key="search_cond"
+                v-model="plans" :fetch_params="[show_sc_in_field, only_show_uncalled]">
+                <view class="filter-bar">
+                    <text class="filter-label">仅显示未叫号</text>
+                    <fui-switch :checked="only_show_uncalled" color="#465CFF" @change="on_uncalled_change"></fui-switch>
+                </view>
+
+                <view class="plan-card" v-for="(item, p_index) in plans" :key="item.id">
+                    <view class="plan-top">
+                        <view class="plan-plates">
+                            <text class="plate-tag">{{ plate_of(item) }}</text>
+                            <text class="plate-tag" v-if="behind_of(item)">{{ behind_of(item) }}</text>
+                        </view>
+                        <view class="status-tag enter" v-if="item.enter_time">
+                            <text class="status-tag-text">已进厂</text>
+                        </view>
+                        <view class="status-tag call" v-else-if="item.call_time">
+                            <text class="status-tag-text">已叫号</text>
+                        </view>
+                        <view class="status-tag wait" v-else>
+                            <text class="status-tag-text">排队中</text>
                         </view>
                     </view>
-                </u-cell>
-                <view style="display: flex;  padding: 10rpx;">
-                    <fui-button btnSize="mini" text="审批" type="primary" @click="prepare_sc_confirm(item)"></fui-button>
-                    <fui-button btnSize="mini" text="检查" type="warning" @click="nav_to_fc(item)"></fui-button>
-                    <fui-button v-if="item.enter_attachment" btnSize="mini" text="查看入厂前磅单" type="success" @click="show_image(item.enter_attachment)"></fui-button>
+
+                    <view class="plan-title-row">
+                        <text class="plan-company">{{ company_of(item) }}</text>
+                        <text class="plan-stuff" v-if="stuff_of(item)">{{ stuff_of(item) }}</text>
+                    </view>
+
+                    <view class="plan-meta">
+                        <text class="meta-item">{{ driver_name(item) }}</text>
+                        <text class="meta-sep">·</text>
+                        <text class="meta-item phone" :data-phone="driver_phone(item)" @click="on_copy_phone">{{ driver_phone(item) }}</text>
+                    </view>
+
+                    <view class="plan-facts">
+                        <text class="fact no" v-if="item.register_number != null">No.{{ item.register_number }}</text>
+                        <text class="fact" v-if="item.register_time">排号 {{ short_time(item.register_time) }}</text>
+                        <text class="fact ok" v-if="item.call_time">叫号 {{ short_time(item.call_time) }}</text>
+                        <text class="fact" v-if="item.enter_time">一次重 {{ item.p_weight }}</text>
+                        <text class="fact" v-if="item.enter_count">进厂前 {{ item.enter_count }}</text>
+                        <text class="fact" v-if="item.expect_weight > 0">期望 {{ item.expect_weight }}</text>
+                        <text class="fact warn" v-if="item.confirmed">
+                            {{ item.seal_no || '已确认' }}{{ item.drop_take_zone_name ? ('·' + item.drop_take_zone_name) : '' }}
+                        </text>
+                    </view>
+
+                    <view class="plan-actions" v-if="item.register_time">
+                        <template v-if="!item.call_time">
+                            <view class="act success" :data-pindex="p_index" @click="on_call_vehicle">
+                                <text class="act-text">叫号</text>
+                            </view>
+                            <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
+                                <text class="act-text">过号</text>
+                            </view>
+                        </template>
+                        <template v-else-if="!item.enter_time">
+                            <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
+                                <text class="act-text">过号</text>
+                            </view>
+                            <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
+                                :data-pindex="p_index" @click="on_enter_vehicle">
+                                <text class="act-text">进厂</text>
+                            </view>
+                        </template>
+                        <template v-else>
+                            <view class="act warn" :data-pindex="p_index" @click="on_confirm_vehicle">
+                                <text class="act-text">装卸货</text>
+                            </view>
+                            <view class="act danger" :data-pindex="p_index" data-exit="1" @click="on_enter_vehicle">
+                                <text class="act-text">撤销进厂</text>
+                            </view>
+                            <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
+                                :data-pindex="p_index" @click="on_manual_weight">
+                                <text class="act-text">计量</text>
+                            </view>
+                        </template>
+                        <view class="act primary" :data-pindex="p_index" @click="on_sc_confirm">
+                            <text class="act-text">审批</text>
+                        </view>
+                        <view class="act warn" :data-pindex="p_index" @click="on_nav_fc">
+                            <text class="act-text">检查</text>
+                        </view>
+                        <view class="act success" v-if="item.enter_attachment"
+                            :data-pindex="p_index" @click="on_show_attach">
+                            <text class="act-text">磅单</text>
+                        </view>
+                    </view>
+                </view>
+            </list-show>
+        </view>
+
+        <view class="body body-pad" v-else-if="cur_page == 1">
+            <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :company="current_company"
+                :device="single_dev" @refresh="dev_refresh"></dev-opt>
+            <view class="empty-block" v-if="!all_dev || !all_dev.length">
+                <text class="empty-text">暂无设备</text>
+            </view>
+        </view>
+
+        <view class="body body-pad" v-else-if="cur_page == 2">
+            <view class="stamp-card" v-if="stamp_pic">
+                <view class="stamp-head">
+                    <text class="stamp-title">当前印章</text>
+                    <text class="stamp-sub">用于磅单盖章展示</text>
+                </view>
+                <view class="stamp-preview">
+                    <image class="stamp-img" :src="$convert_attach_url(stamp_pic)" mode="aspectFit"></image>
+                </view>
+                <view class="stamp-del" @click="delete_stamp_pic">
+                    <text class="stamp-del-text">删除印章</text>
                 </view>
             </view>
-        </list-show>
-    </view>
-    <view v-else-if="cur_page == 1">
-        <dev-opt v-for="(single_dev,index) in all_dev" :key="index" :company="current_company" :device="single_dev" @refresh="dev_refresh"></dev-opt>
-    </view>
-    <view v-else-if="cur_page == 2">
-        <view v-if="stamp_pic">
-            <fui-avatar width="100%" mode="widthFix" block shape="square" v-if="stamp_pic" :src="$convert_attach_url(stamp_pic)"></fui-avatar>
-            <fui-button text="删除" @click="delete_stamp_pic" type="danger"></fui-button>
+            <view class="stamp-card" v-else>
+                <view class="stamp-head">
+                    <text class="stamp-title">上传印章</text>
+                    <text class="stamp-sub">请上传清晰的印章图片</text>
+                </view>
+                <view class="stamp-upload">
+                    <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url"
+                        ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error"
+                        @complete="after_other_action"></fui-upload>
+                </view>
+            </view>
         </view>
-        <view v-else>
-            <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url" ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error" @complete="after_other_action"></fui-upload>
-        </view>
     </view>
+
     <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
     </fui-modal>
-    <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
+    <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle"
+        :show="show_enter_vehicle" @click="enter_vehicle">
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
         <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
@@ -82,8 +167,9 @@
     </fui-modal>
     <fui-bottom-popup :show="show_zone_select" @close="show_zone_select = false" z-index="1002">
         <fui-list>
-            <fui-list-cell v-for="item in zones" :key="item.id" arrow @click="zone_name = item.name; show_zone_select = false">
-                {{item.name}}
+            <fui-list-cell v-for="(item, index) in zones" :key="item.id" :index="index" arrow
+                @click="on_pick_zone">
+                {{ item.name }}
             </fui-list-cell>
         </fui-list>
     </fui-bottom-popup>
@@ -104,7 +190,7 @@
             </view>
         </view>
     </fui-backdrop>
-</div>
+</view>
 </template>
 
 <script>
@@ -150,6 +236,118 @@ export default {
         };
     },
     methods: {
+        plate_of: function (item) {
+            return (item && item.main_vehicle && item.main_vehicle.plate) ? item.main_vehicle.plate : '-';
+        },
+        behind_of: function (item) {
+            return (item && item.behind_vehicle && item.behind_vehicle.plate) ? item.behind_vehicle.plate : '';
+        },
+        company_of: function (item) {
+            return (item && item.company && item.company.name) ? item.company.name : '-';
+        },
+        stuff_of: function (item) {
+            return (item && item.stuff && item.stuff.name) ? item.stuff.name : '';
+        },
+        driver_name: function (item) {
+            return (item && item.driver && item.driver.name) ? item.driver.name : '-';
+        },
+        driver_phone: function (item) {
+            return (item && item.driver && item.driver.phone) ? item.driver.phone : '-';
+        },
+        short_time: function (val) {
+            if (!val) {
+                return '-';
+            }
+            const text = String(val);
+            if (text.length >= 16) {
+                return text.slice(5, 16);
+            }
+            return text;
+        },
+        get_plan_by_event: function (e) {
+            const pindex = Number(e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.pindex
+                : -1);
+            const item = (this.plans || [])[pindex];
+            if (!item) {
+                uni.showToast({ title: '未找到车辆，请重试', icon: 'none' });
+                return null;
+            }
+            return item;
+        },
+        on_copy_phone: function (e) {
+            const phone = e && e.currentTarget && e.currentTarget.dataset
+                ? e.currentTarget.dataset.phone
+                : '';
+            if (!phone || phone === '-') {
+                return;
+            }
+            this.copy_text(phone);
+        },
+        on_call_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.call_vehicle(item);
+            }
+        },
+        on_pass_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_pass_vehicle(item);
+            }
+        },
+        on_enter_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (!item) {
+                return;
+            }
+            const is_exit = !!(e && e.currentTarget && e.currentTarget.dataset
+                && (e.currentTarget.dataset.exit === '1' || e.currentTarget.dataset.exit === 1));
+            this.prepare_enter_vehicle(item, is_exit);
+        },
+        on_confirm_vehicle: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_confirm_vehicle(item);
+            }
+        },
+        on_manual_weight: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_manual_weight(item);
+            }
+        },
+        on_sc_confirm: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.prepare_sc_confirm(item);
+            }
+        },
+        on_nav_fc: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item) {
+                this.nav_to_fc(item);
+            }
+        },
+        on_show_attach: function (e) {
+            const item = this.get_plan_by_event(e);
+            if (item && item.enter_attachment) {
+                this.show_image(item.enter_attachment);
+            }
+        },
+        on_pick_zone: function (e) {
+            const index = e && typeof e.index === 'number' ? e.index : -1;
+            const item = (this.zones || [])[index];
+            if (!item) {
+                return;
+            }
+            this.zone_name = item.name;
+            this.show_zone_select = false;
+        },
+        on_uncalled_change: function (e) {
+            this.only_show_uncalled = !!(e && e.detail && e.detail.value);
+            this.refresh_plans();
+        },
         prepare_sc_confirm: function (item) {
             this.focus_plan = item;
             this.show_sc_confirm = true;
@@ -272,16 +470,6 @@ export default {
             this.zone_name = '';
             this.tmp_seal_no = '';
         },
-        icon_make: function (item) {
-            let ret = 'hourglass';
-            if (item.call_time) {
-                ret = 'volume';
-            }
-            if (item.enter_time) {
-                ret = 'rewind-right';
-            }
-            return ret;
-        },
         get_wait_que: async function (pageNo, [show_sc_in_field, only_show_uncalled]) {
             if (show_sc_in_field == undefined) {
                 return [];
@@ -359,15 +547,345 @@ export default {
 </script>
 
 <style scoped>
-.single_card_show {
-    border: 1px dashed red;
-    border-radius: 10rpx;
-    margin-bottom: -2px;
+.field-page {
+    min-height: 100vh;
+    background: #F4F6FB;
+    padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
+    box-sizing: border-box;
 }
-
-.single_card_show:not(:last-child) {
-    border-bottom: none;
-    /* 隐藏相邻框框的底部边框 */
+.hero {
+    position: relative;
+    padding: 28rpx 28rpx 48rpx;
+    background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
+    overflow: hidden;
+}
+.hero-logo-bg {
+    position: absolute;
+    top: -20rpx;
+    right: -10rpx;
+    width: 240rpx;
+    height: 240rpx;
+    opacity: 0.16;
+    pointer-events: none;
+}
+.hero-logo-img {
+    width: 100%;
+    height: 100%;
+}
+.hero-copy {
+    position: relative;
+    z-index: 1;
+}
+.hero-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.75);
+    letter-spacing: 2rpx;
+}
+.hero-title {
+    display: block;
+    margin-top: 10rpx;
+    font-size: 40rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.hero-sub {
+    display: block;
+    margin-top: 8rpx;
+    font-size: 24rpx;
+    color: rgba(255, 255, 255, 0.88);
+}
+.shell {
+    position: relative;
+    z-index: 2;
+    margin: -24rpx 20rpx 12rpx;
+    background: #FFFFFF;
+    border-radius: 24rpx;
+    box-shadow: 0 10rpx 28rpx rgba(40, 58, 120, 0.08);
+    overflow: hidden;
+    min-height: 70vh;
+}
+.tabs {
+    padding: 10rpx;
+    display: flex;
+    flex-direction: row;
+    border-bottom: 1rpx solid #F2F4FA;
+}
+.tab-item {
+    flex: 1;
+    height: 68rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 14rpx;
+}
+.tab-item.active {
+    background: rgba(70, 92, 255, 0.1);
+}
+.tab-text {
+    font-size: 26rpx;
+    color: #6B7280;
+    font-weight: 600;
+}
+.tab-item.active .tab-text {
+    color: #2F3FCF;
+}
+.body {
+    padding: 12rpx 12rpx 20rpx;
+}
+.body-pad {
+    padding: 16rpx;
+}
+.filter-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10rpx 14rpx;
+    margin-bottom: 8rpx;
+    background: #F8F9FD;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 12rpx;
+}
+.filter-label {
+    font-size: 24rpx;
+    color: #3A4256;
+    font-weight: 600;
+}
+.plan-card {
+    background: #F8F9FD;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 14rpx;
+    padding: 10rpx 12rpx 8rpx;
+    margin-bottom: 8rpx;
+}
+.plan-top {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4rpx;
+}
+.plan-plates {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.plate-tag {
+    padding: 2rpx 10rpx;
+    margin-right: 6rpx;
+    border-radius: 4rpx;
+    background: #F5D000;
+    color: #111111;
+    font-size: 22rpx;
+    font-weight: 800;
+    letter-spacing: 1rpx;
+    border: 2rpx solid #111111;
+    line-height: 1.25;
+}
+.status-tag {
+    flex-shrink: 0;
+    padding: 2rpx 10rpx;
+    border-radius: 999rpx;
+}
+.status-tag.wait {
+    background: rgba(255, 138, 43, 0.12);
+}
+.status-tag.call {
+    background: rgba(45, 190, 108, 0.12);
+}
+.status-tag.enter {
+    background: rgba(70, 92, 255, 0.12);
+}
+.status-tag-text {
+    font-size: 18rpx;
+    font-weight: 700;
+}
+.status-tag.wait .status-tag-text {
+    color: #FF8A2B;
+}
+.status-tag.call .status-tag-text {
+    color: #1FA85A;
+}
+.status-tag.enter .status-tag-text {
+    color: #2F3FCF;
+}
+.plan-title-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+    margin-bottom: 2rpx;
+}
+.plan-company {
+    font-size: 24rpx;
+    color: #1A1F36;
+    font-weight: 700;
+    line-height: 1.25;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.plan-stuff {
+    margin-left: 10rpx;
+    font-size: 20rpx;
+    color: #6B7280;
+    line-height: 1.25;
+}
+.plan-meta {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 2rpx;
+}
+.meta-item {
+    font-size: 20rpx;
+    color: #4A5568;
+    font-weight: 600;
+    line-height: 1.3;
+}
+.meta-item.phone {
+    color: #465CFF;
+}
+.meta-sep {
+    margin: 0 6rpx;
+    color: #C5CAD5;
+    font-size: 20rpx;
+}
+.plan-facts {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 4rpx;
+}
+.fact {
+    margin: 2rpx 8rpx 2rpx 0;
+    padding: 2rpx 8rpx;
+    border-radius: 6rpx;
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    font-size: 18rpx;
+    color: #6B7280;
+    line-height: 1.3;
+}
+.fact.no {
+    padding: 0 4rpx 0 0;
+    background: transparent;
+    border: none;
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 800;
+    letter-spacing: 0.5rpx;
+    line-height: 1.2;
+}
+.fact.ok {
+    color: #1FA85A;
+    border-color: rgba(45, 190, 108, 0.25);
+    background: rgba(45, 190, 108, 0.08);
+}
+.fact.warn {
+    color: #FF4D4F;
+    border-color: rgba(255, 77, 79, 0.25);
+    background: rgba(255, 77, 79, 0.06);
+}
+.plan-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    margin-top: 6rpx;
+    padding-top: 6rpx;
+    border-top: 1rpx solid #EEF1F8;
+}
+.act {
+    width: 20%;
+    box-sizing: border-box;
+    padding: 3rpx;
+    height: 54rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.act-text {
+    width: 100%;
+    height: 48rpx;
+    line-height: 48rpx;
+    text-align: center;
+    border-radius: 8rpx;
+    font-size: 20rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.act.success .act-text { background: #2DBE6C; }
+.act.danger .act-text { background: #FF4D4F; }
+.act.primary .act-text { background: #465CFF; }
+.act.warn .act-text { background: #FF8A2B; }
+.stamp-card {
+    background: #F8F9FD;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 18rpx;
+    padding: 22rpx 20rpx;
+}
+.stamp-head {
+    margin-bottom: 18rpx;
+}
+.stamp-title {
+    display: block;
+    font-size: 30rpx;
+    color: #1A1F36;
+    font-weight: 700;
+}
+.stamp-sub {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 22rpx;
+    color: #9AA3B8;
+}
+.stamp-preview {
+    background: #FFFFFF;
+    border: 1rpx solid #EEF1F8;
+    border-radius: 16rpx;
+    padding: 24rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 360rpx;
+}
+.stamp-img {
+    width: 100%;
+    height: 360rpx;
+    display: block;
+}
+.stamp-upload {
+    background: #FFFFFF;
+    border: 1rpx dashed rgba(70, 92, 255, 0.28);
+    border-radius: 16rpx;
+    padding: 24rpx;
+}
+.stamp-del {
+    margin-top: 20rpx;
+    height: 80rpx;
+    border-radius: 14rpx;
+    background: #FF4D4F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.stamp-del-text {
+    font-size: 28rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+.empty-block {
+    padding: 80rpx 24rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.empty-text {
+    font-size: 26rpx;
+    color: #9AA3B8;
 }
 .image-viewer-container {
     width: 100%;
@@ -376,12 +894,10 @@ export default {
     padding-bottom: 200rpx;
     box-sizing: border-box;
 }
-
 .movable-view {
     height: 100%;
     width: 100%;
 }
-
 .movable-area {
     height: 100%;
     width: 100%;
@@ -402,9 +918,5 @@ export default {
     justify-content: center;
     align-items: center;
     z-index: 8889;
-}
-.sc_execute_show {
-    height: 100%;
-    width: 100%;
 }
 </style>
