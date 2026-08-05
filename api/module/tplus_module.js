@@ -192,7 +192,7 @@ module.exports = {
                                 [db_opt.Op.lt]: body.end_time,
                             },
                             is_buy: true,
-                            tplusSettleRecordId:null,
+                            [db_opt.Op.and]: [sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`)],
                         },
                         group: ['companyId'],
                     })
@@ -241,6 +241,7 @@ module.exports = {
                         stuffId: body.stuff_id,
                         status: 3,
                         is_buy: true,
+                        [db_opt.Op.and]: [sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`)],
                     },
                     include: util_lib.plan_detail_include(),
                 });
