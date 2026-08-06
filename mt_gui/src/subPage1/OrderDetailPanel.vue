@@ -373,8 +373,8 @@
                 </view>
                 <view class="action-chip danger"
                     v-if="focus_plan.status != 3 && ($has_module('sale_management') || $has_module('buy_management'))"
-                    @click="prepare_xxx_confirm(cur_close_url, '关闭')">
-                    <text class="action-chip-text">关闭</text>
+                    @click="prepare_xxx_confirm(cur_close_url, '闭单')">
+                    <text class="action-chip-text">闭单</text>
                 </view>
                 <view class="action-chip success"
                     v-if="focus_plan.status == 1 && !focus_plan.is_buy && ($has_module('sale_management') || $has_module('buy_management'))"
@@ -1192,7 +1192,7 @@ export default {
         },
         history_action_tone: function (action) {
             const text = String(action || '');
-            if (text.indexOf('关闭') !== -1 || text.indexOf('取消') !== -1 || text.indexOf('删除') !== -1) {
+            if (text.indexOf('闭单') !== -1 || text.indexOf('取消') !== -1 || text.indexOf('删除') !== -1) {
                 return 'danger';
             }
             if (text.indexOf('确认') !== -1 || text.indexOf('验款') !== -1 || text.indexOf('通过') !== -1) {
