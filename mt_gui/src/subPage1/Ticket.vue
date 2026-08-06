@@ -21,24 +21,22 @@
     </view>
 
     <view class="shell" v-if="ticket_ready">
-        <view class="count-card">
-            <text class="count-label">{{ ticket_content.label }}</text>
-            <text class="count-value">{{ ticket_content.value }}</text>
-        </view>
-
-        <view class="info-card">
-            <view class="info-row" v-for="(row, idx) in ticket_rows" :key="idx">
-                <text class="info-label">{{ row.label }}</text>
-                <text class="info-value plate" v-if="is_plate_row(row)">{{ row.value || '-' }}</text>
-                <text class="info-value" v-else>{{ row.value == null || row.value === '' ? '-' : row.value }}</text>
+        <view class="ticket-body">
+            <view class="count-card">
+                <text class="count-label">{{ ticket_content.label }}</text>
+                <text class="count-value">{{ ticket_content.value }}</text>
             </view>
-        </view>
 
-        <view class="media-card" v-if="stamp_path">
-            <view class="media-block">
-                <text class="media-title">电子印章</text>
-                <image class="stamp-img" :src="$convert_attach_url(stamp_path)" mode="aspectFit"></image>
+            <view class="info-card">
+                <view class="info-row" v-for="(row, idx) in ticket_rows" :key="idx">
+                    <text class="info-label">{{ row.label }}</text>
+                    <text class="info-value plate" v-if="is_plate_row(row)">{{ row.value || '-' }}</text>
+                    <text class="info-value" v-else>{{ row.value == null || row.value === '' ? '-' : row.value }}</text>
+                </view>
             </view>
+
+            <image v-if="stamp_path" class="stamp-watermark"
+                :src="$convert_attach_url(stamp_path)" mode="aspectFit"></image>
         </view>
     </view>
 
@@ -380,13 +378,18 @@ export default {
 .shell {
     margin: -24rpx 20rpx 0;
 }
+.ticket-body {
+    position: relative;
+    margin-bottom: 16rpx;
+}
 .count-card {
     background: #FFFFFF;
-    border-radius: 20rpx;
+    border-radius: 20rpx 20rpx 0 0;
     border: 1rpx solid #EEF1F8;
+    border-bottom: none;
     box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.06);
     padding: 28rpx 24rpx;
-    margin-bottom: 16rpx;
+    margin-bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -405,11 +408,12 @@ export default {
 }
 .info-card {
     background: #FFFFFF;
-    border-radius: 20rpx;
+    border-radius: 0 0 20rpx 20rpx;
     border: 1rpx solid #EEF1F8;
+    border-top: 1rpx solid #F5F7FC;
     box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.06);
     padding: 8rpx 20rpx;
-    margin-bottom: 16rpx;
+    margin-bottom: 0;
     overflow: hidden;
 }
 .info-row {
@@ -444,34 +448,17 @@ export default {
     font-weight: 800;
     letter-spacing: 1rpx;
 }
-.media-card {
-    background: #FFFFFF;
-    border-radius: 20rpx;
-    border: 1rpx solid #EEF1F8;
-    box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.06);
-    padding: 24rpx 20rpx;
-    margin-bottom: 16rpx;
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: space-around;
-    gap: 24rpx;
-}
-.media-block {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12rpx;
-}
-.media-title {
-    font-size: 22rpx;
-    color: #6B7280;
-    font-weight: 600;
-}
-.stamp-img {
-    width: 220rpx;
-    height: 220rpx;
-    background: #FFFFFF;
+.stamp-watermark {
+    position: absolute;
+    left: 36%;
+    top: 56%;
+    width: 260rpx;
+    height: 260rpx;
+    margin-left: -130rpx;
+    margin-top: -130rpx;
+    opacity: 0.8;
+    pointer-events: none;
+    z-index: 2;
 }
 .actions {
     margin: 8rpx 20rpx 0;
