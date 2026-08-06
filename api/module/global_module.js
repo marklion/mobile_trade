@@ -1048,7 +1048,7 @@ module.exports = {
         company_add: {
             name: '添加公司',
             description: '添加公司',
-            need_rbac: true,
+            need_rbac: false,
             is_write: true,
             is_get_api: false,
             params: {
