@@ -1393,27 +1393,35 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
     else if (_sm.tft == abs_state_machine::timer)
     {
         m_timer_cur_count++;
-        if (m_timer_max_count > 0 && m_timer_cur_count > m_timer_max_count)
+        bool is_ready = false;
+        auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
+        if (set)
         {
-            ret.reset(new scale_state_wait_timeout());
+            auto fg = set->get_parent<sql_device_meta>("front_gate");
+            auto bg = set->get_parent<sql_device_meta>("back_gate");
+            if (fg && bg)
+            {
+                THR_CALL_DM_BEGIN();
+                if (client->gate_is_close(fg->get_pri_id()) && client->gate_is_close(bg->get_pri_id()))
+                {
+                    is_ready = true;
+                }
+                THR_CALL_DM_END();
+            }
+        }
+        if (is_ready)
+        {
+            ret.reset(new scale_state_scale());
         }
         else
         {
-            sm.cast_stop_stable();
-            auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
-            if (set)
+            if (m_timer_max_count > 0 && m_timer_cur_count > m_timer_max_count)
             {
-                auto fg = set->get_parent<sql_device_meta>("front_gate");
-                auto bg = set->get_parent<sql_device_meta>("back_gate");
-                if (fg && bg)
-                {
-                    THR_CALL_DM_BEGIN();
-                    if (client->gate_is_close(fg->get_pri_id()) && client->gate_is_close(bg->get_pri_id()))
-                    {
-                        ret.reset(new scale_state_scale());
-                    }
-                    THR_CALL_DM_END();
-                }
+                ret.reset(new scale_state_wait_timeout());
+            }
+            else
+            {
+                sm.cast_stop_stable();
             }
         }
     }
