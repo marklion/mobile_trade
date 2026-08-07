@@ -83,6 +83,8 @@ class scale_state_idle : public abs_sm_state
 
 class scale_state_prepare : public abs_sm_state
 {
+    int m_timer_cur_count = 0;
+    int m_timer_max_count = 0;
     virtual void before_enter(abs_state_machine &_sm);
     virtual void after_exit(abs_state_machine &_sm);
     virtual std::unique_ptr<abs_sm_state> proc_event(abs_state_machine &_sm);
@@ -111,6 +113,22 @@ class scale_state_issue_card:public abs_sm_state
     virtual std::string name() { return "发卡"; }
 };
 
+class scale_state_wait_timeout:public abs_sm_state
+{
+    virtual void before_enter(abs_state_machine &_sm);
+    virtual void after_exit(abs_state_machine &_sm);
+    virtual std::unique_ptr<abs_sm_state> proc_event(abs_state_machine &_sm);
+    virtual std::string name() { return "等待车辆上磅异常"; }
+};
+
+class scale_state_wrong_weight:public abs_sm_state
+{
+    virtual void before_enter(abs_state_machine &_sm);
+    virtual void after_exit(abs_state_machine &_sm);
+    virtual std::unique_ptr<abs_sm_state> proc_event(abs_state_machine &_sm);
+    virtual std::string name() { return "重量异常"; }
+};
+
 class scale_sm : public abs_state_machine
 {
 public:
@@ -122,9 +140,11 @@ public:
     void clear_state();
     void open_entry();
     void open_exit();
+    void close_both_gates();
     void start_scale_timer(int sec = 3);
     void stop_scale_timer();
     void cast_common(const std::string &_content);
+    void cast_wait_timeout();
     void cast_enter_info();
     void cast_stop_stable();
     void cast_issue_card();

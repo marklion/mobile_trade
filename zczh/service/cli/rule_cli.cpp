@@ -203,6 +203,32 @@ static void set_force_close(std::ostream &out, std::vector<std::string> _params)
         TRH_CLOSE();
     }
 }
+
+static void set_wait_cycle(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 1)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            running_rule tmp;
+            client->get_rule(tmp);
+            tmp.wait_cycle = atoi(_params[0].c_str());
+            client->set_rule(tmp);
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
+
 static void set_max_weight(std::ostream &out, std::vector<std::string> _params)
 {
     if (_params.size() != 2)
@@ -252,7 +278,8 @@ static void set_weight_coe(std::ostream &out, std::vector<std::string> _params)
         TRH_CLOSE();
     }
 }
-static void set_oem_name(std::ostream &out, std::vector<std::string> _params) {
+static void set_oem_name(std::ostream &out, std::vector<std::string> _params)
+{
     if (_params.size() != 1)
     {
         out << "参数错误" << std::endl;
@@ -383,6 +410,7 @@ std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
     root_menu->Insert(CLI_MENU_ITEM(set_force_close), "设置强制关闭道闸");
     root_menu->Insert(CLI_MENU_ITEM(add_weight_ref), "添加货物重量参考", {"货物名称", "参考重量", "允许误差", "p/m"});
     root_menu->Insert(CLI_MENU_ITEM(del_weight_ref), "删除货物重量参考", {"货物名称", "p/m"});
+    root_menu->Insert(CLI_MENU_ITEM(set_wait_cycle), "设置上磅等待轮数", {"轮数"});
     root_menu->Insert(CLI_MENU_ITEM(clear), "清除配置");
 
     return root_menu;
@@ -432,6 +460,10 @@ std::string rule_cli::make_bdr()
     if (tmp.force_close)
     {
         ret.push_back("set_force_close");
+    }
+    if (tmp.wait_cycle != 0)
+    {
+        ret.push_back("set_wait_cycle " + std::to_string(tmp.wait_cycle));
     }
     if (tmp.max_m_weight != 0 || tmp.max_j_weight != 0)
     {

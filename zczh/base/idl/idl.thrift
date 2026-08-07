@@ -144,6 +144,7 @@ struct running_rule {
     11:double max_j_weight,
     12:double weight_coe,
     13:bool force_close,
+    14:i64 wait_cycle,
 }
 
 struct weight_ref_config {
