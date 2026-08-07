@@ -1016,6 +1016,16 @@ void scale_sm::open_exit()
     THR_CALL_DM_END();
 }
 
+void scale_sm::close_both_gates()
+{
+    auto same_gate_id = device_management_handler::get_same_side_device(trigger_device_id, "gate");
+    auto diff_gate_id = device_management_handler::get_diff_side_device(trigger_device_id, "gate");
+    THR_CALL_DM_BEGIN();
+    client->gate_ctrl(same_gate_id, false);
+    client->gate_ctrl(diff_gate_id, false);
+    THR_CALL_DM_END();
+}
+
 void scale_sm::start_scale_timer(int sec)
 {
     m_timer = timer_wheel_add_node(
@@ -1052,6 +1062,11 @@ void scale_sm::cast_common(const std::string &_content)
     client->led_display(fl_id, content);
     client->led_display(bl_id, content);
     THR_CALL_DM_END();
+}
+
+void scale_sm::cast_wait_timeout()
+{
+    cast_common("等待上磅超时，请重置");
 }
 
 void scale_sm::cast_enter_info()
@@ -1300,10 +1315,12 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 if (sm.is_over_weight(tmp.p_weight))
                 {
                     sm.cast_is_over_weight(tmp.p_weight);
+                    ret.reset(new scale_state_wrong_weight());
                 }
                 else if (exceeded_weight != 0)
                 {
                     sm.cast_weight_illegal(exceeded_weight);
+                    ret.reset(new scale_state_wrong_weight());
                 }
                 else
                 {
@@ -1346,6 +1363,11 @@ void scale_state_prepare::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
     sm.start_scale_timer(5);
+    running_rule rule;
+    THR_CALL_BEGIN(config_management);
+    client->get_rule(rule);
+    THR_CALL_END();
+    m_timer_max_count = rule.wait_cycle;
 }
 
 void scale_state_prepare::after_exit(abs_state_machine &_sm)
@@ -1370,20 +1392,28 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
     }
     else if (_sm.tft == abs_state_machine::timer)
     {
-        sm.cast_stop_stable();
-        auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
-        if (set)
+        m_timer_cur_count++;
+        if (m_timer_max_count > 0 && m_timer_cur_count > m_timer_max_count)
         {
-            auto fg = set->get_parent<sql_device_meta>("front_gate");
-            auto bg = set->get_parent<sql_device_meta>("back_gate");
-            if (fg && bg)
+            ret.reset(new scale_state_wait_timeout());
+        }
+        else
+        {
+            sm.cast_stop_stable();
+            auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
+            if (set)
             {
-                THR_CALL_DM_BEGIN();
-                if (client->gate_is_close(fg->get_pri_id()) && client->gate_is_close(bg->get_pri_id()))
+                auto fg = set->get_parent<sql_device_meta>("front_gate");
+                auto bg = set->get_parent<sql_device_meta>("back_gate");
+                if (fg && bg)
                 {
-                    ret.reset(new scale_state_scale());
+                    THR_CALL_DM_BEGIN();
+                    if (client->gate_is_close(fg->get_pri_id()) && client->gate_is_close(bg->get_pri_id()))
+                    {
+                        ret.reset(new scale_state_scale());
+                    }
+                    THR_CALL_DM_END();
                 }
-                THR_CALL_DM_END();
             }
         }
     }
@@ -1617,6 +1647,47 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
                 }
             }
         }
+    }
+
+    return ret;
+}
+
+void scale_state_wait_timeout::before_enter(abs_state_machine &_sm)
+{
+    auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.cast_wait_timeout();
+    sm.close_both_gates();
+}
+
+void scale_state_wait_timeout::after_exit(abs_state_machine &_sm)
+{
+}
+
+std::unique_ptr<abs_sm_state> scale_state_wait_timeout::proc_event(abs_state_machine &_sm)
+{
+    std::unique_ptr<abs_sm_state> ret;
+    if (_sm.tft == abs_state_machine::manual_reset)
+    {
+        ret.reset(new scale_state_idle());
+    }
+
+    return ret;
+}
+
+void scale_state_wrong_weight::before_enter(abs_state_machine &_sm)
+{
+}
+
+void scale_state_wrong_weight::after_exit(abs_state_machine &_sm)
+{
+}
+
+std::unique_ptr<abs_sm_state> scale_state_wrong_weight::proc_event(abs_state_machine &_sm)
+{
+    std::unique_ptr<abs_sm_state> ret;
+    if (_sm.tft == abs_state_machine::manual_reset)
+    {
+        ret.reset(new scale_state_idle());
     }
 
     return ret;

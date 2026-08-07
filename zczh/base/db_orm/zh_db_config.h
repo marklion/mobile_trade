@@ -416,6 +416,7 @@ public:
     double max_j_weight = 0;
     double weight_coe = 1;
     long force_close = 0;
+    long wait_cycle = 0;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -433,6 +434,7 @@ public:
         ret.push_back(sqlite_orm_column("max_j_weight", sqlite_orm_column::REAL, &max_j_weight));
         ret.push_back(sqlite_orm_column("weight_coe", sqlite_orm_column::REAL, &weight_coe));
         ret.push_back(sqlite_orm_column("force_close", sqlite_orm_column::INTEGER, &force_close));
+        ret.push_back(sqlite_orm_column("wait_cycle", sqlite_orm_column::INTEGER, &wait_cycle));
 
         return ret;
     }
