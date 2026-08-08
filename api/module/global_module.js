@@ -1683,6 +1683,8 @@ module.exports = {
                 end_time: { type: String, have_to: true, mean: '结束时间', example: '2020-01-01' },
                 ticket_type: { type: String, have_to: true, mean: '磅单类型', example: 'sale' },
                 company_id: { type: Number, have_to: false, mean: '公司ID', example: 22 },
+                stuff_id: { type: Number, have_to: false, mean: '物料ID', example: 1 },
+                only_finished: { type: Boolean, have_to: false, mean: '仅导出已完成', example: true },
                 stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
             },
             result: {
