@@ -1864,9 +1864,9 @@ export default {
     margin-top: 4rpx;
     font-size: 20rpx;
     color: #FF4D4F;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.4;
+    word-break: break-all;
+    white-space: normal;
 }
 
 .picker-title {
