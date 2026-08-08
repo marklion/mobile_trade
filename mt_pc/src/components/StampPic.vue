@@ -3,7 +3,6 @@
     <el-image style="width: 300px;height: 300px;" :zoom-rate="1.2" :preview-src-list="[$make_file_url(stamp_pic)]" :src="$make_file_url(stamp_pic)" fit="cover">
     </el-image>
     <br>
-    <el-button type="danger" @click="delete_stamp_pic">删除</el-button>
 </div>
 <div v-else>
     <el-upload ref="upload" :action="upload_url" :file-list="fileList" :limit="1" :on-success="after_attach_uploaded" :on-error="meet_upload_error" :on-exceed="handle_exceed" :before-upload="before_upload">
