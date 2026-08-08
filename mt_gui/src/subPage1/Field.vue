@@ -134,9 +134,6 @@
                 <view class="stamp-preview">
                     <image class="stamp-img" :src="$convert_attach_url(stamp_pic)" mode="aspectFit"></image>
                 </view>
-                <view class="stamp-del" @click="delete_stamp_pic">
-                    <text class="stamp-del-text">删除印章</text>
-                </view>
             </view>
             <view class="stamp-card" v-else>
                 <view class="stamp-head">
