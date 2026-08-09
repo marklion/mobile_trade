@@ -26,7 +26,7 @@
 
         <view class="body" v-if="cur_page == 0">
             <list-show ref="plans" :fetch_function="get_wait_que" height="62vh" search_key="search_cond"
-                v-model="plans" :fetch_params="[show_sc_in_field, only_show_uncalled]">
+                v-model="plans" :fetch_params="[show_sc_in_field]">
                 <view class="filter-bar">
                     <text class="filter-label">仅显示未叫号</text>
                     <fui-switch :checked="only_show_uncalled" color="#465CFF" @change="on_uncalled_change"></fui-switch>
@@ -345,8 +345,11 @@ export default {
             this.show_zone_select = false;
         },
         on_uncalled_change: function (e) {
-            this.only_show_uncalled = !!(e && e.detail && e.detail.value);
-            this.refresh_plans();
+            const checked = !!(e && e.detail && e.detail.value);
+            this.only_show_uncalled = checked;
+            this.$nextTick(() => {
+                this.refresh_plans();
+            });
         },
         prepare_sc_confirm: function (item) {
             this.focus_plan = item;
@@ -470,14 +473,14 @@ export default {
             this.zone_name = '';
             this.tmp_seal_no = '';
         },
-        get_wait_que: async function (pageNo, [show_sc_in_field, only_show_uncalled]) {
+        get_wait_que: async function (pageNo, [show_sc_in_field]) {
             if (show_sc_in_field == undefined) {
                 return [];
             }
             let ret = await this.$send_req('/scale/wait_que', {
                 pageNo: pageNo,
                 include_license: show_sc_in_field,
-                only_show_uncalled: only_show_uncalled
+                only_show_uncalled: !!this.only_show_uncalled
             });
             ret.plans.forEach(ele => {
                 ele.search_cond = ele.main_vehicle.plate + ' ' + ele.behind_vehicle.plate;
