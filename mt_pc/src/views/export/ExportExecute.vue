@@ -29,7 +29,9 @@
             <export-date
                 :key="'ticket-' + single_module.module + '-' + (globalStatContextCompanyId || 0)"
                 :export_name="single_module.module_name"
+                :is_buy="single_module.is_buy"
                 :need_company="single_module.has_more_filter"
+                :need_stuff="true"
                 :external_scope_id="scope_selector_enabled ? globalStatContextCompanyId : null"
                 @do_export="export_ticket($event, single_module.module)"></export-date>
         </vue-cell>
@@ -360,6 +362,7 @@ export default {
                     end_time: filter.end_time,
                     ticket_type: module,
                     company_id: filter.company_id,
+                    stuff_id: filter.stuff_id,
                     only_finished: true,
                     stat_context_company_id: filter.stat_context_company_id,
                 }, this.globalStatContextCompanyId));

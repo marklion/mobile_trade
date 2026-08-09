@@ -178,16 +178,27 @@
                         <text class="block-en">WEIGHT · TICKETS</text>
                     </view>
                 </view>
-                <view class="tile-grid" :class="{ single: visible_ticket_modules.length === 1 }">
-                    <view class="tile-cell" v-for="item in visible_ticket_modules" :key="item.module">
-                        <view class="tile tile-indigo" @click="export_weight_ticket(item.module)">
-                            <view class="tile-icon">
-                                <fui-icon name="transport" size="34" color="#FFFFFF"></fui-icon>
-                            </view>
-                            <text class="tile-title">{{ item.name }}</text>
-                            <text class="tile-desc">打包已完成磅单</text>
-                            <text class="tile-go">立即导出 →</text>
+                <view class="ticket-panel">
+                    <view class="ticket-select">
+                        <view class="ticket-select-meta">
+                            <fui-icon name="classify" size="28" color="#5B6FFF"></fui-icon>
+                            <text class="ticket-select-label">筛选物料</text>
                         </view>
+                        <data-filter filter_name="物料" :get_func="get_stuff" search_key="name"
+                            tag_color="primary" v-model="ticket_stuff_filter"></data-filter>
+                    </view>
+                    <view class="ticket-cta" v-for="item in visible_ticket_modules" :key="item.module"
+                        :data-module="item.module" @click="on_export_weight_ticket">
+                        <view class="ticket-cta-left">
+                            <view class="ticket-cta-icon">
+                                <fui-icon name="transport" size="32" color="#FFFFFF"></fui-icon>
+                            </view>
+                            <view class="ticket-cta-copy">
+                                <text class="ticket-cta-title">导出{{ item.name }}</text>
+                                <text class="ticket-cta-desc">按物料打包已完成磅单</text>
+                            </view>
+                        </view>
+                        <text class="ticket-cta-go">立即导出 →</text>
                     </view>
                 </view>
             </view>
@@ -314,6 +325,10 @@ export default {
             end_second: '',
             weight_time_type: 'first',
             stuff_filter: {
+                id: undefined,
+                name: '',
+            },
+            ticket_stuff_filter: {
                 id: undefined,
                 name: '',
             },
@@ -556,14 +571,25 @@ export default {
             });
             this.go_records_and_refresh();
         },
+        on_export_weight_ticket: function (e) {
+            const ds = e && e.currentTarget && e.currentTarget.dataset;
+            const ticket_type = ds ? ds.module : '';
+            if (ticket_type) {
+                this.export_weight_ticket(ticket_type);
+            }
+        },
         export_weight_ticket: async function (ticket_type) {
             try {
-                await this.$send_req('/global/download_ticket_zip', {
+                const export_params = {
                     start_time: this.begin_date,
                     end_time: this.end_date,
                     ticket_type: ticket_type,
                     only_finished: true,
-                });
+                };
+                if (this.ticket_stuff_filter && this.ticket_stuff_filter.id) {
+                    export_params.stuff_id = this.ticket_stuff_filter.id;
+                }
+                await this.$send_req('/global/download_ticket_zip', export_params);
                 this.go_records_and_refresh();
             } catch (error) {
                 uni.showToast({
@@ -1005,6 +1031,104 @@ export default {
     background: #FFFFFF;
     box-shadow: 0 18rpx 40rpx rgba(24, 36, 90, 0.1);
     border: 1rpx solid rgba(255, 255, 255, 0.9);
+}
+
+.ticket-panel {
+    border-radius: 28rpx;
+    overflow: hidden;
+    background: #FFFFFF;
+    box-shadow: 0 18rpx 40rpx rgba(24, 36, 90, 0.1);
+    border: 1rpx solid #E4E9FF;
+}
+
+.ticket-select {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18rpx 20rpx;
+    background: linear-gradient(135deg, #F3F5FF 0%, #FFFFFF 100%);
+    border-bottom: 1rpx solid #E8ECFF;
+}
+
+.ticket-select-meta {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: 12rpx;
+}
+
+.ticket-select-label {
+    margin-left: 10rpx;
+    font-size: 24rpx;
+    color: #465CFF;
+    font-weight: 700;
+}
+
+.ticket-select .data-filter {
+    margin: 0;
+}
+
+.ticket-cta {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 26rpx 24rpx;
+    background: linear-gradient(145deg, #6B7CFF 0%, #465CFF 55%, #2F3FCF 100%);
+}
+
+.ticket-cta + .ticket-cta {
+    border-top: 1rpx solid rgba(255, 255, 255, 0.18);
+}
+
+.ticket-cta-left {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    margin-right: 12rpx;
+}
+
+.ticket-cta-icon {
+    width: 64rpx;
+    height: 64rpx;
+    border-radius: 20rpx;
+    background: rgba(255, 255, 255, 0.22);
+    border: 1rpx solid rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16rpx;
+    flex-shrink: 0;
+}
+
+.ticket-cta-copy {
+    flex: 1;
+    min-width: 0;
+}
+
+.ticket-cta-title {
+    display: block;
+    font-size: 28rpx;
+    color: #FFFFFF;
+    font-weight: 800;
+}
+
+.ticket-cta-desc {
+    display: block;
+    margin-top: 6rpx;
+    font-size: 20rpx;
+    color: rgba(255, 255, 255, 0.82);
+}
+
+.ticket-cta-go {
+    flex-shrink: 0;
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 800;
 }
 
 .balance-panel {
