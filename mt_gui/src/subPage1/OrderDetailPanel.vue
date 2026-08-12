@@ -354,7 +354,7 @@
             </view>
         </scroll-view>
 
-        <view class="bottom-actions" v-if="focus_plan.status != 3 || plan_owner || can_pass_vehicle">
+        <view class="bottom-actions" v-if="focus_plan.status != 3 || plan_owner || can_pass_vehicle || can_show_rollback">
             <view class="bottom-actions-inner">
                 <!-- 底部栏不要包 module-filter：小程序额外 view 会把 flex 按钮挤成小方块 -->
                 <view class="action-chip danger" v-if="focus_plan.status != 3 && plan_owner"
@@ -366,8 +366,7 @@
                     @click="prepare_xxx_confirm(cur_confirm_url, '确认')">
                     <text class="action-chip-text">确认</text>
                 </view>
-                <view class="action-chip warn"
-                    v-if="focus_plan.status != 0 && is_allowed_order_return && ($has_module('sale_management') || $has_module('buy_management'))"
+                <view class="action-chip warn" v-if="can_show_rollback"
                     @click="show_rollback_confirm = true">
                     <text class="action-chip-text">回退</text>
                 </view>
@@ -632,6 +631,19 @@ export default {
         },
         is_allowed_order_return: function () {
             return this.isAllowedOrderReturn;
+        },
+        can_show_rollback: function () {
+            const p = this.focus_plan || {};
+            if (p.status == 0) {
+                return false;
+            }
+            if (p.status == 3 && p.manual_close) {
+                return false;
+            }
+            if (!this.is_allowed_order_return) {
+                return false;
+            }
+            return this.$has_module('sale_management') || this.$has_module('buy_management');
         },
         stat_context_company_id: function () {
             return this.statContextCompanyId;
