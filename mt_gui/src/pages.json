@@ -154,7 +154,10 @@
 				{
 					"path": "ScConfig",
 					"style": {
-						"enablePullDownRefresh": true
+						"enablePullDownRefresh": true,
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理"
 					}
 				},
 				{
