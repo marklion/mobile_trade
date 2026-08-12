@@ -1,47 +1,104 @@
 <template>
-<view>
-    <u-subsection :list="sub_pages" :current="cur_page" @change="sectionChange"></u-subsection>
-    <view v-if="cur_page == 0">
-        <list-show ref="questions" :fetch_function="get_questions" height="85vh" search_key="name" v-model="all_questions">
-            <view class="brief_section" v-for="single_q in all_questions" :key="single_q.id">
-                <fui-section :title="single_q.name" isLine>
-                    <view slot="right">
-                        <fui-icon name="close" color="red" @click="prepare_delete(single_q)"></fui-icon>
-                        <fui-icon name="edit" color="warning" @click="prepare_edit(single_q)"></fui-icon>
+<view class="exam-config-page">
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+        </view>
+        <view class="hero-copy">
+            <text class="hero-label">考试管理</text>
+            <text class="hero-title">考试配置</text>
+            <text class="hero-sub">维护题库题目与物料试卷</text>
+        </view>
+    </view>
+
+    <view class="shell">
+        <view class="seg">
+            <view class="seg-item" v-if="cur_page == 0">
+                <text class="seg-text seg-text-on">题库</text>
+            </view>
+            <view class="seg-item seg-item-off" v-else @click="sectionChange(0)">
+                <text class="seg-text">题库</text>
+            </view>
+            <view class="seg-item" v-if="cur_page == 1">
+                <text class="seg-text seg-text-on">试卷</text>
+            </view>
+            <view class="seg-item seg-item-off" v-else @click="sectionChange(1)">
+                <text class="seg-text">试卷</text>
+            </view>
+        </view>
+
+        <view v-if="cur_page == 0">
+            <list-show ref="questions" :fetch_function="get_questions" height="58vh" search_key="name" v-model="all_questions">
+                <view class="q-card" v-for="single_q in all_questions" :key="single_q.id">
+                    <view class="q-head">
+                        <text class="q-title">{{ single_q.name }}</text>
+                        <view class="q-actions">
+                            <view class="q-act" @click="prepare_edit(single_q)">
+                                <fui-icon name="edit" color="#2F3FCF" :size="36"></fui-icon>
+                            </view>
+                            <view class="q-act" @click="prepare_delete(single_q)">
+                                <fui-icon name="close" color="#E34D59" :size="36"></fui-icon>
+                            </view>
+                        </view>
                     </view>
-                </fui-section>
-                <view v-for="item in single_q.option_answers" :key="item.id" style="padding-left:16px">
-                    <fui-icon name="checkround" size="32"></fui-icon>
-                    <fui-text :type="item.is_correct?'success': 'black'" :text="item.name" size="32"></fui-text>
+                    <view class="opt-row" v-for="item in single_q.option_answers" :key="item.id">
+                        <view class="opt-mark ok" v-if="item.is_correct">
+                            <fui-icon name="checkround" color="#2BA471" :size="28"></fui-icon>
+                        </view>
+                        <view class="opt-mark" v-else>
+                            <view class="opt-dot"></view>
+                        </view>
+                        <text class="opt-text ok" v-if="item.is_correct">{{ item.name }}</text>
+                        <text class="opt-text" v-else>{{ item.name }}</text>
+                    </view>
                 </view>
+            </list-show>
+        </view>
+
+        <view v-else-if="cur_page == 1">
+            <view class="stuff-tabs">
+                <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
             </view>
-        </list-show>
-        <fui-button text="新增" @click="show_question_add = true"></fui-button>
-    </view>
-    <view v-else-if="cur_page == 1">
-        <fui-tabs :tabs="tabs" @change="change_tab"></fui-tabs>
-        <list-show ref="papers" :fetch_function="get_papers" height="80vh" search_key="name" v-model="all_papers" :fetch_params="[focus_stuff_id]">
-            <view v-for="single_p in all_papers" :key="single_p.id">
-                <fui-card :margin="['20rpx', '20rpx']" shadow="0 2rpx 4rpx 0 rgba(2, 4, 38, 0.3)" :title="single_p.name" :tag="'共' + single_p.questions.length + '题'">
-                    <view style="padding: 0 20rpx;position: relative;">
-                        <view v-for="single_question in single_p.questions" :key="single_question.id">
-                            <fui-notice-bar :content="single_question.name" background="#fff8d5">
-                                <view slot="right">
-                                    <fui-icon name="close" color="red" @click="prepare_unlink_question(single_question, single_p)"></fui-icon>
-                                </view>
-                            </fui-notice-bar>
-                        </view>
-                        <view style="display:flex; flex-wrap: wrap;">
-                            <fui-tag text="新增题目" :scaleRatio="0.8" originLeft type="success" @click="prepare_link_question(single_p)"></fui-tag>
-                            <fui-tag text="删除试卷" :scaleRatio="0.8" originLeft type="danger" @click="prepare_delete_paper(single_p)"></fui-tag>
+            <list-show ref="papers" :fetch_function="get_papers" height="52vh" search_key="name" v-model="all_papers" :fetch_params="[focus_stuff_id]">
+                <view class="p-card" v-for="single_p in all_papers" :key="single_p.id">
+                    <view class="p-head">
+                        <text class="p-name">{{ single_p.name }}</text>
+                        <text class="p-tag">共{{ single_p.questions.length }}题</text>
+                    </view>
+                    <view class="p-q-row" v-for="single_question in single_p.questions" :key="single_question.id">
+                        <text class="p-q-name">{{ single_question.name }}</text>
+                        <view class="p-q-del" @click="prepare_unlink_question(single_question, single_p)">
+                            <fui-icon name="close" color="#E34D59" :size="30"></fui-icon>
                         </view>
                     </view>
-                </fui-card>
-            </view>
-        </list-show>
-        <fui-button text="新增" @click="show_paper_add = true"></fui-button>
+                    <view class="p-actions">
+                        <view class="p-btn ok" @click="prepare_link_question(single_p)">
+                            <text class="p-btn-text">新增题目</text>
+                        </view>
+                        <view class="p-btn danger" @click="prepare_delete_paper(single_p)">
+                            <text class="p-btn-text">删除试卷</text>
+                        </view>
+                    </view>
+                </view>
+            </list-show>
+        </view>
     </view>
+
+    <view class="bottom-bar" v-if="cur_page == 0">
+        <view class="primary-btn" @click="show_question_add = true">
+            <text class="primary-btn-text">新增题目</text>
+        </view>
+    </view>
+    <view class="bottom-bar" v-else-if="cur_page == 1">
+        <view class="primary-btn" @click="show_paper_add = true">
+            <text class="primary-btn-text">新增试卷</text>
+        </view>
+    </view>
+
     <fui-bottom-popup :show="show_link_question" @close="show_link_question= false">
+        <view class="popup-head">
+            <text class="popup-title">选择题目加入试卷</text>
+        </view>
         <fui-list>
             <list-show :fetch_function="get_questions" height="40vh" search_key="name" v-model="questions_for_select">
                 <fui-list-cell arrow v-for="item in questions_for_select" :key="item.id" @click="link_question(item.id)">
@@ -67,24 +124,28 @@
         <fui-form ref="edit_question" top="100">
             <fui-input required label="题目" borderTop placeholder="请输入题目" v-model="new_question.name"></fui-input>
             <fui-input v-for="(single_o, index) in new_question.option_answers" :key="index" required :label="'选项' + (index+ 1)" borderTop placeholder="请输入选项" v-model="single_o.name">
-                <view>
-                    <fui-text>是否正确答案</fui-text>
+                <view class="correct-row">
+                    <text class="correct-label">正确答案</text>
                     <u-switch v-model="single_o.is_correct" @change="set_correct(index)"></u-switch>
                 </view>
             </fui-input>
-            <fui-tag text="增加选项" type="primary" @click="add_options"></fui-tag>
+            <view class="form-tag" @click="add_options">
+                <text class="form-tag-text">增加选项</text>
+            </view>
         </fui-form>
     </fui-modal>
     <fui-modal width="600" :show="show_question_add" @click="add_question" v-if="show_question_add">
         <fui-form ref="add_question" top="100">
             <fui-input required label="题目" borderTop placeholder="请输入题目" v-model="new_question.name"></fui-input>
             <fui-input v-for="(single_o, index) in new_question.option_answers" :key="index" required :label="'选项' + (index+ 1)" borderTop placeholder="请输入选项" v-model="single_o.name">
-                <view>
-                    <fui-text>是否正确答案</fui-text>
+                <view class="correct-row">
+                    <text class="correct-label">正确答案</text>
                     <u-switch v-model="single_o.is_correct" @change="set_correct(index)"></u-switch>
                 </view>
             </fui-input>
-            <fui-tag text="增加选项" type="primary" @click="add_options"></fui-tag>
+            <view class="form-tag" @click="add_options">
+                <text class="form-tag-text">增加选项</text>
+            </view>
         </fui-form>
     </fui-modal>
 </view>
@@ -348,10 +409,320 @@ export default {
 </script>
 
 <style scoped>
-.brief_section {
-    border: 3px dashed #45d5bd;
-    border-radius: 10px;
-    /* 添加圆角 */
-    margin-bottom: 20px;
+.exam-config-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #eef1ff 0%, #f7f8fc 42%, #f3f5f9 100%);
+    padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
+
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 36rpx 32rpx 48rpx;
+    background: linear-gradient(135deg, #2F3FCF 0%, #465CFF 55%, #6B7CFF 100%);
+}
+
+.hero-logo-bg {
+    position: absolute;
+    right: -20rpx;
+    top: -10rpx;
+    width: 220rpx;
+    height: 220rpx;
+    opacity: 0.18;
+}
+
+.hero-logo-img {
+    width: 100%;
+    height: 100%;
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.hero-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.78);
+    letter-spacing: 4rpx;
+}
+
+.hero-title {
+    margin-top: 10rpx;
+    font-size: 44rpx;
+    font-weight: 700;
+    color: #fff;
+}
+
+.hero-sub {
+    margin-top: 10rpx;
+    font-size: 24rpx;
+    color: rgba(255, 255, 255, 0.86);
+}
+
+.shell {
+    margin: -24rpx 24rpx 0;
+    position: relative;
+    z-index: 2;
+}
+
+.seg {
+    display: flex;
+    background: #fff;
+    border-radius: 16rpx;
+    padding: 8rpx;
+    box-shadow: 0 8rpx 24rpx rgba(47, 63, 207, 0.08);
+    margin-bottom: 20rpx;
+}
+
+.seg-item {
+    flex: 1;
+    height: 68rpx;
+    border-radius: 12rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #2F3FCF, #465CFF);
+}
+
+.seg-item-off {
+    background: transparent;
+}
+
+.seg-text {
+    font-size: 28rpx;
+    color: #667085;
+}
+
+.seg-text-on {
+    color: #fff;
+    font-weight: 600;
+}
+
+.q-card,
+.p-card {
+    background: #fff;
+    border-radius: 16rpx;
+    padding: 24rpx;
+    margin-bottom: 20rpx;
+    box-shadow: 0 6rpx 20rpx rgba(16, 24, 40, 0.05);
+}
+
+.q-head,
+.p-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 16rpx;
+}
+
+.q-title,
+.p-name {
+    flex: 1;
+    font-size: 30rpx;
+    font-weight: 600;
+    color: #1d2129;
+    line-height: 1.4;
+    padding-right: 16rpx;
+}
+
+.q-actions {
+    display: flex;
+    flex-shrink: 0;
+}
+
+.q-act {
+    width: 56rpx;
+    height: 56rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.opt-row {
+    display: flex;
+    align-items: flex-start;
+    padding: 10rpx 0;
+}
+
+.opt-mark {
+    width: 36rpx;
+    height: 36rpx;
+    margin-right: 12rpx;
+    margin-top: 2rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.opt-dot {
+    width: 16rpx;
+    height: 16rpx;
+    border-radius: 50%;
+    border: 2rpx solid #c9cdd4;
+    box-sizing: border-box;
+}
+
+.opt-text {
+    flex: 1;
+    font-size: 26rpx;
+    color: #4e5969;
+    line-height: 1.45;
+}
+
+.opt-text.ok {
+    color: #2BA471;
+    font-weight: 500;
+}
+
+.p-tag {
+    flex-shrink: 0;
+    font-size: 22rpx;
+    color: #2F3FCF;
+    background: #eef1ff;
+    padding: 6rpx 14rpx;
+    border-radius: 8rpx;
+}
+
+.p-q-row {
+    display: flex;
+    align-items: center;
+    background: #f8f9fc;
+    border-radius: 10rpx;
+    padding: 16rpx 18rpx;
+    margin-bottom: 12rpx;
+}
+
+.p-q-name {
+    flex: 1;
+    font-size: 26rpx;
+    color: #4e5969;
+    line-height: 1.4;
+    padding-right: 12rpx;
+}
+
+.p-q-del {
+    width: 48rpx;
+    height: 48rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.p-actions {
+    display: flex;
+    margin-top: 8rpx;
+}
+
+.p-btn {
+    flex: 1;
+    height: 64rpx;
+    border-radius: 12rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16rpx;
+}
+
+.p-btn:last-child {
+    margin-right: 0;
+}
+
+.p-btn.ok {
+    background: #e8f8f0;
+}
+
+.p-btn.danger {
+    background: #fdecee;
+}
+
+.p-btn.ok .p-btn-text {
+    color: #2BA471;
+}
+
+.p-btn.danger .p-btn-text {
+    color: #E34D59;
+}
+
+.p-btn-text {
+    font-size: 26rpx;
+    font-weight: 500;
+}
+
+.bottom-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+    background: #FFFFFF;
+    border-top: 1rpx solid #EEF1F8;
+    box-shadow: 0 -8rpx 24rpx rgba(26, 31, 54, 0.06);
+}
+
+.primary-btn {
+    height: 84rpx;
+    border-radius: 14rpx;
+    background: linear-gradient(135deg, #2F3FCF, #465CFF);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.primary-btn-text {
+    color: #fff;
+    font-size: 30rpx;
+    font-weight: 600;
+}
+
+.stuff-tabs {
+    margin-bottom: 12rpx;
+    background: #fff;
+    border-radius: 12rpx;
+    overflow: hidden;
+}
+
+.popup-head {
+    padding: 28rpx 32rpx 12rpx;
+}
+
+.popup-title {
+    font-size: 30rpx;
+    font-weight: 600;
+    color: #1d2129;
+}
+
+.correct-row {
+    display: flex;
+    align-items: center;
+    padding-right: 12rpx;
+}
+
+.correct-label {
+    font-size: 24rpx;
+    color: #667085;
+    margin-right: 12rpx;
+}
+
+.form-tag {
+    margin: 16rpx 24rpx 8rpx;
+    height: 64rpx;
+    border-radius: 12rpx;
+    background: #eef1ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-tag-text {
+    font-size: 26rpx;
+    color: #2F3FCF;
+    font-weight: 500;
 }
 </style>
