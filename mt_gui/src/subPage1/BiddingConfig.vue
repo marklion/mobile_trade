@@ -1,11 +1,30 @@
 <template>
-<view>
-    <list-show ref="bc_list" :fetch_function="get_bc_list" height="90vh" search_key="cond" v-model="bc_list">
-        <view v-for="single_bc in bc_list" :key="single_bc.id">
-            <bid-detail :bd="single_bc"></bid-detail>
+<view class="bid-config-page">
+    <view class="hero">
+        <view class="hero-logo-bg">
+            <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
         </view>
-    </list-show>
-    <fui-button type="success" text="新增" @click="show_create_diag = true" v-if="!show_stuff_select"></fui-button>
+        <view class="hero-copy">
+            <text class="hero-label">竞价中心</text>
+            <text class="hero-title">竞价管理</text>
+            <text class="hero-sub">创建活动、开启轮次与导出结果</text>
+        </view>
+    </view>
+
+    <view class="shell">
+        <list-show ref="bc_list" :fetch_function="get_bc_list" height="62vh" search_key="cond" v-model="bc_list">
+            <view v-for="single_bc in bc_list" :key="single_bc.id">
+                <bid-detail :bd="single_bc"></bid-detail>
+            </view>
+        </list-show>
+    </view>
+
+    <view class="bottom-bar" v-if="!show_stuff_select">
+        <view class="primary-btn" @click="show_create_diag = true">
+            <text class="primary-btn-text">新增竞价</text>
+        </view>
+    </view>
+
     <fui-modal width="600" :show="show_create_diag" v-if="show_create_diag" @click="add_bc">
         <fui-form ref="add_bc" top="100">
             <fui-input label="备注" borderTop placeholder="请输入备注" v-model="new_bc.comment"></fui-input>
@@ -24,6 +43,9 @@
         </fui-form>
     </fui-modal>
     <fui-bottom-popup :show="show_stuff_select" v-if="show_stuff_select" @close="show_stuff_select = false">
+        <view class="popup-head">
+            <text class="popup-title">选择物料</text>
+        </view>
         <fui-list>
             <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2bc(item)">
@@ -161,6 +183,101 @@ export default {
 }
 </script>
 
-<style>
+<style scoped>
+.bid-config-page {
+    min-height: 100vh;
+    background: linear-gradient(180deg, #eef1ff 0%, #f7f8fc 42%, #f3f5f9 100%);
+    padding-bottom: calc(140rpx + env(safe-area-inset-bottom));
+    box-sizing: border-box;
+}
 
+.hero {
+    position: relative;
+    overflow: hidden;
+    padding: 36rpx 32rpx 48rpx;
+    background: linear-gradient(135deg, #2F3FCF 0%, #465CFF 55%, #6B7CFF 100%);
+}
+
+.hero-logo-bg {
+    position: absolute;
+    right: -20rpx;
+    top: -10rpx;
+    width: 220rpx;
+    height: 220rpx;
+    opacity: 0.18;
+}
+
+.hero-logo-img {
+    width: 100%;
+    height: 100%;
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.hero-label {
+    font-size: 22rpx;
+    color: rgba(255, 255, 255, 0.78);
+    letter-spacing: 4rpx;
+}
+
+.hero-title {
+    margin-top: 10rpx;
+    font-size: 44rpx;
+    font-weight: 700;
+    color: #fff;
+}
+
+.hero-sub {
+    margin-top: 10rpx;
+    font-size: 24rpx;
+    color: rgba(255, 255, 255, 0.86);
+}
+
+.shell {
+    margin: -24rpx 24rpx 0;
+    position: relative;
+    z-index: 2;
+}
+
+.bottom-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
+    background: #FFFFFF;
+    border-top: 1rpx solid #EEF1F8;
+    box-shadow: 0 -8rpx 24rpx rgba(26, 31, 54, 0.06);
+}
+
+.primary-btn {
+    height: 84rpx;
+    border-radius: 14rpx;
+    background: linear-gradient(135deg, #2F3FCF, #465CFF);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.primary-btn-text {
+    color: #fff;
+    font-size: 30rpx;
+    font-weight: 600;
+}
+
+.popup-head {
+    padding: 28rpx 32rpx 12rpx;
+}
+
+.popup-title {
+    font-size: 30rpx;
+    font-weight: 600;
+    color: #1d2129;
+}
 </style>
