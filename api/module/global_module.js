@@ -1616,7 +1616,7 @@ module.exports = {
 
                         const zipName = `磅单导出_${uuid.v4()}.zip`;
                         const zipPath = path.join('/database/uploads/', zipName);
-                        const concurrency = Math.min(12, Math.max(1, parseInt(body.concurrency, 10) || 6));
+                        const concurrency = Math.min(12, Math.max(1, Number.parseInt(body.concurrency, 10) || 6));
                         console.log(`正在生成 PDF/PNG ZIP ${zipPath}, plans=${plans.length}, concurrency=${concurrency}`);
 
                         const pairs = await map_with_concurrency(plans, concurrency, async (plan) => {

@@ -143,6 +143,11 @@ export default {
                 });
             } catch (e) {
                 uni.hideLoading();
+                uni.showToast({
+                    title: (e && e.err_msg) || e || '生成失败',
+                    icon: 'none',
+                    duration: 2000
+                });
             }
         },
 

@@ -1,7 +1,7 @@
-const fs = require('fs');
-const path = require('path');
-const { execFile } = require('child_process');
-const { promisify } = require('util');
+const fs = require('node:fs');
+const path = require('node:path');
+const { execFile } = require('node:child_process');
+const { promisify } = require('node:util');
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const { build_ticket_view } = require('./ticket_schema');
@@ -98,7 +98,7 @@ async function resolve_attach(attach_path) {
             console.log('[ticket_pdf] cached attach', url, '->', abs);
             return abs;
         } catch (e) {
-            console.warn('[ticket_pdf] fetch attach failed', url, e && e.message);
+            console.warn('[ticket_pdf] fetch attach failed', url, e?.message);
         }
     }
     return null;
@@ -115,7 +115,7 @@ function display_value(v) {
 }
 
 function is_latin_char(ch) {
-    const code = ch.charCodeAt(0);
+    const code = ch.codePointAt(0);
     return code >= 0x20 && code <= 0x7e;
 }
 
@@ -173,7 +173,7 @@ function draw_text(doc, str, x, y, opts = {}) {
     const baselineY = y + font_ascent(doc, 'TicketCN', fontSize);
     const runs = split_font_runs(text);
     const widths = run_widths(doc, runs, fontSize);
-    let totalW = widths.reduce((a, b) => a + b, 0);
+    const totalW = widths.reduce((a, b) => a + b, 0);
 
     if (totalW > maxWidth && maxWidth > 8) {
         doc.font('TicketCN').fillColor(color).fontSize(fontSize).text(text, x, baselineY, {
@@ -209,7 +209,7 @@ function draw_text(doc, str, x, y, opts = {}) {
 }
 
 function is_plate_row(row) {
-    return !!(row && row.label && String(row.label).indexOf('车号') !== -1);
+    return !!row?.label && String(row.label).includes('车号');
 }
 
 function draw_plate_tag(doc, plate, x, y) {
@@ -234,11 +234,14 @@ function draw_plate_tag(doc, plate, x, y) {
     });
     return boxW;
 }
+
 async function render_ticket_pdf(ticket, outputPath, opts = {}) {
     const view = build_ticket_view(ticket, opts);
     const fontPath = resolve_cn_font();
     if (!fontPath) {
-        throw { err_msg: '未找到中文字体，请配置环境变量 TICKET_PDF_FONT' };
+        const err = new Error('未找到中文字体，请配置环境变量 TICKET_PDF_FONT');
+        err.err_msg = err.message;
+        throw err;
     }
 
     // 近似手机宽度
@@ -347,7 +350,7 @@ async function render_ticket_pdf(ticket, outputPath, opts = {}) {
             align: 'center',
         });
     } catch (e) {
-        console.warn('[ticket_pdf] qr render failed', e && e.message);
+        console.warn('[ticket_pdf] qr render failed', e?.message);
     }
 
     // ===== Shell 白卡片（上叠蓝头）=====
@@ -395,7 +398,6 @@ async function render_ticket_pdf(ticket, outputPath, opts = {}) {
     const labelX = shellX + 14;
     const labelW = Math.floor(shellW * 0.34);
     const valueX = labelX + labelW + 8;
-    const valueW = shellW - 28 - labelW - 8;
     // 所有行共用同一右边界，保证右对齐列齐平
     const valueRight = shellX + shellW - 14;
 
@@ -421,7 +423,7 @@ async function render_ticket_pdf(ticket, outputPath, opts = {}) {
         // 右对齐：以 valueRight 为右边界
         draw_text(doc, row.value, valueX, rowY, {
             width: valueRight - valueX,
-            size: plate ? 11 : 11,
+            size: 11,
             color: plate ? BRAND.plateText : BRAND.text,
             align: 'right',
         });
@@ -444,7 +446,7 @@ async function render_ticket_pdf(ticket, outputPath, opts = {}) {
             });
             doc.opacity(1);
         } catch (e) {
-            console.warn('[ticket_pdf] stamp render failed', e && e.message);
+            console.warn('[ticket_pdf] stamp render failed', e?.message);
         }
     } else if (view.stamp_path) {
         console.warn('[ticket_pdf] stamp missing locally and remote fetch failed:', view.stamp_path);
