@@ -105,34 +105,46 @@ export default {
             });
         },
         download_pic: async function () {
-            let resp = await this.$send_req('/global/download_ticket', {
-                id: this.id
-            })
-            uni.downloadFile({
-                url: this.$convert_attach_url(resp.url),
-                success: (res) => {
-                    if (res.statusCode === 200) {
-                        uni.saveImageToPhotosAlbum({
-                            filePath: res.tempFilePath,
-                            success: () => {
-                                uni.showToast({
-                                    title: '保存成功',
-                                    icon: 'success',
-                                    duration: 2000
-                                });
-                            },
-                            fail: () => {
-                                uni.showToast({
-                                    title: '保存失败',
-                                    icon: 'none',
-                                    duration: 2000
-                                });
-                            }
-                        });
+            uni.showLoading({ title: '生成中...' });
+            try {
+                let resp = await this.$send_req('/global/download_ticket', {
+                    id: this.id
+                });
+                uni.downloadFile({
+                    url: this.$convert_attach_url(resp.url),
+                    success: (res) => {
+                        uni.hideLoading();
+                        if (res.statusCode === 200) {
+                            uni.saveImageToPhotosAlbum({
+                                filePath: res.tempFilePath,
+                                success: () => {
+                                    uni.showToast({
+                                        title: '保存成功',
+                                        icon: 'success',
+                                        duration: 2000
+                                    });
+                                },
+                                fail: () => {
+                                    uni.showToast({
+                                        title: '保存失败',
+                                        icon: 'none',
+                                        duration: 2000
+                                    });
+                                }
+                            });
+                        } else {
+                            uni.showToast({ title: '下载失败', icon: 'none' });
+                        }
+                    },
+                    fail: () => {
+                        uni.hideLoading();
+                        uni.showToast({ title: '下载失败', icon: 'none' });
                     }
-                }
-            });
-        }
+                });
+            } catch (e) {
+                uni.hideLoading();
+            }
+        },
 
     },
     onLoad: async function (options) {
@@ -494,11 +506,17 @@ export default {
 .action-btn.warn {
     background: linear-gradient(145deg, #FFB06B 0%, #FF8A2B 100%);
 }
+.action-btn.ghost {
+    background: #EEF1FF;
+}
 .action-btn-text {
     font-size: 24rpx;
     color: #FFFFFF;
     font-weight: 700;
     text-align: center;
+}
+.action-btn-text.ghost {
+    color: #2F3FCF;
 }
 .share-btn {
     flex: 1;

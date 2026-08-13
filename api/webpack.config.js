@@ -14,6 +14,8 @@ module.exports = {
     },
     externals: {
         "/usr/local/lib/node_modules/sqlite3": "commonjs /usr/local/lib/node_modules/sqlite3",
+        "pdfkit": "commonjs pdfkit",
+        "qrcode": "commonjs qrcode",
 	},
     mode: 'development',
     plugins: [
