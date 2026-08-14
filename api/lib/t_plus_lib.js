@@ -499,7 +499,7 @@ module.exports = {
                 [db_opt.Op.or]: stuff_ids.map((id) => ({ stuffId: id })),
             },
             // 推送成功过的计划不再推；无日志或失败可推
-            sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND success = 1) = 0`),
+            sq.literal(`(select count(*) from tplus_push_log where planId = plan.id AND deletedAt is Null AND (success = 1 OR in_process = 1)) = 0`),
         ];
         const cycle_begin = opts.cycle_days != null ? opts.cycle_days : 5;
         const cycle_end = opts.cycle_days_end != null ? opts.cycle_days_end : 0;
@@ -533,9 +533,30 @@ module.exports = {
         if (plans.length == 0) {
             plans = await this.filter_unsettled_plans(company, is_buy, filter_opts);
         }
-        const settle_type = is_buy ? 'buy' : 'sale';
-        const settle_time = moment().format('YYYY-MM-DD HH:mm:ss');
         const op = operator || '系统';
+        const settle_time = moment().format('YYYY-MM-DD HH:mm:ss');
+        for (let plan of plans) {
+            let push_log = await plan.getTplus_push_log();
+            if (push_log) {
+                push_log.push_time = settle_time;
+                push_log.success = false;
+                push_log.execute_result = '';
+                push_log.operator = op;
+                push_log.unit_price = 0;
+                push_log.in_process = true;
+                await push_log.save();
+            } else {
+                await plan.createTplus_push_log({
+                    push_time: settle_time,
+                    success:false,
+                    execute_result:'',
+                    operator: op,
+                    unit_price: 0,
+                    in_process: true,
+                });
+            }
+        }
+        const settle_type = is_buy ? 'buy' : 'sale';
 
         plans = await this.tplus_settle(plans);
 
@@ -577,20 +598,11 @@ module.exports = {
 
             let push_log = await plan.getTplus_push_log();
             if (push_log) {
-                push_log.push_time = settle_time;
                 push_log.success = success;
                 push_log.execute_result = execute_result;
-                push_log.operator = op;
                 push_log.unit_price = settle_unit_price;
+                push_log.in_process = false;
                 await push_log.save();
-            } else {
-                await plan.createTplus_push_log({
-                    push_time: settle_time,
-                    success,
-                    execute_result,
-                    operator: op,
-                    unit_price: settle_unit_price,
-                });
             }
         }
 
