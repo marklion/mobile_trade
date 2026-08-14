@@ -998,6 +998,7 @@ void scale_sm::clear_state()
     this->trigger_device_id = 0;
     this->begin_scale_date.clear();
     this->end_scale_date.clear();
+    this->pressed_manual_weight = false;
 }
 
 void scale_sm::open_entry()
@@ -1275,6 +1276,10 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 }
                 THR_CALL_DM_END();
             }
+        }
+        if (sm.pressed_manual_weight)
+        {
+            should_scale = true;
         }
         if (should_scale)
         {
