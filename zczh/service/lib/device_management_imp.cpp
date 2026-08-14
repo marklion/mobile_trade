@@ -575,6 +575,8 @@ void device_management_handler::confirm_scale(const int64_t sm_id)
         [](abs_state_machine &_sm)
         {
             _sm.tft = abs_state_machine::manual_confirm;
+            auto &ssm = dynamic_cast<scale_sm &>(_sm);
+            ssm.pressed_manual_weight = true;
             return true;
         });
 }
