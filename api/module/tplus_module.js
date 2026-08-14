@@ -105,7 +105,13 @@ module.exports = {
             func: async function (body, token) {
                 const user = await rbac_lib.get_user_by_token(token);
                 const company = await rbac_lib.get_company_by_token(token);
-                t_plus_lib.do_settle(company, !!body.is_buy, user.name);
+                setTimeout(async () => {
+                    try {
+                        await t_plus_lib.do_settle(company, !!body.is_buy, user.name);
+                    } catch (error) {
+                        console.log(error.err_msg);
+                    }
+                }, 200);
                 return { result: true };
             },
         },

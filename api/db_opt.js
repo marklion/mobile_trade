@@ -488,6 +488,7 @@ let db_opt = {
             execute_result: { type: DataTypes.STRING },
             operator: { type: DataTypes.STRING },
             unit_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('unit_price') },
+            in_process:{ type: DataTypes.BOOLEAN, defaultValue: false },
         },
         delegate: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
