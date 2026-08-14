@@ -195,7 +195,7 @@
                             </view>
                             <view class="ticket-cta-copy">
                                 <text class="ticket-cta-title">导出{{ item.name }}</text>
-                                <text class="ticket-cta-desc">按物料打包已完成磅单</text>
+                                <text class="ticket-cta-desc">按物料打包已完成磅单（含 pdf/png）</text>
                             </view>
                         </view>
                         <text class="ticket-cta-go">立即导出 →</text>
@@ -585,6 +585,7 @@ export default {
                     end_time: this.end_date,
                     ticket_type: ticket_type,
                     only_finished: true,
+                    concurrency: 6,
                 };
                 if (this.ticket_stuff_filter && this.ticket_stuff_filter.id) {
                     export_params.stuff_id = this.ticket_stuff_filter.id;

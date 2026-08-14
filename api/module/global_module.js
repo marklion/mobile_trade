@@ -40,131 +40,6 @@ async function enrich_driver_plan(element) {
         : true;
 }
 
-// 浏览器实例池
-let browserInstance = null;
-let browserUsageCount = 0;
-const MAX_BROWSER_USAGE = 50; // 每50次调用后重启浏览器以释放内存
-
-async function getBrowserInstance() {
-    const puppeteer = require('puppeteer');
-
-    if (!browserInstance || browserUsageCount >= MAX_BROWSER_USAGE) {
-        if (browserInstance) {
-            try {
-                await browserInstance.close();
-            } catch (e) {
-                console.error('关闭旧浏览器实例失败:', e);
-            }
-        }
-
-        browserInstance = await puppeteer.launch({
-            headless: 'new',
-            executablePath: '/root/.cache/puppeteer/chrome/linux-126.0.6478.55/chrome-linux64/chrome',
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu',
-            ],
-        });
-        browserUsageCount = 0;
-    }
-
-    browserUsageCount++;
-    return browserInstance;
-}
-const captureQueue = [];
-let isCapturing = false;
-
-async function processCaptureLock() {
-    if (isCapturing || captureQueue.length === 0) {
-        return;
-    }
-
-    isCapturing = true;
-    const captureTask = captureQueue.shift();
-
-    try {
-        await captureTask.func();
-        captureTask.resolve();
-    } catch (error) {
-        captureTask.reject(error);
-    } finally {
-        isCapturing = false;
-        processCaptureLock();
-    }
-}
-async function do_web_cap_right_now(url, file_name) {
-    const captureWebsite = await import('capture-website');
-    await captureWebsite.default.file(url, file_name, {
-        emulateDevice: 'iPhone X',
-        fullPage: true,
-        waitForElement: 'body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view',
-        launchOptions: {
-            headless: 'new',
-            executablePath: '/root/.cache/puppeteer/chrome/linux-126.0.6478.55/chrome-linux64/chrome',
-            args: ['--no-sandbox', '--disable-setuid-sandbox'],
-        },
-    })
-
-}
-
-function lockDoWebCap(url, file_name) {
-    return new Promise((resolve, reject) => {
-        captureQueue.push({
-            func: () => do_web_cap(url, file_name),
-            resolve,
-            reject
-        });
-        processCaptureLock();
-    });
-}
-async function do_web_cap(url, file_name) {
-    let start_time = Date.now();
-    const browser = await getBrowserInstance();
-    const page = await browser.newPage();
-    console.log(`browser new page time: ${Date.now() - start_time}ms`);
-    start_time = Date.now();
-    try {
-        // 设置 iPhone X 的视口
-        await page.setViewport({
-            width: 375,
-            height: 812,
-            deviceScaleFactor: 3,
-            isMobile: true,
-            hasTouch: true,
-        });
-        console.log(`setViewport time: ${Date.now() - start_time}ms`);
-        start_time = Date.now();
-
-        // 设置较短的超时时间
-        await page.goto(url, {
-            waitUntil: 'networkidle2',
-            timeout: 30000
-        });
-        console.log(`page goto time: ${Date.now() - start_time}ms`);
-        start_time = Date.now();
-
-        // 等待关键元素
-        await page.waitForSelector('body > uni-app > uni-page > uni-page-wrapper > uni-page-body > uni-view', {
-            timeout: 10000
-        });
-        console.log(`waitForSelector time: ${Date.now() - start_time}ms`);
-        start_time = Date.now();
-        // 截取整页
-        await page.screenshot({
-            path: file_name,
-            fullPage: true,
-        });
-        console.log(`screenshot time: ${Date.now() - start_time}ms`);
-    } finally {
-        await page.close();
-    }
-}
-
 async function get_ticket_func(body, token) {
     let orig_plan = await util_lib.get_single_plan_by_id(body.id);
     let plan = await plan_lib.replace_plan2archive(orig_plan)
@@ -411,12 +286,35 @@ async function copy_field_check_config(source_stuff, destination_stuff, transact
         }
     }
 }
-function generateTicketFilename(plan) {
+function generateTicketFilename(plan, ext) {
     const companyName = plan.company.name.replace(/[\\/:*?"<>|]/g, '_'); // 清理特殊字符
     const mainPlate = plan.main_vehicle.plate || '无主车';
     const behindPlate = plan.behind_vehicle.plate || '无挂车';
+    const suffix = (ext || 'png').replace(/^\./, '');
 
-    return `磅单_${companyName}_${mainPlate}-${behindPlate}_${plan.id}.png`;
+    return `磅单_${companyName}_${mainPlate}-${behindPlate}_${plan.id}.${suffix}`;
+}
+
+async function map_with_concurrency(items, concurrency, worker) {
+    const results = new Array(items.length);
+    let next = 0;
+    const limit = Math.max(1, concurrency || 1);
+    async function run_one() {
+        while (true) {
+            const index = next;
+            next += 1;
+            if (index >= items.length) {
+                return;
+            }
+            results[index] = await worker(items[index], index);
+        }
+    }
+    const runners = [];
+    for (let i = 0; i < Math.min(limit, items.length); i++) {
+        runners.push(run_one());
+    }
+    await Promise.all(runners);
+    return results;
 }
 
 function getUrlHost(urlStr) {
@@ -1653,28 +1551,40 @@ module.exports = {
         },
         download_ticket: {
             name: '下载磅单',
-            description: '下载磅单',
+            description: 'PDFKit 生成磅单并转为 PNG 返回',
             need_rbac: false,
             is_write: false,
             is_get_api: false,
             params: {
                 id: { type: Number, have_to: true, mean: '磅单ID', example: 1 },
+                is_internal: { type: Boolean, have_to: false, mean: '是否内部磅单', example: false },
             },
             result: {
-                url: { type: String, mean: '下载结果', example: 'https://abc' },
+                url: { type: String, mean: '下载结果', example: '/uploads/ticket_xxx.png' },
             },
             func: async function (body, token) {
-                let id = body.id;
-                const uuid = require('uuid');
-                real_file_name = uuid.v4();
-                const filePath = '/uploads/ticket_' + real_file_name + '.png';
-                await do_web_cap_right_now(process.env.REMOTE_MOBILE_HOST + '/pages/Ticket?id=' + id, '/database' + filePath);
-                return { url: filePath };
+                const ticket_pdf_lib = require('../lib/ticket_pdf_lib');
+                const ticket = await get_ticket_func({ id: body.id }, token);
+                const file_name = uuid.v4();
+                const pdf_rel = '/uploads/ticket_' + file_name + '.pdf';
+                const png_rel = '/uploads/ticket_' + file_name + '.png';
+                const pdf_abs = '/database' + pdf_rel;
+                const png_abs = '/database' + png_rel;
+                await ticket_pdf_lib.render_ticket_pdf(ticket, pdf_abs, {
+                    is_internal: !!body.is_internal,
+                });
+                await ticket_pdf_lib.pdf_to_png(pdf_abs, png_abs, { dpi: 150 });
+                try {
+                    await fs.promises.unlink(pdf_abs);
+                } catch (e) {
+                    // ignore
+                }
+                return { url: png_rel };
             },
         },
         download_ticket_zip: {
             name: '下载磅单ZIP',
-            description: '下载磅单ZIP',
+            description: 'PDFKit 批量生成磅单；ZIP 内含 pdf/ 与 png/（png 由 pdf 转出）',
             need_rbac: false,
             is_write: false,
             is_get_api: false,
@@ -1686,14 +1596,19 @@ module.exports = {
                 stuff_id: { type: Number, have_to: false, mean: '物料ID', example: 1 },
                 only_finished: { type: Boolean, have_to: false, mean: '仅导出已完成', example: true },
                 stat_context_company_id: { type: Number, have_to: false, mean: '集团场景操作主体公司id', example: 1 },
+                concurrency: { type: Number, have_to: false, mean: '并发生成数', example: 6 },
             },
             result: {
                 url: { type: String, mean: '下载地址', example: 'https://abc' },
             },
             func: async function (body, token) {
                 return await common.do_export_later(token, '磅单导出', async () => {
+                    const ticket_pdf_lib = require('../lib/ticket_pdf_lib');
                     const tempDir = path.join('/database/uploads/', uuid.v4());
-                    await fs.promises.mkdir(tempDir, { recursive: true });
+                    const pdfDir = path.join(tempDir, 'pdf');
+                    const pngDir = path.join(tempDir, 'png');
+                    await fs.promises.mkdir(pdfDir, { recursive: true });
+                    await fs.promises.mkdir(pngDir, { recursive: true });
 
                     try {
                         let plans = await getPlansByTicketType(body, token);
@@ -1701,28 +1616,36 @@ module.exports = {
 
                         const zipName = `磅单导出_${uuid.v4()}.zip`;
                         const zipPath = path.join('/database/uploads/', zipName);
-                        console.log(`正在生成 ${zipPath}`);
-                        const filePaths = []
-                        for (let plan of plans) {
-                            console.log(`正在生成 ${plan.id}`);
-                            const fileName = generateTicketFilename(plan);
-                            const filePath = path.join(tempDir, fileName);
-                            await lockDoWebCap(process.env.REMOTE_MOBILE_HOST + '/subPage1/Ticket?id=' + plan.id, filePath);
-                            console.log(`已生成 ${filePath}`);
-                            filePaths.push(filePath);
-                        }
+                        const concurrency = Math.min(12, Math.max(1, Number.parseInt(body.concurrency, 10) || 6));
+                        console.log(`正在生成 PDF/PNG ZIP ${zipPath}, plans=${plans.length}, concurrency=${concurrency}`);
+
+                        const pairs = await map_with_concurrency(plans, concurrency, async (plan) => {
+                            const started = Date.now();
+                            const baseName = generateTicketFilename(plan, 'pdf').replace(/\.pdf$/i, '');
+                            const pdfPath = path.join(pdfDir, baseName + '.pdf');
+                            const pngPath = path.join(pngDir, baseName + '.png');
+                            const ticket = await get_ticket_func({ id: plan.id }, token);
+                            await ticket_pdf_lib.render_ticket_pdf(ticket, pdfPath, {});
+                            await ticket_pdf_lib.pdf_to_png(pdfPath, pngPath, { dpi: 150 });
+                            console.log(`已生成 PDF+PNG ${plan.id} ${Date.now() - started}ms`);
+                            return { pdfPath, pngPath };
+                        });
 
                         const archive = archiver('zip', { zlib: { level: 9 } });
                         const output = fs.createWriteStream(zipPath);
+                        const zipDone = new Promise((resolve, reject) => {
+                            output.on('close', resolve);
+                            output.on('error', reject);
+                            archive.on('error', reject);
+                        });
                         archive.pipe(output);
-                        await Promise.all(filePaths.map(async (filePath) => {
-                            const fileData = await fs.promises.readFile(filePath);
-                            const fileName = path.basename(filePath);
-                            archive.append(fileData, { name: fileName });
-                        }));
-
+                        for (const { pdfPath, pngPath } of pairs) {
+                            archive.file(pdfPath, { name: 'pdf/' + path.basename(pdfPath) });
+                            archive.file(pngPath, { name: 'png/' + path.basename(pngPath) });
+                        }
                         await archive.finalize();
-                        console.log('Zip file created successfully', zipName);
+                        await zipDone;
+                        console.log('PDF/PNG Zip file created successfully', zipName);
                         return '/uploads/' + zipName;
                     } catch (error) {
                         console.error('磅单导出错误:', error);
