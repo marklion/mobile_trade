@@ -70,9 +70,9 @@
         </view>
     </view>
 
-    <fui-backdrop :zIndex="9000" :show="!!pic_path" @click="pic_path = ''">
+    <fui-backdrop :zIndex="9000" :show="!!pic_path" :closable="true" @click="pic_path = ''">
         <view class="pic-wrap" @click.stop>
-            <image class="pic-img" :src="pic_path" mode="aspectFit"></image>
+            <image v-if="pic_path" class="pic-img" :src="pic_path" mode="aspectFit"></image>
             <view class="pic-close" @click="pic_path = ''">
                 <text class="pic-close-text">关闭</text>
             </view>
@@ -330,6 +330,11 @@ export default {
     height: 60vh;
     display: block;
     background: #F4F6FB;
+}
+
+.pic-img ::v-deep img {
+    opacity: 1 !important;
+    object-fit: contain;
 }
 .pic-close {
     margin-top: 16rpx;
