@@ -14,12 +14,12 @@ module.exports = {
     },
     externals: {
         "/usr/local/lib/node_modules/sqlite3": "commonjs /usr/local/lib/node_modules/sqlite3",
-        "pdfkit": "commonjs pdfkit",
-        "qrcode": "commonjs qrcode",
+        "pdfkit": "commonjs /usr/local/lib/node_modules/pdfkit",
+        "qrcode": "commonjs /usr/local/lib/node_modules/qrcode",
 	},
     mode: 'development',
     plugins: [
-        new ESLintPlugin(), 
+        new ESLintPlugin(),
         new CopyPlugin({
             patterns: [
                 {

@@ -502,5 +502,5 @@ module.exports = {
     render_ticket_pdf,
     pdf_to_png,
     resolve_cn_font,
-    resolve_attach,
+    resolve_attach
 };

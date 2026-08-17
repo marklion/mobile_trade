@@ -8,9 +8,9 @@ FROM --platform=linux/amd64  ubuntu:${VARIANT}
 # RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 #     && apt-get -y install --no-install-recommends <your-package-list-here>
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake wget libpython3-dev npm sqlite3 libsqlite3-dev 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y uuid uuid-dev libcurl4-openssl-dev automake 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y bison flex g++ git libboost-all-dev libevent-dev 
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y cmake wget libpython3-dev npm sqlite3 libsqlite3-dev
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y uuid uuid-dev libcurl4-openssl-dev automake
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y bison flex g++ git libboost-all-dev libevent-dev
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libssl-dev libtool make pkg-config
 RUN npm install n -g
 RUN n v18.17.0
@@ -52,3 +52,5 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y libatk1.
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt install -y mysql-client
 RUN wget https://github.com/gohugoio/hugo/releases/download/v0.139.0/hugo_extended_0.139.0_linux-amd64.deb
 RUN dpkg -i hugo_extended_0.139.0_linux-amd64.deb
+RUN npm install --global pdfkit
+RUN npm install --global qrcode
