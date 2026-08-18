@@ -4,6 +4,7 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const db_opt = require('../db_opt');
 const util_lib = require('./util_lib');
+const plan_lib = require('./plan_lib');
 
 function format_plan_datetime(plan) {
     const plan_time = plan.plan_time || '';
@@ -187,7 +188,6 @@ async function group_order_by_partner_code(plans) {
         const is_direct = plan.stuff.stuff_code[0] == '|';
         const inv_code = get_inv_code_from_stuff(plan.stuff.stuff_code);
         const key = `${company_id}_${is_buy ? 1 : 0}_${is_direct ? 1 : 0}_${inv_code}`;
-
         if (!group_map[key]) {
             group_map[key] = {
                 company_id,
@@ -373,6 +373,24 @@ function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
 
     return ret;
 }
+async function customer_saled_by_factory(host_company, customer_company) {
+    let ret = false;
+    try {
+        let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(
+            customer_company.id,
+            host_company.id,
+        );
+        contracts = plan_lib.pick_sale_contracts_for_supply(contracts, host_company.id);
+        if (contracts.length == 1) {
+            ret = contracts[0].number.substr(0, 2) === 'F2';
+        }
+    }
+    catch (e) {
+        ret = false;
+    }
+
+    return ret;
+}
 async function push_sale_settle(sale_groups, host_company) {
     const sq = db_opt.get_sq();
     let parent_company = await host_company.getParent_group_company();
@@ -402,42 +420,66 @@ async function push_sale_settle(sale_groups, host_company) {
             }
         }
         else {
-            let s2c_sale_pc = await get_partner_code(parent_company, customer_company);
-            try {
-                let first_resp = await private_req2tplus(
-                    "POST",
-                    "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
-                    {},
-                    make_sale_body(host_company, f2s_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code),
-                    host_company
-                );
-                let second_resp = await private_req2tplus(
-                    "POST",
-                    "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
-                    {},
-                    make_buy_body(parent_company, f2s_buy_pc, one_company_group.plans, host_company.tplus_dep_code),
-                    parent_company
-                );
-                let third_resp = await private_req2tplus(
-                    "POST",
-                    "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
-                    {},
-                    make_sale_body(parent_company, s2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_dep_code),
-                    parent_company
-                );
-                one_company_group.plans.forEach(plan => {
-                    plan.tplus_success = true;
-                    plan.execute_result = '推送成功';
-                })
-            } catch (e) {
-                one_company_group.plans.forEach(plan => {
-                    plan.tplus_success = false;
-                    plan.execute_result = e.err_msg;
-                })
+            let factory_sale = await customer_saled_by_factory(host_company, customer_company);
+            if (factory_sale) {
+                let f2c_sale_pc = await get_partner_code(host_company, customer_company);
+                try {
+                    let resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                        {},
+                        make_sale_body(host_company, f2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code),
+                        host_company
+                    );
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = true;
+                        plan.execute_result = '推送成功';
+                    })
+                }
+                catch (e) {
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = false;
+                        plan.execute_result = e.err_msg;
+                    })
+                }
+
+            }
+            else {
+                let s2c_sale_pc = await get_partner_code(parent_company, customer_company);
+                try {
+                    let first_resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                        {},
+                        make_sale_body(host_company, f2s_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code),
+                        host_company
+                    );
+                    let second_resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
+                        {},
+                        make_buy_body(parent_company, f2s_buy_pc, one_company_group.plans, host_company.tplus_dep_code),
+                        parent_company
+                    );
+                    let third_resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                        {},
+                        make_sale_body(parent_company, s2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_dep_code),
+                        parent_company
+                    );
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = true;
+                        plan.execute_result = '推送成功';
+                    })
+                } catch (e) {
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = false;
+                        plan.execute_result = e.err_msg;
+                    })
+                }
             }
         }
-
-
     }
 }
 
@@ -548,8 +590,8 @@ module.exports = {
             } else {
                 await plan.createTplus_push_log({
                     push_time: settle_time,
-                    success:false,
-                    execute_result:'',
+                    success: false,
+                    execute_result: '',
                     operator: op,
                     unit_price: 0,
                     in_process: true,

@@ -96,8 +96,8 @@ docker rm -f ${DC_CON_ID}
 EOF
 
 #3. 拉取运行所依赖的docker镜像后重命名镜像
-someuser@DOMAIN_NAME:~/work# docker pull marklion/mt_deploy:v1.0
-someuser@DOMAIN_NAME:~/work# docker tag marklion/mt_deploy:v1.0 mt_deploy:v1.0
+someuser@DOMAIN_NAME:~/work# docker pull marklion/mt_deploy:v1.1
+someuser@DOMAIN_NAME:~/work# docker tag marklion/mt_deploy:v1.1 mt_deploy:v1.1
 
 ```
 
