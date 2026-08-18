@@ -381,8 +381,9 @@ async function customer_saled_by_factory(host_company, customer_company) {
             host_company.id,
         );
         contracts = plan_lib.pick_sale_contracts_for_supply(contracts, host_company.id);
-        if (contracts.length == 1) {
-            ret = contracts[0].number.substr(0, 2) === 'F2';
+        if (contracts.length === 1) {
+            const contractNo = String(contracts[0]?.number || '');
+            ret = contractNo.startsWith('F2');
         }
     }
     catch (e) {
