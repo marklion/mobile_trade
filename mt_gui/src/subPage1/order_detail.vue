@@ -7,7 +7,8 @@
         <view v-if="!loaded" class="detail-loading">
             <text class="detail-loading-text">加载中...</text>
         </view>
-        <order-detail-panel v-else :plan="focus_plan" :role="role" :stat-context-company-id="stat_context_company_id"
+        <order-detail-panel v-else :plan="focus_plan" :role="role"
+            :stat-context-company-id="stat_context_company_id || undefined"
             :hide-order-detail-price="hide_order_detail_price" :is-allowed-order-return="is_allowed_order_return"
             @refresh="reload_plan"></order-detail-panel>
     </view>
@@ -64,7 +65,7 @@ export default {
             for (const role of roles) {
                 try {
                     const body = { plan_id: this.plan_id };
-                    if (role === 'sale_management' && this.stat_context_company_id != null) {
+                    if (role === 'sale_management' && this.stat_context_company_id) {
                         body.stat_context_company_id = this.stat_context_company_id;
                     }
                     const resp = await this.$send_req('/' + role + '/get_order_by_id', body, silent, silent);
