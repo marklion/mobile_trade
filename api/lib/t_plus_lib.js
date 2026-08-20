@@ -4,6 +4,7 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const db_opt = require('../db_opt');
 const util_lib = require('./util_lib');
+const plan_lib = require('./plan_lib');
 
 function format_plan_datetime(plan) {
     const plan_time = plan.plan_time || '';
@@ -54,8 +55,7 @@ function normalize_stuff_code(stuff_code) {
 function get_inv_code_from_stuff(stuff_code) {
     let ret = '';
     let split_array = stuff_code.split('|');
-    if (split_array.length >2)
-    {
+    if (split_array.length > 2) {
         ret = split_array[2];
     }
     return ret;
@@ -186,14 +186,15 @@ async function group_order_by_partner_code(plans) {
         const is_buy = !!(plan && plan.is_buy);
         const is_direct = plan.stuff.stuff_code[0] == '|';
         const inv_code = get_inv_code_from_stuff(plan.stuff.stuff_code);
-        const key = `${company_id}_${is_buy ? 1 : 0}_${is_direct ? 1 : 0}_${inv_code}`;
-
+        const plan_time = plan.plan_time;
+        const key = `${company_id}_${is_buy ? 1 : 0}_${is_direct ? 1 : 0}_${inv_code}_${plan_time}`;
         if (!group_map[key]) {
             group_map[key] = {
                 company_id,
                 is_buy,
                 is_direct,
                 inv_code,
+                plan_time,
                 plans: [],
             };
         }
@@ -230,7 +231,7 @@ async function push_buy_settle(buy_groups, host_company) {
                 Warehouse: {
                     Code: host_company.tplus_buy_inv_code,
                 },
-                VoucherDate: moment().format('YYYY-MM-DD'),
+                VoucherDate: one_company_group.plan_time,
                 RDRecordDetails: [],
             }
         }
@@ -245,8 +246,8 @@ async function push_buy_settle(buy_groups, host_company) {
                 Quantity: plan.count * 1450,
                 TaxRate: '0.09',
                 Price: plan.unit_price / 1.09,
-                DynamicPropertyKeys: ["pubuserdefnvc1","pubuserdefnvc2", "pubuserdefnvc3","pubuserdefnvc4","pubuserdefnvc5","pubuserdefdecm1"],
-                DynamicPropertyValues: [plan.main_vehicle.plate,plan.plan_time, plan.m_time, plan.p_time, plan.behind_vehicle.plate, plan.enter_count],
+                DynamicPropertyKeys: ["pubuserdefnvc1", "pubuserdefnvc2", "pubuserdefnvc3", "pubuserdefnvc4", "pubuserdefnvc5", "pubuserdefdecm1"],
+                DynamicPropertyValues: [plan.main_vehicle.plate, plan.plan_time, plan.m_time, plan.p_time, plan.behind_vehicle.plate, plan.enter_count],
             });
         }
         try {
@@ -270,7 +271,7 @@ async function push_buy_settle(buy_groups, host_company) {
 
     }
 }
-function make_sale_body(sale_company, partner_code, plans, is_direct = false, inv_code = '', dep_code = '') {
+function make_sale_body(sale_company, partner_code, plans, is_direct = false, inv_code = '', dep_code = '', plan_time = '') {
     let ret = {
         dto: {
             ExternalCode: `${sale_company.id}_${partner_code}_${moment().format('YYYYMMDDHHmmss')}`,
@@ -288,7 +289,7 @@ function make_sale_body(sale_company, partner_code, plans, is_direct = false, in
             },
             DynamicPropertyKeys: ["pubuserdefnvc2"],
             DynamicPropertyValues: [plans[0].stuff.company.name],
-            VoucherDate: moment().format('YYYY-MM-DD'),
+            VoucherDate: plan_time ? plan_time : moment().format('YYYY-MM-DD'),
             RDRecordDetails: [],
         }
     }
@@ -299,7 +300,7 @@ function make_sale_body(sale_company, partner_code, plans, is_direct = false, in
     }
     for (let plan of plans) {
         let self_define_body = {
-            DynamicPropertyKeys: ["pubuserdefnvc1","pubuserdefnvc3", "pubuserdefnvc4", "pubuserdefdecm5", "pubuserdefdecm6", "pubuserdefnvc5"],
+            DynamicPropertyKeys: ["pubuserdefnvc1", "pubuserdefnvc3", "pubuserdefnvc4", "pubuserdefdecm5", "pubuserdefdecm6", "pubuserdefnvc5"],
             DynamicPropertyValues: [plan.main_vehicle.plate, plan.p_time, plan.m_time, plan.m_weight, plan.p_weight, plan.behind_vehicle.plate],
         }
         if (is_direct) {
@@ -328,7 +329,7 @@ function make_sale_body(sale_company, partner_code, plans, is_direct = false, in
     }
     return ret;
 }
-function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
+function make_buy_body(buy_company, partner_code, plans, dep_code = '', plan_time = '') {
     let ret = {
         dto: {
             ExternalCode: `${buy_company.id}_${partner_code}_${moment().format('YYYYMMDDHHmmss')}`,
@@ -344,7 +345,7 @@ function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
             Warehouse: {
                 Code: buy_company.tplus_buy_inv_code,
             },
-            VoucherDate: moment().format('YYYY-MM-DD'),
+            VoucherDate: plan_time ? plan_time : moment().format('YYYY-MM-DD'),
             RDRecordDetails: [],
         }
     };
@@ -365,10 +366,29 @@ function make_buy_body(buy_company, partner_code, plans, dep_code = '') {
                 Unit: {
                     Name: '吨'
                 },
-                DynamicPropertyKeys: ["pubuserdefnvc1","pubuserdefnvc2", "pubuserdefnvc3","pubuserdefnvc4","pubuserdefnvc5"],
-                DynamicPropertyValues: [plan.main_vehicle.plate,plan.plan_time, plan.m_time, plan.p_time, plan.behind_vehicle.plate],
+                DynamicPropertyKeys: ["pubuserdefnvc1", "pubuserdefnvc2", "pubuserdefnvc3", "pubuserdefnvc4", "pubuserdefnvc5"],
+                DynamicPropertyValues: [plan.main_vehicle.plate, plan.plan_time, plan.m_time, plan.p_time, plan.behind_vehicle.plate],
             })
         }
+    }
+
+    return ret;
+}
+async function customer_saled_by_factory(host_company, customer_company) {
+    let ret = false;
+    try {
+        let contracts = await plan_lib.get_sale_contracts_for_buyer_and_supply_company(
+            customer_company.id,
+            host_company.id,
+        );
+        contracts = plan_lib.pick_sale_contracts_for_supply(contracts, host_company.id);
+        if (contracts.length === 1) {
+            const contractNo = String(contracts[0]?.number || '');
+            ret = contractNo.startsWith('F2');
+        }
+    }
+    catch (e) {
+        ret = false;
     }
 
     return ret;
@@ -387,7 +407,7 @@ async function push_sale_settle(sale_groups, host_company) {
                     "POST",
                     "https://openapi.chanjet.com/tplus/api/v2/otherDispatch/Create",
                     {},
-                    make_sale_body(host_company, f2c_sale_pc, one_company_group.plans, true, one_company_group.inv_code),
+                    make_sale_body(host_company, f2c_sale_pc, one_company_group.plans, true, one_company_group.inv_code, '', one_company_group.plan_time),
                     host_company
                 );
                 one_company_group.plans.forEach(plan => {
@@ -402,42 +422,66 @@ async function push_sale_settle(sale_groups, host_company) {
             }
         }
         else {
-            let s2c_sale_pc = await get_partner_code(parent_company, customer_company);
-            try {
-                let first_resp = await private_req2tplus(
-                    "POST",
-                    "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
-                    {},
-                    make_sale_body(host_company, f2s_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code),
-                    host_company
-                );
-                let second_resp = await private_req2tplus(
-                    "POST",
-                    "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
-                    {},
-                    make_buy_body(parent_company, f2s_buy_pc, one_company_group.plans, host_company.tplus_dep_code),
-                    parent_company
-                );
-                let third_resp = await private_req2tplus(
-                    "POST",
-                    "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
-                    {},
-                    make_sale_body(parent_company, s2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_dep_code),
-                    parent_company
-                );
-                one_company_group.plans.forEach(plan => {
-                    plan.tplus_success = true;
-                    plan.execute_result = '推送成功';
-                })
-            } catch (e) {
-                one_company_group.plans.forEach(plan => {
-                    plan.tplus_success = false;
-                    plan.execute_result = e.err_msg;
-                })
+            let factory_sale = await customer_saled_by_factory(host_company, customer_company);
+            if (factory_sale) {
+                let f2c_sale_pc = await get_partner_code(host_company, customer_company);
+                try {
+                    let resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                        {},
+                        make_sale_body(host_company, f2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code, one_company_group.plan_time),
+                        host_company
+                    );
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = true;
+                        plan.execute_result = '推送成功';
+                    })
+                }
+                catch (e) {
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = false;
+                        plan.execute_result = e.err_msg;
+                    })
+                }
+
+            }
+            else {
+                let s2c_sale_pc = await get_partner_code(parent_company, customer_company);
+                try {
+                    let first_resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                        {},
+                        make_sale_body(host_company, f2s_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code, one_company_group.plan_time),
+                        host_company
+                    );
+                    let second_resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/purchaseReceive/Create",
+                        {},
+                        make_buy_body(parent_company, f2s_buy_pc, one_company_group.plans, host_company.tplus_dep_code, one_company_group.plan_time),
+                        parent_company
+                    );
+                    let third_resp = await private_req2tplus(
+                        "POST",
+                        "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
+                        {},
+                        make_sale_body(parent_company, s2c_sale_pc, one_company_group.plans, false, null, host_company.tplus_dep_code, one_company_group.plan_time),
+                        parent_company
+                    );
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = true;
+                        plan.execute_result = '推送成功';
+                    })
+                } catch (e) {
+                    one_company_group.plans.forEach(plan => {
+                        plan.tplus_success = false;
+                        plan.execute_result = e.err_msg;
+                    })
+                }
             }
         }
-
-
     }
 }
 
@@ -548,8 +592,8 @@ module.exports = {
             } else {
                 await plan.createTplus_push_log({
                     push_time: settle_time,
-                    success:false,
-                    execute_result:'',
+                    success: false,
+                    execute_result: '',
                     operator: op,
                     unit_price: 0,
                     in_process: true,

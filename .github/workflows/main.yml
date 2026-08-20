@@ -44,9 +44,9 @@ jobs:
         run: mysql -uroot -e 'CREATE DATABASE automation_test; CREATE USER "sysadmin"@"%" IDENTIFIED BY "${{ secrets.DB_PASSWORD }}";GRANT ALL PRIVILEGES ON *.* TO "sysadmin"@"%"; FLUSH PRIVILEGES;'
       - name: Run build-wrapper
         run: |
-          docker pull marklion/mt_deploy:v1.0
-          docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.0 make -f `realpath .`/Makefile
-          docker tag marklion/mt_deploy:v1.0 mt_deploy:v1.0
+          docker pull marklion/mt_deploy:v1.1
+          docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.1 make -f `realpath .`/Makefile
+          docker tag marklion/mt_deploy:v1.1 mt_deploy:v1.1
           ip addr show docker0 | grep -Po 'inet \K[\d.]+'
           cur_ip=$(ip addr show docker0 | grep -Po 'inet \K[\d.]+')
           make test db_password=${{ secrets.DB_PASSWORD }} db_host=${cur_ip}
