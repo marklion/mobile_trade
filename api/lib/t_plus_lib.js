@@ -453,7 +453,7 @@ async function push_sale_settle(sale_groups, host_company) {
                         "POST",
                         "https://openapi.chanjet.com/tplus/api/v2/saleDispatch/Create",
                         {},
-                        make_sale_body(host_company, f2s_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code),
+                        make_sale_body(host_company, f2s_sale_pc, one_company_group.plans, false, null, host_company.tplus_self_dep_code, one_company_group.plan_time),
                         host_company
                     );
                     let second_resp = await private_req2tplus(
