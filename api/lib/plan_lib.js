@@ -2120,7 +2120,8 @@ module.exports = {
         });
         for (let index = 0; index < plans.length; index++) {
             const element = plans[index];
-            if (!element.stuff.manual_weight) {
+            // 未进厂不需要一次重，避免对排队列表逐条打外部称重接口拖慢
+            if (element.enter_time && element.stuff && !element.stuff.manual_weight) {
                 element.p_weight = await hook_plan('get_p_weight', element);
             }
         }

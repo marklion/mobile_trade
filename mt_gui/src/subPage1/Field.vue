@@ -25,13 +25,12 @@
         </view>
 
         <view class="body" v-if="cur_page == 0">
-            <list-show ref="plans" :fetch_function="get_wait_que" height="62vh" search_key="search_cond"
-                v-model="plans" :fetch_params="[show_sc_in_field]">
-                <view class="filter-bar">
-                    <text class="filter-label">仅显示未叫号</text>
-                    <fui-switch :checked="only_show_uncalled" color="#465CFF" @change="on_uncalled_change"></fui-switch>
-                </view>
-
+            <view class="filter-bar">
+                <text class="filter-label">仅显示未叫号</text>
+                <fui-switch :checked="only_show_uncalled" color="#465CFF" @change="on_uncalled_change"></fui-switch>
+            </view>
+            <list-show ref="plans" :fetch_function="get_wait_que" height="58vh" search_key="search_cond"
+                v-model="plans" :fetch_params="[show_sc_in_field, only_show_uncalled]">
                 <view class="plan-card" v-for="(item, p_index) in plans" :key="item.id">
                     <view class="plan-top">
                         <view class="plan-plates">
@@ -44,8 +43,11 @@
                         <view class="status-tag call" v-else-if="item.call_time">
                             <text class="status-tag-text">已叫号</text>
                         </view>
-                        <view class="status-tag wait" v-else>
+                        <view class="status-tag wait" v-else-if="item.register_time">
                             <text class="status-tag-text">排队中</text>
+                        </view>
+                        <view class="status-tag wait" v-else>
+                            <text class="status-tag-text">未排号</text>
                         </view>
                     </view>
 
@@ -72,35 +74,37 @@
                         </text>
                     </view>
 
-                    <view class="plan-actions" v-if="item.register_time">
-                        <template v-if="!item.call_time">
-                            <view class="act success" :data-pindex="p_index" @click="on_call_vehicle">
-                                <text class="act-text">叫号</text>
-                            </view>
-                            <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
-                                <text class="act-text">过号</text>
-                            </view>
-                        </template>
-                        <template v-else-if="!item.enter_time">
-                            <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
-                                <text class="act-text">过号</text>
-                            </view>
-                            <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
-                                :data-pindex="p_index" @click="on_enter_vehicle">
-                                <text class="act-text">进厂</text>
-                            </view>
-                        </template>
-                        <template v-else>
-                            <view class="act warn" :data-pindex="p_index" @click="on_confirm_vehicle">
-                                <text class="act-text">装卸货</text>
-                            </view>
-                            <view class="act danger" :data-pindex="p_index" data-exit="1" @click="on_enter_vehicle">
-                                <text class="act-text">撤销进厂</text>
-                            </view>
-                            <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
-                                :data-pindex="p_index" @click="on_manual_weight">
-                                <text class="act-text">计量</text>
-                            </view>
+                    <view class="plan-actions">
+                        <template v-if="item.register_time">
+                            <template v-if="!item.call_time">
+                                <view class="act success" :data-pindex="p_index" @click="on_call_vehicle">
+                                    <text class="act-text">叫号</text>
+                                </view>
+                                <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
+                                    <text class="act-text">过号</text>
+                                </view>
+                            </template>
+                            <template v-else-if="!item.enter_time">
+                                <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
+                                    <text class="act-text">过号</text>
+                                </view>
+                                <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
+                                    :data-pindex="p_index" @click="on_enter_vehicle">
+                                    <text class="act-text">进厂</text>
+                                </view>
+                            </template>
+                            <template v-else>
+                                <view class="act warn" :data-pindex="p_index" @click="on_confirm_vehicle">
+                                    <text class="act-text">装卸货</text>
+                                </view>
+                                <view class="act danger" :data-pindex="p_index" data-exit="1" @click="on_enter_vehicle">
+                                    <text class="act-text">撤销进厂</text>
+                                </view>
+                                <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
+                                    :data-pindex="p_index" @click="on_manual_weight">
+                                    <text class="act-text">计量</text>
+                                </view>
+                            </template>
                         </template>
                         <view class="act primary" :data-pindex="p_index" @click="on_sc_confirm">
                             <text class="act-text">审批</text>
@@ -419,7 +423,7 @@ export default {
                 await this.$send_req('/scale/cancel_check_in', {
                     plan_id: this.focus_plan_id
                 })
-                uni.startPullDownRefresh();
+                this.refresh_plans();
             }
             this.show_pass_vehicle = false;
         },
@@ -443,7 +447,7 @@ export default {
                     plan_id: this.focus_plan_id,
                     is_exit: this.is_exit_confirm
                 });
-                uni.startPullDownRefresh();
+                this.refresh_plans();
             }
             this.show_enter_vehicle = false;
         },
@@ -465,19 +469,19 @@ export default {
                 seal_no: this.tmp_seal_no,
                 drop_take_zone_name: this.zone_name
             });
-            uni.startPullDownRefresh();
+            this.refresh_plans();
             this.show_confirm_vehicle = false;
             this.zone_name = '';
             this.tmp_seal_no = '';
         },
-        get_wait_que: async function (pageNo, [show_sc_in_field]) {
+        get_wait_que: async function (pageNo, [show_sc_in_field, only_show_uncalled]) {
             if (show_sc_in_field == undefined) {
                 return [];
             }
             let ret = await this.$send_req('/scale/wait_que', {
                 pageNo: pageNo,
                 include_license: show_sc_in_field,
-                only_show_uncalled: !!this.only_show_uncalled
+                only_show_uncalled: !!only_show_uncalled
             });
             ret.plans.forEach(ele => {
                 ele.search_cond = ele.main_vehicle.plate + ' ' + ele.behind_vehicle.plate;
@@ -507,11 +511,15 @@ export default {
             await this.$send_req('/scale/call_vehicle', {
                 plan_id: item.id
             });
-            uni.startPullDownRefresh();
+            this.refresh_plans();
         },
         init_sc_show_switch: async function () {
+            const prev = this.show_sc_in_field;
             this.show_sc_in_field = (await this.$send_req('/global/get_show_sc_in_field', {})).show_sc_in_field;
-            this.refresh_plans();
+            // 仅开关变化时刷新列表，避免每次 onShow/下拉都整表重拉
+            if (prev !== this.show_sc_in_field || this.plans.length === 0) {
+                this.refresh_plans();
+            }
             if (this.$refs.sc_confirm) {
                 this.$refs.sc_confirm.refresh();
             }
@@ -530,13 +538,11 @@ export default {
         }
     },
     onPullDownRefresh: function () {
-        if (this.$refs.plans) {
-            this.$refs.plans.refresh();
-        }
+        this.refresh_plans();
         this.init_stamp_pic();
         this.init_dev();
-        uni.stopPullDownRefresh();
         this.init_sc_show_switch();
+        uni.stopPullDownRefresh();
     },
     onShow: function () {
         this.init_stamp_pic();

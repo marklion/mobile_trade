@@ -45,6 +45,7 @@ export default {
             page: 0,
             finish: false,
             fetching: false,
+            fetch_token: 0,
         }
     },
     computed: {
@@ -132,30 +133,44 @@ export default {
             this.refresh();
         },
         refresh: function () {
+            // 递增 token，丢弃进行中的旧请求结果；并解除 fetching 锁，否则刷新会被吞掉
+            this.fetch_token += 1;
             this.all_data = [];
             this.page = 0;
             this.finish = false;
+            this.fetching = false;
             this.fetch_new();
         },
         fetch_new: async function () {
-            if (!this.finish && !this.fetching) {
-                this.fetching = true;
+            if (this.finish || this.fetching) {
+                return;
+            }
+            this.fetching = true;
+            const token = this.fetch_token;
+            const page = this.page;
+            try {
                 let fetch_options = {};
                 if (this.server_search && this.search_condition) {
                     fetch_options.search_key = this.search_condition;
                 }
-                let new_data = await this.fetch_function(this.page, this.fetch_params, fetch_options);
-                if (new_data.length == 0) {
+                let new_data = await this.fetch_function(page, this.fetch_params, fetch_options);
+                if (token !== this.fetch_token) {
+                    return;
+                }
+                if (!new_data || new_data.length == 0) {
                     this.finish = true;
                 } else {
                     new_data.forEach(ele => {
                         this.$set(this.all_data, this.all_data.length, ele)
                     });
-                    this.page++;
+                    this.page = page + 1;
                 }
-                this.fetching = false;
-                if (this.show_count < 20) {
-                    this.fetch_new();
+            } finally {
+                if (token === this.fetch_token) {
+                    this.fetching = false;
+                    if (!this.finish && this.show_count < 20) {
+                        this.fetch_new();
+                    }
                 }
             }
         },
