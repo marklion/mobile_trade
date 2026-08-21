@@ -1179,6 +1179,29 @@ void scale_sm::cast_weight_illegal(double _exceeded_weight)
     cast_common(content + util_double_to_string(real_exceeded) + "吨");
 }
 
+bool scale_sm::is_lack_weight()
+{
+    bool ret = false;
+    double min_weight = 0;
+    THR_CALL_BEGIN(config_management);
+    running_rule tmp;
+    client->get_rule(tmp);
+    min_weight = tmp.min_weight;
+    THR_CALL_END();
+
+    if (min_weight > 0 && cur_weight < min_weight)
+    {
+        ret = true;
+    }
+
+    return ret;
+}
+
+void scale_sm::cast_is_lack_weight()
+{
+    cast_common("欠重了,只有" + util_double_to_string(cur_weight) + "吨");
+}
+
 void scale_state_idle::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
@@ -1322,6 +1345,11 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                 if (sm.is_over_weight(tmp.p_weight))
                 {
                     sm.cast_is_over_weight(tmp.p_weight);
+                    ret.reset(new scale_state_wrong_weight());
+                }
+                else if (sm.is_lack_weight())
+                {
+                    sm.cast_is_lack_weight();
                     ret.reset(new scale_state_wrong_weight());
                 }
                 else if (exceeded_weight != 0)
@@ -1506,15 +1534,6 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
         auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
         if (set)
         {
-            auto fg = set->get_parent<sql_device_meta>("front_gate");
-            auto bg = set->get_parent<sql_device_meta>("back_gate");
-            if (fg && bg)
-            {
-                THR_CALL_DM_BEGIN();
-                client->gate_is_close(fg->get_pri_id());
-                client->gate_is_close(bg->get_pri_id());
-                THR_CALL_DM_END();
-            }
             auto sc = set->get_parent<sql_device_meta>("scale");
             if (sc)
             {
@@ -1523,13 +1542,6 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
                 THR_CALL_DM_END();
                 if (sm.cur_weight == 0)
                 {
-                    if (fg && bg)
-                    {
-                        THR_CALL_DM_BEGIN();
-                        client->gate_is_close(fg->get_pri_id());
-                        client->gate_is_close(bg->get_pri_id());
-                        THR_CALL_DM_END();
-                    }
                     ret.reset(new scale_state_idle());
                 }
             }

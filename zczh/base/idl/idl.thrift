@@ -145,6 +145,7 @@ struct running_rule {
     12:double weight_coe,
     13:bool force_close,
     14:i64 wait_cycle,
+    15:double min_weight,
 }
 
 struct weight_ref_config {

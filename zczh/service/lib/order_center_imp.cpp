@@ -356,6 +356,23 @@ bool order_center_handler::del_order(const std::string &order_number, const std:
     {
         ZH_RETURN_MSG("正在执行，无法关闭");
     }
+    bool vehicle_in_scale = false;
+    THR_CALL_DM_BEGIN();
+    std::vector<scale_sm_info> sm_i;
+    client->get_scale_sm_info(sm_i);
+    for (auto &itr : sm_i)
+    {
+        if (itr.cur_plate == es->plate_number)
+        {
+            vehicle_in_scale = true;
+            break;
+        }
+    }
+    THR_CALL_DM_END();
+    if (vehicle_in_scale)
+    {
+        ZH_RETURN_MSG("车辆正在过磅，无法关闭");
+    }
 
     es->continue_until = "";
     close_order(*es, opt_name);
