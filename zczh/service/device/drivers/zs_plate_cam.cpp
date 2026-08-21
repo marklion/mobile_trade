@@ -385,7 +385,6 @@ public:
     virtual bool gate_is_close(const int64_t gate_id)
     {
         bool ret = false;
-        force_close_gate();
         int val = 1;
         auto zs_ret = VzLPRClient_GetGPIOValue(g_zc_handler, 0, &val);
         if (1 == val)
@@ -407,6 +406,7 @@ public:
 
 int main(int argc, char **argv)
 {
+    timer_wheel_init();
     using namespace clipp;
     unsigned short run_port = 0;
     unsigned short self_id;
@@ -425,7 +425,24 @@ int main(int argc, char **argv)
     auto pd = new zs_plate_cam_driver("zs_plate_cam_driver" + std::to_string(self_id), self_id);
     pd->double_led = double_led;
     pd->init_all_set();
+    timer_wheel_add_node(
+        1, [](void *pdata)
+        {
+            auto p_driver = (zs_plate_cam_driver *)pdata;
+            p_driver->force_close_gate();
+        },
+    false, pd);
+    std::thread(
+        []()
+        {
+            while (1)
+            {
+                timer_wheel_schc();
+            }
+        })
+        .detach();
     common_driver::start_driver(run_port, pd);
+    timer_wheel_fini();
 
     return 0;
 }
