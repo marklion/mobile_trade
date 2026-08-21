@@ -418,7 +418,8 @@ module.exports = {
             return home_company;
         }
         const context_id = Number(stat_context_company_id);
-        if (!Number.isFinite(context_id) || context_id === home_company.id) {
+        // 公司 id 从 1 起；0 只可能是前端 Number(null) 误传，按未传处理
+        if (!Number.isFinite(context_id) || context_id <= 0 || context_id === home_company.id) {
             return home_company;
         }
         if (!home_company.is_group) {

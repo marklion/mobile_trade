@@ -557,8 +557,7 @@ export default {
             default: '',
         },
         statContextCompanyId: {
-            type: Number,
-            default: null,
+            default: undefined,
         },
         hideOrderDetailPrice: {
             type: Boolean,
@@ -798,7 +797,7 @@ export default {
         },
         make_context_req: function (body = {}) {
             const ret = { ...body };
-            if (this.role === 'sale_management' && this.stat_context_company_id != null) {
+            if (this.role === 'sale_management' && this.stat_context_company_id) {
                 ret.stat_context_company_id = this.stat_context_company_id;
             }
             return ret;

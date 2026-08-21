@@ -694,7 +694,7 @@ export default {
                         req.customer_id = this.plan.company.id;
                         req.supply_company_id = this.plan.stuff.company.id;
                     }
-                    if (!this.plan.is_buy && this.stat_context_company_id != null) {
+                    if (!this.plan.is_buy && this.stat_context_company_id) {
                         req.stat_context_company_id = this.stat_context_company_id;
                     }
                     let resp = await this.$send_req(url, req);
