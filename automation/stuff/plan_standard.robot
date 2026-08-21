@@ -722,6 +722,7 @@ Auto confirm Goods With Plan
     Manual Pay A Plan    ${plan}
     Check Plan Was Confirmed  ${plan_id}  ${False}
     Plan Enter  ${plan}
+    Sleep    200ms
     Check Plan Was Confirmed  ${plan_id}  ${True}
 
 Extra Info Set Test
