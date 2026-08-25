@@ -1427,7 +1427,6 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
     }
     else if (_sm.tft == abs_state_machine::timer)
     {
-        m_timer_cur_count++;
         bool is_ready = false;
         auto set = sqlite_orm::search_record<sql_device_set>(sm.set_id);
         if (set)
@@ -1450,9 +1449,18 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
         }
         else
         {
-            if (m_timer_max_count > 0 && m_timer_cur_count > m_timer_max_count)
+            auto lack_weight = sm.is_lack_weight();
+            if (lack_weight)
             {
-                ret.reset(new scale_state_wait_timeout());
+                m_timer_cur_count++;
+                if (m_timer_max_count > 0 && m_timer_cur_count > m_timer_max_count)
+                {
+                    ret.reset(new scale_state_wait_timeout());
+                }
+                else
+                {
+                    sm.cast_enter_info();
+                }
             }
             else
             {
