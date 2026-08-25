@@ -233,6 +233,9 @@ async function push_buy_settle(buy_groups, host_company) {
                 },
                 VoucherDate: one_company_group.plan_time,
                 RDRecordDetails: [],
+                Department:{
+                    Code:host_company.tplus_buy_dep_code,
+                },
             }
         }
         for (let plan of one_company_group.plans) {
