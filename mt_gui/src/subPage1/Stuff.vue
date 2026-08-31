@@ -185,7 +185,9 @@
                             </view>
                             <view class="field-card">
                                 <view class="field-row">
-                                    <fui-input v-model="item.ticket_prefix" placeholder="请输入磅单号前缀" background="transparent" :padding="['0', '0']"></fui-input>
+                                    <fui-input :value="item.ticket_prefix || ''" placeholder="请输入磅单号前缀"
+                                        background="transparent" :padding="['0', '0']"
+                                        @input="on_ticket_prefix_input($event, item)"></fui-input>
                                     <view class="field-btn" :data-sindex="s_index" @click="on_save_ticket_prefix">
                                         <text class="field-btn-text">保存</text>
                                     </view>
@@ -793,6 +795,12 @@ export default {
             if (!item) return;
             this.$set(this.expanded_ids, item.id, !this.expanded_ids[item.id]);
         },
+        on_ticket_prefix_input: function (value, item) {
+            if (!item) {
+                return;
+            }
+            this.$set(item, 'ticket_prefix', value == null ? '' : String(value));
+        },
         on_save_ticket_prefix: function (e) {
             const item = this.get_stuff_by_event(e);
             if (item) this.save_ticket_prefix(item);
@@ -976,9 +984,14 @@ export default {
             }
         },
         save_ticket_prefix: async function (item) {
+            const ticket_prefix = item.ticket_prefix == null ? '' : String(item.ticket_prefix).trim();
+            if (!ticket_prefix) {
+                uni.showToast({ title: '请输入磅单号前缀', icon: 'none' });
+                return;
+            }
             await this.$send_req('/stuff/set_ticket_prefix', this.make_scope_req({
                 stuff_id: item.id,
-                ticket_prefix: item.ticket_prefix
+                ticket_prefix: ticket_prefix
             }));
             uni.startPullDownRefresh();
         },
