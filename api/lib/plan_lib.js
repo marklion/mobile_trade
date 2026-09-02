@@ -709,6 +709,21 @@ module.exports = {
         }));
         return resultArray;
     },
+    is_finished_plan_filter: function (condition) {
+        return condition && condition.status == 3 && !!condition.hide_manual_close;
+    },
+    resolve_plan_list_order: function (sq, condition) {
+        if (this.is_finished_plan_filter(condition)) {
+            return [
+                [sq.fn('TIMESTAMP', sq.col('enter_time')), 'DESC'],
+                ['id', 'DESC'],
+            ];
+        }
+        return [
+            [sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'],
+            ['id', 'DESC'],
+        ];
+    },
     make_plan_where_condition: function (_condition, search_buy = false) {
         let sq = db_opt.get_sq();
         let where_condition = {
@@ -1004,7 +1019,7 @@ module.exports = {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         let search_condition = {
-            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            order: this.resolve_plan_list_order(sq, _condition),
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -1018,7 +1033,7 @@ module.exports = {
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         where_condition[db_opt.Op.and].push({ companyId: company.id });
         let search_condition = {
-            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            order: this.resolve_plan_list_order(sq, _condition),
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -1100,7 +1115,7 @@ module.exports = {
         });
 
         let search_condition = {
-            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            order: this.resolve_plan_list_order(sq, _condition),
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
@@ -1124,7 +1139,7 @@ module.exports = {
         });
 
         let search_condition = {
-            order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'DESC'], ['id', 'DESC']],
+            order: this.resolve_plan_list_order(sq, _condition),
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,

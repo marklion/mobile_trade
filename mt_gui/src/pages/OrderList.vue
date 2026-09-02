@@ -196,7 +196,10 @@
                             </view>
 
                             <view class="tag-row">
-                                <text class="tag danger">计划 {{ item.plan_time }}</text>
+                                <text class="tag danger" v-if="item.status == 3 && !item.manual_close && item.enter_time">
+                                    进厂 {{ item.enter_time }}
+                                </text>
+                                <text class="tag danger" v-else>计划 {{ item.plan_time }}</text>
                                 <text class="tag warn" v-if="item.is_repeat">连续派车</text>
                                 <text class="tag primary" v-if="item.register_time && item.status != 3">已排号</text>
                                 <text class="tag primary" v-if="item.m_time">发车 {{ item.m_time }}</text>
@@ -921,13 +924,13 @@ export default {
         },
         change_tab: function (e) {
             let index = e.index
+            this.tab_current = index;
             if (index > 0) {
                 this.focus_status = this.tabs[index].filter.status;
             } else {
                 this.focus_status = undefined;
             }
             this.refresh_plans();
-            this.tab_current = index;
         },
         make_plan_get_url: function () {
             return this.cur_get_url;
