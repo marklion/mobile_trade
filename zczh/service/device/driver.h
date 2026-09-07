@@ -23,6 +23,7 @@ public:
     virtual void get_scale_sm_info(std::vector<scale_sm_info> &_return) {}
     virtual void reset_scale_sm(const int64_t sm_id) {}
     virtual void confirm_scale(const int64_t sm_id) {}
+    virtual void trigger_sm(const int64_t sm_id, const int64_t trigger_source) {}
     virtual void get_device_run_time(std::vector<device_run_time> &_return) {}
     common_driver(const std::string &_name, long _self_id) : m_log(_name, "/tmp/" + _name + ".log", "/tmp/" + _name + ".log"), self_dev_id(_self_id)
     {
@@ -76,7 +77,7 @@ public:
     {
     }
 
-    virtual void deliver_card(std::string &_return, const int64_t card_deliver_id, const std::string &plate, const int64_t ser_no, const int64_t expect_load){}
+    virtual void deliver_card(std::string &_return, const int64_t card_deliver_id, const std::string &plate, const int64_t ser_no, const int64_t expect_load) {}
     virtual void clear_card_no(const int64_t card_reader_id) {}
 
     virtual void push_card_no(const int64_t card_reader_id, const std::string &card_no)
