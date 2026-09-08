@@ -659,6 +659,18 @@ void device_management_handler::deliver_card(std::string &_return, const int64_t
         TRH_CLOSE();
     }
 }
+void device_management_handler::trigger_sm(const int64_t sm_id, const int64_t trigger_source)
+{
+    auto ts = (abs_state_machine::triggered_from_type)trigger_source;
+    sm_trigger(
+        sm_id,
+        [=](abs_state_machine &_sm)
+        {
+            _sm.tft = ts;
+            return true;
+        });
+}
+
 static bool isZombieProcess(pid_t pid)
 {
     int status;
@@ -1035,8 +1047,9 @@ void scale_sm::start_scale_timer(int sec)
         sec,
         [this](void *p_set_id)
         {
-            tft = timer;
-            trigger_sm();
+            THR_CALL_DM_BEGIN();
+            client->trigger_sm(this->set_id, timer);
+            THR_CALL_DM_END();
         });
 }
 
