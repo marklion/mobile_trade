@@ -139,41 +139,10 @@
                                 <text class="config-section-title">业务开关</text>
                             </view>
                             <view class="switch-grid">
-                                <view class="switch-item">
-                                    <text class="switch-label">需要安检</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.need_sc" @change="change_need_sc($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">进厂前重量</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.need_enter_weight" @change="change_need_enter_weight($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">需要考试</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.need_exam" @change="change_need_exam($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">不用排号</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.no_need_register" @change="change_no_need_register($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">延迟结算</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.checkout_delay" @change="change_checkout_delay($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">手动计量</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.manual_weight" @change="change_manual_weight($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">期望重量</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.need_expect_weight" @change="change_need_expect_weight($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">自动确认装卸</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.auto_confirm_goods" @change="change_auto_confirm_goods($event, item)"></fui-switch>
-                                </view>
-                                <view class="switch-item">
-                                    <text class="switch-label">司机签名</text>
-                                    <fui-switch :scaleRatio="0.65" :checked="item.need_driver_sign" @change="change_need_driver_sign($event, item)"></fui-switch>
+                                <view class="switch-item" v-for="sw in stuff_switch_defs" :key="sw.field">
+                                    <text class="switch-label">{{ sw.label }}</text>
+                                    <fui-switch :scaleRatio="0.65" :checked="!!item[sw.field]"
+                                        @change="on_stuff_switch_change($event, s_index, sw.field)"></fui-switch>
                                 </view>
                             </view>
                         </view>
@@ -575,6 +544,17 @@ export default {
             cur_seg: 0,
             seg_list: ['物料配置', '全局策略', '黑名单'],
             expanded_ids: {},
+            stuff_switch_defs: [
+                { label: '需要安检', field: 'need_sc', url: '/stuff/sc_config' },
+                { label: '进厂前重量', field: 'need_enter_weight', url: '/stuff/enter_weight' },
+                { label: '需要考试', field: 'need_exam', url: '/stuff/exam_config' },
+                { label: '不用排号', field: 'no_need_register', url: '/stuff/no_need_register' },
+                { label: '延迟结算', field: 'checkout_delay', url: '/stuff/checkout_delay_config' },
+                { label: '手动计量', field: 'manual_weight', url: '/stuff/manual_weight_config' },
+                { label: '期望重量', field: 'need_expect_weight', url: '/stuff/expect_weight_config' },
+                { label: '自动确认装卸', field: 'auto_confirm_goods', url: '/stuff/auto_confirm_goods' },
+                { label: '司机签名', field: 'need_driver_sign', url: '/stuff/need_driver_sign' },
+            ],
             stuff_search_input: '',
             stat_scopes: [],
             stat_context_company_id: null,
@@ -1071,54 +1051,46 @@ export default {
             this.stuff_ready_fetch.close_time = e.result;
             this.show_close_time = false;
         },
-        change_no_need_register: async function (event, item) {
-            await this.$send_req('/stuff/no_need_register', this.make_scope_req({
-                stuff_id: item.id,
-                no_need_register: event.detail.value,
-            }));
+        pick_switch_value: function (e) {
+            if (typeof e === 'boolean') {
+                return e;
+            }
+            if (!e) {
+                return false;
+            }
+            // 微信小程序自定义组件 $emit 整份原生事件时，会出现 detail.detail.value
+            if (e.detail && e.detail.detail && e.detail.detail.value != null) {
+                return !!e.detail.detail.value;
+            }
+            if (e.detail && typeof e.detail === 'boolean') {
+                return e.detail;
+            }
+            if (e.detail && e.detail.value != null) {
+                return !!e.detail.value;
+            }
+            if (e.value != null) {
+                return !!e.value;
+            }
+            return false;
         },
-        change_need_exam: async function (event, item) {
-            await this.$send_req('/stuff/exam_config', this.make_scope_req({
-                stuff_id: item.id,
-                need_exam: event.detail.value,
-            }));
-        },
-        change_checkout_delay: async function (event, item) {
-            await this.$send_req('/stuff/checkout_delay_config', this.make_scope_req({
-                stuff_id: item.id,
-                checkout_delay: event.detail.value,
-            }));
-        },
-        change_manual_weight: async function (event, item) {
-            item.manual_weight = event.detail.value;
-            await this.$send_req('/stuff/manual_weight_config', this.make_scope_req({
-                stuff_id: item.id,
-                manual_weight: event.detail.value
-            }));
-        },
-        change_auto_confirm_goods: async function (event, item) {
-            await this.$send_req('/stuff/auto_confirm_goods', this.make_scope_req({
-                stuff_id: item.id,
-                auto_confirm_goods: event.detail.value
-            }));
-        },
-        change_need_driver_sign: async function (event, item) {
-            await this.$send_req('/stuff/need_driver_sign', this.make_scope_req({
-                stuff_id: item.id,
-                need_driver_sign: event.detail.value
-            }));
-        },
-        change_need_enter_weight: async function (event, item) {
-            await this.$send_req('/stuff/enter_weight', this.make_scope_req({
-                stuff_id: item.id,
-                need_enter_weight: event.detail.value
-            }));
-        },
-        change_need_expect_weight: async function (event, item) {
-            await this.$send_req('/stuff/expect_weight_config', this.make_scope_req({
-                stuff_id: item.id,
-                need_expect_weight: event.detail.value
-            }));
+        on_stuff_switch_change: async function (e, s_index, field) {
+            const item = (this.data2show2 || [])[s_index];
+            const def = (this.stuff_switch_defs || []).find((row) => row.field === field);
+            if (!item || !def) {
+                uni.showToast({ title: '未找到物料，请重试', icon: 'none' });
+                return;
+            }
+            const value = this.pick_switch_value(e);
+            const prev = !!item[field];
+            this.$set(item, field, value);
+            try {
+                await this.$send_req(def.url, this.make_scope_req({
+                    stuff_id: item.id,
+                    [field]: value,
+                }));
+            } catch (err) {
+                this.$set(item, field, prev);
+            }
         },
         set_scunit_coe_configuration: async function (item) {
             try {
@@ -1148,12 +1120,6 @@ export default {
                     icon: 'none'
                 });
             }
-        },
-        change_need_sc: async function (event, item) {
-            await this.$send_req('/stuff/sc_config', this.make_scope_req({
-                stuff_id: item.id,
-                need_sc: event.detail.value
-            }));
         },
         get_price_history: async function (_pageNo, params) {
             if (params[0] == 0) {
