@@ -497,6 +497,11 @@ export default {
                 const url = item.url;
                 let status_class = 'pending';
                 let status_text = '导出中';
+                if (item.order >= 0)
+                {
+                    status_text = '排队中:第' + (item.order + 1) + '位';
+                }
+
                 if (url === 'no') {
                     status_class = 'fail';
                     status_text = '失败';

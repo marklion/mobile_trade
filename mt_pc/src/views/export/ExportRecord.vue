@@ -15,8 +15,11 @@
                                 下载失败
                             </div>
                             <el-button v-else-if="scope.row.url" size="mini" type="text" @click="$download_file(scope.row.url, scope.row.name + scope.row.create_time)">下载</el-button>
-                            <div v-else>
+                            <div v-else-if="scope.row.order < 0">
                                 正在导出
+                            </div>
+                            <div v-else-if="scope.row.order >= 0">
+                                排队中:第{{ scope.row.order + 1 }}位
                             </div>
                         </template>
                     </el-table-column>
