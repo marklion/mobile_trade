@@ -4,26 +4,49 @@ const rbac_lib = require('../lib/rbac_lib');
 const moment = require('moment');
 const util_lib = require('../lib/util_lib');
 const api_param_result_define = require('../api_param_result_define');
+
+const export_center = {
+    task_queue: [],
+    is_executing: false,
+    execute_tasks: async function () {
+        let task = this.task_queue.shift();
+        while (task) {
+            let url = '';
+            try {
+                url = await task.func();
+
+            } catch (error) {
+                console.log(error);
+            }
+
+            let exist_record = await db_opt.get_sq().models.export_record.findByPk(task.er_id);
+            if (exist_record) {
+                exist_record.url = url;
+                exist_record.create_time = moment().format('YYYY-MM-DD HH:mm:ss');
+                await exist_record.save();
+            }
+            task = this.task_queue.shift();
+        }
+    },
+    push_task: function (func, er_id) {
+        this.task_queue.push({ func, er_id });
+        if (!this.is_executing) {
+            this.is_executing = true;
+            this.execute_tasks().finally(() => {
+                this.is_executing = false;
+            });
+        }
+    },
+}
+
 async function do_export_later(token, name, func) {
     let user = await rbac_lib.get_user_by_token(token);
-    await user.addExport_record(await db_opt.get_sq().models.export_record.create({
+    let new_er = await db_opt.get_sq().models.export_record.create({
         name: name,
         url: '',
-    }));
-    setTimeout(async () => {
-        let url = 'no';
-        try {
-            url = await func();
-        } catch (error) {
-            console.log(error);
-        }
-        let exist_record = await user.getExport_records({ where: { name: name, url: '' } });
-        if (exist_record.length > 0) {
-            exist_record[0].url = url;
-            exist_record[0].create_time = moment().format('YYYY-MM-DD HH:mm:ss');
-            await exist_record[0].save();
-        }
-    }, 200);
+    })
+    await user.addExport_record(new_er);
+    export_center.push_task(func, new_er.id);
     return { result: true };
 }
 module.exports = {
@@ -215,10 +238,12 @@ module.exports = {
                 m_start_time: { type: String, have_to: false, mean: '开始时间（时：分：秒）', example: '2020-01-01 22:22:22' },
                 m_end_time: { type: String, have_to: false, mean: '结束时间（时：分：秒）', example: '2020-01-01 22:22:22' },
                 weight_time_type: { type: String, have_to: false, mean: '称重时间筛选类型(first:一次称重/second:二次称重)', example: 'first' },
-                columns:{type:Array, have_to:false, mean:'列定义', explain:{
-                    name:{type:String,have_to:true, mean:'列名', example:'plan_time'},
-                    label:{type:String,have_to:true, mean:'列标签', example:'计划时间'},
-                }}
+                columns: {
+                    type: Array, have_to: false, mean: '列定义', explain: {
+                        name: { type: String, have_to: true, mean: '列名', example: 'plan_time' },
+                        label: { type: String, have_to: true, mean: '列标签', example: '计划时间' },
+                    }
+                }
             },
             result: {
                 result: { type: Boolean, mean: '导出结果', example: true },
@@ -245,5 +270,9 @@ module.exports = {
                 phone: { type: String, mean: '用户电话', example: '用户电话' },
             }
         }
+    },
+    get_queue_order_number: function (er_id) {
+        let index = export_center.task_queue.findIndex(task => task.er_id === er_id);
+        return index;
     }
 }

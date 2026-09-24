@@ -663,32 +663,30 @@ module.exports = {
                 return ret;
             },
         },
-        driver_confirm:{
+        driver_confirm: {
             name: '司机确认装卸货',
             description: '司机确认装卸货',
-            need_rbac:false,
-            is_write:true,
-            is_get_api:false,
-            params:{
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
                 open_id: { type: String, have_to: true, mean: '微信open_id', example: 'open_id' },
                 plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
                 is_confirm: { type: Boolean, have_to: true, mean: '是否确认', example: true },
             },
-            result:{
+            result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
-            func:async function (body, token) {
+            func: async function (body, token) {
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (driver && plan && await driver.hasPlan(plan)) {
                     let can_confirm = false;
-                    if (plan.enter_time && plan.count == 0)
-                    {
+                    if (plan.enter_time && plan.count == 0) {
                         can_confirm = true;
                     }
-                    if (!body.is_confirm && plan.confirmed)
-                    {
+                    if (!body.is_confirm && plan.confirmed) {
                         can_confirm = false;
                     }
 
@@ -1373,6 +1371,7 @@ module.exports = {
                         name: { type: String, mean: '记录名', example: 'record_example' },
                         create_time: { type: String, mean: '创建时间', example: '2020-01-01 00:00:00' },
                         url: { type: String, mean: '下载地址', example: 'https://www.baidu.com' },
+                        order: { type: Number, mean: '队列顺序', example: 0 },
                     }
                 }
             },
@@ -1395,7 +1394,11 @@ module.exports = {
                 let records = await user.getExport_records({ order: [['id', 'DESC']], limit: 20, offset: body.pageNo * 20 });
                 let count = await user.countExport_records();
                 return {
-                    records: records,
+                    records: records.map(record => {
+                        let tmp_record = record
+                        tmp_record.order = common.get_queue_order_number(record.id);
+                        return tmp_record;
+                    }),
                     total: count,
                 }
             },
@@ -2745,7 +2748,7 @@ module.exports = {
                 return verifyTicketQrContent(body.qr_content);
             }
         },
-        test_t_plus:{
+        test_t_plus: {
             name: '测试T+接口',
             description: '测试T+接口',
             need_rbac: true,
@@ -2753,9 +2756,9 @@ module.exports = {
             is_get_api: false,
             params: {
                 test_param: { type: String, have_to: false, mean: '测试参数', example: 'test' },
-                test_body:{type: String, have_to: false, mean: '测试body', example: 'test'},
-                test_url:{type: String, have_to: true, mean: '测试url', example: 'test'},
-                test_method:{type: String, have_to: true, mean: '测试method', example: 'test'},
+                test_body: { type: String, have_to: false, mean: '测试body', example: 'test' },
+                test_url: { type: String, have_to: true, mean: '测试url', example: 'test' },
+                test_method: { type: String, have_to: true, mean: '测试method', example: 'test' },
             },
             result: {
                 result: { type: String, mean: '测试结果', example: 'result' },
