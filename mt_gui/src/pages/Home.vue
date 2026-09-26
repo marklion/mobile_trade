@@ -48,6 +48,64 @@
             </fui-list>
         </fui-bottom-popup>
 
+        <fui-bottom-popup :show="llm_step_show" @close="llm_step_show = false" z-index="1005">
+            <view class="llm-popup">
+                <view class="llm-popup-head">
+                    <view>
+                        <text class="llm-popup-title">智能导出</text>
+                        <text class="llm-popup-subtitle">请求已提交 · 后台正在生成文件</text>
+                    </view>
+                    <fui-icon name="close" size="32" color="#8A94A6" @click="llm_step_show = false"></fui-icon>
+                </view>
+                <text class="llm-prompt-label">导出内容描述</text>
+                <view class="llm-prompt-preview">
+                    <text class="llm-prompt-text">{{ llm_step_description }}</text>
+                </view>
+                <view class="llm-popup-actions">
+                    <fui-button type="primary" text="查看操作历史" background="#465CFF" radius="44rpx" height="88rpx"
+                        @click="open_llm_history"></fui-button>
+                </view>
+            </view>
+        </fui-bottom-popup>
+
+        <fui-bottom-popup :show="llm_record_show" @close="llm_record_show = false" z-index="1005">
+            <view class="llm-history-popup">
+                <view class="llm-popup-head llm-history-head">
+                    <view>
+                        <text class="llm-popup-title">操作历史</text>
+                        <text class="llm-popup-subtitle">智能导出请求记录</text>
+                    </view>
+                    <fui-icon name="close" size="32" color="#8A94A6" @click="llm_record_show = false"></fui-icon>
+                </view>
+                <list-show v-if="llm_record_show" ref="llm_history_list" :fetch_function="get_llm_export_records"
+                    height="58vh" v-model="llm_export_records">
+                    <view class="llm-record-item" v-for="record in llm_export_records" :key="record.id">
+                        <view class="llm-record-top">
+                            <text class="llm-record-time">{{ record.export_time }}</text>
+                            <text class="llm-record-status" :class="'status-' + record.status">
+                                {{ record.status === 0 ? '处理中' : (record.status === 1 ? '成功' : '失败') }}
+                            </text>
+                        </view>
+                        <text class="llm-record-description">{{ record.export_description }}</text>
+                        <view class="llm-record-foot">
+                            <text class="llm-record-spend" v-if="record.status !== 0">耗时 {{ record.spend || 0 }} 秒</text>
+                            <text class="llm-record-error" v-if="record.status === 2">{{ record.export_result || '导出失败' }}</text>
+                            <text class="llm-record-pending" v-else-if="record.status === 0">正在生成文件</text>
+                            <view class="llm-record-edit" @click="edit_llm_record(record)">
+                                <fui-icon name="edit" size="28" color="#465CFF"></fui-icon>
+                                <text>再次编辑</text>
+                            </view>
+                            <view v-if="record.status === 1 && record.export_result" class="llm-record-download"
+                                @click="download_llm_record(record.export_result)">
+                                <fui-icon name="download" size="28" color="#465CFF"></fui-icon>
+                                <text>下载文件</text>
+                            </view>
+                        </view>
+                    </view>
+                </list-show>
+            </view>
+        </fui-bottom-popup>
+
         <view class="content-stack">
             <view class="section-shell">
                 <view class="section-head">
@@ -263,6 +321,33 @@
                     </view>
                 </view>
             </module-filter>
+
+            <view id="llm-export-section" class="section-shell">
+                <view class="section-head llm-section-head">
+                    <view class="section-head-left">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">智能导出</text>
+                            <text class="section-en">AI · EXPORT</text>
+                        </view>
+                    </view>
+                    <view class="llm-history-link" @click="llm_record_show = true">
+                        <fui-icon name="history" size="28" color="#465CFF"></fui-icon>
+                        <text>操作历史</text>
+                    </view>
+                </view>
+                <view class="section-body">
+                    <fui-textarea flexStart isCounter label="导出内容描述" maxlength="2000"
+                        placeholder="描述你需要导出的数据，例如：导出本月已完成的销售订单"
+                        v-model="llm_export_content"></fui-textarea>
+                    <view class="llm-execute-actions">
+                        <fui-button type="primary" :text="llm_export_loading ? '提交中...' : '执行导出'"
+                            :disabled="!llm_export_content.trim() || llm_export_loading"
+                            :background="llm_export_content.trim() && !llm_export_loading ? '#465CFF' : '#AEB8D8'"
+                            color="#FFFFFF" radius="44rpx" height="88rpx" @click="execute_llm_export"></fui-button>
+                    </view>
+                </view>
+            </view>
         </view>
     <app-tab-bar :selected="0" />
     </view>
@@ -339,6 +424,12 @@ export default {
             stat_scopes: [],
             stat_context_company_id: null,
             show_scope_picker: false,
+            llm_export_content: '',
+            llm_export_records: [],
+            llm_export_loading: false,
+            llm_step_show: false,
+            llm_step_description: '',
+            llm_record_show: false,
         }
     },
     computed: {
@@ -400,6 +491,55 @@ export default {
         save_notice: async function () {
             await this.$send_req('/stuff/set_notice', this.notice);
             uni.startPullDownRefresh();
+        },
+        execute_llm_export: async function () {
+            if (!this.llm_export_content.trim() || this.llm_export_loading) {
+                return;
+            }
+            this.llm_export_loading = true;
+            try {
+                await this.$send_req('/global/llm_export', {
+                    export_description: this.llm_export_content,
+                });
+                this.llm_step_description = this.llm_export_content;
+                this.llm_step_show = true;
+            } finally {
+                this.llm_export_loading = false;
+            }
+        },
+        get_llm_export_records: async function (pageNo) {
+            const res = await this.$send_req('/global/list_le_records', {
+                pageNo: pageNo,
+            });
+            return res.records || [];
+        },
+        open_llm_history: function () {
+            this.llm_step_show = false;
+            this.llm_record_show = true;
+        },
+        edit_llm_record: function (record) {
+            this.llm_export_content = record.export_description || '';
+            this.llm_record_show = false;
+            this.$nextTick(() => {
+                uni.pageScrollTo({
+                    selector: '#llm-export-section',
+                    duration: 300,
+                });
+            });
+        },
+        download_llm_record: function (url) {
+            if (!url) {
+                return;
+            }
+            uni.downloadFile({
+                url: this.$convert_attach_url(url),
+                success: function (res) {
+                    uni.openDocument({
+                        filePath: res.tempFilePath,
+                        showMenu: true,
+                    });
+                },
+            });
         },
         // 仅展示用：从已有 chartData 读取，不改统计逻辑
         chart_has_data: function (cts) {
@@ -1311,6 +1451,211 @@ export default {
 .notice-actions {
     margin-top: 28rpx;
     padding: 0 4rpx 8rpx;
+}
+
+.llm-history-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 10rpx 16rpx;
+    border-radius: 28rpx;
+    background: #EEF1FF;
+    color: #465CFF;
+    font-size: 22rpx;
+}
+
+.llm-section-head {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.llm-history-link text {
+    margin-left: 8rpx;
+}
+
+.llm-execute-actions {
+    margin-top: 24rpx;
+}
+
+.llm-popup,
+.llm-history-popup {
+    box-sizing: border-box;
+    padding: 32rpx 28rpx calc(32rpx + env(safe-area-inset-bottom));
+}
+
+.llm-popup-head {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+}
+
+.llm-popup-title,
+.llm-popup-subtitle {
+    display: block;
+}
+
+.llm-popup-title {
+    font-size: 34rpx;
+    line-height: 1.3;
+    font-weight: 700;
+    color: #1A1F36;
+}
+
+.llm-popup-subtitle {
+    margin-top: 8rpx;
+    font-size: 22rpx;
+    line-height: 1.4;
+    color: #6B7280;
+}
+
+.llm-step-mark {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-top: 32rpx;
+    padding: 18rpx 20rpx;
+    border-radius: 18rpx;
+    background: linear-gradient(100deg, #EEF1FF 0%, #F7F8FE 100%);
+}
+
+.llm-step-number {
+    font-size: 28rpx;
+    font-weight: 800;
+    color: #465CFF;
+}
+
+.llm-step-caption {
+    margin-left: 14rpx;
+    font-size: 24rpx;
+    font-weight: 600;
+    color: #374151;
+}
+
+.llm-prompt-label {
+    display: block;
+    margin-top: 28rpx;
+    font-size: 24rpx;
+    font-weight: 600;
+    color: #4A5568;
+}
+
+.llm-prompt-preview {
+    max-height: 260rpx;
+    margin-top: 12rpx;
+    padding: 20rpx;
+    border-radius: 16rpx;
+    background: #F6F7FB;
+    border: 1rpx solid #E8ECF6;
+    overflow-y: auto;
+}
+
+.llm-prompt-text {
+    font-size: 24rpx;
+    line-height: 1.6;
+    color: #374151;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.llm-popup-actions {
+    margin-top: 28rpx;
+}
+
+.llm-history-head {
+    margin-bottom: 24rpx;
+}
+
+.llm-record-item {
+    margin-bottom: 18rpx;
+    padding: 22rpx;
+    border-radius: 18rpx;
+    border: 1rpx solid #E8ECF6;
+    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FD 100%);
+    box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.05);
+}
+
+.llm-record-top,
+.llm-record-foot {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.llm-record-time,
+.llm-record-spend,
+.llm-record-pending {
+    font-size: 21rpx;
+    color: #8A94A6;
+}
+
+.llm-record-status {
+    flex-shrink: 0;
+    padding: 6rpx 16rpx;
+    border-radius: 22rpx;
+    font-size: 20rpx;
+    font-weight: 600;
+}
+
+.llm-record-status.status-0 {
+    color: #B7791F;
+    background: #FFF4D6;
+}
+
+.llm-record-status.status-1 {
+    color: #25855A;
+    background: #E4F6ED;
+}
+
+.llm-record-status.status-2 {
+    color: #C64B4B;
+    background: #FDEBEC;
+}
+
+.llm-record-description {
+    display: block;
+    margin-top: 16rpx;
+    font-size: 25rpx;
+    line-height: 1.55;
+    color: #2D3748;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.llm-record-foot {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 16rpx;
+}
+
+.llm-record-error {
+    flex: 1;
+    min-width: 0;
+    font-size: 22rpx;
+    line-height: 1.4;
+    color: #C64B4B;
+    word-break: break-all;
+}
+
+.llm-record-download {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-left: auto;
+    padding: 10rpx 16rpx;
+    border-radius: 24rpx;
+    background: #EEF1FF;
+    color: #465CFF;
+    font-size: 22rpx;
+    font-weight: 600;
+}
+
+.llm-record-download text {
+    margin-left: 8rpx;
 }
 
 .scope-row {

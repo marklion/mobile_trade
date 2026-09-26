@@ -19,6 +19,7 @@ const path = require('path');
 const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
 const t_plus_lib = require('../lib/t_plus_lib');
+const qwen_lib = require('../lib/qwen_lib');
 
 function create_api_error(message) {
     const error = new Error(message);
@@ -2771,6 +2772,92 @@ module.exports = {
                     await rbac_lib.get_company_by_token(token));
                 return { result: JSON.stringify(ret) };
             },
+        },
+        llm_export: {
+            name: '执行大模型导出',
+            description: '执行大模型导出操作',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                export_description: { type: String, have_to: true, mean: '导出描述', example: 'test' }
+            },
+            result: {
+                result: { type: Boolean, mean: '请求结果', example: true },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (user) {
+                    let new_record = await user.createLlm_export_record({
+                        export_description: body.export_description,
+                        export_result: '',
+                        export_time: moment().format('YYYY-MM-DD HH:mm:ss'),
+                        status: 0,
+                    });
+                    setTimeout(async () => {
+                        try {
+                            let startTime = Date.now();
+                            let sql = await qwen_lib.qwenChat(qwen_lib.make_export_prompt(body.export_description, user.phone));
+                            sql = String(sql).replace(/^```(?:sql)?\s*/i, '').replace(/\s*```$/, '').trim();
+                            let sq = db_opt.get_sq();
+                            let result = await sq.query(sql);
+                            let rows = Array.isArray(result[0]) ? result[0] : [];
+                            let columns = rows.length ? Object.keys(rows[0]) : [];
+                            let csvValue = (value) => value === null || value === undefined
+                                ? ''
+                                : `"${String(value).replace(/"/g, '""')}"`;
+                            let csv = [columns.map(csvValue).join(',')];
+                            csv.push(...rows.map(row => columns.map(column => csvValue(row[column])).join(',')));
+                            let fileName = `llm_export_${new_record.id}_${Date.now()}.csv`;
+                            let filePath = path.join('/database/uploads', fileName);
+                            fs.mkdirSync(path.dirname(filePath), { recursive: true });
+                            fs.writeFileSync(filePath, '\ufeff' + csv.join('\n'), 'utf8');
+                            let spend = Math.floor((Date.now() - startTime) / 1000);
+                            await new_record.update({ export_result: `/uploads/${fileName}`, status: 1, spend: spend });
+                        } catch (error) {
+                            await new_record.update({ export_result: error.message || String(error), status: 2 });
+                        }
+                    }, 200);
+                }
+                else {
+                    throw create_api_error('请先登录');
+                }
+
+                return { result: true }
+            },
+        },
+        list_le_records: {
+            name: '列出大模型导出记录',
+            description: '列出大模型导出记录',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {},
+            result: {
+                records: {
+                    type: Array, mean: '导出记录列表', explain: {
+                        id: { type: Number, mean: '记录ID', example: 1 },
+                        export_description: { type: String, mean: '导出描述', example: '导出全部记录' },
+                        export_result: { type: String, mean: '导出结果', example: '/uploads/llm_export_1_1680000000000.csv' },
+                        export_time: { type: String, mean: '导出时间', example: '2024-06-01 12:00:00' },
+                        status: { type: Number, mean: '导出状态，0: 未导出, 1: 成功, 2: 失败', example: 1 },
+                        spend: { type: Number, mean: '消耗秒数', example: 5 },
+                    }
+                },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (!user) {
+                    throw create_api_error('请先登录');
+                }
+                let records = await user.getLlm_export_records({
+                    order: [['id', 'DESC']],
+                    limit: 20,
+                    offset: body.pageNo * 20,
+                });
+                let total = await user.countLlm_export_records();
+                return { records: records, total: total }
+            }
         },
     },
 }

@@ -7,6 +7,8 @@ echo -n "sql user:"
 read DB_USER
 echo -n "sql password:"
 read DB_PASS
+echo -n "qwen api_key:"
+read QWEN_API_KEY
 
 DEFAULT_PWD='_P@ssw0rd_'
 DB_HOST='rm-2ze6222dda7fe8427eo.mysql.rds.aliyuncs.com'
@@ -28,3 +30,7 @@ echo "DB_PASS=${DB_PASS}" >> /tmp/purpose.env
 echo "DB_NAME=${DB_NAME}" >> /tmp/purpose.env
 echo "MP_SECRET=${MP_SECRET}" >> /tmp/purpose.env
 echo "DEFAULT_PWD=${DEFAULT_PWD}" >> /tmp/purpose.env
+echo "DASHSCOPE_API_KEY=${QWEN_API_KEY}" >> /tmp/purpose.env
+mkdir -p /conf
+cur_dir=$(realpath $(dirname $0))
+cp -a "${cur_dir}/../conf/export_prompt_template.txt" /conf/
