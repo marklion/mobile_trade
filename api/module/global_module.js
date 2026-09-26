@@ -2812,8 +2812,9 @@ module.exports = {
                             let filePath = path.join('/database/uploads', fileName);
                             fs.mkdirSync(path.dirname(filePath), { recursive: true });
                             fs.writeFileSync(filePath, '\ufeff' + csv.join('\n'), 'utf8');
+                            let chart_result = await qwen_lib.qwenChat(qwen_lib.make_chart_prompt(body.export_description, filePath));
                             let spend = Math.floor((Date.now() - startTime) / 1000);
-                            await new_record.update({ export_result: `/uploads/${fileName}`, status: 1, spend: spend });
+                            await new_record.update({ export_result: `/uploads/${fileName}`, status: 1, spend: spend, chart_result: chart_result });
                         } catch (error) {
                             await new_record.update({ export_result: error.message || String(error), status: 2 });
                         }
@@ -2842,6 +2843,7 @@ module.exports = {
                         export_time: { type: String, mean: '导出时间', example: '2024-06-01 12:00:00' },
                         status: { type: Number, mean: '导出状态，0: 未导出, 1: 成功, 2: 失败', example: 1 },
                         spend: { type: Number, mean: '消耗秒数', example: 5 },
+                        chart_result: { type: String, mean: '大模型生成的ECharts option配置JSON', example: '{"title":{"text":"示例"}}' },
                     }
                 },
             },

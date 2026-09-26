@@ -577,6 +577,7 @@ let db_opt = {
             export_time: { type: DataTypes.STRING },
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
             spend: { type: DataTypes.INTEGER, defaultValue: 0 },
+            chart_result: { type: DataTypes.TEXT },
         },
     },
     make_associate: function (_sq) {

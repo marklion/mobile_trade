@@ -100,9 +100,31 @@
                                 <fui-icon name="download" size="28" color="#465CFF"></fui-icon>
                                 <text>下载文件</text>
                             </view>
+                            <view v-if="record.status === 1 && record.chart_result" class="llm-record-download"
+                                @click="view_llm_chart(record)">
+                                <fui-icon name="find" size="28" color="#465CFF"></fui-icon>
+                                <text>查看图表</text>
+                            </view>
                         </view>
                     </view>
                 </list-show>
+            </view>
+        </fui-bottom-popup>
+
+        <fui-bottom-popup :show="chart_popup_show" @close="chart_popup_show = false" z-index="1006">
+            <view class="chart-popup">
+                <view class="llm-popup-head">
+                    <view>
+                        <text class="llm-popup-title">查看图表</text>
+                        <text class="llm-popup-subtitle">智能导出图表结果</text>
+                    </view>
+                    <fui-icon name="close" size="32" color="#8A94A6" @click="chart_popup_show = false"></fui-icon>
+                </view>
+                <chart-view v-if="chart_popup_show && chart_popup_option" :chart-option="chart_popup_option"
+                    height="460rpx"></chart-view>
+                <view v-else-if="chart_popup_error" class="chart-popup-error">
+                    <text>{{ chart_popup_error }}</text>
+                </view>
             </view>
         </fui-bottom-popup>
 
@@ -359,6 +381,7 @@ import utils from '@/components/firstui/fui-utils';
 import ModuleFilter from '../components/ModuleFilter.vue';
 import NoticeBar from '../components/NoticeBar.vue';
 import AppTabBar from '../components/AppTabBar.vue';
+import ChartView from '../components/ChartView.vue';
 import { setTabBarSelected } from '@/utils/setTabBarSelected';
 export default {
     name: 'Home',
@@ -367,6 +390,7 @@ export default {
         "module-filter": ModuleFilter,
         "notice-bar": NoticeBar,
         "app-tab-bar": AppTabBar,
+        "chart-view": ChartView,
     },
     data() {
         return {
@@ -430,6 +454,9 @@ export default {
             llm_step_show: false,
             llm_step_description: '',
             llm_record_show: false,
+            chart_popup_show: false,
+            chart_popup_option: null,
+            chart_popup_error: '',
         }
     },
     computed: {
@@ -526,6 +553,17 @@ export default {
                     duration: 300,
                 });
             });
+        },
+        view_llm_chart: function (record) {
+            this.chart_popup_error = '';
+            this.chart_popup_option = null;
+            const raw = String(record.chart_result || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+            try {
+                this.chart_popup_option = JSON.parse(raw);
+            } catch (error) {
+                this.chart_popup_error = '图表数据解析失败';
+            }
+            this.chart_popup_show = true;
         },
         download_llm_record: function (url) {
             if (!url) {
@@ -1481,9 +1519,18 @@ export default {
 }
 
 .llm-popup,
-.llm-history-popup {
+.llm-history-popup,
+.chart-popup {
     box-sizing: border-box;
     padding: 32rpx 28rpx calc(32rpx + env(safe-area-inset-bottom));
+}
+
+.chart-popup-error {
+    margin-top: 24rpx;
+    padding: 24rpx;
+    text-align: center;
+    font-size: 26rpx;
+    color: #F56C6C;
 }
 
 .llm-popup-head {

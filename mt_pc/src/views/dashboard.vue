@@ -175,15 +175,20 @@
                                 <span v-else-if="scope.row.status === 0">正在生成文件</span>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="100">
+                        <el-table-column label="操作" width="160">
                             <template slot-scope="scope">
                                 <el-button type="text" @click="edit_llm_record(scope.row)">再次编辑</el-button>
+                                <el-button v-if="scope.row.status === 1 && scope.row.chart_result" type="text" @click="view_llm_chart(scope.row)">查看图表</el-button>
                             </template>
                         </el-table-column>
                     </el-table>
                 </template>
             </page-content>
         </el-drawer>
+        <el-dialog title="查看图表" :visible.sync="chart_dialog_show" :width="chart_dialog_width" @opened="chart_dialog_ready = true" @close="chart_dialog_ready = false">
+            <ChartComponent v-if="chart_dialog_ready && chart_dialog_option" ref="chartDialogComponent" :chartOption="chart_dialog_option" :height="chart_dialog_height" />
+            <el-alert v-else-if="chart_dialog_error" :title="chart_dialog_error" type="error" :closable="false" show-icon></el-alert>
+        </el-dialog>
     </template>
 </div>
 </template>
@@ -242,6 +247,12 @@ export default {
                 stat_context_company_id: this.globalStatContextCompanyId,
             };
         },
+        chart_dialog_width() {
+            return this.is_mobile_view ? '94%' : '720px';
+        },
+        chart_dialog_height() {
+            return this.is_mobile_view ? '320px' : '440px';
+        },
     },
     data() {
         return {
@@ -264,6 +275,11 @@ export default {
             req_url: '/sale_management/get_count_by_customer',
             sb_url: '/customer/get_stuff_on_sale',
             ss_url: '/supplier/get_stuff_need_buy',
+            chart_dialog_show: false,
+            chart_dialog_ready: false,
+            chart_dialog_option: null,
+            chart_dialog_error: '',
+            is_mobile_view: window.innerWidth < 768,
         }
     },
     async mounted() {
@@ -273,6 +289,10 @@ export default {
         this.init_brief_info();
         this.init_statistic();
         this.show_today_yesterday();
+        window.addEventListener('resize', this.on_window_resize);
+    },
+    beforeDestroy() {
+        window.removeEventListener('resize', this.on_window_resize);
     },
     watch: {
         globalStatContextCompanyId: function (newVal, oldVal) {
@@ -348,6 +368,26 @@ export default {
         open_llm_history: function () {
             this.llm_step_show = false;
             this.llm_record_show = true;
+        },
+        view_llm_chart: function (record) {
+            this.chart_dialog_error = '';
+            this.chart_dialog_option = null;
+            let raw = String(record.chart_result || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+            try {
+                this.chart_dialog_option = JSON.parse(raw);
+                this.chart_dialog_show = true;
+            } catch (error) {
+                this.chart_dialog_error = '图表数据解析失败';
+                this.chart_dialog_show = true;
+            }
+        },
+        on_window_resize: function () {
+            this.is_mobile_view = window.innerWidth < 768;
+            this.$nextTick(() => {
+                if (this.$refs.chartDialogComponent) {
+                    this.$refs.chartDialogComponent.resize();
+                }
+            });
         },
         edit_llm_record: function (record) {
             this.llm_export_content = record.export_description || '';

@@ -137,7 +137,18 @@ function make_export_prompt(export_description, phone) {
     return temp;
 }
 
+function make_chart_prompt(chart_description, csv_file_path) {
+    let csv_content = fs.readFileSync(csv_file_path, "utf-8");
+    let csv_first_10_lines = csv_content.split("\n").slice(0, 10).join("\n");
+    let temp = fs.readFileSync("/conf/chart_prompt_template.txt", "utf-8");
+    temp = temp.replace("{{chart_description}}", chart_description);
+    temp = temp.replace("{{csv_first_10_lines}}", csv_first_10_lines);
+    return temp;
+}
+
+
 module.exports = {
     qwenChat,
-    make_export_prompt
+    make_export_prompt,
+    make_chart_prompt,
 };

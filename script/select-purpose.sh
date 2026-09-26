@@ -34,3 +34,4 @@ echo "DASHSCOPE_API_KEY=${QWEN_API_KEY}" >> /tmp/purpose.env
 mkdir -p /conf
 cur_dir=$(realpath $(dirname $0))
 cp -a "${cur_dir}/../conf/export_prompt_template.txt" /conf/
+cp -a "${cur_dir}/../conf/chart_prompt_template.txt" /conf/
