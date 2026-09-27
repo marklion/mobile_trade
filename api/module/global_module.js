@@ -359,6 +359,7 @@ async function sql2csvfile(sql, fileName, userPhone) {
         .replace(/\/\*[\s\S]*?\*\//g, ' ')
         .replace(/--.*$/gm, ' ')
         .trim();
+    normalizedSql = normalizedSql.replace(/;\s*$/, '');
     if (!/^select\b/i.test(normalizedSql)) {
         throw create_api_error('导出SQL仅支持SELECT查询');
     }
@@ -388,8 +389,10 @@ async function sql2csvfile(sql, fileName, userPhone) {
     if (!escapedUserPhone || !phoneRegex.test(normalizedSql)) {
         throw create_api_error('导出SQL缺少当前用户手机号过滤');
     }
+    let userLookupRegex = new RegExp(`\\bfrom\\s+\`?rbac_user\`?[\\s\\S]*?\\bphone\\b\\s*=\\s*['"\`]${escapedUserPhone}['"\`]`, 'i');
     let whereMatch = normalizedSql.match(/\bwhere\b([\s\S]*)$/i);
-    if (!whereMatch || !/(\bcompanyId\b|\brbacUserId\b)/i.test(whereMatch[1])) {
+    let tenantPredicateRegex = /(`?plan`?\.`?rbacUserId`?\s*=\s*`?u`?\.`?id`?|`?plan`?\.`?companyId`?\s*=\s*`?u`?\.`?companyId`?|`?(?:stuff|s)`?\.`?companyId`?\s*=\s*`?u`?\.`?companyId`?)/i;
+    if (!whereMatch || !userLookupRegex.test(normalizedSql) || !tenantPredicateRegex.test(whereMatch[1])) {
         throw create_api_error('导出SQL缺少租户隔离字段过滤');
     }
     let sq = db_opt.get_sq();
