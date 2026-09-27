@@ -4,7 +4,6 @@ const fs = require("fs");
 // ========== 配置项 ==========
 const QWEN_MODEL = "qwen3.7-plus";
 const MAX_CONCURRENT_LLM = 5;
-const LLM_TIMEOUT = 300000;
 const LLM_MAX_RETRY = 2;
 
 // 延迟加载 ESM-only 的 p-limit，并复用同一个限制器
@@ -22,7 +21,6 @@ function getLimitConcurrency() {
 const openai = new OpenAI({
     apiKey: process.env.DASHSCOPE_API_KEY,
     baseURL: "https://llm-7nvsavd7n3gjmza6.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
-    timeout: LLM_TIMEOUT,
 });
 
 /**
@@ -139,10 +137,10 @@ function make_export_prompt(export_description, phone) {
 
 function make_chart_prompt(chart_description, csv_file_path) {
     let csv_content = fs.readFileSync(csv_file_path, "utf-8");
-    let csv_first_10_lines = csv_content.split("\n").slice(0, 10).join("\n");
+    let csv_first_3_lines = csv_content.split("\n").slice(0, 10).join("\n");
     let temp = fs.readFileSync("/conf/chart_prompt_template.txt", "utf-8");
     temp = temp.replace("{{chart_description}}", chart_description);
-    temp = temp.replace("{{csv_first_10_lines}}", csv_first_10_lines);
+    temp = temp.replace("{{csv_first_3_lines}}", csv_first_3_lines);
     return temp;
 }
 

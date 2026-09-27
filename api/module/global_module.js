@@ -348,6 +348,21 @@ function verifyTicketQrContent(qr_content) {
     };
 }
 
+async function sql2csvfile(sql, fileName) {
+    let sq = db_opt.get_sq();
+    let result = await sq.query(sql);
+    let rows = Array.isArray(result[0]) ? result[0] : [];
+    let columns = rows.length ? Object.keys(rows[0]) : [];
+    let csvValue = (value) => value === null || value === undefined
+        ? ''
+        : `"${String(value).replace(/"/g, '""')}"`;
+    let csv = [columns.map(csvValue).join(',')];
+    csv.push(...rows.map(row => columns.map(column => csvValue(row[column])).join(',')));
+    let filePath = path.join('/database/uploads', fileName);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, '\ufeff' + csv.join('\n'), 'utf8');
+}
+
 module.exports = {
     name: 'global',
     description: '全局',
@@ -2799,22 +2814,12 @@ module.exports = {
                             let startTime = Date.now();
                             let sql = await qwen_lib.qwenChat(qwen_lib.make_export_prompt(body.export_description, user.phone));
                             sql = String(sql).replace(/^```(?:sql)?\s*/i, '').replace(/\s*```$/, '').trim();
-                            let sq = db_opt.get_sq();
-                            let result = await sq.query(sql);
-                            let rows = Array.isArray(result[0]) ? result[0] : [];
-                            let columns = rows.length ? Object.keys(rows[0]) : [];
-                            let csvValue = (value) => value === null || value === undefined
-                                ? ''
-                                : `"${String(value).replace(/"/g, '""')}"`;
-                            let csv = [columns.map(csvValue).join(',')];
-                            csv.push(...rows.map(row => columns.map(column => csvValue(row[column])).join(',')));
                             let fileName = `llm_export_${new_record.id}_${Date.now()}.csv`;
-                            let filePath = path.join('/database/uploads', fileName);
-                            fs.mkdirSync(path.dirname(filePath), { recursive: true });
-                            fs.writeFileSync(filePath, '\ufeff' + csv.join('\n'), 'utf8');
-                            let chart_result = await qwen_lib.qwenChat(qwen_lib.make_chart_prompt(body.export_description, filePath));
+                            await new_record.update({ sql: sql });
+                            await sql2csvfile(sql, fileName);
+                            let chart_result = await qwen_lib.qwenChat(qwen_lib.make_chart_prompt(body.export_description, `/database/uploads/${fileName}`));
                             let spend = Math.floor((Date.now() - startTime) / 1000);
-                            await new_record.update({ export_result: `/uploads/${fileName}`, status: 1, spend: spend, chart_result: chart_result });
+                            await new_record.update({ export_result: `/uploads/${fileName}`, status: 1, spend: spend, chart_result: chart_result, sql: sql });
                         } catch (error) {
                             await new_record.update({ export_result: error.message || String(error), status: 2 });
                         }
@@ -2824,6 +2829,41 @@ module.exports = {
                     throw create_api_error('请先登录');
                 }
 
+                return { result: true }
+            },
+        },
+        llm_dup_execute: {
+            name: '重复执行大模型导出',
+            description: '重复执行大模型导出',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                export_id: { type: Number, mean: '导出记录ID', have_to: true, example:1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '操作是否成功', example: true },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (!user) {
+                    throw create_api_error('请先登录');
+                }
+                let record = await user.getLlm_export_records({ where: { id: body.export_id } });
+                if (!record || !record.length) {
+                    throw create_api_error('导出记录不存在');
+                }
+                record = record[0];
+                let new_record = await user.createLlm_export_record({
+                    export_description: record.export_description,
+                    status: 0, spend: 0, chart_result: record.chart_result, sql: record.sql,
+                    export_time: moment().format('YYYY-MM-DD HH:mm:ss')
+                });
+                let fileName = `llm_export_${new_record.id}_${Date.now()}.csv`;
+                await sql2csvfile(new_record.sql, fileName);
+                new_record.export_result = `/uploads/${fileName}`;
+                new_record.status = 1
+                await new_record.save();
                 return { result: true }
             },
         },

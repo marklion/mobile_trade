@@ -264,6 +264,15 @@ export default {
                     featured: true,
                 },
                 {
+                    name:'智能导出',
+                    icon: 'setup',
+                    require_module: undefined,
+                    path: 'LlmExport',
+                    sub_page_name: 'subPage2',
+                    group: 'tool',
+                    desc: '智能导出功能',
+                },
+                {
                     name: '磅单验证',
                     icon: 'scan',
                     require_module: undefined,

@@ -154,8 +154,14 @@
                 <el-button type="text" @click="open_llm_history">查看操作历史</el-button>
             </div>
         </el-dialog>
-        <el-drawer title="智能导出操作历史" :visible.sync="llm_record_show" direction="rtl" size="70%">
-            <page-content v-if="llm_record_show" body_key="records" req_url="/global/list_le_records" :enable="true">
+        <el-drawer :visible.sync="llm_record_show" direction="rtl" size="70%">
+            <template slot="title">
+                <span class="llm-drawer-title">
+                    <span>智能导出操作历史</span>
+                    <el-button type="text" icon="el-icon-refresh" @click="refresh_llm_records">刷新</el-button>
+                </span>
+            </template>
+            <page-content v-if="llm_record_show" ref="llm_records_page" body_key="records" req_url="/global/list_le_records" :enable="true">
                 <template v-slot:default="slotProps">
                     <el-table :data="slotProps.content" stripe style="width: 100%" height="calc(100vh - 180px)">
                         <el-table-column prop="export_time" label="请求时间" width="160"></el-table-column>
@@ -175,9 +181,10 @@
                                 <span v-else-if="scope.row.status === 0">正在生成文件</span>
                             </template>
                         </el-table-column>
-                        <el-table-column label="操作" width="160">
+                        <el-table-column label="操作" width="230">
                             <template slot-scope="scope">
                                 <el-button type="text" @click="edit_llm_record(scope.row)">再次编辑</el-button>
+                                <el-button type="text" @click="dup_execute_llm_record(scope.row)">再次执行</el-button>
                                 <el-button v-if="scope.row.status === 1 && scope.row.chart_result" type="text" @click="view_llm_chart(scope.row)">查看图表</el-button>
                             </template>
                         </el-table-column>
@@ -186,8 +193,13 @@
             </page-content>
         </el-drawer>
         <el-dialog title="查看图表" :visible.sync="chart_dialog_show" :width="chart_dialog_width" @opened="chart_dialog_ready = true" @close="chart_dialog_ready = false">
-            <ChartComponent v-if="chart_dialog_ready && chart_dialog_option" ref="chartDialogComponent" :chartOption="chart_dialog_option" :height="chart_dialog_height" />
-            <el-alert v-else-if="chart_dialog_error" :title="chart_dialog_error" type="error" :closable="false" show-icon></el-alert>
+            <div v-loading="chart_dialog_loading">
+                <ChartComponent v-if="chart_dialog_ready && chart_dialog_option" ref="chartDialogComponent" :chartOption="chart_dialog_option" :height="chart_dialog_height" />
+                <el-table v-else-if="chart_dialog_table" :data="chart_dialog_table.rows" stripe style="width: 100%" max-height="440">
+                    <el-table-column v-for="col in chart_dialog_table.columns" :key="col.prop" :prop="col.prop" :label="col.label" show-overflow-tooltip></el-table-column>
+                </el-table>
+                <el-alert v-else-if="chart_dialog_error" :title="chart_dialog_error" type="error" :closable="false" show-icon></el-alert>
+            </div>
         </el-dialog>
     </template>
 </div>
@@ -200,6 +212,7 @@ import {
 import ChartComponent from '../components/Charts.vue';
 import page_content from '../components/PageContent.vue';
 import moment from 'moment';
+import { parseCsvText, buildChartPayload } from '../utils/chart_data.js';
 
 function hasCanViewPermission(scope) {
     return !!scope;
@@ -277,7 +290,9 @@ export default {
             ss_url: '/supplier/get_stuff_need_buy',
             chart_dialog_show: false,
             chart_dialog_ready: false,
+            chart_dialog_loading: false,
             chart_dialog_option: null,
+            chart_dialog_table: null,
             chart_dialog_error: '',
             is_mobile_view: window.innerWidth < 768,
         }
@@ -369,16 +384,46 @@ export default {
             this.llm_step_show = false;
             this.llm_record_show = true;
         },
-        view_llm_chart: function (record) {
+        refresh_llm_records: function () {
+            if (this.$refs.llm_records_page) {
+                this.$refs.llm_records_page.refresh(1);
+            }
+        },
+        view_llm_chart: async function (record) {
             this.chart_dialog_error = '';
             this.chart_dialog_option = null;
+            this.chart_dialog_table = null;
             let raw = String(record.chart_result || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+            let structure;
             try {
-                this.chart_dialog_option = JSON.parse(raw);
-                this.chart_dialog_show = true;
+                structure = JSON.parse(raw);
             } catch (error) {
                 this.chart_dialog_error = '图表数据解析失败';
                 this.chart_dialog_show = true;
+                return;
+            }
+            this.chart_dialog_show = true;
+            this.chart_dialog_loading = true;
+            try {
+                let rows = [];
+                if (record.export_result) {
+                    let resp = await fetch(record.export_result);
+                    if (resp.ok) {
+                        rows = parseCsvText(await resp.text()).rows;
+                    }
+                }
+                let payload = buildChartPayload(structure, rows);
+                if (!payload) {
+                    this.chart_dialog_error = '图表数据解析失败';
+                } else if (payload.kind === 'table') {
+                    this.chart_dialog_table = payload;
+                } else {
+                    this.chart_dialog_option = payload.option;
+                }
+            } catch (error) {
+                this.chart_dialog_error = '图表数据加载失败';
+            } finally {
+                this.chart_dialog_loading = false;
             }
         },
         on_window_resize: function () {
@@ -398,6 +443,13 @@ export default {
                     input.$el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     input.focus();
                 }
+            });
+        },
+        dup_execute_llm_record: async function (record) {
+            await this.$send_req('/global/llm_dup_execute', { export_id: record.id });
+            this.$message({
+                message: '已提交，请刷新智能导出记录查看结果',
+                type: 'success'
             });
         },
         start_plan_creation: function (item, is_sale) {
@@ -647,5 +699,11 @@ export default {
 
 .llm-export-error {
     color: #f56c6c;
+}
+
+.llm-drawer-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
 }
 </style>

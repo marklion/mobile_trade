@@ -578,6 +578,7 @@ let db_opt = {
             status: { type: DataTypes.INTEGER, defaultValue: 0 },
             spend: { type: DataTypes.INTEGER, defaultValue: 0 },
             chart_result: { type: DataTypes.TEXT },
+            sql: { type: DataTypes.TEXT },
         },
     },
     make_associate: function (_sq) {

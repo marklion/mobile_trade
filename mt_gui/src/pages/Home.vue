@@ -1,378 +1,248 @@
 <template>
-    <view class="home-page">
-        <logo-loading />
-        <view class="page-mesh"></view>
-        <view class="page-glow page-glow-a"></view>
-        <view class="page-glow page-glow-b"></view>
-        <notice-bar ref="noticeBar" />
+<view class="home-page">
+    <logo-loading />
+    <view class="page-mesh"></view>
+    <view class="page-glow page-glow-a"></view>
+    <view class="page-glow page-glow-b"></view>
+    <notice-bar ref="noticeBar" />
 
-        <view class="home-hero">
-            <view class="company-card">
-                <view class="hero-logo-bg">
-                    <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+    <view class="home-hero">
+        <view class="company-card">
+            <view class="hero-logo-bg">
+                <image class="hero-logo-img" src="/static/logo_transparent.png" mode="aspectFit"></image>
+            </view>
+            <view class="hero-top">
+                <text class="hero-greeting">欢迎回来</text>
+            </view>
+            <view class="company-row">
+                <view v-if="self_info.company_logo" class="company-logo-wrap">
+                    <fui-avatar size="middle" shape="square" :radius="16" :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
                 </view>
-                <view class="hero-top">
-                    <text class="hero-greeting">欢迎回来</text>
+                <view class="company-info" :class="{ 'has-logo': !!self_info.company_logo }">
+                    <text class="company-name">{{ self_info.company }}</text>
+                    <text class="company-sub">今日经营概览 · 实时洞察</text>
                 </view>
-                <view class="company-row">
-                    <view v-if="self_info.company_logo" class="company-logo-wrap">
-                        <fui-avatar size="middle" shape="square" :radius="16"
-                            :src="$convert_attach_url(self_info.company_logo)"></fui-avatar>
-                    </view>
-                    <view class="company-info" :class="{ 'has-logo': !!self_info.company_logo }">
-                        <text class="company-name">{{ self_info.company }}</text>
-                        <text class="company-sub">今日经营概览 · 实时洞察</text>
+            </view>
+            <fui-list-cell v-if="stat_scopes.length > 1" :padding="['22rpx', '8rpx', '8rpx', '8rpx']" :topBorder="true" :bottomBorder="false" :topLeft="0" :topRight="0" borderColor="rgba(255,255,255,0.2)" background="transparent" arrow highlight arrowColor="#FFFFFF" @click="open_scope_picker">
+                <view class="meta-left">
+                    <text class="meta-label hero-meta-label">操作主体</text>
+                    <text class="meta-value hero-meta-value">{{ current_scope_name || '请选择公司' }}</text>
+                </view>
+            </fui-list-cell>
+        </view>
+    </view>
+
+    <fui-bottom-popup :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
+        <fui-list>
+            <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
+                <view class="scope-row">
+                    <view class="scope-name">{{ s.name }}</view>
+                    <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30" color="#465CFF"></fui-icon>
+                </view>
+            </fui-list-cell>
+        </fui-list>
+    </fui-bottom-popup>
+
+    <view class="content-stack">
+        <view class="section-shell">
+            <view class="section-head">
+                <view class="section-head-left">
+                    <view class="section-bar"></view>
+                    <view class="section-titles">
+                        <text class="section-title">数据一览</text>
+                        <text class="section-en">OVERVIEW</text>
                     </view>
                 </view>
-                <fui-list-cell v-if="stat_scopes.length > 1" :padding="['22rpx', '8rpx', '8rpx', '8rpx']"
-                    :topBorder="true" :bottomBorder="false" :topLeft="0" :topRight="0"
-                    borderColor="rgba(255,255,255,0.2)" background="transparent" arrow highlight
-                    arrowColor="#FFFFFF" @click="open_scope_picker">
-                    <view class="meta-left">
-                        <text class="meta-label hero-meta-label">操作主体</text>
-                        <text class="meta-value hero-meta-value">{{ current_scope_name || '请选择公司' }}</text>
+            </view>
+            <view class="section-body">
+                <view class="charts-grid">
+                    <view :class="charts.length > 1 ? 'charts-box' : 'charts-box-full'" v-for="(single_cts, index) in charts" :key="index">
+                        <view class="chart-panel">
+                            <view class="chart-canvas-wrap">
+                                <view v-if="chart_has_data(single_cts)" class="lite-chart" :class="{ play: charts_anim }">
+                                    <view class="lite-col" v-for="(cat, ci) in single_cts.chartData.categories" :key="ci" :style="{ animationDelay: (ci * 0.1) + 's' }">
+                                        <view class="lite-meter-track">
+                                            <view class="lite-meter" :style="{
+                                                        height: (charts_anim ? chart_meter_pct(single_cts, ci) : 0) + '%',
+                                                        transitionDelay: (ci * 0.1) + 's'
+                                                    }">
+                                                <text class="lite-total">{{ chart_total(single_cts, ci) }}</text>
+                                                <view class="lite-fill" :style="{
+                                                            height: (charts_anim ? chart_fill_pct(single_cts, ci) : 0) + '%',
+                                                            transitionDelay: (ci * 0.1 + 0.18) + 's'
+                                                        }">
+                                                    <text class="lite-done" v-if="chart_done(single_cts, ci) > 0">
+                                                        {{ chart_done(single_cts, ci) }}
+                                                    </text>
+                                                </view>
+                                            </view>
+                                        </view>
+                                        <text class="lite-label">{{ cat }}</text>
+                                    </view>
+                                </view>
+                                <view v-else class="chart-empty">
+                                    <view class="chart-empty-icon">
+                                        <fui-icon name="order" size="48" color="#A8B4D8"></fui-icon>
+                                    </view>
+                                    <text class="chart-empty-text">暂无数据</text>
+                                </view>
+                            </view>
+                            <view class="chart-title-wrap">
+                                <text class="chart-title">{{ single_cts.opts.title }}</text>
+                            </view>
+                        </view>
                     </view>
-                </fui-list-cell>
+                </view>
+
+                <module-filter require_module="sale_management">
+                    <view class="section-divider">
+                        <fui-divider text="物料统计" color="#7B8499" backgroundColor="#FFFFFF"></fui-divider>
+                    </view>
+                    <view class="stat-toolbar-card">
+                        <fui-list-cell :padding="['16rpx', '8rpx']" :topBorder="false" :bottomBorder="false" background="transparent" highlight @click="show_pick_date = true">
+                            <view class="meta-row-inner">
+                                <view class="meta-left">
+                                    <text class="meta-label">统计日期</text>
+                                    <text class="meta-value">{{ base_day }}</text>
+                                </view>
+                                <fui-icon name="calendar" size="36" color="#465CFF"></fui-icon>
+                            </view>
+                        </fui-list-cell>
+                        <view class="day-toolbar">
+                            <view class="day-chips">
+                                <fui-tag text="前日" :background="day_offset === -1 ? '#465CFF' : '#FFFFFF'" :color="day_offset === -1 ? '#FFFFFF' : '#4A5568'" :borderColor="day_offset === -1 ? '#465CFF' : '#E4E8F2'" :radius="28" :padding="['12rpx', '28rpx']" :marginRight="16" highlight @click="switch_day_offset(-1)"></fui-tag>
+                                <fui-tag text="当天" :background="day_offset === 0 ? '#465CFF' : '#FFFFFF'" :color="day_offset === 0 ? '#FFFFFF' : '#4A5568'" :borderColor="day_offset === 0 ? '#465CFF' : '#E4E8F2'" :radius="28" :padding="['12rpx', '28rpx']" :marginRight="16" highlight @click="switch_day_offset(0)"></fui-tag>
+                                <fui-tag text="翌天" :background="day_offset === 1 ? '#465CFF' : '#FFFFFF'" :color="day_offset === 1 ? '#FFFFFF' : '#4A5568'" :borderColor="day_offset === 1 ? '#465CFF' : '#E4E8F2'" :radius="28" :padding="['12rpx', '28rpx']" highlight @click="switch_day_offset(1)"></fui-tag>
+                            </view>
+                            <fui-text v-if="tableData.length > 7" type="primary" :text="expand_text" decoration="underline" @click="handle_expand"></fui-text>
+                        </view>
+                    </view>
+                    <view class="table-bleed">
+                        <fui-table :height="table_height" :gap="24" full fixed stripe :itemList="tableData" :header="headerData"></fui-table>
+                    </view>
+                </module-filter>
             </view>
         </view>
 
-        <fui-bottom-popup :show="show_scope_picker" @close="show_scope_picker = false" z-index="1003">
-            <fui-list>
-                <fui-list-cell v-for="s in stat_scopes" :key="s.id" arrow @click="choose_stat_scope(s.id)">
-                    <view class="scope-row">
-                        <view class="scope-name">{{ s.name }}</view>
-                        <fui-icon v-if="stat_context_company_id === s.id" name="check" size="30"
-                            color="#465CFF"></fui-icon>
-                    </view>
-                </fui-list-cell>
-            </fui-list>
-        </fui-bottom-popup>
+        <fui-date-picker zIndex="1004" :show="show_pick_date" type="3" :value="base_day" @change="choose_expired_date" @cancel="show_pick_date = false"></fui-date-picker>
 
-        <fui-bottom-popup :show="llm_step_show" @close="llm_step_show = false" z-index="1005">
-            <view class="llm-popup">
-                <view class="llm-popup-head">
-                    <view>
-                        <text class="llm-popup-title">智能导出</text>
-                        <text class="llm-popup-subtitle">请求已提交 · 后台正在生成文件</text>
-                    </view>
-                    <fui-icon name="close" size="32" color="#8A94A6" @click="llm_step_show = false"></fui-icon>
-                </view>
-                <text class="llm-prompt-label">导出内容描述</text>
-                <view class="llm-prompt-preview">
-                    <text class="llm-prompt-text">{{ llm_step_description }}</text>
-                </view>
-                <view class="llm-popup-actions">
-                    <fui-button type="primary" text="查看操作历史" background="#465CFF" radius="44rpx" height="88rpx"
-                        @click="open_llm_history"></fui-button>
-                </view>
-            </view>
-        </fui-bottom-popup>
-
-        <fui-bottom-popup :show="llm_record_show" @close="llm_record_show = false" z-index="1005">
-            <view class="llm-history-popup">
-                <view class="llm-popup-head llm-history-head">
-                    <view>
-                        <text class="llm-popup-title">操作历史</text>
-                        <text class="llm-popup-subtitle">智能导出请求记录</text>
-                    </view>
-                    <fui-icon name="close" size="32" color="#8A94A6" @click="llm_record_show = false"></fui-icon>
-                </view>
-                <list-show v-if="llm_record_show" ref="llm_history_list" :fetch_function="get_llm_export_records"
-                    height="58vh" v-model="llm_export_records">
-                    <view class="llm-record-item" v-for="record in llm_export_records" :key="record.id">
-                        <view class="llm-record-top">
-                            <text class="llm-record-time">{{ record.export_time }}</text>
-                            <text class="llm-record-status" :class="'status-' + record.status">
-                                {{ record.status === 0 ? '处理中' : (record.status === 1 ? '成功' : '失败') }}
-                            </text>
-                        </view>
-                        <text class="llm-record-description">{{ record.export_description }}</text>
-                        <view class="llm-record-foot">
-                            <text class="llm-record-spend" v-if="record.status !== 0">耗时 {{ record.spend || 0 }} 秒</text>
-                            <text class="llm-record-error" v-if="record.status === 2">{{ record.export_result || '导出失败' }}</text>
-                            <text class="llm-record-pending" v-else-if="record.status === 0">正在生成文件</text>
-                            <view class="llm-record-edit" @click="edit_llm_record(record)">
-                                <fui-icon name="edit" size="28" color="#465CFF"></fui-icon>
-                                <text>再次编辑</text>
-                            </view>
-                            <view v-if="record.status === 1 && record.export_result" class="llm-record-download"
-                                @click="download_llm_record(record.export_result)">
-                                <fui-icon name="download" size="28" color="#465CFF"></fui-icon>
-                                <text>下载文件</text>
-                            </view>
-                            <view v-if="record.status === 1 && record.chart_result" class="llm-record-download"
-                                @click="view_llm_chart(record)">
-                                <fui-icon name="find" size="28" color="#465CFF"></fui-icon>
-                                <text>查看图表</text>
-                            </view>
-                        </view>
-                    </view>
-                </list-show>
-            </view>
-        </fui-bottom-popup>
-
-        <fui-bottom-popup :show="chart_popup_show" @close="chart_popup_show = false" z-index="1006">
-            <view class="chart-popup">
-                <view class="llm-popup-head">
-                    <view>
-                        <text class="llm-popup-title">查看图表</text>
-                        <text class="llm-popup-subtitle">智能导出图表结果</text>
-                    </view>
-                    <fui-icon name="close" size="32" color="#8A94A6" @click="chart_popup_show = false"></fui-icon>
-                </view>
-                <chart-view v-if="chart_popup_show && chart_popup_option" :chart-option="chart_popup_option"
-                    height="460rpx"></chart-view>
-                <view v-else-if="chart_popup_error" class="chart-popup-error">
-                    <text>{{ chart_popup_error }}</text>
-                </view>
-            </view>
-        </fui-bottom-popup>
-
-        <view class="content-stack">
+        <module-filter require_module="customer">
             <view class="section-shell">
                 <view class="section-head">
                     <view class="section-head-left">
                         <view class="section-bar"></view>
                         <view class="section-titles">
-                            <text class="section-title">数据一览</text>
-                            <text class="section-en">OVERVIEW</text>
+                            <text class="section-title">采购提单</text>
+                            <text class="section-en">PROCUREMENT</text>
                         </view>
                     </view>
                 </view>
                 <view class="section-body">
-                    <view class="charts-grid">
-                        <view :class="charts.length > 1 ? 'charts-box' : 'charts-box-full'"
-                            v-for="(single_cts, index) in charts" :key="index">
-                            <view class="chart-panel">
-                                <view class="chart-canvas-wrap">
-                                    <view v-if="chart_has_data(single_cts)" class="lite-chart" :class="{ play: charts_anim }">
-                                        <view class="lite-col"
-                                            v-for="(cat, ci) in single_cts.chartData.categories" :key="ci"
-                                            :style="{ animationDelay: (ci * 0.1) + 's' }">
-                                            <view class="lite-meter-track">
-                                                <view class="lite-meter"
-                                                    :style="{
-                                                        height: (charts_anim ? chart_meter_pct(single_cts, ci) : 0) + '%',
-                                                        transitionDelay: (ci * 0.1) + 's'
-                                                    }">
-                                                    <text class="lite-total">{{ chart_total(single_cts, ci) }}</text>
-                                                    <view class="lite-fill"
-                                                        :style="{
-                                                            height: (charts_anim ? chart_fill_pct(single_cts, ci) : 0) + '%',
-                                                            transitionDelay: (ci * 0.1 + 0.18) + 's'
-                                                        }">
-                                                        <text class="lite-done" v-if="chart_done(single_cts, ci) > 0">
-                                                            {{ chart_done(single_cts, ci) }}
-                                                        </text>
-                                                    </view>
-                                                </view>
-                                            </view>
-                                            <text class="lite-label">{{ cat }}</text>
-                                        </view>
-                                    </view>
-                                    <view v-else class="chart-empty">
-                                        <view class="chart-empty-icon">
-                                            <fui-icon name="order" size="48" color="#A8B4D8"></fui-icon>
-                                        </view>
-                                        <text class="chart-empty-text">暂无数据</text>
-                                    </view>
-                                </view>
-                                <view class="chart-title-wrap">
-                                    <text class="chart-title">{{ single_cts.opts.title }}</text>
+                    <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="48vh" v-model="stuff2buy">
+                        <view class="stuff-item" v-for="item in stuff2buy" :key="item.id">
+                            <view class="stuff-accent"></view>
+                            <view class="stuff-body">
+                                <text class="stuff-title">{{ item.name }}</text>
+                                <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
+                                <text class="stuff-company">{{ item.company.name }}</text>
+                                <view class="stuff-foot">
+                                    <text class="stuff-desc">{{ item.comment || '暂无备注' }}</text>
+                                    <fui-button btnSize="mini" text="下单" background="#465CFF" color="#FFFFFF" radius="28rpx" width="120rpx" height="56rpx" size="24" @click="start_plan_creation(item)"></fui-button>
                                 </view>
                             </view>
                         </view>
-                    </view>
-
-                    <module-filter require_module="sale_management">
-                        <view class="section-divider">
-                            <fui-divider text="物料统计" color="#7B8499" backgroundColor="#FFFFFF"></fui-divider>
-                        </view>
-                        <view class="stat-toolbar-card">
-                            <fui-list-cell :padding="['16rpx', '8rpx']" :topBorder="false" :bottomBorder="false"
-                                background="transparent" highlight @click="show_pick_date = true">
-                                <view class="meta-row-inner">
-                                    <view class="meta-left">
-                                        <text class="meta-label">统计日期</text>
-                                        <text class="meta-value">{{ base_day }}</text>
-                                    </view>
-                                    <fui-icon name="calendar" size="36" color="#465CFF"></fui-icon>
-                                </view>
-                            </fui-list-cell>
-                            <view class="day-toolbar">
-                                <view class="day-chips">
-                                    <fui-tag text="前日"
-                                        :background="day_offset === -1 ? '#465CFF' : '#FFFFFF'"
-                                        :color="day_offset === -1 ? '#FFFFFF' : '#4A5568'"
-                                        :borderColor="day_offset === -1 ? '#465CFF' : '#E4E8F2'" :radius="28"
-                                        :padding="['12rpx', '28rpx']" :marginRight="16" highlight
-                                        @click="switch_day_offset(-1)"></fui-tag>
-                                    <fui-tag text="当天"
-                                        :background="day_offset === 0 ? '#465CFF' : '#FFFFFF'"
-                                        :color="day_offset === 0 ? '#FFFFFF' : '#4A5568'"
-                                        :borderColor="day_offset === 0 ? '#465CFF' : '#E4E8F2'" :radius="28"
-                                        :padding="['12rpx', '28rpx']" :marginRight="16" highlight
-                                        @click="switch_day_offset(0)"></fui-tag>
-                                    <fui-tag text="翌天"
-                                        :background="day_offset === 1 ? '#465CFF' : '#FFFFFF'"
-                                        :color="day_offset === 1 ? '#FFFFFF' : '#4A5568'"
-                                        :borderColor="day_offset === 1 ? '#465CFF' : '#E4E8F2'" :radius="28"
-                                        :padding="['12rpx', '28rpx']" highlight
-                                        @click="switch_day_offset(1)"></fui-tag>
-                                </view>
-                                <fui-text v-if="tableData.length > 7" type="primary" :text="expand_text"
-                                    decoration="underline" @click="handle_expand"></fui-text>
-                            </view>
-                        </view>
-                        <view class="table-bleed">
-                            <fui-table :height="table_height" :gap="24" full fixed stripe :itemList="tableData"
-                                :header="headerData"></fui-table>
-                        </view>
-                    </module-filter>
+                    </list-show>
                 </view>
             </view>
+        </module-filter>
 
-            <fui-date-picker zIndex="1004" :show="show_pick_date" type="3" :value="base_day"
-                @change="choose_expired_date" @cancel="show_pick_date = false"></fui-date-picker>
-
-            <module-filter require_module="customer">
-                <view class="section-shell">
-                    <view class="section-head">
-                        <view class="section-head-left">
-                            <view class="section-bar"></view>
-                            <view class="section-titles">
-                                <text class="section-title">采购提单</text>
-                                <text class="section-en">PROCUREMENT</text>
-                            </view>
-                        </view>
-                    </view>
-                    <view class="section-body">
-                        <list-show ref="sb_list" :fetch_function="get_stuff2buy" height="48vh" v-model="stuff2buy">
-                            <view class="stuff-item" v-for="item in stuff2buy" :key="item.id">
-                                <view class="stuff-accent"></view>
-                                <view class="stuff-body">
-                                    <text class="stuff-title">{{ item.name }}</text>
-                                    <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
-                                    <text class="stuff-company">{{ item.company.name }}</text>
-                                    <view class="stuff-foot">
-                                        <text class="stuff-desc">{{ item.comment || '暂无备注' }}</text>
-                                        <fui-button btnSize="mini" text="下单" background="#465CFF" color="#FFFFFF"
-                                            radius="28rpx" width="120rpx" height="56rpx" size="24"
-                                            @click="start_plan_creation(item)"></fui-button>
-                                    </view>
-                                </view>
-                            </view>
-                        </list-show>
-                    </view>
-                </view>
-            </module-filter>
-
-            <module-filter require_module="supplier">
-                <view class="section-shell">
-                    <view class="section-head">
-                        <view class="section-head-left">
-                            <view class="section-bar"></view>
-                            <view class="section-titles">
-                                <text class="section-title">销售提单</text>
-                                <text class="section-en">SALES</text>
-                            </view>
-                        </view>
-                    </view>
-                    <view class="section-body">
-                        <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="48vh" v-model="stuff2sale">
-                            <view class="stuff-item" v-for="(item, index) in stuff2sale" :key="index">
-                                <view class="stuff-accent"></view>
-                                <view class="stuff-body">
-                                    <text class="stuff-title">{{ item.name }}</text>
-                                    <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
-                                    <text class="stuff-company">{{ item.company.name }}</text>
-                                    <view class="stuff-foot">
-                                        <text class="stuff-desc">{{ item.comment || '暂无备注' }}</text>
-                                        <fui-button v-if="item.price != -1" btnSize="mini" text="下单"
-                                            background="#465CFF" color="#FFFFFF" radius="28rpx" width="120rpx"
-                                            height="56rpx" size="24"
-                                            @click="start_plan_creation(item, true)"></fui-button>
-                                    </view>
-                                </view>
-                            </view>
-                        </list-show>
-                    </view>
-                </view>
-            </module-filter>
-
-            <module-filter require_module="stuff">
-                <view class="section-shell">
-                    <view class="section-head">
-                        <view class="section-head-left">
-                            <view class="section-bar"></view>
-                            <view class="section-titles">
-                                <text class="section-title">物料统计</text>
-                                <text class="section-en">MATERIALS</text>
-                            </view>
-                        </view>
-                    </view>
-                    <view class="section-body">
-                        <view class="table-bleed">
-                            <fui-table :gap="24" full fixed stripe :itemList="totalCountData"
-                                :header="stuff_count_header"></fui-table>
-                        </view>
-                    </view>
-                </view>
-            </module-filter>
-
-            <module-filter require_module="stuff">
-                <view class="section-shell section-shell-last">
-                    <view class="section-head">
-                        <view class="section-head-left">
-                            <view class="section-bar"></view>
-                            <view class="section-titles">
-                                <text class="section-title">通知管理</text>
-                                <text class="section-en">NOTICE</text>
-                            </view>
-                        </view>
-                    </view>
-                    <view class="section-body">
-                        <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容"
-                            v-model="notice.notice"></fui-textarea>
-                        <fui-textarea flexStart isCounter label="司机通知" maxlength="2000" placeholder="请输入内容"
-                            v-model="notice.driver_notice"></fui-textarea>
-                        <view class="notice-actions">
-                            <fui-button type="primary" text="保存" background="#465CFF" radius="44rpx" height="88rpx"
-                                @click="save_notice"></fui-button>
-                        </view>
-                    </view>
-                </view>
-            </module-filter>
-
-            <view id="llm-export-section" class="section-shell">
-                <view class="section-head llm-section-head">
+        <module-filter require_module="supplier">
+            <view class="section-shell">
+                <view class="section-head">
                     <view class="section-head-left">
                         <view class="section-bar"></view>
                         <view class="section-titles">
-                            <text class="section-title">智能导出</text>
-                            <text class="section-en">AI · EXPORT</text>
+                            <text class="section-title">销售提单</text>
+                            <text class="section-en">SALES</text>
                         </view>
-                    </view>
-                    <view class="llm-history-link" @click="llm_record_show = true">
-                        <fui-icon name="history" size="28" color="#465CFF"></fui-icon>
-                        <text>操作历史</text>
                     </view>
                 </view>
                 <view class="section-body">
-                    <fui-textarea flexStart isCounter label="导出内容描述" maxlength="2000"
-                        placeholder="描述你需要导出的数据，例如：导出本月已完成的销售订单"
-                        v-model="llm_export_content"></fui-textarea>
-                    <view class="llm-execute-actions">
-                        <fui-button type="primary" :text="llm_export_loading ? '提交中...' : '执行导出'"
-                            :disabled="!llm_export_content.trim() || llm_export_loading"
-                            :background="llm_export_content.trim() && !llm_export_loading ? '#465CFF' : '#AEB8D8'"
-                            color="#FFFFFF" radius="44rpx" height="88rpx" @click="execute_llm_export"></fui-button>
+                    <list-show ref="ss_list" :fetch_function="get_stuff2sale" height="48vh" v-model="stuff2sale">
+                        <view class="stuff-item" v-for="(item, index) in stuff2sale" :key="index">
+                            <view class="stuff-accent"></view>
+                            <view class="stuff-body">
+                                <text class="stuff-title">{{ item.name }}</text>
+                                <text class="stuff-price">{{ item.price == -1 ? '未关注' : '¥' + item.price }}</text>
+                                <text class="stuff-company">{{ item.company.name }}</text>
+                                <view class="stuff-foot">
+                                    <text class="stuff-desc">{{ item.comment || '暂无备注' }}</text>
+                                    <fui-button v-if="item.price != -1" btnSize="mini" text="下单" background="#465CFF" color="#FFFFFF" radius="28rpx" width="120rpx" height="56rpx" size="24" @click="start_plan_creation(item, true)"></fui-button>
+                                </view>
+                            </view>
+                        </view>
+                    </list-show>
+                </view>
+            </view>
+        </module-filter>
+
+        <module-filter require_module="stuff">
+            <view class="section-shell">
+                <view class="section-head">
+                    <view class="section-head-left">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">物料统计</text>
+                            <text class="section-en">MATERIALS</text>
+                        </view>
+                    </view>
+                </view>
+                <view class="section-body">
+                    <view class="table-bleed">
+                        <fui-table :gap="24" full fixed stripe :itemList="totalCountData" :header="stuff_count_header"></fui-table>
                     </view>
                 </view>
             </view>
+        </module-filter>
+        <view id="llm-export-section" class="section-shell section-shell-last" @click="goto_llm_export">
+            <view class="section-head llm-section-head">
+                <view class="section-head-left">
+                    <view class="section-bar"></view>
+                    <view class="section-titles">
+                        <text class="section-title">智能导出</text>
+                        <text class="section-en">AI · EXPORT</text>
+                    </view>
+                </view>
+                <fui-icon name="arrowright" size="28" color="#9AA3B8"></fui-icon>
+            </view>
+            <view class="section-body">
+                <text class="llm-entry-desc">用自然语言描述需求，AI自动生成导出文件与图表，点击进入</text>
+            </view>
         </view>
-    <app-tab-bar :selected="0" />
+        <module-filter require_module="stuff">
+            <view class="section-shell">
+                <view class="section-head">
+                    <view class="section-head-left">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">通知管理</text>
+                            <text class="section-en">NOTICE</text>
+                        </view>
+                    </view>
+                </view>
+                <view class="section-body">
+                    <fui-textarea flexStart isCounter label="下单通知" maxlength="2000" placeholder="请输入内容" v-model="notice.notice"></fui-textarea>
+                    <fui-textarea flexStart isCounter label="司机通知" maxlength="2000" placeholder="请输入内容" v-model="notice.driver_notice"></fui-textarea>
+                    <view class="notice-actions">
+                        <fui-button type="primary" text="保存" background="#465CFF" radius="44rpx" height="88rpx" @click="save_notice"></fui-button>
+                    </view>
+                </view>
+            </view>
+        </module-filter>
+
     </view>
+    <app-tab-bar :selected="0" />
+</view>
 </template>
 
 <script>
@@ -381,8 +251,9 @@ import utils from '@/components/firstui/fui-utils';
 import ModuleFilter from '../components/ModuleFilter.vue';
 import NoticeBar from '../components/NoticeBar.vue';
 import AppTabBar from '../components/AppTabBar.vue';
-import ChartView from '../components/ChartView.vue';
-import { setTabBarSelected } from '@/utils/setTabBarSelected';
+import {
+    setTabBarSelected
+} from '@/utils/setTabBarSelected';
 export default {
     name: 'Home',
     components: {
@@ -390,7 +261,6 @@ export default {
         "module-filter": ModuleFilter,
         "notice-bar": NoticeBar,
         "app-tab-bar": AppTabBar,
-        "chart-view": ChartView,
     },
     data() {
         return {
@@ -448,15 +318,6 @@ export default {
             stat_scopes: [],
             stat_context_company_id: null,
             show_scope_picker: false,
-            llm_export_content: '',
-            llm_export_records: [],
-            llm_export_loading: false,
-            llm_step_show: false,
-            llm_step_description: '',
-            llm_record_show: false,
-            chart_popup_show: false,
-            chart_popup_option: null,
-            chart_popup_error: '',
         }
     },
     computed: {
@@ -519,64 +380,9 @@ export default {
             await this.$send_req('/stuff/set_notice', this.notice);
             uni.startPullDownRefresh();
         },
-        execute_llm_export: async function () {
-            if (!this.llm_export_content.trim() || this.llm_export_loading) {
-                return;
-            }
-            this.llm_export_loading = true;
-            try {
-                await this.$send_req('/global/llm_export', {
-                    export_description: this.llm_export_content,
-                });
-                this.llm_step_description = this.llm_export_content;
-                this.llm_step_show = true;
-            } finally {
-                this.llm_export_loading = false;
-            }
-        },
-        get_llm_export_records: async function (pageNo) {
-            const res = await this.$send_req('/global/list_le_records', {
-                pageNo: pageNo,
-            });
-            return res.records || [];
-        },
-        open_llm_history: function () {
-            this.llm_step_show = false;
-            this.llm_record_show = true;
-        },
-        edit_llm_record: function (record) {
-            this.llm_export_content = record.export_description || '';
-            this.llm_record_show = false;
-            this.$nextTick(() => {
-                uni.pageScrollTo({
-                    selector: '#llm-export-section',
-                    duration: 300,
-                });
-            });
-        },
-        view_llm_chart: function (record) {
-            this.chart_popup_error = '';
-            this.chart_popup_option = null;
-            const raw = String(record.chart_result || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
-            try {
-                this.chart_popup_option = JSON.parse(raw);
-            } catch (error) {
-                this.chart_popup_error = '图表数据解析失败';
-            }
-            this.chart_popup_show = true;
-        },
-        download_llm_record: function (url) {
-            if (!url) {
-                return;
-            }
-            uni.downloadFile({
-                url: this.$convert_attach_url(url),
-                success: function (res) {
-                    uni.openDocument({
-                        filePath: res.tempFilePath,
-                        showMenu: true,
-                    });
-                },
+        goto_llm_export: function () {
+            uni.navigateTo({
+                url: '/subPage2/LlmExport',
             });
         },
         // 仅展示用：从已有 chartData 读取，不改统计逻辑
@@ -822,18 +628,18 @@ export default {
                         chartData: {
                             categories: ['昨日', '今日', '明日'],
                             series: [{
-                                name: '订单总数',
-                                data: [
-                                    db.yst_unfinish_count + db.yst_finished_count,
-                                    db.today_unfinish_count + db.today_finished_count,
-                                    db.tmr_unfinish_count + db.tmr_finished_count
-                                ]
-                            },
-                            {
-                                name: '已完成',
-                                color: '#465CFF',
-                                data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
-                            }
+                                    name: '订单总数',
+                                    data: [
+                                        db.yst_unfinish_count + db.yst_finished_count,
+                                        db.today_unfinish_count + db.today_finished_count,
+                                        db.tmr_unfinish_count + db.tmr_finished_count
+                                    ]
+                                },
+                                {
+                                    name: '已完成',
+                                    color: '#465CFF',
+                                    data: [db.yst_finished_count, db.today_finished_count, db.tmr_finished_count]
+                                }
                             ]
                         }
                     };
@@ -908,7 +714,6 @@ export default {
     },
 }
 </script>
-
 
 <style scoped>
 .home-page {
@@ -1313,6 +1118,7 @@ export default {
         opacity: 0;
         transform: translateY(12rpx);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -1491,18 +1297,6 @@ export default {
     padding: 0 4rpx 8rpx;
 }
 
-.llm-history-link {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    flex-shrink: 0;
-    padding: 10rpx 16rpx;
-    border-radius: 28rpx;
-    background: #EEF1FF;
-    color: #465CFF;
-    font-size: 22rpx;
-}
-
 .llm-section-head {
     display: flex;
     flex-direction: row;
@@ -1510,199 +1304,10 @@ export default {
     justify-content: space-between;
 }
 
-.llm-history-link text {
-    margin-left: 8rpx;
-}
-
-.llm-execute-actions {
-    margin-top: 24rpx;
-}
-
-.llm-popup,
-.llm-history-popup,
-.chart-popup {
-    box-sizing: border-box;
-    padding: 32rpx 28rpx calc(32rpx + env(safe-area-inset-bottom));
-}
-
-.chart-popup-error {
-    margin-top: 24rpx;
-    padding: 24rpx;
-    text-align: center;
-    font-size: 26rpx;
-    color: #F56C6C;
-}
-
-.llm-popup-head {
-    display: flex;
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-}
-
-.llm-popup-title,
-.llm-popup-subtitle {
-    display: block;
-}
-
-.llm-popup-title {
-    font-size: 34rpx;
-    line-height: 1.3;
-    font-weight: 700;
-    color: #1A1F36;
-}
-
-.llm-popup-subtitle {
-    margin-top: 8rpx;
-    font-size: 22rpx;
-    line-height: 1.4;
-    color: #6B7280;
-}
-
-.llm-step-mark {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    margin-top: 32rpx;
-    padding: 18rpx 20rpx;
-    border-radius: 18rpx;
-    background: linear-gradient(100deg, #EEF1FF 0%, #F7F8FE 100%);
-}
-
-.llm-step-number {
-    font-size: 28rpx;
-    font-weight: 800;
-    color: #465CFF;
-}
-
-.llm-step-caption {
-    margin-left: 14rpx;
-    font-size: 24rpx;
-    font-weight: 600;
-    color: #374151;
-}
-
-.llm-prompt-label {
-    display: block;
-    margin-top: 28rpx;
-    font-size: 24rpx;
-    font-weight: 600;
-    color: #4A5568;
-}
-
-.llm-prompt-preview {
-    max-height: 260rpx;
-    margin-top: 12rpx;
-    padding: 20rpx;
-    border-radius: 16rpx;
-    background: #F6F7FB;
-    border: 1rpx solid #E8ECF6;
-    overflow-y: auto;
-}
-
-.llm-prompt-text {
+.llm-entry-desc {
     font-size: 24rpx;
     line-height: 1.6;
-    color: #374151;
-    white-space: pre-wrap;
-    word-break: break-all;
-}
-
-.llm-popup-actions {
-    margin-top: 28rpx;
-}
-
-.llm-history-head {
-    margin-bottom: 24rpx;
-}
-
-.llm-record-item {
-    margin-bottom: 18rpx;
-    padding: 22rpx;
-    border-radius: 18rpx;
-    border: 1rpx solid #E8ECF6;
-    background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FD 100%);
-    box-shadow: 0 8rpx 24rpx rgba(40, 58, 120, 0.05);
-}
-
-.llm-record-top,
-.llm-record-foot {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.llm-record-time,
-.llm-record-spend,
-.llm-record-pending {
-    font-size: 21rpx;
-    color: #8A94A6;
-}
-
-.llm-record-status {
-    flex-shrink: 0;
-    padding: 6rpx 16rpx;
-    border-radius: 22rpx;
-    font-size: 20rpx;
-    font-weight: 600;
-}
-
-.llm-record-status.status-0 {
-    color: #B7791F;
-    background: #FFF4D6;
-}
-
-.llm-record-status.status-1 {
-    color: #25855A;
-    background: #E4F6ED;
-}
-
-.llm-record-status.status-2 {
-    color: #C64B4B;
-    background: #FDEBEC;
-}
-
-.llm-record-description {
-    display: block;
-    margin-top: 16rpx;
-    font-size: 25rpx;
-    line-height: 1.55;
-    color: #2D3748;
-    white-space: pre-wrap;
-    word-break: break-all;
-}
-
-.llm-record-foot {
-    justify-content: flex-start;
-    flex-wrap: wrap;
-    margin-top: 16rpx;
-}
-
-.llm-record-error {
-    flex: 1;
-    min-width: 0;
-    font-size: 22rpx;
-    line-height: 1.4;
-    color: #C64B4B;
-    word-break: break-all;
-}
-
-.llm-record-download {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    margin-left: auto;
-    padding: 10rpx 16rpx;
-    border-radius: 24rpx;
-    background: #EEF1FF;
-    color: #465CFF;
-    font-size: 22rpx;
-    font-weight: 600;
-}
-
-.llm-record-download text {
-    margin-left: 8rpx;
+    color: #6B7280;
 }
 
 .scope-row {

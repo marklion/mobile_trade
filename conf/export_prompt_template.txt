@@ -199,4 +199,4 @@ id, range(区间), status(状态), order_count(订单数) | companyId | balance_
 所有表均有 deletedAt 列。默认查询应加：`AND t.deletedAt IS NULL`（t 为表别名）。
 
 【最终输出格式】
-只输出 SQL 代码，用 ```sql 代码块包裹。若需假设说明，请在 SQL 后以注释 -- 形式给出，最多一行。
+只输出 SQL 文本,若需假设说明，请在 SQL 后以注释 -- 形式给出，最多一行。

@@ -24,6 +24,17 @@ module.exports = {
                 target: process.env.REMOTE_HOST,
                 changeOrigin: true,
             },
+        },
+        before: (app) => {
+            app.get('/uploads/llm*', (req, res) => {
+                const relativePath = req.path.replace('/uploads/', '')
+                const realFile = path.join('/database/uploads', relativePath)
+                if (fs.existsSync(realFile)) {
+                    res.sendFile(realFile)
+                } else {
+                    res.status(404).end()
+                }
+            })
         }
     },
     chainWebpack: config => {
