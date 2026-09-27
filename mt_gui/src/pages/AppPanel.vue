@@ -268,7 +268,7 @@ export default {
                     icon: 'setup',
                     require_module: undefined,
                     path: 'LlmExport',
-                    sub_page_name: 'subPage2',
+                    sub_page_name: 'subPage1',
                     group: 'tool',
                     desc: '智能导出功能',
                 },

@@ -382,7 +382,7 @@ export default {
         },
         goto_llm_export: function () {
             uni.navigateTo({
-                url: '/subPage2/LlmExport',
+                url: '/subPage1/LlmExport',
             });
         },
         // 仅展示用：从已有 chartData 读取，不改统计逻辑

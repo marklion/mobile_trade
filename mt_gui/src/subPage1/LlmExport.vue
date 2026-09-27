@@ -93,9 +93,9 @@
 </template>
 
 <script>
-import ListShow from '@/components/ListShow.vue';
-import ChartView from './components/ChartView.vue';
-import { parseCsvText, buildChartPayload } from './utils/chart_data.js';
+import ListShow from '../components/ListShow.vue';
+import ChartView from './ChartView.vue';
+import { parseCsvText, buildChartPayload } from './chart_data.js';
 
 export default {
     name: 'LlmExport',

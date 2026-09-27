@@ -83,15 +83,6 @@
 						"navigationBarTextStyle": "white",
 						"navigationBarTitleText": "掌易助理"
 					}
-				},
-				{
-					"path": "LlmExport",
-					"style": {
-						"navigationBarBackgroundColor": "#2F3FCF",
-						"navigationBarTextStyle": "white",
-						"navigationBarTitleText": "掌易助理",
-						"enablePullDownRefresh": true
-					}
 				}
 			]
 		},
@@ -287,6 +278,15 @@
 					"style": {
 						"enablePullDownRefresh": true,
 						"navigationBarTitleText": "集团数据权限"
+					}
+				},
+				{
+					"path": "LlmExport",
+					"style": {
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "掌易助理",
+						"enablePullDownRefresh": true
 					}
 				}
 			]
