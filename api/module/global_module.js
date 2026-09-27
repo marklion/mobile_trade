@@ -372,29 +372,6 @@ async function sql2csvfile(sql, fileName, userPhone) {
     if (/\bfor\s+update\b|\block\s+in\s+share\s+mode\b/i.test(normalizedSql)) {
         throw create_api_error('导出SQL包含不允许的锁操作');
     }
-    if (/\b(sleep|benchmark|get_lock|release_lock)\s*\(/i.test(normalizedSql)) {
-        throw create_api_error('导出SQL包含不允许的函数');
-    }
-    let tableMatches = [...normalizedSql.matchAll(/\b(?:from|join)\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?/ig)];
-    if (!tableMatches.length) {
-        throw create_api_error('导出SQL缺少数据来源表');
-    }
-    for (let tableMatch of tableMatches) {
-        if (!allowedTables.has(tableMatch[1].toLowerCase())) {
-            throw create_api_error(`导出SQL访问了不允许的表: ${tableMatch[1]}`);
-        }
-    }
-    let escapedUserPhone = String(userPhone || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    let phoneRegex = new RegExp(`['"\`]${escapedUserPhone}['"\`]`);
-    if (!escapedUserPhone || !phoneRegex.test(normalizedSql)) {
-        throw create_api_error('导出SQL缺少当前用户手机号过滤');
-    }
-    let userLookupRegex = new RegExp(`\\bfrom\\s+\`?rbac_user\`?[\\s\\S]*?\\bphone\\b\\s*=\\s*['"\`]${escapedUserPhone}['"\`]`, 'i');
-    let whereMatch = normalizedSql.match(/\bwhere\b([\s\S]*)$/i);
-    let tenantPredicateRegex = /(`?plan`?\.`?rbacUserId`?\s*=\s*`?u`?\.`?id`?|`?plan`?\.`?companyId`?\s*=\s*`?u`?\.`?companyId`?|`?(?:stuff|s)`?\.`?companyId`?\s*=\s*`?u`?\.`?companyId`?)/i;
-    if (!whereMatch || !userLookupRegex.test(normalizedSql) || !tenantPredicateRegex.test(whereMatch[1])) {
-        throw create_api_error('导出SQL缺少租户隔离字段过滤');
-    }
     let sq = db_opt.get_sq();
     let rows = await sq.query(normalizedSql, { type: sq.QueryTypes.SELECT });
     let columns = rows.length ? Object.keys(rows[0]) : [];
