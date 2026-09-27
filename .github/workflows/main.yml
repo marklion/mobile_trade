@@ -45,7 +45,7 @@ jobs:
       - name: Run build-wrapper
         run: |
           docker pull marklion/mt_deploy:v1.1
-          docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.1 make -f `realpath .`/Makefile
+          docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.1 make -f `realpath .`/Makefile ENV_DASHSCOPE_API_KEY='${{ secrets.ALI_QWEN_KEY }}
           docker tag marklion/mt_deploy:v1.1 mt_deploy:v1.1
           ip addr show docker0 | grep -Po 'inet \K[\d.]+'
           cur_ip=$(ip addr show docker0 | grep -Po 'inet \K[\d.]+')
