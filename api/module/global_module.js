@@ -368,6 +368,12 @@ async function sql2csvfile(sql, fileName, userPhone) {
     if (/\b(insert|update|delete|replace|alter|drop|truncate|create|grant|revoke|call|execute|outfile|load_file)\b/i.test(normalizedSql)) {
         throw create_api_error('导出SQL包含不允许的操作');
     }
+    if (/\bfor\s+update\b|\block\s+in\s+share\s+mode\b/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL包含不允许的锁操作');
+    }
+    if (/\b(sleep|benchmark|get_lock|release_lock)\s*\(/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL包含不允许的函数');
+    }
     let tableMatches = [...normalizedSql.matchAll(/\b(?:from|join)\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?/ig)];
     if (!tableMatches.length) {
         throw create_api_error('导出SQL缺少数据来源表');
@@ -382,7 +388,8 @@ async function sql2csvfile(sql, fileName, userPhone) {
     if (!escapedUserPhone || !phoneRegex.test(normalizedSql)) {
         throw create_api_error('导出SQL缺少当前用户手机号过滤');
     }
-    if (!/(\bcompanyId\b|\brbacUserId\b)/i.test(normalizedSql)) {
+    let whereMatch = normalizedSql.match(/\bwhere\b([\s\S]*)$/i);
+    if (!whereMatch || !/(\bcompanyId\b|\brbacUserId\b)/i.test(whereMatch[1])) {
         throw create_api_error('导出SQL缺少租户隔离字段过滤');
     }
     let sq = db_opt.get_sq();
