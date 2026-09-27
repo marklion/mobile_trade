@@ -1,13 +1,13 @@
 <template>
     <div>
       <!-- 图表容器 -->
-      <div ref="chart" style="width: 100%; height: 400px;"></div>
+      <div ref="chart" :style="{ width: '100%', height: height }"></div>
     </div>
   </template>
-  
+
   <script>
   import * as echarts from 'echarts';
-  
+
   export default {
     name: 'ChartComponent',
     props: {
@@ -15,6 +15,10 @@
         chartOption: {
             type: Object,
             default: () => ({})
+        },
+        height: {
+            type: String,
+            default: '400px'
         }
     },
     data() {
@@ -30,7 +34,7 @@
         chartOption: {
             deep: true,
             handler(newOption) {
-              
+
                 if (this.chart) {
                     this.chart.setOption(newOption);
                 }
@@ -46,6 +50,11 @@
         // 使用配置项显示图表
         this.chart.setOption(this.chartOption);
       },
+      resize() {
+        if (this.chart) {
+          this.chart.resize();
+        }
+      },
     },
     beforeDestroy() {
       // 在组件销毁前销毁ECharts实例，避免内存泄漏
@@ -55,8 +64,7 @@
     },
   };
   </script>
-  
+
   <style scoped>
   /* 你可以在这里添加组件的样式 */
   </style>
-  

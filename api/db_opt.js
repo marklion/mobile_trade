@@ -570,6 +570,16 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             error_string: { type: DataTypes.TEXT },
         },
+        llm_export_record: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            export_description: { type: DataTypes.STRING },
+            export_result: { type: DataTypes.TEXT },
+            export_time: { type: DataTypes.STRING },
+            status: { type: DataTypes.INTEGER, defaultValue: 0 },
+            spend: { type: DataTypes.INTEGER, defaultValue: 0 },
+            chart_result: { type: DataTypes.TEXT },
+            sql: { type: DataTypes.TEXT },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -808,6 +818,8 @@ let db_opt = {
             otherKey: { name: 'groupCompanyId', allowNull: false },
             constraints: false,
         });
+        _sq.models.llm_export_record.belongsTo(_sq.models.rbac_user);
+        _sq.models.rbac_user.hasMany(_sq.models.llm_export_record);
     },
     install: async function () {
         console.log('run install');

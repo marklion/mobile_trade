@@ -9,6 +9,7 @@ import { initLogoLoading } from '@/utils/logoLoading'
 initLogoLoading()
 Vue.config.productionTip = false
 Vue.prototype.$remote_url = function () {
+  //return 'http://localhost:8080'
   if (process.env.NODE_ENV === 'development') {
     return '';
   }

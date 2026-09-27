@@ -19,6 +19,7 @@ const path = require('path');
 const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
 const t_plus_lib = require('../lib/t_plus_lib');
+const qwen_lib = require('../lib/qwen_lib');
 
 function create_api_error(message) {
     const error = new Error(message);
@@ -345,6 +346,66 @@ function verifyTicketQrContent(qr_content) {
         scanned_host: scannedHost || '',
         official_host: officialHost || '',
     };
+}
+
+async function sql2csvfile(sql, fileName, userPhone) {
+    const allowedTables = new Set([
+        'plan', 'stuff', 'balance_history', 'rbac_user', 'contract',
+        'contract_stuff', 'contract_stuff_price', 'delegate', 'company',
+        'vehicle', 'driver', 'plan_history', 'archive_plan',
+        'price_history', 'tplus_settle_record', 'subsidy_record',
+    ]);
+    let normalizedSql = String(sql || '')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/--.*$/gm, ' ')
+        .trim();
+    normalizedSql = normalizedSql.replace(/;\s*$/, '');
+    if (!/^select\b/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL仅支持SELECT查询');
+    }
+    if (normalizedSql.includes(';')) {
+        throw create_api_error('导出SQL仅支持单条SELECT查询');
+    }
+    if (/\b(insert|update|delete|replace|alter|drop|truncate|create|grant|revoke|call|execute|outfile|load_file)\b/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL包含不允许的操作');
+    }
+    if (/\bfor\s+update\b|\block\s+in\s+share\s+mode\b/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL包含不允许的锁操作');
+    }
+    if (/\b(sleep|benchmark|get_lock|release_lock)\s*\(/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL包含不允许的函数');
+    }
+    let tableMatches = [...normalizedSql.matchAll(/\b(?:from|join)\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?/ig)];
+    if (!tableMatches.length) {
+        throw create_api_error('导出SQL缺少数据来源表');
+    }
+    for (let tableMatch of tableMatches) {
+        if (!allowedTables.has(tableMatch[1].toLowerCase())) {
+            throw create_api_error(`导出SQL访问了不允许的表: ${tableMatch[1]}`);
+        }
+    }
+    let escapedUserPhone = String(userPhone || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let phoneRegex = new RegExp(`['"\`]${escapedUserPhone}['"\`]`);
+    if (!escapedUserPhone || !phoneRegex.test(normalizedSql)) {
+        throw create_api_error('导出SQL缺少当前用户手机号过滤');
+    }
+    let userLookupRegex = new RegExp(`\\bfrom\\s+\`?rbac_user\`?[\\s\\S]*?\\bphone\\b\\s*=\\s*['"\`]${escapedUserPhone}['"\`]`, 'i');
+    let whereMatch = normalizedSql.match(/\bwhere\b([\s\S]*)$/i);
+    let tenantPredicateRegex = /(`?plan`?\.`?rbacUserId`?\s*=\s*`?u`?\.`?id`?|`?plan`?\.`?companyId`?\s*=\s*`?u`?\.`?companyId`?|`?(?:stuff|s)`?\.`?companyId`?\s*=\s*`?u`?\.`?companyId`?)/i;
+    if (!whereMatch || !userLookupRegex.test(normalizedSql) || !tenantPredicateRegex.test(whereMatch[1])) {
+        throw create_api_error('导出SQL缺少租户隔离字段过滤');
+    }
+    let sq = db_opt.get_sq();
+    let rows = await sq.query(normalizedSql, { type: sq.QueryTypes.SELECT });
+    let columns = rows.length ? Object.keys(rows[0]) : [];
+    let csvValue = (value) => value === null || value === undefined
+        ? ''
+        : `"${String(value).replace(/"/g, '""')}"`;
+    let csv = [columns.map(csvValue).join(',')];
+    csv.push(...rows.map(row => columns.map(column => csvValue(row[column])).join(',')));
+    let filePath = path.join('/database/uploads', fileName);
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(filePath, '\ufeff' + csv.join('\n'), 'utf8');
 }
 
 module.exports = {
@@ -2771,6 +2832,119 @@ module.exports = {
                     await rbac_lib.get_company_by_token(token));
                 return { result: JSON.stringify(ret) };
             },
+        },
+        llm_export: {
+            name: '执行大模型导出',
+            description: '执行大模型导出操作',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                export_description: { type: String, have_to: true, mean: '导出描述', example: 'test' }
+            },
+            result: {
+                result: { type: Boolean, mean: '请求结果', example: true },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (user) {
+                    let new_record = await user.createLlm_export_record({
+                        export_description: body.export_description,
+                        export_result: '',
+                        export_time: moment().format('YYYY-MM-DD HH:mm:ss'),
+                        status: 0,
+                    });
+                    setTimeout(async () => {
+                        try {
+                            let startTime = Date.now();
+                            let sql = await qwen_lib.qwenChat(qwen_lib.make_export_prompt(body.export_description, user.phone));
+                            sql = String(sql).replace(/^```(?:sql)?\s*/i, '').replace(/\s*```$/, '').trim();
+                            let fileName = `llm_export_${new_record.id}_${Date.now()}.csv`;
+                            await new_record.update({ sql: sql });
+                            await sql2csvfile(sql, fileName, user.phone);
+                            let chart_result = await qwen_lib.qwenChat(qwen_lib.make_chart_prompt(body.export_description, `/database/uploads/${fileName}`));
+                            let spend = Math.floor((Date.now() - startTime) / 1000);
+                            await new_record.update({ export_result: `/uploads/${fileName}`, status: 1, spend: spend, chart_result: chart_result, sql: sql });
+                        } catch (error) {
+                            await new_record.update({ export_result: error.message || String(error), status: 2 });
+                        }
+                    }, 200);
+                }
+                else {
+                    throw create_api_error('请先登录');
+                }
+
+                return { result: true }
+            },
+        },
+        llm_dup_execute: {
+            name: '重复执行大模型导出',
+            description: '重复执行大模型导出',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {
+                export_id: { type: Number, mean: '导出记录ID', have_to: true, example:1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '操作是否成功', example: true },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (!user) {
+                    throw create_api_error('请先登录');
+                }
+                let record = await user.getLlm_export_records({ where: { id: body.export_id } });
+                if (!record || !record.length) {
+                    throw create_api_error('导出记录不存在');
+                }
+                record = record[0];
+                let new_record = await user.createLlm_export_record({
+                    export_description: record.export_description,
+                    status: 0, spend: 0, chart_result: record.chart_result, sql: record.sql,
+                    export_time: moment().format('YYYY-MM-DD HH:mm:ss')
+                });
+                let fileName = `llm_export_${new_record.id}_${Date.now()}.csv`;
+                await sql2csvfile(new_record.sql, fileName, user.phone);
+                new_record.export_result = `/uploads/${fileName}`;
+                new_record.status = 1
+                await new_record.save();
+                return { result: true }
+            },
+        },
+        list_le_records: {
+            name: '列出大模型导出记录',
+            description: '列出大模型导出记录',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: true,
+            params: {},
+            result: {
+                records: {
+                    type: Array, mean: '导出记录列表', explain: {
+                        id: { type: Number, mean: '记录ID', example: 1 },
+                        export_description: { type: String, mean: '导出描述', example: '导出全部记录' },
+                        export_result: { type: String, mean: '导出结果', example: '/uploads/llm_export_1_1680000000000.csv' },
+                        export_time: { type: String, mean: '导出时间', example: '2024-06-01 12:00:00' },
+                        status: { type: Number, mean: '导出状态，0: 未导出, 1: 成功, 2: 失败', example: 1 },
+                        spend: { type: Number, mean: '消耗秒数', example: 5 },
+                        chart_result: { type: String, mean: '大模型生成的ECharts option配置JSON', example: '{"title":{"text":"示例"}}' },
+                    }
+                },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                if (!user) {
+                    throw create_api_error('请先登录');
+                }
+                let records = await user.getLlm_export_records({
+                    order: [['id', 'DESC']],
+                    limit: 20,
+                    offset: body.pageNo * 20,
+                });
+                let total = await user.countLlm_export_records();
+                return { records: records, total: total }
+            }
         },
     },
 }

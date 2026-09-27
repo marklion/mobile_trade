@@ -15,6 +15,8 @@ $(DELIVER_PATH):
 	echo "export REMOTE_MOBILE_HOST=$(ENV_REMOTE_MOBILE_HOST)" >> $(ENV_FILE)
 	echo "export MP_APPID=$(ENV_MP_APPID)" >> $(ENV_FILE)
 	echo "export PUB_APPID=$(ENV_PUB_APPID)" >> $(ENV_FILE)
+	echo "export DASHSCOPE_API_KEY=$(ENV_DASHSCOPE_API_KEY)" >> $(ENV_FILE)
+
 clean:
 	rm -rf $(SRC_DIR)/build
 
