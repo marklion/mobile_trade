@@ -94,8 +94,8 @@
 
 <script>
 import ListShow from '@/components/ListShow.vue';
-import ChartView from '@/components/ChartView.vue';
-import { parseCsvText, buildChartPayload } from '@/utils/chart_data.js';
+import ChartView from './components/ChartView.vue';
+import { parseCsvText, buildChartPayload } from './utils/chart_data.js';
 
 export default {
     name: 'LlmExport',
@@ -225,6 +225,21 @@ export default {
             // #endif
         },
         // #ifdef MP-WEIXIN
+        // exceljs在小程序环境下writeBuffer可能返回非原生ArrayBuffer/Uint8Array的普通对象，需手动转换
+        buffer2array_buffer: function (data) {
+            if (data instanceof ArrayBuffer) {
+                return data;
+            }
+            if (ArrayBuffer.isView(data)) {
+                return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+            }
+            const len = typeof data.length === 'number' ? data.length : Object.keys(data).length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = data[i];
+            }
+            return bytes.buffer;
+        },
         download_csv_as_xlsx: async function (url) {
             try {
                 const csv_text = await this.fetch_csv_text(this.$convert_attach_url(url));
@@ -238,7 +253,7 @@ export default {
                 });
                 const buffer = await workbook.xlsx.writeBuffer();
                 const filePath = wx.env.USER_DATA_PATH + '/llm_export_' + Date.now() + '.xlsx';
-                wx.getFileSystemManager().writeFileSync(filePath, buffer);
+                wx.getFileSystemManager().writeFileSync(filePath, this.buffer2array_buffer(buffer));
                 uni.openDocument({
                     filePath: filePath,
                     fileType: 'xlsx',
