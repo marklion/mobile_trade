@@ -348,10 +348,45 @@ function verifyTicketQrContent(qr_content) {
     };
 }
 
-async function sql2csvfile(sql, fileName) {
+async function sql2csvfile(sql, fileName, userPhone) {
+    const allowedTables = new Set([
+        'plan', 'stuff', 'balance_history', 'rbac_user', 'contract',
+        'contract_stuff', 'contract_stuff_price', 'delegate', 'company',
+        'vehicle', 'driver', 'plan_history', 'archive_plan',
+        'price_history', 'tplus_settle_record', 'subsidy_record',
+    ]);
+    let normalizedSql = String(sql || '')
+        .replace(/\/\*[\s\S]*?\*\//g, ' ')
+        .replace(/--.*$/gm, ' ')
+        .trim();
+    if (!/^select\b/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL仅支持SELECT查询');
+    }
+    if (normalizedSql.includes(';')) {
+        throw create_api_error('导出SQL仅支持单条SELECT查询');
+    }
+    if (/\b(insert|update|delete|replace|alter|drop|truncate|create|grant|revoke|call|execute|outfile|load_file)\b/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL包含不允许的操作');
+    }
+    let tableMatches = [...normalizedSql.matchAll(/\b(?:from|join)\s+`?([a-zA-Z_][a-zA-Z0-9_]*)`?/ig)];
+    if (!tableMatches.length) {
+        throw create_api_error('导出SQL缺少数据来源表');
+    }
+    for (let tableMatch of tableMatches) {
+        if (!allowedTables.has(tableMatch[1].toLowerCase())) {
+            throw create_api_error(`导出SQL访问了不允许的表: ${tableMatch[1]}`);
+        }
+    }
+    let escapedUserPhone = String(userPhone || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    let phoneRegex = new RegExp(`['"\`]${escapedUserPhone}['"\`]`);
+    if (!escapedUserPhone || !phoneRegex.test(normalizedSql)) {
+        throw create_api_error('导出SQL缺少当前用户手机号过滤');
+    }
+    if (!/(\bcompanyId\b|\brbacUserId\b)/i.test(normalizedSql)) {
+        throw create_api_error('导出SQL缺少租户隔离字段过滤');
+    }
     let sq = db_opt.get_sq();
-    let result = await sq.query(sql);
-    let rows = Array.isArray(result[0]) ? result[0] : [];
+    let rows = await sq.query(normalizedSql, { type: sq.QueryTypes.SELECT });
     let columns = rows.length ? Object.keys(rows[0]) : [];
     let csvValue = (value) => value === null || value === undefined
         ? ''
@@ -2816,7 +2851,7 @@ module.exports = {
                             sql = String(sql).replace(/^```(?:sql)?\s*/i, '').replace(/\s*```$/, '').trim();
                             let fileName = `llm_export_${new_record.id}_${Date.now()}.csv`;
                             await new_record.update({ sql: sql });
-                            await sql2csvfile(sql, fileName);
+                            await sql2csvfile(sql, fileName, user.phone);
                             let chart_result = await qwen_lib.qwenChat(qwen_lib.make_chart_prompt(body.export_description, `/database/uploads/${fileName}`));
                             let spend = Math.floor((Date.now() - startTime) / 1000);
                             await new_record.update({ export_result: `/uploads/${fileName}`, status: 1, spend: spend, chart_result: chart_result, sql: sql });
@@ -2860,7 +2895,7 @@ module.exports = {
                     export_time: moment().format('YYYY-MM-DD HH:mm:ss')
                 });
                 let fileName = `llm_export_${new_record.id}_${Date.now()}.csv`;
-                await sql2csvfile(new_record.sql, fileName);
+                await sql2csvfile(new_record.sql, fileName, user.phone);
                 new_record.export_result = `/uploads/${fileName}`;
                 new_record.status = 1
                 await new_record.save();
