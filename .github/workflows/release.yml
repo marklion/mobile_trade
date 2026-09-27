@@ -24,7 +24,7 @@ jobs:
     - name: Build BackEnd
       run: |
         docker pull marklion/mt_deploy:v1.1
-        docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.1 make -f `realpath .`/Makefile ENV_REMOTE_HOST='https://console.d8sis.cn'
+        docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.1 make -f `realpath .`/Makefile ENV_REMOTE_HOST='https://console.d8sis.cn' ENV_DASHSCOPE_API_KEY='${{ secrets.ALI_QWEN_KEY }}'
 
     - name: Deploy
       env:
