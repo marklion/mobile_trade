@@ -7,8 +7,6 @@ const jimp = require('jimp').default;
 const king_dee_start_lib = require('./lib/king_dee_start_lib');
 const cash_lib = require('./lib/cash_lib');
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.help_info = [];
 app.openapi_paths = {};
 if (!isMainThread) {
@@ -50,6 +48,41 @@ if (!isMainThread) {
     })();
 }
 else {
+    const os = require('os');
+    const totalCpuCores = typeof os.availableParallelism === 'function'
+        ? os.availableParallelism()
+        : os.cpus().length;
+    const cpuLimitCores = totalCpuCores * 0.9;
+    let lastCpuUsage = process.cpuUsage();
+    let lastCpuSampleTime = process.hrtime.bigint();
+    let cpuUsageCores = 0;
+    const cpuSampleTimer = setInterval(() => {
+        const currentCpuUsage = process.cpuUsage();
+        const currentSampleTime = process.hrtime.bigint();
+        const elapsedMicros = Number(currentSampleTime - lastCpuSampleTime) / 1000;
+        const usedMicros = currentCpuUsage.user - lastCpuUsage.user
+            + currentCpuUsage.system - lastCpuUsage.system;
+        cpuUsageCores = usedMicros / elapsedMicros;
+        lastCpuUsage = currentCpuUsage;
+        lastCpuSampleTime = currentSampleTime;
+    }, 1000);
+    cpuSampleTimer.unref();
+
+    app.use((req, res, next) => {
+        if (cpuUsageCores >= cpuLimitCores) {
+            res.set('Retry-After', '1');
+            console.log(`current cpu usage:${cpuUsageCores}`);
+
+            return res.status(503).send({
+                err_msg: '服务器繁忙，请稍后重试',
+                result: null,
+            });
+        }
+        return next();
+    });
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+
     let mkapi = require('./api_utils');
     const db_opt = require('./db_opt');
     const rbac_lib = require('./lib/rbac_lib');
