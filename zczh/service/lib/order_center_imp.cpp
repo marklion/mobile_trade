@@ -629,13 +629,7 @@ bool order_center_handler::order_push_weight(const std::string &order_number, co
     es->status = 2;
     if (es->confirm_info_time.length() <= 0)
     {
-        if (eph)
-        {
-            eph->node_caller = opt_name;
-            eph->occour_time = cur_date;
-            eph->update_record();
-        }
-        else
+        if (!eph)
         {
             sql_order_history tmp;
             tmp.node_caller = opt_name;
@@ -643,10 +637,10 @@ bool order_center_handler::order_push_weight(const std::string &order_number, co
             tmp.node_name = node_name_p_weight;
             tmp.set_parent(*es, "belong_order");
             tmp.insert_record();
+            es->p_weight = weight;
+            es->p_time = cur_date;
+            zyzl_plugin::get_inst()->push_p(es->plate_number);
         }
-        es->p_weight = weight;
-        es->p_time = cur_date;
-        zyzl_plugin::get_inst()->push_p(es->plate_number);
     }
     else
     {
