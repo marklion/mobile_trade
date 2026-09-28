@@ -62,9 +62,17 @@ function request_rpc(service_name, process_name, params, one_way = false) {
     }
     let client = mp.createClient(service_name, eval("zh_rpc_" + service_name), connection);
     return new Promise(function (resolve, reject) {
+        /* 统一加超时：原代码只在 one_way 分支销毁请求，
+           get_scale_sm_info 等同步查询在后端线程池占满时会永久挂起。 */
+        const timer = setTimeout(() => {
+            reject(new Error("RPC timeout: " + service_name + "." + process_name));
+            try { connection.destroy(); } catch (e) {}
+        }, 5000);
         client[process_name].apply(client, params).then(function (resp) {
+            clearTimeout(timer);
             resolve(resp);
         }).catch(function (err) {
+            clearTimeout(timer);
             reject(err);
         });
     });

@@ -551,10 +551,10 @@ void device_management_handler::get_scale_sm_info(std::vector<scale_sm_info> &_r
                 tmp.cur_weight = ssm.cur_weight;
             });
         tmp.set_info = itr;
-        THR_CALL_DM_BEGIN();
-        tmp.front_gate_is_close = client->gate_is_close(tmp.set_info.gate.front.id);
-        tmp.back_gate_is_close = client->gate_is_close(tmp.set_info.gate.back.id);
-        THR_CALL_DM_END();
+        /* 原为 THR_CALL_DM_BEGIN() 自环回本进程 8124，占双份 worker；
+           改为同进程直接调用，避免池耗尽。 */
+        try { tmp.front_gate_is_close = gate_is_close(tmp.set_info.gate.front.id); } catch (...) { tmp.front_gate_is_close = false; }
+        try { tmp.back_gate_is_close = gate_is_close(tmp.set_info.gate.back.id); } catch (...) { tmp.back_gate_is_close = false; }
         _return.push_back(tmp);
     }
 }
@@ -714,21 +714,30 @@ void device_management_handler::walk_zombie_process()
         }
     }
     pthread_mutex_unlock(&g_runing_lock);
-    THR_CALL_DM_BEGIN();
+    /* 原为 THR_CALL_DM_BEGIN() 自环回 8124；改为直接调用，消除自环占池。 */
     for (auto &itr : dids)
     {
-        client->device_ctrl(itr, false);
+        try
+        {
+            device_ctrl(itr, false);
+        }
+        catch (...)
+        {
+        }
     }
-    THR_CALL_DM_END();
     timer_wheel_add_node(
         3, [=](void *)
         {
-        THR_CALL_DM_BEGIN();
         for (auto &itr:dids)
         {
-            client->device_ctrl(itr, true);
-        }
-        THR_CALL_DM_END(); },
+            try
+            {
+                device_ctrl(itr, true);
+            }
+            catch (...)
+            {
+            }
+        } },
         true);
 }
 
@@ -753,11 +762,33 @@ void device_management_handler::sm_init_add(std::shared_ptr<abs_state_machine> _
 
 void device_management_handler::sm_trigger(int64_t sm_id, std::function<bool(abs_state_machine &_sm)> update_func)
 {
+    std::shared_ptr<abs_state_machine> sm;
     pthread_mutex_lock(&map_lock);
     try
     {
-        auto sm = m_sm_map[sm_id];
-        if (sm && update_func(*sm))
+        auto it = m_sm_map.find(sm_id);
+        if (it != m_sm_map.end())
+        {
+            sm = it->second;
+        }
+    }
+    catch (...)
+    {
+        sm.reset();
+    }
+    pthread_mutex_unlock(&map_lock);
+
+    if (!sm)
+    {
+        return;
+    }
+
+    /* 迁移放到每台状态机自己的锁下执行：不再持有全局 map_lock 跑阻塞 RPC，
+       一台磅/设备响应慢只阻塞它自己，不再拖死所有状态机。 */
+    pthread_mutex_lock(&sm->m_sm_lock);
+    try
+    {
+        if (update_func(*sm))
         {
             sm->trigger_sm();
         }
@@ -765,26 +796,41 @@ void device_management_handler::sm_trigger(int64_t sm_id, std::function<bool(abs
     catch (...)
     {
     }
-
-    pthread_mutex_unlock(&map_lock);
+    pthread_mutex_unlock(&sm->m_sm_lock);
 }
 
 void device_management_handler::sm_run_in_scale(int64_t sm_id, std::function<void(abs_state_machine &_sm)> runner)
 {
+    std::shared_ptr<abs_state_machine> sm;
     pthread_mutex_lock(&map_lock);
     try
     {
-
-        auto sm = m_sm_map[sm_id];
-        if (sm)
+        auto it = m_sm_map.find(sm_id);
+        if (it != m_sm_map.end())
         {
-            runner(*sm);
+            sm = it->second;
         }
     }
     catch (...)
     {
+        sm.reset();
     }
     pthread_mutex_unlock(&map_lock);
+
+    if (!sm)
+    {
+        return;
+    }
+
+    pthread_mutex_lock(&sm->m_sm_lock);
+    try
+    {
+        runner(*sm);
+    }
+    catch (...)
+    {
+    }
+    pthread_mutex_unlock(&sm->m_sm_lock);
 }
 
 std::string device_management_handler::gate_proc_id_plate(const std::string &_id, const std::string &_plate, bool _is_enter, sql_device_set &_set)
@@ -933,14 +979,12 @@ std::unique_ptr<abs_sm_state> gate_state_init::proc_event(abs_state_machine &_sm
     auto this_gate = get_gate_config_by_id(sm.set_id);
     if (this_gate)
     {
-        THR_CALL_DM_BEGIN();
         auto gate_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "gate");
         auto speaker_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "speaker");
         auto led_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "led");
-        client->gate_ctrl(gate_id, true);
-        client->speaker_cast(speaker_id, "请通过");
-        client->led_display(led_id, {"", sm.pass_plate_number, "请通过", util_get_timestring()});
-        THR_CALL_DM_END();
+        try { _sm.belong->gate_ctrl(gate_id, true); } catch (...) {}
+        try { _sm.belong->speaker_cast(speaker_id, "请通过"); } catch (...) {}
+        try { _sm.belong->led_display(led_id, {"", sm.pass_plate_number, "请通过", util_get_timestring()}); } catch (...) {}
     }
     sm.init_sm();
 
@@ -1018,27 +1062,21 @@ void scale_sm::clear_state()
 void scale_sm::open_entry()
 {
     auto tg_id = device_management_handler::get_same_side_device(trigger_device_id, "gate");
-    THR_CALL_DM_BEGIN();
-    client->gate_ctrl(tg_id, true);
-    THR_CALL_DM_END();
+    try { belong->gate_ctrl(tg_id, true); } catch (...) {}
 }
 
 void scale_sm::open_exit()
 {
     auto tg_id = device_management_handler::get_diff_side_device(trigger_device_id, "gate");
-    THR_CALL_DM_BEGIN();
-    client->gate_ctrl(tg_id, true);
-    THR_CALL_DM_END();
+    try { belong->gate_ctrl(tg_id, true); } catch (...) {}
 }
 
 void scale_sm::close_both_gates()
 {
     auto same_gate_id = device_management_handler::get_same_side_device(trigger_device_id, "gate");
     auto diff_gate_id = device_management_handler::get_diff_side_device(trigger_device_id, "gate");
-    THR_CALL_DM_BEGIN();
-    client->gate_ctrl(same_gate_id, false);
-    client->gate_ctrl(diff_gate_id, false);
-    THR_CALL_DM_END();
+    try { belong->gate_ctrl(same_gate_id, false); } catch (...) {}
+    try { belong->gate_ctrl(diff_gate_id, false); } catch (...) {}
 }
 
 void scale_sm::start_scale_timer(int sec)
@@ -1047,9 +1085,7 @@ void scale_sm::start_scale_timer(int sec)
         sec,
         [this](void *p_set_id)
         {
-            THR_CALL_DM_BEGIN();
-            client->trigger_sm(this->set_id, timer);
-            THR_CALL_DM_END();
+            try { belong->trigger_sm(this->set_id, timer); } catch (...) {}
         });
 }
 
@@ -1072,12 +1108,10 @@ void scale_sm::cast_common(const std::string &_content)
     };
     auto spe_content = std::vector<std::string>(content.begin() + 1, content.begin() + 3);
     auto sp_content = util_join_string(spe_content, ",");
-    THR_CALL_DM_BEGIN();
-    client->speaker_cast(fs_id, sp_content);
-    client->speaker_cast(bs_id, sp_content);
-    client->led_display(fl_id, content);
-    client->led_display(bl_id, content);
-    THR_CALL_DM_END();
+    try { belong->speaker_cast(fs_id, sp_content); } catch (...) {}
+    try { belong->speaker_cast(bs_id, sp_content); } catch (...) {}
+    try { belong->led_display(fl_id, content); } catch (...) {}
+    try { belong->led_display(bl_id, content); } catch (...) {}
 }
 
 void scale_sm::cast_wait_timeout()
@@ -1133,19 +1167,15 @@ void scale_sm::record_scale_end()
 void scale_sm::print_ticket()
 {
     auto p_id = device_management_handler::get_diff_side_device(trigger_device_id, "printer");
-    THR_CALL_DM_BEGIN();
-    client->printer_print(p_id, "暂无磅单");
-    THR_CALL_END();
+    try { belong->printer_print(p_id, "暂无磅单"); } catch (...) {}
 }
 
 void scale_sm::trigger_cam_plate()
 {
     auto pc_id = device_management_handler::get_diff_side_device(trigger_device_id, "plate_cam");
     auto pc_o_id = device_management_handler::get_same_side_device(trigger_device_id, "plate_cam");
-    THR_CALL_DM_BEGIN();
-    client->plate_cam_cap(pc_id);
-    client->plate_cam_cap(pc_o_id);
-    THR_CALL_END();
+    try { belong->plate_cam_cap(pc_id); } catch (...) {}
+    try { belong->plate_cam_cap(pc_o_id); } catch (...) {}
 }
 
 bool scale_sm::is_over_weight(double _p_weight)
@@ -1228,9 +1258,7 @@ void scale_state_idle::after_exit(abs_state_machine &_sm)
     sm.cast_enter_info();
     auto plate_cam_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "plate_cam");
     std::string pic_path;
-    THR_CALL_DM_BEGIN();
-    client->cap_picture_slow(pic_path, plate_cam_id);
-    THR_CALL_DM_END();
+    try { sm.belong->cap_picture_slow(pic_path, plate_cam_id); } catch (...) {}
     THR_CALL_BEGIN(order_center);
     client->order_push_attach(sm.order_number, "上磅照片", pic_path);
     THR_CALL_END();
@@ -1307,12 +1335,14 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
             auto bg = set->get_parent<sql_device_meta>("back_gate");
             if (fg && bg)
             {
-                THR_CALL_DM_BEGIN();
-                if (!client->gate_is_close(fg->get_pri_id()) || !client->gate_is_close(bg->get_pri_id()))
+                try
                 {
-                    should_scale = false;
+                    if (!sm.belong->gate_is_close(fg->get_pri_id()) || !sm.belong->gate_is_close(bg->get_pri_id()))
+                    {
+                        should_scale = false;
+                    }
                 }
-                THR_CALL_DM_END();
+                catch (...) {}
             }
         }
         if (sm.pressed_manual_weight)
@@ -1448,12 +1478,14 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
             auto bg = set->get_parent<sql_device_meta>("back_gate");
             if (fg && bg)
             {
-                THR_CALL_DM_BEGIN();
-                if (client->gate_is_close(fg->get_pri_id()) && client->gate_is_close(bg->get_pri_id()))
+                try
                 {
-                    is_ready = true;
+                    if (sm.belong->gate_is_close(fg->get_pri_id()) && sm.belong->gate_is_close(bg->get_pri_id()))
+                    {
+                        is_ready = true;
+                    }
                 }
-                THR_CALL_DM_END();
+                catch (...) {}
             }
         }
         if (is_ready)
@@ -1510,27 +1542,26 @@ void scale_state_clean::after_exit(abs_state_machine &_sm)
     auto end_date = sm.end_scale_date;
     auto enter_device_id = sm.trigger_device_id;
     auto on = sm.order_number;
+    auto belong = sm.belong;
     timer_wheel_add_node(
         1,
         [=](void *)
         {
-            THR_CALL_DM_BEGIN();
             std::string file_name;
-            client->video_record_slow(file_name, device_management_handler::get_same_side_device(enter_device_id, "video_cam"), begin_date, end_date);
+            try { belong->video_record_slow(file_name, device_management_handler::get_same_side_device(enter_device_id, "video_cam"), begin_date, end_date); } catch (...) {}
             THR_CALL_BEGIN(order_center);
             if (file_name.length() > 0)
             {
                 client->order_push_attach(on, "过磅录像", file_name);
             }
             THR_CALL_END();
-            client->video_record_slow(file_name, device_management_handler::get_diff_side_device(enter_device_id, "video_cam"), begin_date, end_date);
+            try { belong->video_record_slow(file_name, device_management_handler::get_diff_side_device(enter_device_id, "video_cam"), begin_date, end_date); } catch (...) {}
             THR_CALL_BEGIN(order_center);
             if (file_name.length() > 0)
             {
                 client->order_push_attach(on, "过磅录像", file_name);
             }
             THR_CALL_END();
-            THR_CALL_DM_END();
         },
         true);
 }
@@ -1558,9 +1589,11 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
             auto sc = set->get_parent<sql_device_meta>("scale");
             if (sc)
             {
-                THR_CALL_DM_BEGIN();
-                sm.cur_weight = client->last_scale_read(sc->get_pri_id());
-                THR_CALL_DM_END();
+                try
+                {
+                    sm.cur_weight = sm.belong->last_scale_read(sc->get_pri_id());
+                }
+                catch (...) {}
                 if (sm.cur_weight == 0)
                 {
                     ret.reset(new scale_state_idle());
@@ -1585,9 +1618,7 @@ void scale_state_issue_card::before_enter(abs_state_machine &_sm)
         if (cr)
         {
             std::string card_no;
-            THR_CALL_DM_BEGIN();
-            client->clear_card_no(cr->get_pri_id());
-            THR_CALL_DM_END();
+            try { sm.belong->clear_card_no(cr->get_pri_id()); } catch (...) {}
         }
     }
 }
@@ -1660,9 +1691,7 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
             if (cr)
             {
                 std::string card_no;
-                THR_CALL_DM_BEGIN();
-                client->last_card_no(card_no, cr->get_pri_id());
-                THR_CALL_DM_END();
+                try { sm.belong->last_card_no(card_no, cr->get_pri_id()); } catch (...) {}
                 if (card_no.length() > 0)
                 {
                     if (issue_card(sm.order_number, sm.cur_weight, card_no))
@@ -1682,9 +1711,7 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
                 THR_CALL_BEGIN(order_center);
                 client->get_order(tmp, sm.order_number);
                 THR_CALL_END();
-                THR_CALL_DM_BEGIN();
-                client->deliver_card(card_deliver_ret, cd->get_pri_id(), tmp.plate_number, tmp.id, (int)(tmp.expect_weight * 1000));
-                THR_CALL_DM_END();
+                try { sm.belong->deliver_card(card_deliver_ret, cd->get_pri_id(), tmp.plate_number, tmp.id, (int)(tmp.expect_weight * 1000)); } catch (...) {}
                 if (card_deliver_ret.empty())
                 {
                     ret.reset(new scale_state_clean());

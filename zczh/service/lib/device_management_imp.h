@@ -29,8 +29,10 @@ public:
     timer_handle m_timer;
     device_management_handler *belong = nullptr;
     long set_id = 0;
+    pthread_mutex_t m_sm_lock;
     abs_state_machine(std::unique_ptr<abs_sm_state> _init_state, device_management_handler *_belong, long _set_id) : m_cur_state(_init_state.release()),belong(_belong),m_log("sm", "/tmp/pub_log.log", "/tmp/pub_log.log"),set_id(_set_id)
     {
+        pthread_mutex_init(&m_sm_lock, nullptr);
     }
     void trigger_sm()
     {
@@ -57,7 +59,7 @@ public:
     {
         m_cur_state->before_enter(*this);
     }
-    virtual ~abs_state_machine() {}
+    virtual ~abs_state_machine() { pthread_mutex_destroy(&m_sm_lock); }
 };
 
 class gate_state_init : public abs_sm_state
