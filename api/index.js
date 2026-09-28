@@ -49,9 +49,34 @@ if (!isMainThread) {
 }
 else {
     const os = require('os');
-    const totalCpuCores = typeof os.availableParallelism === 'function'
-        ? os.availableParallelism()
-        : os.cpus().length;
+    const cgroupFs = require('fs');
+    function getCpuLimitCores() {
+        const envCpuLimit = Number(process.env.CPU_LIMIT_CORES);
+        if (!Number.isNaN(envCpuLimit) && envCpuLimit > 0) {
+            return envCpuLimit;
+        }
+        try {
+            const [quota, period] = cgroupFs.readFileSync('/sys/fs/cgroup/cpu.max', 'utf8').trim().split(' ');
+            if (quota !== 'max') {
+                const quotaValue = Number(quota);
+                const periodValue = Number(period);
+                if (quotaValue > 0 && periodValue > 0) {
+                    return quotaValue / periodValue;
+                }
+            }
+        } catch (e) { }
+        try {
+            const quotaValue = Number(cgroupFs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_quota_us', 'utf8').trim());
+            const periodValue = Number(cgroupFs.readFileSync('/sys/fs/cgroup/cpu/cpu.cfs_period_us', 'utf8').trim());
+            if (quotaValue > 0 && periodValue > 0) {
+                return quotaValue / periodValue;
+            }
+        } catch (e) { }
+        return typeof os.availableParallelism === 'function'
+            ? os.availableParallelism()
+            : os.cpus().length;
+    }
+    const totalCpuCores = getCpuLimitCores();
     const cpuLimitCores = totalCpuCores * 0.9;
     let lastCpuUsage = process.cpuUsage();
     let lastCpuSampleTime = process.hrtime.bigint();
