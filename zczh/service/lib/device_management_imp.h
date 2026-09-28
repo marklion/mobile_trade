@@ -24,6 +24,7 @@ public:
         plate_cam, id_reader, qr_reader, scale, timer,self, manual_reset, manual_confirm
     } tft;
     std::string pass_plate_number;
+    double cur_weight = 0;
     int64_t trigger_device_id = 0;
     std::string order_number;
     timer_handle m_timer;
@@ -48,6 +49,7 @@ public:
                 m_cur_state.reset(next_state.release());
                 m_cur_state->before_enter(*this);
                 m_log.log("sm %d enter %s", set_id, m_cur_state->name().c_str());
+                m_log.log("plate:%s, weight:%f", this->pass_plate_number.c_str(), this->cur_weight);
             }
             else
             {
@@ -134,7 +136,6 @@ class scale_state_wrong_weight:public abs_sm_state
 class scale_sm : public abs_state_machine
 {
 public:
-    double cur_weight = 0;
     std::list<double> weight_que;
     std::string begin_scale_date;
     std::string end_scale_date;

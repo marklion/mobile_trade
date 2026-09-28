@@ -1446,6 +1446,17 @@ void scale_state_prepare::before_enter(abs_state_machine &_sm)
     client->get_rule(rule);
     THR_CALL_END();
     m_timer_max_count = rule.wait_cycle;
+    auto another_gate = device_management_handler::get_diff_side_device(sm.trigger_device_id, "gate");
+    if (another_gate)
+    {
+        try
+        {
+            sm.belong->gate_ctrl(another_gate, false);
+        }
+        catch (...)
+        {
+        }
+    }
 }
 
 void scale_state_prepare::after_exit(abs_state_machine &_sm)
@@ -1485,7 +1496,9 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
                         is_ready = true;
                     }
                 }
-                catch (...) {}
+                catch (...)
+                {
+                }
             }
         }
         if (is_ready)
@@ -1548,14 +1561,26 @@ void scale_state_clean::after_exit(abs_state_machine &_sm)
         [=](void *)
         {
             std::string file_name;
-            try { belong->video_record_slow(file_name, device_management_handler::get_same_side_device(enter_device_id, "video_cam"), begin_date, end_date); } catch (...) {}
+            try
+            {
+                belong->video_record_slow(file_name, device_management_handler::get_same_side_device(enter_device_id, "video_cam"), begin_date, end_date);
+            }
+            catch (...)
+            {
+            }
             THR_CALL_BEGIN(order_center);
             if (file_name.length() > 0)
             {
                 client->order_push_attach(on, "过磅录像", file_name);
             }
             THR_CALL_END();
-            try { belong->video_record_slow(file_name, device_management_handler::get_diff_side_device(enter_device_id, "video_cam"), begin_date, end_date); } catch (...) {}
+            try
+            {
+                belong->video_record_slow(file_name, device_management_handler::get_diff_side_device(enter_device_id, "video_cam"), begin_date, end_date);
+            }
+            catch (...)
+            {
+            }
             THR_CALL_BEGIN(order_center);
             if (file_name.length() > 0)
             {
@@ -1593,7 +1618,9 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
                 {
                     sm.cur_weight = sm.belong->last_scale_read(sc->get_pri_id());
                 }
-                catch (...) {}
+                catch (...)
+                {
+                }
                 if (sm.cur_weight == 0)
                 {
                     ret.reset(new scale_state_idle());
@@ -1618,7 +1645,13 @@ void scale_state_issue_card::before_enter(abs_state_machine &_sm)
         if (cr)
         {
             std::string card_no;
-            try { sm.belong->clear_card_no(cr->get_pri_id()); } catch (...) {}
+            try
+            {
+                sm.belong->clear_card_no(cr->get_pri_id());
+            }
+            catch (...)
+            {
+            }
         }
     }
 }
@@ -1691,7 +1724,13 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
             if (cr)
             {
                 std::string card_no;
-                try { sm.belong->last_card_no(card_no, cr->get_pri_id()); } catch (...) {}
+                try
+                {
+                    sm.belong->last_card_no(card_no, cr->get_pri_id());
+                }
+                catch (...)
+                {
+                }
                 if (card_no.length() > 0)
                 {
                     if (issue_card(sm.order_number, sm.cur_weight, card_no))
@@ -1711,7 +1750,13 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
                 THR_CALL_BEGIN(order_center);
                 client->get_order(tmp, sm.order_number);
                 THR_CALL_END();
-                try { sm.belong->deliver_card(card_deliver_ret, cd->get_pri_id(), tmp.plate_number, tmp.id, (int)(tmp.expect_weight * 1000)); } catch (...) {}
+                try
+                {
+                    sm.belong->deliver_card(card_deliver_ret, cd->get_pri_id(), tmp.plate_number, tmp.id, (int)(tmp.expect_weight * 1000));
+                }
+                catch (...)
+                {
+                }
                 if (card_deliver_ret.empty())
                 {
                     ret.reset(new scale_state_clean());
