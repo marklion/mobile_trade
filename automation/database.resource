@@ -72,6 +72,12 @@ Plan Reset
     Clear Table  plan
     Clear Table  plan_history
 
+Region Capacity Reset
+    DB Connect
+    Execute Sql String  update stuff set regionCapacityId = null;
+    Disconnect From All Databases
+    Clear Table  region_capacity
+
 Company Set Script
     [Arguments]  ${company_id}  ${script_path}
     DB Connect

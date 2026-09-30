@@ -1689,12 +1689,14 @@ module.exports = {
                 await this.close_a_plan(plan, _token, t);
             }
         }, false, existing_t, true);
+        await field_lib.auto_call_vehicle();
     },
     manual_deliver_plan: async function (_plan, _token) {
         await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name, "");
         if (!_plan.checkout_delay) {
             await this.close_a_plan(_plan, _token);
         }
+        await field_lib.auto_call_vehicle();
     },
     checkout_plan: async function (_plan_id, token) {
         await this.action_in_plan(_plan_id, token, 2, async (plan, t) => {

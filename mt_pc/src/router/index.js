@@ -262,6 +262,12 @@ export const asyncRoutes = [
         name: 'seal_pic',
         component: () => import('@/views/field/SealPic'),
         meta: { title: '磅单印章' }
+      },
+      {
+        path: 'region_capacity',
+        name: 'region_capacity',
+        component: () => import('@/views/field/RegionCapacity'),
+        meta: { title: '区域容量' }
       }
     ]
   },
