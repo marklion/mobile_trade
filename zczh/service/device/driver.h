@@ -1,17 +1,19 @@
 #if !defined(_DRIVER_H_)
 #define _DRIVER_H_
 #include "../lib/rpc_include.h"
+#include <mutex>
 
 class common_driver : public device_managementIf
 {
 protected:
     tdf_log m_log;
     TThreadPoolServer *p_tp_server = nullptr;
-
+    std::mutex health_mutext;
 public:
     long self_dev_id = 0;
     std::string health_info;
     void set_health_info(const std::string &info) {
+        std::lock_guard<std::mutex> lock(health_mutext);
         health_info = info;
     }
     virtual void init_all_set() {}
@@ -121,6 +123,7 @@ public:
         _exit(-1);
     }
     virtual void get_health_info(std::string& _return) {
+        std::lock_guard<std::mutex> lock(health_mutext);
         _return = health_info;
     }
 };

@@ -1,17 +1,18 @@
 #if !defined(_COMMON_SCALE_DRIVER_H)
 #define _COMMON_SCALE_DRIVER_H
-
+#include <atomic>
 #include "../driver.h"
 class common_scale_driver : public common_driver
 {
     double weight = 0;
     std::string dev_ip;
     tdf_log m_log;
-    unsigned long input_frame_count = 0;
-    unsigned long last_input_frame_count = 0;
+    std::atomic<unsigned long> input_frame_count;
+    std::atomic<unsigned long> last_input_frame_count;
 public:
     common_scale_driver(const std::string &name, const int64_t id, const std::string &_ip)
         : common_driver(name, id), dev_ip(_ip), m_log("common_scale_driver", "/tmp/common_scale_driver.log", "/tmp/common_scale_driver.log")
+        , input_frame_count(0), last_input_frame_count(0)
     {
         timer_wheel_init();
     }
@@ -49,8 +50,11 @@ public:
                             {
                                 weight *= weight_coe;
                             }
-                            input_frame_count++;
-                            input_frame_count %= 1000000; // Prevent overflow, keep it within a reasonable range
+                            auto frame_count = input_frame_count.fetch_add(1) + 1;
+                            if (frame_count >= 1000000)
+                            {
+                                input_frame_count.store(frame_count % 1000000);
+                            } // Prevent overflow, keep it within a reasonable range
                         }
                         else
                         {
@@ -97,7 +101,7 @@ public:
                 {
                     set_health_info("");
                 }
-                last_input_frame_count = input_frame_count;
+                last_input_frame_count.store(input_frame_count.load());
             });
         timer_wheel_add_node(3, [this](void *)
                              {

@@ -396,7 +396,7 @@ export default {
 
         },
         init_health_info: async function () {
-            let resp = await this.$send_req('/scale/get_health_info', {});
+            let resp = await this.$send_req('/scale/get_health_info', {}, true, true);
             this.health_info = resp.result;
         },
         start_health_info_polling: function () {
