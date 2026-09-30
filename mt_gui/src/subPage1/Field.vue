@@ -236,6 +236,7 @@ export default {
             stamp_pic: '',
             all_dev: [],
             health_info: '',
+            health_info_timer: null,
             show_reboot_confirm: false,
             current_company: '',
             is_exit_confirm: false,
@@ -397,6 +398,18 @@ export default {
         init_health_info: async function () {
             let resp = await this.$send_req('/scale/get_health_info', {});
             this.health_info = resp.result;
+        },
+        start_health_info_polling: function () {
+            this.stop_health_info_polling();
+            this.health_info_timer = setInterval(() => {
+                this.init_health_info();
+            }, 5000);
+        },
+        stop_health_info_polling: function () {
+            if (this.health_info_timer) {
+                clearInterval(this.health_info_timer);
+                this.health_info_timer = null;
+            }
         },
         on_reboot_modal: async function (e) {
             if (e.index == 1) {
@@ -579,6 +592,13 @@ export default {
         this.init_dev();
         this.init_health_info();
         this.init_sc_show_switch();
+        this.start_health_info_polling();
+    },
+    onHide: function () {
+        this.stop_health_info_polling();
+    },
+    onUnload: function () {
+        this.stop_health_info_polling();
     },
 }
 </script>
