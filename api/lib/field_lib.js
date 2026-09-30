@@ -175,9 +175,14 @@ module.exports = {
             return ret;
         },
         reboot: async function(company) {
+            let supported = false;
             await run_plugin_based_on_company(company, 'reboot', async (func) => {
+                supported = true;
                 await func(company);
             });
+            if (!supported) {
+                throw { err_msg: '当前公司不支持重启过磅系统' };
+            }
         }
     },
 };
