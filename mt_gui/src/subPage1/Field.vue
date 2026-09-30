@@ -122,6 +122,15 @@
         </view>
 
         <view class="body body-pad" v-else-if="cur_page == 1">
+            <view class="health-card" :class="{ warn: !!health_info }">
+                <view class="health-main">
+                    <text class="health-label">自动过磅系统状态</text>
+                    <text class="health-value">{{ health_info || '正常' }}</text>
+                </view>
+                <view class="health-btn" @click="show_reboot_confirm = true">
+                    <text class="health-btn-text">重启过磅系统</text>
+                </view>
+            </view>
             <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :company="current_company"
                 :device="single_dev" @refresh="dev_refresh"></dev-opt>
             <view class="empty-block" v-if="!all_dev || !all_dev.length">
@@ -154,6 +163,9 @@
     </view>
 
     <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
+    </fui-modal>
+    <fui-modal width="600" descr="确定要重启过磅系统吗？" v-if="show_reboot_confirm" :show="show_reboot_confirm"
+        @click="on_reboot_modal">
     </fui-modal>
     <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle"
         :show="show_enter_vehicle" @click="enter_vehicle">
@@ -223,6 +235,8 @@ export default {
             tmp_seal_no: '',
             stamp_pic: '',
             all_dev: [],
+            health_info: '',
+            show_reboot_confirm: false,
             current_company: '',
             is_exit_confirm: false,
             focus_company: {},
@@ -379,6 +393,21 @@ export default {
                 uni.hideLoading()
             }, 2000);
 
+        },
+        init_health_info: async function () {
+            let resp = await this.$send_req('/scale/get_health_info', {});
+            this.health_info = resp.result;
+        },
+        on_reboot_modal: async function (e) {
+            if (e.index == 1) {
+                await this.$send_req('/scale/reboot', {});
+                uni.showToast({
+                    title: '重启指令已发送',
+                    icon: 'success',
+                    duration: 2000
+                });
+            }
+            this.show_reboot_confirm = false;
         },
         measurement_refresh: function () {
             this.$refs.plans.refresh();
@@ -541,12 +570,14 @@ export default {
         this.refresh_plans();
         this.init_stamp_pic();
         this.init_dev();
+        this.init_health_info();
         this.init_sc_show_switch();
         uni.stopPullDownRefresh();
     },
     onShow: function () {
         this.init_stamp_pic();
         this.init_dev();
+        this.init_health_info();
         this.init_sc_show_switch();
     },
 }
@@ -656,6 +687,56 @@ export default {
     font-size: 24rpx;
     color: #3A4256;
     font-weight: 600;
+}
+.health-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    padding: 16rpx 18rpx;
+    margin-bottom: 14rpx;
+    background: rgba(45, 190, 108, 0.08);
+    border: 1rpx solid rgba(45, 190, 108, 0.25);
+    border-radius: 14rpx;
+}
+.health-card.warn {
+    background: rgba(255, 138, 43, 0.1);
+    border-color: rgba(255, 138, 43, 0.3);
+}
+.health-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+.health-label {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+.health-value {
+    margin-top: 4rpx;
+    font-size: 26rpx;
+    color: #1FA85A;
+    font-weight: 700;
+}
+.health-card.warn .health-value {
+    color: #FF8A2B;
+}
+.health-btn {
+    flex-shrink: 0;
+    height: 60rpx;
+    padding: 0 18rpx;
+    border-radius: 10rpx;
+    background: #FF4D4F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.health-btn-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 700;
 }
 .plan-card {
     background: #F8F9FD;

@@ -27,7 +27,7 @@ async function get_vo(plan) {
     if (resp.result.length > 0) {
         ret = resp.result[0].order_number;
     }
-    
+
     return ret;
 }
 
@@ -208,4 +208,17 @@ module.exports = {
         }
         return ret;
     },
+    get_health_info: async function (company) {
+        let ret = '';
+        let ut = get_url_token_by_company(company, '/api/get_health_info');
+        let resp = await push_req2zc({}, ut.url, ut.token);
+        if (resp && resp.result) {
+            ret = resp.result;
+        }
+        return ret;
+    },
+    reboot: async function (company) {
+        let ut = get_url_token_by_company(company, '/api/reboot');
+        await push_req2zc({}, ut.url, ut.token);
+    }
 }

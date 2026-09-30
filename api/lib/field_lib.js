@@ -163,6 +163,21 @@ module.exports = {
             });
 
             return ret;
+        },
+        get_health_info: async function(company) {
+            let ret = '不支持';
+            await run_plugin_based_on_company(company, 'get_health_info', async (func) => {
+                let plugin_ret = await func(company);
+                if (plugin_ret != undefined) {
+                    ret = plugin_ret;
+                }
+            });
+            return ret;
+        },
+        reboot: async function(company) {
+            await run_plugin_based_on_company(company, 'reboot', async (func) => {
+                await func(company);
+            });
         }
     },
 };

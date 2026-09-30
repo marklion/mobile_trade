@@ -10,6 +10,10 @@ protected:
 
 public:
     long self_dev_id = 0;
+    std::string health_info;
+    void set_health_info(const std::string &info) {
+        health_info = info;
+    }
     virtual void init_all_set() {}
 
     virtual void get_gate_sm_info(std::vector<gate_sm_info> &_return) {}
@@ -115,6 +119,9 @@ public:
         stop_driver();
         log_driver(__FUNCTION__, "exit because: %s", _msg.c_str());
         _exit(-1);
+    }
+    virtual void get_health_info(std::string& _return) {
+        _return = health_info;
     }
 };
 

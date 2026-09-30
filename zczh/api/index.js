@@ -1477,6 +1477,25 @@ const g_api_permisson = {
             },
         },
     },
+    "/api/reboot": {
+        module: 'order',
+        resource: 'stuff',
+        is_write: true,
+        no_need_rabc: false,
+        handler: async function (body) {
+            request_rpc('config_management', 'reboot_system', []);
+            return true;
+        },
+    },
+    "/api/get_health_info": {
+        module: 'order',
+        resource:'stuff',
+        is_write: false,
+        no_need_rbac:false,
+        handler: async function (body) {
+            return await request_rpc('device_management', 'get_health_info', []);
+        },
+    },
     "/api/update": {
         module: 'order',
         resource: 'stuff',
