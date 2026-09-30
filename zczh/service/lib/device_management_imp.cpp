@@ -682,16 +682,16 @@ void device_management_handler::get_health_info(std::string &_return)
         if (ds)
         {
             auto port = ds->port;
-            THR_CALL_DM_BEGIN_DEV(port);
             try
             {
+                THR_CALL_DM_BEGIN_DEV(port);
                 client->get_health_info(dev_health_info);
+                THR_CALL_DM_END();
             }
             catch (...)
             {
                 dev_health_info = "设备通信异常";
             }
-            THR_CALL_DM_END();
         }
         if (dev_health_info.length() > 0)
         {
