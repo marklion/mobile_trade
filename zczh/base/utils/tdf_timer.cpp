@@ -119,6 +119,7 @@ bool timer_wheel_init()
         .mq_msgsize = sizeof(void *),
         .mq_curmsgs = 0};
     std::string mq_name = "/timer_" + std::to_string(getpid());
+    mq_unlink(mq_name.c_str());
     auto mq_fd = mq_open(mq_name.c_str(), O_RDWR | O_CREAT, 0666, &tmp_mq_attr);
     if (mq_fd >= 0)
     {

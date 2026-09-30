@@ -172,7 +172,7 @@ Plan Price Change With Recalculation
     ${plan_id_string}  Convert To String    ${plan}[id]
     ${req}=    Create Dictionary    unit_price=${new_price}  plan_id=${plan_id_string}  comment=测试改价重新计算
     ${resp}=    Req to Server    /stuff/change_price_by_plan    ${sc_admin_token}  ${req}
-    Sleep    1s
+    Sleep    2s
     ${data_plan_after}  Get Plan By Id  ${plan}[id]
     ${new_arrears}  Get From Dictionary  ${data_plan_after}  arrears  false
     ${new_outstanding_vehicles}  Get From Dictionary  ${data_plan_after}  outstanding_vehicles  false

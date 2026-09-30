@@ -114,7 +114,7 @@ public:
         timer_wheel_fini();
         stop_driver();
         log_driver(__FUNCTION__, "exit because: %s", _msg.c_str());
-        exit(-1);
+        _exit(-1);
     }
 };
 
