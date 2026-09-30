@@ -27,6 +27,10 @@ static std::string read_id()
             }
         }
     }
+    else
+    {
+        ret = "xx";
+    }
 
     auto all_info = util_split_string(ret, "|");
     if (all_info.size() > 5)
@@ -58,12 +62,21 @@ public:
             [this](void *)
             {
                 auto id = read_id();
-                if (id.length() > 0)
+                if (id.length() > 10)
                 {
                     THR_CALL_DM_BEGIN();
                     client->push_id_read(self_dev_id, id);
                     THR_CALL_DM_END();
                     last_id = id;
+                    set_health_info("");
+                }
+                else if (id == "xx")
+                {
+                    set_health_info("身份证阅读器故障");
+                }
+                else
+                {
+                    set_health_info("");
                 }
             });
         timer_wheel_add_node(3, [this](void *)

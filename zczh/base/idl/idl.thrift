@@ -321,4 +321,5 @@ service device_management {
     oneway void clear_card_no(1:i64 card_reader_id),
     string deliver_card(1:i64 card_deliver_id, 2:string plate, 3:i64 ser_no, 4:i64 expect_load) throws (1:gen_exp e),
     oneway void trigger_sm(1:i64 sm_id, 2:i64 trigger_source),
+    string get_health_info() throws (1:gen_exp e),
 }
