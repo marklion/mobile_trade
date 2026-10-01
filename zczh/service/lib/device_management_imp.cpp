@@ -1118,8 +1118,9 @@ void scale_sm::open_entry()
     }
 }
 
-void scale_sm::open_exit()
+std::string scale_sm::open_exit()
 {
+    std::string ret;
     auto tg_id = device_management_handler::get_diff_side_device(trigger_device_id, "gate");
     try
     {
@@ -1128,6 +1129,14 @@ void scale_sm::open_exit()
     catch (...)
     {
     }
+
+    auto device_meta = sqlite_orm::search_record<sql_device_meta>(tg_id);
+    if (device_meta)
+    {
+        ret = device_meta->name;
+    }
+
+    return ret;
 }
 
 void scale_sm::close_both_gates()
@@ -1668,7 +1677,30 @@ void scale_state_clean::before_enter(abs_state_machine &_sm)
     client->order_push_weight(sm.order_number, sm.cur_weight, "自动");
     THR_CALL_END();
     sm.print_ticket();
-    sm.open_exit();
+    auto scale_gate_name = sm.open_exit();
+    std::string gate_cam_name;
+    std::vector<gate_scale_map> all_gate_scale_maps;
+    THR_CALL_BEGIN(config_management);
+    client->get_gate_scale_map(all_gate_scale_maps);
+    THR_CALL_END();
+    for (auto &itr : all_gate_scale_maps)
+    {
+        if (scale_gate_name.length() > 0 && scale_gate_name == itr.scale_gate_name)
+        {
+            gate_cam_name = itr.gate_cam_name;
+            break;
+        }
+    }
+    if (gate_cam_name.length() > 0)
+    {
+        auto cam_meta = sqlite_orm::search_record<sql_device_meta>("name = '%s'", gate_cam_name.c_str());
+        if (cam_meta)
+        {
+            try {
+                sm.belong->push_plate_read(cam_meta->get_pri_id(), sm.pass_plate_number);
+            } catch(...){}
+        }
+    }
     sm.start_scale_timer();
 }
 

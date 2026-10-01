@@ -32,6 +32,10 @@ public:
     virtual bool add_weight_ref(const weight_ref_config &new_one);
     virtual bool del_weight_ref(const int64_t ref_id);
 
+    virtual bool add_gate_scale_map(const gate_scale_map &new_one);
+    virtual bool del_gate_scale_map(const int64_t id);
+    virtual void get_gate_scale_map(std::vector<gate_scale_map> &_return);
+
     void db_2_rpc(sql_stuff &_db, stuff_config &_rpc);
     void db_2_rpc(sql_contract &_db, contract_config &_rpc);
     void db_2_rpc(sql_vehicle &_db, vehicle_config &_rpc);
@@ -41,5 +45,7 @@ public:
     void db_2_rpc(sql_device_set &_db, device_gate_set &_rpc);
     void db_2_rpc(sql_weight_ref_config &_db, weight_ref_config &_rpc);
     void rpc_2_db(const weight_ref_config &_rpc, sql_weight_ref_config &_db);
+    void db_2_rpc(sql_gate_scale_map &_db, gate_scale_map &_rpc);
+    void rpc_2_db(const gate_scale_map &_rpc, sql_gate_scale_map &_db);
 };
 #endif // _CONFIG_MANAGEMENT_H_

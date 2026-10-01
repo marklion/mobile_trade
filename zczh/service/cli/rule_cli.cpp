@@ -417,6 +417,62 @@ static void del_weight_ref(std::ostream &out, std::vector<std::string> _params)
     }
 }
 
+static void add_gate_scale_map(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 2)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            gate_scale_map tmp;
+            tmp.gate_cam_name = _params[0];
+            tmp.scale_gate_name = _params[1];
+            client->add_gate_scale_map(tmp);
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
+
+static void del_gate_scale_map(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 2)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            std::vector<gate_scale_map> tmp;
+            client->get_gate_scale_map(tmp);
+            for (auto &itr : tmp)
+            {
+                if (itr.gate_cam_name == _params[0] && itr.scale_gate_name == _params[1])
+                {
+                    client->del_gate_scale_map(itr.id);
+                    break;
+                }
+            }
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
+
 std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
 {
     auto root_menu = std::unique_ptr<cli::Menu>(new cli::Menu(_menu_name));
@@ -438,6 +494,8 @@ std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
     root_menu->Insert(CLI_MENU_ITEM(set_wait_cycle), "设置上磅等待轮数", {"轮数"});
     root_menu->Insert(CLI_MENU_ITEM(set_min_weight), "设置最小重量", {"最小重量"});
     root_menu->Insert(CLI_MENU_ITEM(clear), "清除配置");
+    root_menu->Insert(CLI_MENU_ITEM(add_gate_scale_map), "添加大门-地磅映射", {"大门门名称", "地磅门名称"});
+    root_menu->Insert(CLI_MENU_ITEM(del_gate_scale_map), "删除大门-地磅映射", {"大门门名称", "地磅门名称"});
 
     return root_menu;
 }
@@ -450,9 +508,11 @@ std::string rule_cli::make_bdr()
     std::vector<std::string> ret;
     running_rule tmp;
     std::vector<weight_ref_config> weight_ref;
+    std::vector<gate_scale_map> gate_scale;
     THR_CALL_BEGIN(config_management);
     client->get_rule(tmp);
     client->get_weight_ref(weight_ref);
+    client->get_gate_scale_map(gate_scale);
     THR_CALL_END();
 
     if (tmp.auto_call_count != 0)
@@ -512,6 +572,11 @@ std::string rule_cli::make_bdr()
     {
         std::string pm_config = itr.is_p_weight ? "p" : "m";
         ret.push_back("add_weight_ref " + itr.stuff_name + " " + std::to_string(itr.weight_ref) + " " + std::to_string(itr.flu_permission) + " " + pm_config);
+    }
+
+    for (auto &itr : gate_scale)
+    {
+        ret.push_back("add_gate_scale_map " + itr.gate_cam_name + " " + itr.scale_gate_name);
     }
 
     return util_join_string(ret, "\n");
