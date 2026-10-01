@@ -143,7 +143,7 @@ public:
     scale_sm(int64_t _set_id, device_management_handler *dmh);
     void clear_state();
     void open_entry();
-    void open_exit();
+    std::string open_exit();
     void close_both_gates();
     void start_scale_timer(int sec = 3);
     void stop_scale_timer();

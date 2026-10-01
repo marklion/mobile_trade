@@ -550,6 +550,26 @@ public:
     }
 };
 
+class sql_gate_scale_map : public sql_tree_base
+{
+public:
+    std::string gate_cam_name;
+    std::string scale_gate_name;
+    virtual std::vector<sqlite_orm_column> self_columns_defined()
+    {
+        std::vector<sqlite_orm_column> ret;
+
+        ret.push_back(sqlite_orm_column("gate_cam_name", sqlite_orm_column::STRING, &gate_cam_name));
+        ret.push_back(sqlite_orm_column("scale_gate_name", sqlite_orm_column::STRING, &scale_gate_name));
+
+        return ret;
+    }
+    virtual std::string table_name()
+    {
+        return "gate_scale_map_table";
+    }
+};
+
 std::unique_ptr<sql_user> db_get_online_user(const std::string &_token);
 
 #endif
