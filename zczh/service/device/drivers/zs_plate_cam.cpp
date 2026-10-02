@@ -284,6 +284,7 @@ public:
         if (zs_ret != 0)
         {
             log_driver(__FUNCTION__, "failed to force trigger:%d", zs_ret);
+            exit_driver("failed to force trigger");
         }
     }
     virtual void push_plate_read(const int64_t plate_cam_id, const std::string &plate_no)
@@ -307,6 +308,7 @@ public:
         if (zs_ret != 0)
         {
             log_driver(__FUNCTION__, "failed to gate control:%d", zs_ret);
+            exit_driver("failed to gate control");
         }
     }
     virtual void led_display(const int64_t led_id, const std::vector<std::string> &content)
@@ -353,6 +355,7 @@ public:
         else
         {
             log_driver(__FUNCTION__, "faile to snap:%d", zs_ret);
+            exit_driver("failed to snap picture");
         }
     }
     bool m_was_blocking = false;
@@ -368,17 +371,25 @@ public:
         {
             int val = 0;
             auto zs_ret = VzLPRClient_GetGPIOValue(g_zc_handler, 1, &val);
-            if (0 == val)
+            if (zs_ret == 0)
             {
-                m_was_blocking = true;
+                if (0 == val)
+                {
+                    m_was_blocking = true;
+                }
+                else
+                {
+                    if (m_was_blocking)
+                    {
+                        gate_ctrl(1, false);
+                    }
+                    m_was_blocking = false;
+                }
             }
             else
             {
-                if (m_was_blocking)
-                {
-                    gate_ctrl(1, false);
-                }
-                m_was_blocking = false;
+                log_driver(__FUNCTION__, "failed to get GPIO value for force close:%d", zs_ret);
+                exit_driver("failed to get GPIO value for force close");
             }
         }
     }
@@ -398,6 +409,7 @@ public:
         if (zs_ret != 0)
         {
             log_driver(__FUNCTION__, "failed to get gate status:%d", zs_ret);
+            exit_driver("failed to get gate status");
         }
 
         return ret;
@@ -429,9 +441,8 @@ int main(int argc, char **argv)
         1, [](void *pdata)
         {
             auto p_driver = (zs_plate_cam_driver *)pdata;
-            p_driver->force_close_gate();
-        },
-    false, pd);
+            p_driver->force_close_gate(); },
+        false, pd);
     std::thread(
         []()
         {
