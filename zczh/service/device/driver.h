@@ -116,13 +116,20 @@ public:
     }
     void exit_driver(const std::string &_msg)
     {
-        before_exit_driver();
-        timer_wheel_fini();
-        stop_driver();
-        log_driver(__FUNCTION__, "exit because: %s", _msg.c_str());
+        try
+        {
+            before_exit_driver();
+            timer_wheel_fini();
+            stop_driver();
+            log_driver(__FUNCTION__, "exit because: %s", _msg.c_str());
+        }
+        catch (...)
+        {
+        }
         _exit(-1);
     }
-    virtual void get_health_info(std::string& _return) {
+    virtual void get_health_info(std::string &_return)
+    {
         std::lock_guard<std::mutex> lock(health_mutext);
         _return = health_info;
     }

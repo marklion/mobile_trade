@@ -182,13 +182,7 @@ public:
 
     virtual void before_exit_driver()
     {
-        VzLPRClient_Close(g_zc_handler);
-        VzLPRClient_SerialStop(g_zc_ser_handler0);
-        if (double_led)
-        {
-            VzLPRClient_SerialStop(g_zc_ser_handler1);
-        }
-        VzLPRClient_Cleanup();
+
     }
     virtual void init_all_set()
     {
