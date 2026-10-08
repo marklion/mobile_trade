@@ -356,7 +356,7 @@ export default {
                 day_offset: this.day_offset,
                 base_day: this.base_day,
                 stat_context_company_id: this.stat_context_company_id,
-            });
+            }, true);
             let format_confirm_count = (confirm_count, cancel_count) => {
                 let cc = cancel_count || 0;
                 return cc > 0 ? `${confirm_count}(${cc})` : `${confirm_count}`;
@@ -549,7 +549,7 @@ export default {
             if (this.$has_module('stuff')) {
                 let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {
                     stat_context_company_id: this.stat_context_company_id,
-                });
+                }, true);
                 this.totalCountData = res.statistic
                 this.totalCountData.forEach(item => {
                     if (item.second_unit == '吨') {
@@ -591,7 +591,7 @@ export default {
 
             // 发送请求获取订单数量的函数
             let get_count = async (url, cond) => {
-                return (await this.$send_req(url, cond)).total;
+                return (await this.$send_req(url, cond, true)).total;
             };
 
             // 生成图表数据的函数
