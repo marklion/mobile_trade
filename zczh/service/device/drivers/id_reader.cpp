@@ -58,7 +58,7 @@ public:
             exit_driver("failed to init id reader");
         }
         timer_wheel_add_node(
-            2,
+            3,
             [this](void *)
             {
                 auto id = read_id();

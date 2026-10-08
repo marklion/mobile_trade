@@ -1,7 +1,7 @@
 <template>
 <el-container>
     <el-main>
-        <el-alert :type="health_info ? 'warning' : 'success'" :closable="false" show-icon style="margin-bottom: 10px;">
+        <el-alert v-permission="['rbac']" :type="health_info ? 'warning' : 'success'" :closable="false" show-icon style="margin-bottom: 10px;">
             <div slot="title" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
                 <span>
                     自动过磅系统状态：{{ health_info || '正常' }}
@@ -109,12 +109,14 @@ export default {
             this.$set(this, 'all_dev', resp.devices);
         },
         init_health_info: async function () {
-            let resp = await this.$send_req('/scale/get_health_info', {});
-            this.health_info = resp.result;
+            if (this.$hasPermission('rbac')) {
+                let resp = await this.$send_req('/rbac/get_health_info', {});
+                this.health_info = resp.result;
+            }
         },
         reboot_scale_system: function () {
             this.$confirm('确定要重启过磅系统吗?').then(async () => {
-                await this.$send_req('/scale/reboot', {});
+                await this.$send_req('/rbac/reboot', {});
                 this.$message.success('重启指令已发送');
             });
         },

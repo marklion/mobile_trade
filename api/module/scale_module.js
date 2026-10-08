@@ -2,7 +2,6 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
-const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const moment = require('moment');
 
@@ -461,37 +460,6 @@ module.exports = {
                 return { result: true };
             },
         },
-        get_health_info: {
-            name: '获取健康信息',
-            description: '获取健康信息',
-            is_write: false,
-            is_get_api: true,
-            params: {
-            },
-            result: {
-                result: { type: String, mean: '健康信息', example: '健康信息' }
-            },
-            func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                let ret = await field_lib.dev_opt.get_health_info(company);
-                return { result: ret };
-            },
-        },
-        reboot: {
-            name: '重启设备',
-            description: '重启设备',
-            is_write: true,
-            is_get_api: false,
-            params: {
-            },
-            result: {
-                result: { type: Boolean, mean: '结果', example: true }
-            },
-            func: async function (body, token) {
-                let company = await rbac_lib.get_company_by_token(token);
-                await field_lib.dev_opt.reboot(company);
-                return { result: true };
-            },
-        },
+
     }
 }
