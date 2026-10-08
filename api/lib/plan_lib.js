@@ -892,13 +892,13 @@ module.exports = {
         }
     },
     // 通用搜索函数
-    searchPlansByModel: async function (model, where_condition, search_condition, replacePlanFn, isUserModel = false) {
+    searchPlansByModel: async function (model, where_condition, search_condition, replacePlanFn, isUserModel = false, onlyCount = false) {
         let result = [];
         let count;
         // 根据模型类型选择查询方法
         if (isUserModel) {
             count = await model.countPlans({ where: where_condition });
-            if (!search_condition.only_count) {
+            if (!onlyCount) {
                 let plans = await model.getPlans(search_condition);
                 for (const element of plans) {
                     result.push(await this.processPlan(element, replacePlanFn));
@@ -907,7 +907,7 @@ module.exports = {
         } else {
             let sq = db_opt.get_sq();
             count = await sq.models.plan.count({ where: where_condition });
-            if (!search_condition.only_count) {
+            if (!onlyCount) {
                 let plans = await sq.models.plan.findAll(search_condition);
                 for (const element of plans) {
                     result.push(await this.processPlan(element, replacePlanFn));
@@ -1026,7 +1026,7 @@ module.exports = {
             include: util_lib.plan_detail_include(),
         };
 
-        return await this.searchPlansByModel(user, where_condition, search_condition, this.replace_plan2archive.bind(this), true);
+        return await this.searchPlansByModel(user, where_condition, search_condition, this.replace_plan2archive.bind(this), true, _condition.only_count);
     },
     search_bought_plans_as_buyer_company: async function (company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -1039,7 +1039,7 @@ module.exports = {
             where: where_condition,
             include: util_lib.plan_detail_include(),
         };
-        return await this.searchPlansByModel(company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+        return await this.searchPlansByModel(company, where_condition, search_condition, this.replace_plan2archive.bind(this), false, _condition.only_count);
     },
     get_authorized_counterparty_company_ids_for_user: async function (user_id, home_company_id, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -1122,7 +1122,7 @@ module.exports = {
             include: util_lib.plan_detail_include(),
         };
 
-        return await this.searchPlansByModel(buyer_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+        return await this.searchPlansByModel(buyer_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false, _condition.only_count);
     },
     search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -1145,7 +1145,7 @@ module.exports = {
             where: where_condition,
             include: util_lib.plan_detail_include(),
         };
-        return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+        return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false, _condition.only_count);
     },
     update_single_plan: async function (_plan_id, _token, _update_data) {
         let sq = db_opt.get_sq();

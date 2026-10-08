@@ -1105,10 +1105,10 @@ export default {
         uni.stopPullDownRefresh();
     },
     async onLoad() {
+        this.init_top_seg();
         await this.load_self_info();
         await this.load_stat_scopes();
         this.reset_order_date(false);
-        this.init_top_seg();
         this.init_number_of_sold_plan();
         this.get_price_display_config();
         this.get_hide_order_detail_price_config();
