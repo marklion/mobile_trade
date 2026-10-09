@@ -69,6 +69,7 @@ module.exports = {
                     if (moment().isAfter(stop_time)) {
                         let full_plan = await util_lib.get_single_plan_by_id(plans[j].id);
                         await this.handle_cancel_check_in(full_plan);
+                        await this.auto_call_vehicle();
                     }
                 }
             }
@@ -174,7 +175,6 @@ module.exports = {
         _plan.register_time = moment().format('YYYY-MM-DD HH:mm:ss');
         _plan.register_number = get_increased_number();
         await _plan.save();
-        await this.auto_call_vehicle();
     },
     handle_cancel_check_in: async function (_plan) {
         _plan.register_time = null;
@@ -182,7 +182,6 @@ module.exports = {
         _plan.call_time = null;
         await hook_plan('cancel_check_in', _plan);
         await _plan.save();
-        await this.auto_call_vehicle();
     },
     handle_call_vehicle: async function (_plan) {
         if (await fc_lib.should_run_action('call', _plan)) {
