@@ -408,63 +408,6 @@ module.exports = {
             }
         },
     },
-    plan_brief_define: {
-        id: { type: Number, mean: '计划ID', example: 1 },
-        plan_time: { type: String, mean: '计划时间', example: '2020-01-01' },
-        unit_price: { type: Number, mean: '单价', example: 1 },
-        status: { type: Number, mean: '状态', example: 1 },
-        arrears: { type: Number, mean: '欠款额', example: 10.00 },
-        outstanding_vehicles: { type: Number, mean: '欠款车数', example: 1 },
-        comment: { type: String, mean: '备注', example: '备注' },
-        count: { type: Number, mean: '数量', example: 1 },
-        register_time: { type: String, mean: '登记时间', example: '2020-01-01 12:00:00' },
-        enter_time: { type: String, mean: '进场时间', example: '2020-01-01 12:00:00' },
-        manual_close: { type: Boolean, mean: '手动关闭', example: true },
-        is_buy: { type: Boolean, mean: '是否是采购单', example: true },
-        company: {
-            type: Object, mean: '下单公司', explain: {
-                id: { type: Number, mean: '公司ID', example: 1 },
-                name: { type: String, mean: '公司名称', example: '公司名称' },
-            }
-        },
-        rbac_user: {
-            type: Object, mean: '创建人', explain: {
-                id: { type: Number, mean: '用户ID', example: 1 },
-                name: { type: String, mean: '用户姓名', example: '用户姓名' },
-            }
-        },
-        stuff: {
-            type: Object, mean: '货物', explain: {
-                id: { type: Number, mean: '货物ID', example: 1 },
-                name: { type: String, mean: '货物名称', example: '货物名称' },
-                company: {
-                    type: Object, mean: '接单公司', explain: {
-                        id: { type: Number, mean: '公司ID', example: 1 },
-                        name: { type: String, mean: '公司名称', example: '公司名称' },
-                    }
-                },
-            }
-        },
-        main_vehicle: {
-            type: Object, mean: '主车', explain: {
-                id: { type: Number, mean: '车辆ID', example: 1 },
-                plate: { type: String, mean: '车牌', example: '车牌' },
-            }
-        },
-        behind_vehicle: {
-            type: Object, mean: '挂车', explain: {
-                id: { type: Number, mean: '车辆ID', example: 1 },
-                plate: { type: String, mean: '车牌', example: '车牌' },
-            }
-        },
-        driver: {
-            type: Object, mean: '司机', explain: {
-                id: { type: Number, mean: '司机ID', example: 1 },
-                name: { type: String, mean: '司机姓名', example: '司机姓名' },
-                phone: { type: String, mean: '司机电话', example: '司机电话' },
-            }
-        },
-    },
     bidding_items: bidding_items,
     dev_data: {
         third_key: { type: String, have_to: false, mean: '货达key', example: 'third_key_example' },
@@ -523,3 +466,56 @@ module.exports = {
         return ret;
     },
 }
+
+function pick_define_fields(src, keys) {
+    let out = {};
+    for (let i = 0; i < keys.length; i++) {
+        let key = keys[i];
+        if (src[key] !== undefined) {
+            out[key] = src[key];
+        }
+    }
+    return out;
+}
+
+(function build_plan_brief_define() {
+    let detail = module.exports.plan_detail_define;
+    module.exports.plan_brief_define = Object.assign(
+        pick_define_fields(detail, [
+            'id', 'plan_time', 'unit_price', 'status', 'arrears', 'outstanding_vehicles',
+            'comment', 'count', 'register_time', 'enter_time', 'manual_close', 'is_buy',
+            'main_vehicle', 'behind_vehicle',
+        ]),
+        {
+            company: {
+                type: Object,
+                mean: detail.company.mean,
+                explain: pick_define_fields(detail.company.explain, ['id', 'name']),
+            },
+            rbac_user: {
+                type: Object,
+                mean: detail.rbac_user.mean,
+                explain: pick_define_fields(detail.rbac_user.explain, ['id', 'name']),
+            },
+            stuff: {
+                type: Object,
+                mean: detail.stuff.mean,
+                explain: Object.assign(
+                    pick_define_fields(detail.stuff.explain, ['id', 'name']),
+                    {
+                        company: {
+                            type: Object,
+                            mean: detail.stuff.explain.company.mean,
+                            explain: pick_define_fields(detail.stuff.explain.company.explain, ['id', 'name']),
+                        },
+                    }
+                ),
+            },
+            driver: {
+                type: Object,
+                mean: detail.driver.mean,
+                explain: pick_define_fields(detail.driver.explain, ['id', 'name', 'phone']),
+            },
+        }
+    );
+})();
