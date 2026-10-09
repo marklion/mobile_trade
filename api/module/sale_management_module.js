@@ -187,6 +187,23 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        order_search_brief: {
+            name: '销售订单简要查询',
+            description: '销售订单列表精简查询',
+            is_write: false,
+            is_get_api: true,
+            params: api_param_result_define.order_search_cond,
+            result: {
+                plans: {
+                    type: Array, mean: '计划', explain: api_param_result_define.plan_brief_define,
+                },
+            },
+            func: async function (body, token) {
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                let search_ret = await plan_lib.search_sold_plans(company, body.pageNo, body, false, true);
+                return { plans: search_ret.rows, total: search_ret.count };
+            },
+        },
         get_order_by_id: common.get_order_by_id('sale_management'),
         order_rollback: {
             name: '销售订单回滚',

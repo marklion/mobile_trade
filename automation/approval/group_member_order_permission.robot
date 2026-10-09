@@ -58,30 +58,7 @@ Set Member Finished Price Change Switch
 
 Get Plan By Id For Token
     [Arguments]  ${plan_id}  ${token}
-    ${plans}  Search Plans Based on User  ${token}
-    ${target_plan_id}  Convert To String  ${plan_id}
-    ${ret}  Create Dictionary
-    FOR  ${itr}  IN  @{plans}
-        ${pid}  Set Variable  ${itr}[id]
-        ${pid_str}  Convert To String  ${pid}
-        IF  $pid_str == $target_plan_id
-            ${ret}  Set Variable  ${itr}
-            Exit For Loop
-        END
-    END
-    IF  $ret == {}
-        ${order_search_status}  ${order_search_ret}  Run Keyword And Ignore Error  Search Orders Based on User  ${token}
-        IF  '${order_search_status}' == 'PASS'
-            FOR  ${itr}  IN  @{order_search_ret}
-                ${pid}  Set Variable  ${itr}[id]
-                ${pid_str}  Convert To String  ${pid}
-                IF  $pid_str == $target_plan_id
-                    ${ret}  Set Variable  ${itr}
-                    Exit For Loop
-                END
-            END
-        END
-    END
+    ${ret}  Get Plan By Id  ${plan_id}  ${token}
     Should Not Be Empty  ${ret}
     RETURN  ${ret}
 

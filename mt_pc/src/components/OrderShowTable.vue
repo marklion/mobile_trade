@@ -72,7 +72,7 @@
                     </el-table-column>
                     <el-table-column min-width="170" v-else label="下单公司">
                         <template slot-scope="scope">
-                            {{scope.row.company.name}}({{scope.row.rbac_user.name}})
+                            {{scope.row.company && scope.row.company.name}}({{scope.row.rbac_user && scope.row.rbac_user.name}})
                             <el-tag size="mini" :type="scope.row.enter_time?'success':'info'">{{!!scope.row.enter_time?'已入场':'未入场'}}</el-tag>
                         </template>
                     </el-table-column>
@@ -160,8 +160,12 @@ export default {
             'globalStatContextCompanyId',
         ]),
         show_sale_scope_selector: function () {
-            return this.req_url === '/sale_management/order_search'
+            return this.req_url === '/sale_management/order_search_brief'
                 && this.globalStatScopeVisible;
+        },
+        detail_url: function () {
+            const module_name = (this.req_url || '').split('/')[1];
+            return module_name ? `/${module_name}/get_order_by_id` : '';
         },
         contract_req_body: function () {
             return this.make_context_req({});
@@ -374,8 +378,11 @@ export default {
         record_selection: function (val) {
             this.order_selected = val;
         },
-        expend: function (plan) {
-            this.focus_plan = plan;
+        expend: async function (plan) {
+            const resp = await this.$send_req(this.detail_url, this.make_context_req({
+                plan_id: plan.id,
+            }));
+            this.focus_plan = resp.plan;
             this.show_plan_detail = true;
         },
         cancel_search: function () {

@@ -56,6 +56,47 @@ module.exports = {
             }
         ];
     },
+    plan_brief_include() {
+        return [
+            {
+                model: db_opt.get_sq().models.company,
+                attributes: ['id', 'name'],
+                paranoid: false
+            },
+            {
+                model: db_opt.get_sq().models.rbac_user,
+                attributes: ['id', 'name'],
+                paranoid: false
+            },
+            {
+                model: db_opt.get_sq().models.vehicle,
+                as: 'main_vehicle',
+                attributes: ['id', 'plate'],
+                paranoid: false
+            },
+            {
+                model: db_opt.get_sq().models.vehicle,
+                as: 'behind_vehicle',
+                attributes: ['id', 'plate'],
+                paranoid: false
+            },
+            {
+                model: db_opt.get_sq().models.driver,
+                attributes: ['id', 'name', 'phone'],
+                paranoid: false
+            },
+            {
+                model: db_opt.get_sq().models.stuff,
+                attributes: ['id', 'name'],
+                include: [{
+                    model: db_opt.get_sq().models.company,
+                    attributes: ['id', 'name'],
+                    paranoid: false
+                }],
+                paranoid: false
+            },
+        ];
+    },
     get_single_plan_by_id: async function (_plan_id, _t) {
         let ret = {};
         let sq = db_opt.get_sq();

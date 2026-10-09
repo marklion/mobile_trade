@@ -482,19 +482,14 @@ Search Plans Based on User
     ${resp}  Req Get to Server  ${url}  ${token}  ${data_name}  ${-1}  &{req}
     RETURN  ${resp}
 Get Plan By Id
-    [Arguments]  ${plan_id}
-    ${resp}  Search Plans Based on User  ${sc_admin_token}
-    ${more_resp}  Search Orders Based on User  ${sc_admin_token}
-    ${resp}  Combine Lists  ${resp}  ${more_resp}
-    ${plan}  Create Dictionary
-    FOR  ${itr}  IN  @{resp}
-        ${plan_found_id}  Get From Dictionary  ${itr}  id
-        IF  $plan_found_id == $plan_id
-            ${plan}  Set To Dictionary  ${itr}
-            Exit For Loop
-        END
+    [Arguments]  ${plan_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan_id}
+    ${status}  ${resp}  Run Keyword And Ignore Error  Req to Server  /sale_management/get_order_by_id  ${token}  ${req}
+    IF  '${status}' == 'PASS'
+        RETURN  ${resp}[plan]
     END
-    RETURN  ${plan}
+    ${resp}  Req to Server  /buy_management/get_order_by_id  ${token}  ${req}
+    RETURN  ${resp}[plan]
 Get Latest History Node
     [Arguments]  ${plan}
     ${history}  Copy List  ${plan}[plan_histories]

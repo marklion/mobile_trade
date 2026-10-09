@@ -150,6 +150,28 @@ module.exports = {
                 return { plans: search_ret.rows, total: search_ret.count };
             },
         },
+        order_search_brief: {
+            name: '查询销售单简要列表',
+            description: '销售下单列表精简查询',
+            is_write: false,
+            is_get_api: true,
+            params: api_param_result_define.order_search_cond,
+            result: {
+                plans: { type: Array, mean: '订单', explain: api_param_result_define.plan_brief_define }
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                let home = await rbac_lib.get_company_by_token(token);
+                let ctx = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                let search_ret;
+                if (ctx.id !== home.id) {
+                    search_ret = await plan_lib.search_bought_plans_as_buyer_company(ctx, body.pageNo, body, true, true);
+                } else {
+                    search_ret = await plan_lib.search_bought_plans_with_contract_authorization(user, home, body.pageNo, body, true, true);
+                }
+                return { plans: search_ret.rows, total: search_ret.count };
+            },
+        },
         get_order_by_id: common.get_order_by_id('supplier'),
         order_sale_cancel: {
             name: '取消销售单',
