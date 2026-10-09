@@ -2,7 +2,6 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
-const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const moment = require('moment');
 
@@ -478,8 +477,8 @@ module.exports = {
                 if (!company) {
                     throw { err_msg: '公司信息不存在' };
                 }
-                if (body.parking_count < 0) {
-                    throw { err_msg: '车位数不能为负数' };
+                if (!Number.isInteger(body.parking_count) || body.parking_count < 0) {
+                    throw { err_msg: '车位数必须为非负整数' };
                 }
                 let exist = await company.getRegion_capacities({ where: { name: body.name } });
                 if (exist.length > 0) {

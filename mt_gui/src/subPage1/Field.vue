@@ -29,8 +29,7 @@
                 <text class="filter-label">仅显示未叫号</text>
                 <fui-switch :checked="only_show_uncalled" color="#465CFF" @change="on_uncalled_change"></fui-switch>
             </view>
-            <list-show ref="plans" :fetch_function="get_wait_que" height="58vh" search_key="search_cond"
-                v-model="plans" :fetch_params="[show_sc_in_field, only_show_uncalled]">
+            <list-show ref="plans" :fetch_function="get_wait_que" height="58vh" search_key="search_cond" v-model="plans" :fetch_params="[show_sc_in_field, only_show_uncalled]">
                 <view class="plan-card" v-for="(item, p_index) in plans" :key="item.id">
                     <view class="plan-top">
                         <view class="plan-plates">
@@ -88,8 +87,7 @@
                                 <view class="act danger" :data-pindex="p_index" @click="on_pass_vehicle">
                                     <text class="act-text">过号</text>
                                 </view>
-                                <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
-                                    :data-pindex="p_index" @click="on_enter_vehicle">
+                                <view class="act primary" v-if="item.stuff && item.stuff.manual_weight" :data-pindex="p_index" @click="on_enter_vehicle">
                                     <text class="act-text">进厂</text>
                                 </view>
                             </template>
@@ -100,8 +98,7 @@
                                 <view class="act danger" :data-pindex="p_index" data-exit="1" @click="on_enter_vehicle">
                                     <text class="act-text">撤销进厂</text>
                                 </view>
-                                <view class="act primary" v-if="item.stuff && item.stuff.manual_weight"
-                                    :data-pindex="p_index" @click="on_manual_weight">
+                                <view class="act primary" v-if="item.stuff && item.stuff.manual_weight" :data-pindex="p_index" @click="on_manual_weight">
                                     <text class="act-text">计量</text>
                                 </view>
                             </template>
@@ -112,8 +109,7 @@
                         <view class="act warn" :data-pindex="p_index" @click="on_nav_fc">
                             <text class="act-text">检查</text>
                         </view>
-                        <view class="act success" v-if="item.enter_attachment"
-                            :data-pindex="p_index" @click="on_show_attach">
+                        <view class="act success" v-if="item.enter_attachment" :data-pindex="p_index" @click="on_show_attach">
                             <text class="act-text">磅单</text>
                         </view>
                     </view>
@@ -122,8 +118,18 @@
         </view>
 
         <view class="body body-pad" v-else-if="cur_page == 1">
-            <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :company="current_company"
-                :device="single_dev" @refresh="dev_refresh"></dev-opt>
+            <module-filter require_module="rbac">
+                <view class="health-card" :class="{ warn: !!health_info }">
+                    <view class="health-main">
+                        <text class="health-label">自动过磅系统状态</text>
+                        <text class="health-value">{{ health_info || '正常' }}</text>
+                    </view>
+                    <view class="health-btn" @click="show_reboot_confirm = true">
+                        <text class="health-btn-text">重启过磅系统</text>
+                    </view>
+                </view>
+            </module-filter>
+            <dev-opt v-for="(single_dev, index) in all_dev" :key="index" :company="current_company" :device="single_dev" @refresh="dev_refresh"></dev-opt>
             <view class="empty-block" v-if="!all_dev || !all_dev.length">
                 <text class="empty-text">暂无设备</text>
             </view>
@@ -145,9 +151,7 @@
                     <text class="stamp-sub">请上传清晰的印章图片</text>
                 </view>
                 <view class="stamp-upload">
-                    <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url"
-                        ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error"
-                        @complete="after_other_action"></fui-upload>
+                    <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url" ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error" @complete="after_other_action"></fui-upload>
                 </view>
             </view>
         </view>
@@ -155,8 +159,9 @@
 
     <fui-modal width="600" descr="确定要过号吗？" v-if="show_pass_vehicle" :show="show_pass_vehicle" @click="pass_vehicle">
     </fui-modal>
-    <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle"
-        :show="show_enter_vehicle" @click="enter_vehicle">
+    <fui-modal width="600" descr="确定要重启过磅系统吗？" v-if="show_reboot_confirm" :show="show_reboot_confirm" @click="on_reboot_modal">
+    </fui-modal>
+    <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
         <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
@@ -168,8 +173,7 @@
     </fui-modal>
     <fui-bottom-popup :show="show_zone_select" @close="show_zone_select = false" z-index="1002">
         <fui-list>
-            <fui-list-cell v-for="(item, index) in zones" :key="item.id" :index="index" arrow
-                @click="on_pick_zone">
+            <fui-list-cell v-for="(item, index) in zones" :key="item.id" :index="index" arrow @click="on_pick_zone">
                 {{ item.name }}
             </fui-list-cell>
         </fui-list>
@@ -200,6 +204,7 @@ import $fui from '@/components/firstui/fui-clipboard';
 import DevOpt from './DevOpt.vue';
 import Measurement from '@/components/Measurement.vue';
 import ScExecute from '../components/ScExecute.vue';
+import ModuleFilter from '@/components/ModuleFilter.vue';
 export default {
     name: 'Field',
     components: {
@@ -207,6 +212,7 @@ export default {
         "dev-opt": DevOpt,
         "measurement": Measurement,
         "sc-execute": ScExecute,
+        "module-filter": ModuleFilter,
     },
     data: function () {
         return {
@@ -223,6 +229,9 @@ export default {
             tmp_seal_no: '',
             stamp_pic: '',
             all_dev: [],
+            health_info: '',
+            health_info_timer: null,
+            show_reboot_confirm: false,
             current_company: '',
             is_exit_confirm: false,
             focus_company: {},
@@ -266,20 +275,23 @@ export default {
             return text;
         },
         get_plan_by_event: function (e) {
-            const pindex = Number(e && e.currentTarget && e.currentTarget.dataset
-                ? e.currentTarget.dataset.pindex
-                : -1);
+            const pindex = Number(e && e.currentTarget && e.currentTarget.dataset ?
+                e.currentTarget.dataset.pindex :
+                -1);
             const item = (this.plans || [])[pindex];
             if (!item) {
-                uni.showToast({ title: '未找到车辆，请重试', icon: 'none' });
+                uni.showToast({
+                    title: '未找到车辆，请重试',
+                    icon: 'none'
+                });
                 return null;
             }
             return item;
         },
         on_copy_phone: function (e) {
-            const phone = e && e.currentTarget && e.currentTarget.dataset
-                ? e.currentTarget.dataset.phone
-                : '';
+            const phone = e && e.currentTarget && e.currentTarget.dataset ?
+                e.currentTarget.dataset.phone :
+                '';
             if (!phone || phone === '-') {
                 return;
             }
@@ -302,8 +314,8 @@ export default {
             if (!item) {
                 return;
             }
-            const is_exit = !!(e && e.currentTarget && e.currentTarget.dataset
-                && (e.currentTarget.dataset.exit === '1' || e.currentTarget.dataset.exit === 1));
+            const is_exit = !!(e && e.currentTarget && e.currentTarget.dataset &&
+                (e.currentTarget.dataset.exit === '1' || e.currentTarget.dataset.exit === 1));
             this.prepare_enter_vehicle(item, is_exit);
         },
         on_confirm_vehicle: function (e) {
@@ -379,6 +391,35 @@ export default {
                 uni.hideLoading()
             }, 2000);
 
+        },
+        init_health_info: async function () {
+            if (this.$has_module('rbac')) {
+                let resp = await this.$send_req('/rbac/get_health_info', {}, true, true);
+                this.health_info = resp.result;
+            }
+        },
+        start_health_info_polling: function () {
+            this.stop_health_info_polling();
+            this.health_info_timer = setInterval(() => {
+                this.init_health_info();
+            }, 5000);
+        },
+        stop_health_info_polling: function () {
+            if (this.health_info_timer) {
+                clearInterval(this.health_info_timer);
+                this.health_info_timer = null;
+            }
+        },
+        on_reboot_modal: async function (e) {
+            if (e.index == 1) {
+                await this.$send_req('/rbac/reboot', {});
+                uni.showToast({
+                    title: '重启指令已发送',
+                    icon: 'success',
+                    duration: 2000
+                });
+            }
+            this.show_reboot_confirm = false;
         },
         measurement_refresh: function () {
             this.$refs.plans.refresh();
@@ -541,13 +582,22 @@ export default {
         this.refresh_plans();
         this.init_stamp_pic();
         this.init_dev();
+        this.init_health_info();
         this.init_sc_show_switch();
         uni.stopPullDownRefresh();
     },
     onShow: function () {
         this.init_stamp_pic();
         this.init_dev();
+        this.init_health_info();
         this.init_sc_show_switch();
+        this.start_health_info_polling();
+    },
+    onHide: function () {
+        this.stop_health_info_polling();
+    },
+    onUnload: function () {
+        this.stop_health_info_polling();
     },
 }
 </script>
@@ -559,12 +609,14 @@ export default {
     padding-bottom: calc(24rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
 }
+
 .hero {
     position: relative;
     padding: 28rpx 28rpx 48rpx;
     background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
     overflow: hidden;
 }
+
 .hero-logo-bg {
     position: absolute;
     top: -20rpx;
@@ -574,19 +626,23 @@ export default {
     opacity: 0.16;
     pointer-events: none;
 }
+
 .hero-logo-img {
     width: 100%;
     height: 100%;
 }
+
 .hero-copy {
     position: relative;
     z-index: 1;
 }
+
 .hero-label {
     font-size: 22rpx;
     color: rgba(255, 255, 255, 0.75);
     letter-spacing: 2rpx;
 }
+
 .hero-title {
     display: block;
     margin-top: 10rpx;
@@ -594,12 +650,14 @@ export default {
     color: #FFFFFF;
     font-weight: 700;
 }
+
 .hero-sub {
     display: block;
     margin-top: 8rpx;
     font-size: 24rpx;
     color: rgba(255, 255, 255, 0.88);
 }
+
 .shell {
     position: relative;
     z-index: 2;
@@ -610,12 +668,14 @@ export default {
     overflow: hidden;
     min-height: 70vh;
 }
+
 .tabs {
     padding: 10rpx;
     display: flex;
     flex-direction: row;
     border-bottom: 1rpx solid #F2F4FA;
 }
+
 .tab-item {
     flex: 1;
     height: 68rpx;
@@ -624,23 +684,29 @@ export default {
     justify-content: center;
     border-radius: 14rpx;
 }
+
 .tab-item.active {
     background: rgba(70, 92, 255, 0.1);
 }
+
 .tab-text {
     font-size: 26rpx;
     color: #6B7280;
     font-weight: 600;
 }
+
 .tab-item.active .tab-text {
     color: #2F3FCF;
 }
+
 .body {
     padding: 12rpx 12rpx 20rpx;
 }
+
 .body-pad {
     padding: 16rpx;
 }
+
 .filter-bar {
     display: flex;
     flex-direction: row;
@@ -652,11 +718,71 @@ export default {
     border: 1rpx solid #EEF1F8;
     border-radius: 12rpx;
 }
+
 .filter-label {
     font-size: 24rpx;
     color: #3A4256;
     font-weight: 600;
 }
+
+.health-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+    padding: 16rpx 18rpx;
+    margin-bottom: 14rpx;
+    background: rgba(45, 190, 108, 0.08);
+    border: 1rpx solid rgba(45, 190, 108, 0.25);
+    border-radius: 14rpx;
+}
+
+.health-card.warn {
+    background: rgba(255, 138, 43, 0.1);
+    border-color: rgba(255, 138, 43, 0.3);
+}
+
+.health-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.health-label {
+    font-size: 20rpx;
+    color: #9AA3B8;
+}
+
+.health-value {
+    margin-top: 4rpx;
+    font-size: 26rpx;
+    color: #1FA85A;
+    font-weight: 700;
+}
+
+.health-card.warn .health-value {
+    color: #FF8A2B;
+}
+
+.health-btn {
+    flex-shrink: 0;
+    height: 60rpx;
+    padding: 0 18rpx;
+    border-radius: 10rpx;
+    background: #FF4D4F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.health-btn-text {
+    font-size: 22rpx;
+    color: #FFFFFF;
+    font-weight: 700;
+}
+
 .plan-card {
     background: #F8F9FD;
     border: 1rpx solid #EEF1F8;
@@ -664,12 +790,14 @@ export default {
     padding: 10rpx 12rpx 8rpx;
     margin-bottom: 8rpx;
 }
+
 .plan-top {
     display: flex;
     flex-direction: row;
     align-items: center;
     margin-bottom: 4rpx;
 }
+
 .plan-plates {
     flex: 1;
     min-width: 0;
@@ -677,6 +805,7 @@ export default {
     flex-direction: row;
     flex-wrap: wrap;
 }
+
 .plate-tag {
     padding: 2rpx 10rpx;
     margin-right: 6rpx;
@@ -689,33 +818,42 @@ export default {
     border: 2rpx solid #111111;
     line-height: 1.25;
 }
+
 .status-tag {
     flex-shrink: 0;
     padding: 2rpx 10rpx;
     border-radius: 999rpx;
 }
+
 .status-tag.wait {
     background: rgba(255, 138, 43, 0.12);
 }
+
 .status-tag.call {
     background: rgba(45, 190, 108, 0.12);
 }
+
 .status-tag.enter {
     background: rgba(70, 92, 255, 0.12);
 }
+
 .status-tag-text {
     font-size: 18rpx;
     font-weight: 700;
 }
+
 .status-tag.wait .status-tag-text {
     color: #FF8A2B;
 }
+
 .status-tag.call .status-tag-text {
     color: #1FA85A;
 }
+
 .status-tag.enter .status-tag-text {
     color: #2F3FCF;
 }
+
 .plan-title-row {
     display: flex;
     flex-direction: row;
@@ -723,6 +861,7 @@ export default {
     flex-wrap: wrap;
     margin-bottom: 2rpx;
 }
+
 .plan-company {
     font-size: 24rpx;
     color: #1A1F36;
@@ -733,12 +872,14 @@ export default {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
 .plan-stuff {
     margin-left: 10rpx;
     font-size: 20rpx;
     color: #6B7280;
     line-height: 1.25;
 }
+
 .plan-meta {
     display: flex;
     flex-direction: row;
@@ -746,26 +887,31 @@ export default {
     flex-wrap: wrap;
     margin-top: 2rpx;
 }
+
 .meta-item {
     font-size: 20rpx;
     color: #4A5568;
     font-weight: 600;
     line-height: 1.3;
 }
+
 .meta-item.phone {
     color: #465CFF;
 }
+
 .meta-sep {
     margin: 0 6rpx;
     color: #C5CAD5;
     font-size: 20rpx;
 }
+
 .plan-facts {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
     margin-top: 4rpx;
 }
+
 .fact {
     margin: 2rpx 8rpx 2rpx 0;
     padding: 2rpx 8rpx;
@@ -776,6 +922,7 @@ export default {
     color: #6B7280;
     line-height: 1.3;
 }
+
 .fact.no {
     padding: 0 4rpx 0 0;
     background: transparent;
@@ -786,16 +933,19 @@ export default {
     letter-spacing: 0.5rpx;
     line-height: 1.2;
 }
+
 .fact.ok {
     color: #1FA85A;
     border-color: rgba(45, 190, 108, 0.25);
     background: rgba(45, 190, 108, 0.08);
 }
+
 .fact.warn {
     color: #FF4D4F;
     border-color: rgba(255, 77, 79, 0.25);
     background: rgba(255, 77, 79, 0.06);
 }
+
 .plan-actions {
     display: flex;
     flex-direction: row;
@@ -804,6 +954,7 @@ export default {
     padding-top: 6rpx;
     border-top: 1rpx solid #EEF1F8;
 }
+
 .act {
     width: 20%;
     box-sizing: border-box;
@@ -813,6 +964,7 @@ export default {
     align-items: center;
     justify-content: center;
 }
+
 .act-text {
     width: 100%;
     height: 48rpx;
@@ -823,31 +975,48 @@ export default {
     color: #FFFFFF;
     font-weight: 700;
 }
-.act.success .act-text { background: #2DBE6C; }
-.act.danger .act-text { background: #FF4D4F; }
-.act.primary .act-text { background: #465CFF; }
-.act.warn .act-text { background: #FF8A2B; }
+
+.act.success .act-text {
+    background: #2DBE6C;
+}
+
+.act.danger .act-text {
+    background: #FF4D4F;
+}
+
+.act.primary .act-text {
+    background: #465CFF;
+}
+
+.act.warn .act-text {
+    background: #FF8A2B;
+}
+
 .stamp-card {
     background: #F8F9FD;
     border: 1rpx solid #EEF1F8;
     border-radius: 18rpx;
     padding: 22rpx 20rpx;
 }
+
 .stamp-head {
     margin-bottom: 18rpx;
 }
+
 .stamp-title {
     display: block;
     font-size: 30rpx;
     color: #1A1F36;
     font-weight: 700;
 }
+
 .stamp-sub {
     display: block;
     margin-top: 6rpx;
     font-size: 22rpx;
     color: #9AA3B8;
 }
+
 .stamp-preview {
     background: #FFFFFF;
     border: 1rpx solid #EEF1F8;
@@ -858,17 +1027,20 @@ export default {
     justify-content: center;
     min-height: 360rpx;
 }
+
 .stamp-img {
     width: 100%;
     height: 360rpx;
     display: block;
 }
+
 .stamp-upload {
     background: #FFFFFF;
     border: 1rpx dashed rgba(70, 92, 255, 0.28);
     border-radius: 16rpx;
     padding: 24rpx;
 }
+
 .stamp-del {
     margin-top: 20rpx;
     height: 80rpx;
@@ -878,21 +1050,25 @@ export default {
     align-items: center;
     justify-content: center;
 }
+
 .stamp-del-text {
     font-size: 28rpx;
     color: #FFFFFF;
     font-weight: 700;
 }
+
 .empty-block {
     padding: 80rpx 24rpx;
     display: flex;
     align-items: center;
     justify-content: center;
 }
+
 .empty-text {
     font-size: 26rpx;
     color: #9AA3B8;
 }
+
 .image-viewer-container {
     width: 100%;
     height: 100%;
@@ -900,21 +1076,25 @@ export default {
     padding-bottom: 200rpx;
     box-sizing: border-box;
 }
+
 .movable-view {
     height: 100%;
     width: 100%;
 }
+
 .movable-area {
     height: 100%;
     width: 100%;
     overflow: hidden;
     z-index: 9999;
 }
+
 .lookimg {
     width: 100%;
     height: 100%;
     display: block;
 }
+
 .close-button-container {
     position: absolute;
     bottom: 40rpx;

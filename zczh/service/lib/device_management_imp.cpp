@@ -671,6 +671,35 @@ void device_management_handler::trigger_sm(const int64_t sm_id, const int64_t tr
         });
 }
 
+void device_management_handler::get_health_info(std::string &_return)
+{
+    std::vector<device_run_time> all_drt;
+    get_device_run_time(all_drt);
+    for (auto &itr : all_drt)
+    {
+        std::string dev_health_info;
+        auto ds = get_status_from_map(itr.id);
+        if (ds)
+        {
+            auto port = ds->port;
+            try
+            {
+                THR_CALL_DM_BEGIN_DEV(port);
+                client->get_health_info(dev_health_info);
+                THR_CALL_DM_END();
+            }
+            catch (...)
+            {
+                dev_health_info = "设备通信异常";
+            }
+        }
+        if (dev_health_info.length() > 0)
+        {
+            _return += itr.name + ":" + dev_health_info + "\n";
+        }
+    }
+}
+
 static bool isZombieProcess(pid_t pid)
 {
     int status;
@@ -982,9 +1011,27 @@ std::unique_ptr<abs_sm_state> gate_state_init::proc_event(abs_state_machine &_sm
         auto gate_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "gate");
         auto speaker_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "speaker");
         auto led_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "led");
-        try { _sm.belong->gate_ctrl(gate_id, true); } catch (...) {}
-        try { _sm.belong->speaker_cast(speaker_id, "请通过"); } catch (...) {}
-        try { _sm.belong->led_display(led_id, {"", sm.pass_plate_number, "请通过", util_get_timestring()}); } catch (...) {}
+        try
+        {
+            _sm.belong->gate_ctrl(gate_id, true);
+        }
+        catch (...)
+        {
+        }
+        try
+        {
+            _sm.belong->speaker_cast(speaker_id, "请通过");
+        }
+        catch (...)
+        {
+        }
+        try
+        {
+            _sm.belong->led_display(led_id, {"", sm.pass_plate_number, "请通过", util_get_timestring()});
+        }
+        catch (...)
+        {
+        }
     }
     sm.init_sm();
 
@@ -1062,21 +1109,54 @@ void scale_sm::clear_state()
 void scale_sm::open_entry()
 {
     auto tg_id = device_management_handler::get_same_side_device(trigger_device_id, "gate");
-    try { belong->gate_ctrl(tg_id, true); } catch (...) {}
+    try
+    {
+        belong->gate_ctrl(tg_id, true);
+    }
+    catch (...)
+    {
+    }
 }
 
-void scale_sm::open_exit()
+std::string scale_sm::open_exit()
 {
+    std::string ret;
     auto tg_id = device_management_handler::get_diff_side_device(trigger_device_id, "gate");
-    try { belong->gate_ctrl(tg_id, true); } catch (...) {}
+    try
+    {
+        belong->gate_ctrl(tg_id, true);
+    }
+    catch (...)
+    {
+    }
+
+    auto device_meta = sqlite_orm::search_record<sql_device_meta>(tg_id);
+    if (device_meta)
+    {
+        ret = device_meta->name;
+    }
+
+    return ret;
 }
 
 void scale_sm::close_both_gates()
 {
     auto same_gate_id = device_management_handler::get_same_side_device(trigger_device_id, "gate");
     auto diff_gate_id = device_management_handler::get_diff_side_device(trigger_device_id, "gate");
-    try { belong->gate_ctrl(same_gate_id, false); } catch (...) {}
-    try { belong->gate_ctrl(diff_gate_id, false); } catch (...) {}
+    try
+    {
+        belong->gate_ctrl(same_gate_id, false);
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        belong->gate_ctrl(diff_gate_id, false);
+    }
+    catch (...)
+    {
+    }
 }
 
 void scale_sm::start_scale_timer(int sec)
@@ -1085,7 +1165,13 @@ void scale_sm::start_scale_timer(int sec)
         sec,
         [this](void *p_set_id)
         {
-            try { belong->trigger_sm(this->set_id, timer); } catch (...) {}
+            try
+            {
+                belong->trigger_sm(this->set_id, timer);
+            }
+            catch (...)
+            {
+            }
         });
 }
 
@@ -1108,10 +1194,34 @@ void scale_sm::cast_common(const std::string &_content)
     };
     auto spe_content = std::vector<std::string>(content.begin() + 1, content.begin() + 3);
     auto sp_content = util_join_string(spe_content, ",");
-    try { belong->speaker_cast(fs_id, sp_content); } catch (...) {}
-    try { belong->speaker_cast(bs_id, sp_content); } catch (...) {}
-    try { belong->led_display(fl_id, content); } catch (...) {}
-    try { belong->led_display(bl_id, content); } catch (...) {}
+    try
+    {
+        belong->speaker_cast(fs_id, sp_content);
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        belong->speaker_cast(bs_id, sp_content);
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        belong->led_display(fl_id, content);
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        belong->led_display(bl_id, content);
+    }
+    catch (...)
+    {
+    }
 }
 
 void scale_sm::cast_wait_timeout()
@@ -1167,15 +1277,33 @@ void scale_sm::record_scale_end()
 void scale_sm::print_ticket()
 {
     auto p_id = device_management_handler::get_diff_side_device(trigger_device_id, "printer");
-    try { belong->printer_print(p_id, "暂无磅单"); } catch (...) {}
+    try
+    {
+        belong->printer_print(p_id, "暂无磅单");
+    }
+    catch (...)
+    {
+    }
 }
 
 void scale_sm::trigger_cam_plate()
 {
     auto pc_id = device_management_handler::get_diff_side_device(trigger_device_id, "plate_cam");
     auto pc_o_id = device_management_handler::get_same_side_device(trigger_device_id, "plate_cam");
-    try { belong->plate_cam_cap(pc_id); } catch (...) {}
-    try { belong->plate_cam_cap(pc_o_id); } catch (...) {}
+    try
+    {
+        belong->plate_cam_cap(pc_id);
+    }
+    catch (...)
+    {
+    }
+    try
+    {
+        belong->plate_cam_cap(pc_o_id);
+    }
+    catch (...)
+    {
+    }
 }
 
 bool scale_sm::is_over_weight(double _p_weight)
@@ -1258,7 +1386,13 @@ void scale_state_idle::after_exit(abs_state_machine &_sm)
     sm.cast_enter_info();
     auto plate_cam_id = device_management_handler::get_same_side_device(sm.trigger_device_id, "plate_cam");
     std::string pic_path;
-    try { sm.belong->cap_picture_slow(pic_path, plate_cam_id); } catch (...) {}
+    try
+    {
+        sm.belong->cap_picture_slow(pic_path, plate_cam_id);
+    }
+    catch (...)
+    {
+    }
     THR_CALL_BEGIN(order_center);
     client->order_push_attach(sm.order_number, "上磅照片", pic_path);
     THR_CALL_END();
@@ -1342,7 +1476,9 @@ std::unique_ptr<abs_sm_state> scale_state_scale::proc_event(abs_state_machine &_
                         should_scale = false;
                     }
                 }
-                catch (...) {}
+                catch (...)
+                {
+                }
             }
         }
         if (sm.pressed_manual_weight)
@@ -1541,7 +1677,30 @@ void scale_state_clean::before_enter(abs_state_machine &_sm)
     client->order_push_weight(sm.order_number, sm.cur_weight, "自动");
     THR_CALL_END();
     sm.print_ticket();
-    sm.open_exit();
+    auto scale_gate_name = sm.open_exit();
+    std::string gate_cam_name;
+    std::vector<gate_scale_map> all_gate_scale_maps;
+    THR_CALL_BEGIN(config_management);
+    client->get_gate_scale_map(all_gate_scale_maps);
+    THR_CALL_END();
+    for (auto &itr : all_gate_scale_maps)
+    {
+        if (scale_gate_name.length() > 0 && scale_gate_name == itr.scale_gate_name)
+        {
+            gate_cam_name = itr.gate_cam_name;
+            break;
+        }
+    }
+    if (gate_cam_name.length() > 0)
+    {
+        auto cam_meta = sqlite_orm::search_record<sql_device_meta>("name = '%s'", gate_cam_name.c_str());
+        if (cam_meta)
+        {
+            try {
+                sm.belong->push_plate_read(cam_meta->get_pri_id(), sm.pass_plate_number);
+            } catch(...){}
+        }
+    }
     sm.start_scale_timer();
 }
 

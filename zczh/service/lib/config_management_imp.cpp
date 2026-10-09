@@ -403,6 +403,40 @@ bool config_management_handler::del_weight_ref(const int64_t ref_id)
     return true;
 }
 
+bool config_management_handler::add_gate_scale_map(const gate_scale_map &new_one)
+{
+    bool ret = true;
+    auto er = sqlite_orm::search_record<sql_gate_scale_map>("gate_cam_name == '%s' AND scale_gate_name == '%s'", new_one.gate_cam_name.c_str(), new_one.scale_gate_name.c_str());
+    if (!er)
+    {
+        sql_gate_scale_map tmp;
+        rpc_2_db(new_one, tmp);
+        ret = tmp.insert_record();
+    }
+    return ret;
+}
+
+bool config_management_handler::del_gate_scale_map(const int64_t id)
+{
+    auto er = sqlite_orm::search_record<sql_gate_scale_map>(id);
+    if (er)
+    {
+        er->remove_record();
+    }
+    return true;
+}
+
+void config_management_handler::get_gate_scale_map(std::vector<gate_scale_map> &_return)
+{
+    auto all_records = sqlite_orm::search_record_all<sql_gate_scale_map>();
+    for (auto &itr : all_records)
+    {
+        gate_scale_map tmp;
+        db_2_rpc(itr, tmp);
+        _return.push_back(tmp);
+    }
+}
+
 void config_management_handler::get_rule(running_rule &_return)
 {
     auto er = sqlite_orm::search_record<sql_rule_config>(1);
@@ -563,4 +597,17 @@ void config_management_handler::rpc_2_db(const weight_ref_config &_rpc, sql_weig
     _db.ref_weight = _rpc.weight_ref;
     _db.flu_permission = _rpc.flu_permission;
     _db.is_p_weight = _rpc.is_p_weight;
+}
+
+void config_management_handler::db_2_rpc(sql_gate_scale_map &_db, gate_scale_map &_rpc)
+{
+    _rpc.id = _db.get_pri_id();
+    _rpc.gate_cam_name = _db.gate_cam_name;
+    _rpc.scale_gate_name = _db.scale_gate_name;
+}
+
+void config_management_handler::rpc_2_db(const gate_scale_map &_rpc, sql_gate_scale_map &_db)
+{
+    _db.gate_cam_name = _rpc.gate_cam_name;
+    _db.scale_gate_name = _rpc.scale_gate_name;
 }

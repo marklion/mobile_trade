@@ -155,6 +155,11 @@ struct weight_ref_config {
     4:i64 id,
     5:bool is_p_weight,
 }
+struct gate_scale_map {
+    1:string gate_cam_name,
+    2:string scale_gate_name,
+    3:i64 id,
+}
 
 struct device_run_time{
     1:i64 id,
@@ -187,6 +192,9 @@ service config_management{
     bool add_weight_ref(1:weight_ref_config new_one) throws (1:gen_exp e),
     bool del_weight_ref(1:i64 ref_id) throws (1:gen_exp e),
     void reboot_system() throws (1:gen_exp e),
+    bool add_gate_scale_map(1:gate_scale_map new_one) throws (1:gen_exp e),
+    bool del_gate_scale_map(1:i64 id) throws (1:gen_exp e),
+    list<gate_scale_map> get_gate_scale_map() throws (1:gen_exp e),
 }
 
 struct vehicle_order_opt_info {
@@ -321,4 +329,5 @@ service device_management {
     oneway void clear_card_no(1:i64 card_reader_id),
     string deliver_card(1:i64 card_deliver_id, 2:string plate, 3:i64 ser_no, 4:i64 expect_load) throws (1:gen_exp e),
     oneway void trigger_sm(1:i64 sm_id, 2:i64 trigger_source),
+    string get_health_info() throws (1:gen_exp e),
 }

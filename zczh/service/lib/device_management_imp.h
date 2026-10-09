@@ -143,7 +143,7 @@ public:
     scale_sm(int64_t _set_id, device_management_handler *dmh);
     void clear_state();
     void open_entry();
-    void open_exit();
+    std::string open_exit();
     void close_both_gates();
     void start_scale_timer(int sec = 3);
     void stop_scale_timer();
@@ -203,6 +203,7 @@ public:
     virtual void clear_card_no(const int64_t card_reader_id);
     virtual void deliver_card(std::string &_return, const int64_t card_deliver_id, const std::string &plate, const int64_t ser_no, const int64_t expect_load);
     virtual void trigger_sm(const int64_t sm_id, const int64_t trigger_source);
+    virtual void get_health_info(std::string &_return);
 
     void walk_zombie_process();
     void start_device_no_exp(int64_t id);

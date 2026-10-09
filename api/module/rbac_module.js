@@ -1,6 +1,7 @@
 const api_param_result_define = require('../api_param_result_define');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
+const field_lib = require('../lib/field_lib');
 module.exports = {
     name: 'rbac',
     description: '权限管理',
@@ -26,7 +27,7 @@ module.exports = {
                 let { count, rows } = await rbac_lib.get_all_users(company, body.pageNo);
                 return { all_user: rows, total: count };
             },
-            
+
         },
         role_get_all: {
             name: '获取所有角色',
@@ -339,6 +340,38 @@ module.exports = {
                 else {
                     throw { err_msg: '角色或表不存在' };
                 }
+            },
+        },
+        get_health_info: {
+            name: '获取健康信息',
+            description: '获取健康信息',
+            is_write: false,
+            is_get_api: true,
+            params: {
+            },
+            result: {
+                result: { type: String, mean: '健康信息', example: '健康信息' }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let ret = await field_lib.dev_opt.get_health_info(company);
+                return { result: ret };
+            },
+        },
+        reboot: {
+            name: '重启设备',
+            description: '重启设备',
+            is_write: true,
+            is_get_api: false,
+            params: {
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await field_lib.dev_opt.reboot(company);
+                return { result: true };
             },
         },
     }

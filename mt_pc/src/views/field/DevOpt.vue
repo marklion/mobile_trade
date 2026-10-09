@@ -1,66 +1,65 @@
 <template>
-    <el-container>
-        <el-main>
-            <el-table :data="all_dev">
-                <el-table-column prop="name" label="设备名称" width="180">
-                    <template slot-scope="scope">
-                        {{ scope.row.name }} - {{ scope.row.scale_status }}
-                    </template>
-                </el-table-column>
-                <el-table-column label="状态">
-                    <template slot-scope="scope">
-                        <div v-if="scope.row.scale_status">
-                            重量：{{ scope.row.cur_weight }}
-                            <el-tag v-if="scope.row.enter_gate" type="success">前门已关</el-tag>
-                            <el-tag v-else type="danger">前门未关</el-tag>
-                            <el-tag v-if="scope.row.exit_gate" type="success">后门已关</el-tag>
-                            <el-tag v-else type="danger">后门未关</el-tag>
-                        </div>
-                    </template>
-                </el-table-column>
-                <el-table-column label="操作">
-                    <template slot-scope="scope">
-                        <el-button type="primary" size="mini"
-                            @click="gate_ctrl(scope.row, true, true)">开{{ gate_name.fg }}</el-button>
-                        <el-button type="primary" size="mini"
-                            @click="gate_ctrl(scope.row, false, true)">开{{ gate_name.bg }}</el-button>
-                        <el-button type="danger" size="mini"
-                            @click="gate_ctrl(scope.row, true, false)">关{{ gate_name.fg }}</el-button>
-                        <el-button type="danger" size="mini"
-                            @click="gate_ctrl(scope.row, false, false)">关{{ gate_name.bg }}</el-button>
-                    </template>
-                </el-table-column>
-                <el-table-column label="功能" align="left">
-                    <template slot-scope="scope">
-                        <el-button type="success" size="mini"
-                            @click="take_pic(scope.row, true)">{{ gate_name.fg }}拍照</el-button>
-                        <el-button type="primary" size="mini"
-                            @click="prepare_cap(scope.row, true)">{{ gate_name.fg }}识别</el-button>
-                        <el-button v-if="scope.row.scale_status" type="warning" size="mini"
-                            @click="manual_scale(scope.row)">手动称重</el-button>
-                        <el-button type="success" size="mini"
-                            @click="take_pic(scope.row, false)">{{ gate_name.bg }}拍照</el-button>
-                        <el-button type="primary" size="mini"
-                            @click="prepare_cap(scope.row, false)">{{ gate_name.bg }}识别</el-button>
-                        <el-button v-if="scope.row.scale_status" type="danger" size="mini"
-                            @click="reset_scale(scope.row)">重置</el-button>
-                    </template>
-                </el-table-column>
-            </el-table>
-
-            <el-dialog :visible.sync="pic_path.length != 0" center>
-                <el-image :src="pic_path"></el-image>
-            </el-dialog>
-
-            <el-dialog title="请输入车牌号" :visible.sync="show_cap" width="30%">
-                <el-input v-model="focus_plate" placeholder="不输入即直接抓拍识别"></el-input>
-                <span slot="footer">
-                    <el-button @click="show_cap = false">取 消</el-button>
-                    <el-button type="primary" @click="trigger_cap(cap_enter)">确 定</el-button>
+<el-container>
+    <el-main>
+        <el-alert v-permission="['rbac']" :type="health_info ? 'warning' : 'success'" :closable="false" show-icon style="margin-bottom: 10px;">
+            <div slot="title" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                <span>
+                    自动过磅系统状态：{{ health_info || '正常' }}
                 </span>
-            </el-dialog>
-        </el-main>
-    </el-container>
+                <el-button type="danger" size="mini" @click="reboot_scale_system">重启过磅系统</el-button>
+            </div>
+        </el-alert>
+
+        <el-table :data="all_dev">
+            <el-table-column prop="name" label="设备名称" width="180">
+                <template slot-scope="scope">
+                    {{ scope.row.name }} - {{ scope.row.scale_status }}
+                </template>
+            </el-table-column>
+            <el-table-column label="状态">
+                <template slot-scope="scope">
+                    <div v-if="scope.row.scale_status">
+                        重量：{{ scope.row.cur_weight }}
+                        <el-tag v-if="scope.row.enter_gate" type="success">前门已关</el-tag>
+                        <el-tag v-else type="danger">前门未关</el-tag>
+                        <el-tag v-if="scope.row.exit_gate" type="success">后门已关</el-tag>
+                        <el-tag v-else type="danger">后门未关</el-tag>
+                    </div>
+                </template>
+            </el-table-column>
+            <el-table-column label="操作">
+                <template slot-scope="scope">
+                    <el-button type="primary" size="mini" @click="gate_ctrl(scope.row, true, true)">开{{ gate_name.fg }}</el-button>
+                    <el-button type="primary" size="mini" @click="gate_ctrl(scope.row, false, true)">开{{ gate_name.bg }}</el-button>
+                    <el-button type="danger" size="mini" @click="gate_ctrl(scope.row, true, false)">关{{ gate_name.fg }}</el-button>
+                    <el-button type="danger" size="mini" @click="gate_ctrl(scope.row, false, false)">关{{ gate_name.bg }}</el-button>
+                </template>
+            </el-table-column>
+            <el-table-column label="功能" align="left">
+                <template slot-scope="scope">
+                    <el-button type="success" size="mini" @click="take_pic(scope.row, true)">{{ gate_name.fg }}拍照</el-button>
+                    <el-button type="primary" size="mini" @click="prepare_cap(scope.row, true)">{{ gate_name.fg }}识别</el-button>
+                    <el-button v-if="scope.row.scale_status" type="warning" size="mini" @click="manual_scale(scope.row)">手动称重</el-button>
+                    <el-button type="success" size="mini" @click="take_pic(scope.row, false)">{{ gate_name.bg }}拍照</el-button>
+                    <el-button type="primary" size="mini" @click="prepare_cap(scope.row, false)">{{ gate_name.bg }}识别</el-button>
+                    <el-button v-if="scope.row.scale_status" type="danger" size="mini" @click="reset_scale(scope.row)">重置</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <el-dialog :visible.sync="pic_path.length != 0" center>
+            <el-image :src="pic_path"></el-image>
+        </el-dialog>
+
+        <el-dialog title="请输入车牌号" :visible.sync="show_cap" width="30%">
+            <el-input v-model="focus_plate" placeholder="不输入即直接抓拍识别"></el-input>
+            <span slot="footer">
+                <el-button @click="show_cap = false">取 消</el-button>
+                <el-button type="primary" @click="trigger_cap(cap_enter)">确 定</el-button>
+            </span>
+        </el-dialog>
+    </el-main>
+</el-container>
 </template>
 
 <script>
@@ -76,6 +75,7 @@ export default {
             focus_plate: '',
             cap_enter: false,
             all_dev: [],
+            health_info: '',
             device: {
                 name: '',
                 enter_gate: false,
@@ -87,6 +87,7 @@ export default {
     },
     mounted() {
         this.init_dev();
+        this.init_health_info();
     },
     computed: {
         gate_name: function () {
@@ -106,6 +107,18 @@ export default {
         init_dev: async function () {
             let resp = await this.$send_req('/scale/get_device_status', {});
             this.$set(this, 'all_dev', resp.devices);
+        },
+        init_health_info: async function () {
+            if (this.$hasPermission('rbac')) {
+                let resp = await this.$send_req('/rbac/get_health_info', {});
+                this.health_info = resp.result;
+            }
+        },
+        reboot_scale_system: function () {
+            this.$confirm('确定要重启过磅系统吗?').then(async () => {
+                await this.$send_req('/rbac/reboot', {});
+                this.$message.success('重启指令已发送');
+            });
         },
         dev_refresh: async function () {
             this.init_dev()
@@ -154,3 +167,10 @@ export default {
     }
 }
 </script>
+
+<style scoped>
+/* el-alert__content is a table-cell that doesn't grow to fill the row by default */
+::v-deep .el-alert__content {
+    flex: 1;
+}
+</style>
