@@ -2,6 +2,7 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
+const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const moment = require('moment');
 
