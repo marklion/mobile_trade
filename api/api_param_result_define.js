@@ -466,3 +466,56 @@ module.exports = {
         return ret;
     },
 }
+
+function pick_define_fields(src, keys) {
+    let out = {};
+    for (let i = 0; i < keys.length; i++) {
+        let key = keys[i];
+        if (src[key] !== undefined) {
+            out[key] = src[key];
+        }
+    }
+    return out;
+}
+
+(function build_plan_brief_define() {
+    let detail = module.exports.plan_detail_define;
+    module.exports.plan_brief_define = Object.assign(
+        pick_define_fields(detail, [
+            'id', 'plan_time', 'unit_price', 'status', 'arrears', 'outstanding_vehicles',
+            'comment', 'count', 'register_time', 'enter_time', 'manual_close', 'is_buy',
+            'main_vehicle', 'behind_vehicle',
+        ]),
+        {
+            company: {
+                type: Object,
+                mean: detail.company.mean,
+                explain: pick_define_fields(detail.company.explain, ['id', 'name']),
+            },
+            rbac_user: {
+                type: Object,
+                mean: detail.rbac_user.mean,
+                explain: pick_define_fields(detail.rbac_user.explain, ['id', 'name']),
+            },
+            stuff: {
+                type: Object,
+                mean: detail.stuff.mean,
+                explain: Object.assign(
+                    pick_define_fields(detail.stuff.explain, ['id', 'name']),
+                    {
+                        company: {
+                            type: Object,
+                            mean: detail.stuff.explain.company.mean,
+                            explain: pick_define_fields(detail.stuff.explain.company.explain, ['id', 'name']),
+                        },
+                    }
+                ),
+            },
+            driver: {
+                type: Object,
+                mean: detail.driver.mean,
+                explain: pick_define_fields(detail.driver.explain, ['id', 'name', 'phone']),
+            },
+        }
+    );
+})();

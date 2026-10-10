@@ -288,29 +288,8 @@ module.exports = {
                 return { result: true };
             },
         },
-        order_buy_search: {
-            name: '查询采购单',
-            description: '查询采购单',
-
-            is_write: false,
-            is_get_api: true,
-            params: api_param_result_define.order_search_cond,
-            result: {
-                plans: { type: Array, mean: '订单', explain: api_param_result_define.plan_detail_define }
-            },
-            func: async function (body, token) {
-                let user = await rbac_lib.get_user_by_token(token);
-                let home = await rbac_lib.get_company_by_token(token);
-                let ctx = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
-                let search_ret;
-                if (ctx.id !== home.id) {
-                    search_ret = await plan_lib.search_bought_plans_as_buyer_company(ctx, body.pageNo, body, false);
-                } else {
-                    search_ret = await plan_lib.search_bought_plans_with_contract_authorization(user, home, body.pageNo, body, false);
-                }
-                return { plans: search_ret.rows, total: search_ret.count };
-            },
-        },
+        order_buy_search: common.make_bought_order_search('查询采购单', '查询采购单', false, false),
+        order_search_brief: common.make_bought_order_search('查询采购单简要列表', '采购下单列表精简查询', false, true),
         get_order_by_id: common.get_order_by_id('customer'),
         bidding_search: {
             name: '查询竞标单',
