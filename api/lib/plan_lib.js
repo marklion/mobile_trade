@@ -922,8 +922,9 @@ module.exports = {
     },
     processPlan: async function (element, replacePlanFn) {
         let arc_p = await replacePlanFn(element);
-        this.setDuplicateInfoAndCompany(element);
-        return arc_p || element;
+        let result = arc_p || element;
+        this.setDuplicateInfoAndCompany(result);
+        return result;
     },
     setDuplicateInfoAndCompany: function (element) {
         element.duplicateInfo = {
@@ -1015,6 +1016,8 @@ module.exports = {
         let result = await this.processPlan(plan, this.replace_plan2archive.bind(this));
         if (typeof result?.toJSON === 'function') {
             result = result.toJSON();
+            // toJSON 不会保留 processPlan 挂在实例上的非字段属性
+            this.setDuplicateInfoAndCompany(result);
         }
         return result;
     },
