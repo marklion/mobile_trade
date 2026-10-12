@@ -1381,6 +1381,7 @@ module.exports = {
         else {
             await this.rp_history_close(plan, name);
         }
+        await field_lib.auto_call_vehicle();
     },
     plan_enter: async function (_plan_id, _token, is_exit = false, existing_t = null) {
         let tmp_plan = await util_lib.get_single_plan_by_id(_plan_id);
@@ -1482,6 +1483,7 @@ module.exports = {
                 this.verify_pay_against_same_company(plan.company.id, skip_plan_ids);
             }
         }, false, existing_t, allow_group_member_operate);
+        await field_lib.auto_call_vehicle();
     },
     plan_cost: async function (plan) {
         let contracts = this.pick_sale_contracts_for_supply(
@@ -1689,12 +1691,14 @@ module.exports = {
                 await this.close_a_plan(plan, _token, t);
             }
         }, false, existing_t, true);
+        await field_lib.auto_call_vehicle();
     },
     manual_deliver_plan: async function (_plan, _token) {
         await this.rp_history_deliver(_plan, (await rbac_lib.get_user_by_token(_token)).name, "");
         if (!_plan.checkout_delay) {
             await this.close_a_plan(_plan, _token);
         }
+        await field_lib.auto_call_vehicle();
     },
     checkout_plan: async function (_plan_id, token) {
         await this.action_in_plan(_plan_id, token, 2, async (plan, t) => {

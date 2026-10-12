@@ -2,6 +2,7 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
+const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const moment = require('moment');
 
@@ -80,6 +81,7 @@ module.exports = {
                     let user = await rbac_lib.get_user_by_token(token);
                     await plan_lib.rp_history_cancel_checkin(plan, user.name);
                 }, false, null, true);
+                await field_lib.auto_call_vehicle();
                 return { result: true };
             },
         },
@@ -460,6 +462,146 @@ module.exports = {
                 return { result: true };
             },
         },
-
+        add_region_capacity: {
+            name: '添加区域容量',
+            description: '添加区域容量配置项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                name: { type: String, have_to: true, mean: '区域名称', example: '一号装卸区' },
+                parking_count: { type: Number, have_to: true, mean: '车位数', example: 2 },
+            },
+            result: {
+                id: { type: Number, mean: '区域容量ID', example: 1 },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司信息不存在' };
+                }
+                if (!Number.isInteger(body.parking_count) || body.parking_count < 0) {
+                    throw { err_msg: '车位数必须为非负整数' };
+                }
+                let exist = await company.getRegion_capacities({ where: { name: body.name } });
+                if (exist.length > 0) {
+                    throw { err_msg: '区域名称已存在' };
+                }
+                let region = await db_opt.get_sq().models.region_capacity.create({
+                    name: body.name,
+                    parking_count: body.parking_count,
+                });
+                await region.setCompany(company);
+                return { id: region.id };
+            },
+        },
+        del_region_capacity: {
+            name: '删除区域容量',
+            description: '删除区域容量配置项',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '区域容量ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let region = await db_opt.get_sq().models.region_capacity.findByPk(body.id);
+                if (!region || region.companyId != company.id) {
+                    throw { err_msg: '区域容量不存在' };
+                }
+                let stuffs = await region.getStuff();
+                for (let index = 0; index < stuffs.length; index++) {
+                    await stuffs[index].setRegion_capacity(null);
+                }
+                await region.destroy();
+                return { result: true };
+            },
+        },
+        get_region_capacity: {
+            name: '获取区域容量',
+            description: '获取区域容量配置列表',
+            is_write: false,
+            is_get_api: true,
+            params: {},
+            result: {
+                region_capacities: {
+                    type: Array, mean: '区域容量列表', explain: {
+                        id: { type: Number, mean: '区域容量ID', example: 1 },
+                        name: { type: String, mean: '区域名称', example: '一号装卸区' },
+                        parking_count: { type: Number, mean: '车位数', example: 2 },
+                        stuff: {
+                            type: Array, mean: '关联物料', explain: {
+                                id: { type: Number, mean: '物料ID', example: 1 },
+                                name: { type: String, mean: '物料名称', example: '煤炭' },
+                            }
+                        },
+                    }
+                }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let sq = db_opt.get_sq();
+                let resp = await sq.models.region_capacity.findAndCountAll({
+                    where: { companyId: company.id },
+                    include: [sq.models.stuff],
+                    offset: 20 * (body.pageNo || 0),
+                    limit: 20,
+                    order: [['id', 'DESC']],
+                });
+                return {
+                    region_capacities: resp.rows,
+                    total: resp.count,
+                };
+            },
+        },
+        add_region_stuff: {
+            name: '区域容量添加物料',
+            description: '将物料关联到区域容量',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '区域容量ID', example: 1 },
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let region = await db_opt.get_sq().models.region_capacity.findByPk(body.id);
+                if (!region || region.companyId != company.id) {
+                    throw { err_msg: '区域容量不存在' };
+                }
+                let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
+                if (!stuff || stuff.companyId != company.id) {
+                    throw { err_msg: '物料不存在' };
+                }
+                await stuff.setRegion_capacity(region);
+                return { result: true };
+            },
+        },
+        del_region_stuff: {
+            name: '区域容量删除物料',
+            description: '取消物料与区域容量的关联',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                stuff_id: { type: Number, have_to: true, mean: '物料ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await db_opt.get_sq().models.stuff.findByPk(body.stuff_id);
+                if (!stuff || stuff.companyId != company.id) {
+                    throw { err_msg: '物料不存在' };
+                }
+                await stuff.setRegion_capacity(null);
+                return { result: true };
+            },
+        },
     }
 }
