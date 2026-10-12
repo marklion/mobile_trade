@@ -6,7 +6,6 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const { default: axios } = require('axios');
 const util_lib = require('./util_lib');
-const { Utils } = require('sequelize');
 const httpsAgent = require('https').Agent;
 const tplus_lib = require('./t_plus_lib');
 module.exports = {
@@ -32,17 +31,28 @@ module.exports = {
         }
 
     },
-    charge: async function (_token, _contract_id, _cash_increased, _comment, stat_context_company_id) {
+    charge: async function (_token, _contract_id, _cash_increased, _comment, stat_context_company_id, bank_name) {
         let user = await rbac_lib.get_user_by_token(_token);
         let contract = await db_opt.get_sq().models.contract.findByPk(_contract_id);
         if (user && contract) {
             let sale_company = await plan_lib.resolve_sale_contract_context_company(_token, stat_context_company_id, true);
             if (sale_company && await sale_company.hasSale_contract(contract)) {
                 let final_comment = _comment;
+                let real_bank_name = bank_name;
+                if (real_bank_name) {
+                    final_comment += `，银行名称:${real_bank_name}`;
+                }
+                else if (final_comment.indexOf('回退') != -1) {
+                    real_bank_name = final_comment.match(/银行名称:([^，]+)/)[1];
+                    if (!real_bank_name) {
+                        real_bank_name = '鄂尔多斯银行';
+                    }
+                }
                 if (sale_company.tplus_appkey && sale_company.tplus_appsecret) {
-                    let tplus_code = await tplus_lib.push_charge_msg(contract, _cash_increased);
+                    let tplus_code = await tplus_lib.push_charge_msg(contract, _cash_increased, real_bank_name);
                     final_comment += `，T+单号:${tplus_code}`;
                 }
+
                 await this.charge_by_username_and_contract(user.name, contract, _cash_increased, final_comment);
             }
             else {

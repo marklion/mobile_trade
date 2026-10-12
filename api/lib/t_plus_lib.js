@@ -780,7 +780,7 @@ module.exports = {
         await workbook.xlsx.writeFile('/database' + file_name);
         return file_name;
     },
-    push_charge_msg: async function (contract, cash) {
+    push_charge_msg: async function (contract, cash, bank_name) {
         let sale_company = await contract.getSale_company();
         let buy_company = await contract.getBuy_company();
 
@@ -802,7 +802,7 @@ module.exports = {
                             Code: "997"
                         },
                         BankAccount: {
-                            Name: '鄂尔多斯银行',
+                            Name: bank_name,
                         },
                         OrigAmount: cash,
                         Memo: `掌易助理充值:${cash}`,
