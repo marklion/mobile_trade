@@ -6,7 +6,6 @@ const ExcelJS = require('exceljs');
 const uuid = require('uuid');
 const { default: axios } = require('axios');
 const util_lib = require('./util_lib');
-const { Utils } = require('sequelize');
 const httpsAgent = require('https').Agent;
 const tplus_lib = require('./t_plus_lib');
 module.exports = {
