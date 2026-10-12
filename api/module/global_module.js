@@ -806,8 +806,10 @@ module.exports = {
                 if (driver && plan && ((plan.status == 2 && !plan.is_buy) || (plan.status == 1 && plan.is_buy)) && await driver.hasPlan(plan)) {
                     let reason = await checkif_plan_checkinable(plan, driver, body.lat, body.lon);
                     if (reason === '') {
-                        await require('../lib/field_lib').handle_driver_check_in(plan);
+                        const field_lib = require('../lib/field_lib');
+                        await field_lib.handle_driver_check_in(plan);
                         await plan_lib.rp_history_checkin(plan);
+                        await field_lib.auto_call_vehicle();
                         return { result: true };
                     }
                     else {

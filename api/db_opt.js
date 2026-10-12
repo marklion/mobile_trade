@@ -412,6 +412,11 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
         },
+        region_capacity: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            name: { type: DataTypes.STRING },
+            parking_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+        },
         field_check_table: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
@@ -718,6 +723,11 @@ let db_opt = {
 
         _sq.models.drop_take_zone.belongsTo(_sq.models.stuff);
         _sq.models.stuff.hasMany(_sq.models.drop_take_zone);
+
+        _sq.models.region_capacity.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.region_capacity);
+        _sq.models.stuff.belongsTo(_sq.models.region_capacity);
+        _sq.models.region_capacity.hasMany(_sq.models.stuff);
 
         _sq.models.field_check_table.belongsTo(_sq.models.stuff);
         _sq.models.stuff.hasMany(_sq.models.field_check_table);

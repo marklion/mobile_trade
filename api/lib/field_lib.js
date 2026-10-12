@@ -69,11 +69,91 @@ module.exports = {
                     if (moment().isAfter(stop_time)) {
                         let full_plan = await util_lib.get_single_plan_by_id(plans[j].id);
                         await this.handle_cancel_check_in(full_plan);
+                        await this.auto_call_vehicle();
                     }
                 }
             }
         }
 
+    },
+    auto_call_vehicle: async function () {
+        let sq = db_opt.get_sq();
+        let regions = await sq.models.region_capacity.findAll({
+            where: {
+                parking_count: {
+                    [db_opt.Op.gt]: 0
+                }
+            },
+            include: [sq.models.stuff]
+        });
+        for (let index = 0; index < regions.length; index++) {
+            const region = regions[index];
+            let stuff_ids = (region.stuff || []).map(s => s.id);
+            if (stuff_ids.length === 0) {
+                continue;
+            }
+            await this.auto_call_for_region(region.parking_count, stuff_ids);
+        }
+    },
+    auto_call_for_region: async function (parking_count, stuff_ids) {
+        let sq = db_opt.get_sq();
+        const plan_lib = require('./plan_lib');
+        while (true) {
+            let called_count = await sq.models.plan.count({
+                where: {
+                    stuffId: {
+                        [db_opt.Op.in]: stuff_ids
+                    },
+                    call_time: {
+                        [db_opt.Op.ne]: null
+                    },
+                    status: {
+                        [db_opt.Op.ne]: 3
+                    },
+                    count: 0,
+                }
+            });
+            if (parking_count <= called_count) {
+                break;
+            }
+            let wait_plans = await sq.models.plan.findAll({
+                where: {
+                    stuffId: {
+                        [db_opt.Op.in]: stuff_ids
+                    },
+                    register_time: {
+                        [db_opt.Op.ne]: null
+                    },
+                    call_time: null,
+                    status: {
+                        [db_opt.Op.ne]: 3
+                    },
+                    count: 0,
+                },
+                order: [[sq.fn('TIMESTAMP', sq.col('register_time')), 'ASC']],
+                limit: 20,
+            });
+            let called_one = false;
+            for (let j = 0; j < wait_plans.length; j++) {
+                const plan = wait_plans[j];
+                let expect_status = plan.is_buy ? 1 : 2;
+                if (plan.status != expect_status) {
+                    continue;
+                }
+                try {
+                    let full_plan = await util_lib.get_single_plan_by_id(plan.id);
+                    await this.handle_call_vehicle(full_plan);
+                    await plan_lib.rp_history_call(full_plan, '自动');
+                    called_one = true;
+                    break;
+                } catch (e) {
+                    continue;
+                }
+            }
+            if (!called_one) {
+                break;
+            }
+        }
     },
     clear_first_weight_on_plan: function (plan) {
         if (plan.is_buy) {
