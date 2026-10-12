@@ -242,6 +242,7 @@
         <fui-form ref="charge" top="100">
             <fui-input required label="充值金额" borderTop placeholder="负值为扣款" v-model="cash"></fui-input>
             <fui-input required label="充值原因" borderTop placeholder="请输入充值原因" v-model="comment"></fui-input>
+            <fui-input label="银行名称" borderTop placeholder="请输入银行名称(可选)" v-model="bank_name"></fui-input>
         </fui-form>
     </fui-modal>
     <fui-bottom-popup :show="show_charge_history" @close="show_charge_history = false">
@@ -342,6 +343,7 @@ export default {
             show_charge_history: false,
             cash: '',
             comment: '',
+            bank_name:'',
             show_charge: false,
             charging: false,
             show_del: false,
@@ -840,7 +842,8 @@ export default {
                     await this.$send_req(charge_url, this.make_context_req({
                         contract_id: this.focus_item.id,
                         cash_increased: parseFloat(this.cash),
-                        comment: this.comment
+                        comment: this.comment,
+                        bank_name: this.bank_name,
                     }, charge_url, this.show_scope_switch, this.self_info && this.self_info.company_is_group === true, this.stat_context_company_id));
                     uni.startPullDownRefresh();
                     this.show_charge = false;
@@ -1226,7 +1229,7 @@ export default {
             });
             return ret.contracts;
         },
-        
+
     },
     created: function () {
         this.init_top_seg();
