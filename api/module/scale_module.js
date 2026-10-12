@@ -81,7 +81,6 @@ module.exports = {
                     let user = await rbac_lib.get_user_by_token(token);
                     await plan_lib.rp_history_cancel_checkin(plan, user.name);
                 }, false, null, true);
-                await field_lib.auto_call_vehicle();
                 return { result: true };
             },
         },
