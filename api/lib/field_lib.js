@@ -7,6 +7,7 @@ const util_lib = require('./util_lib');
 const fc_lib = require('./fc_lib');
 let currentDay = moment().format('YYYY-MM-DD');
 let currentNumber = 0;
+let autoCallVehicleRunning = false;
 function get_increased_number() {
     const today = moment().format('YYYY-MM-DD');
     if (today === currentDay) {
@@ -76,22 +77,30 @@ module.exports = {
 
     },
     auto_call_vehicle: async function () {
-        let sq = db_opt.get_sq();
-        let regions = await sq.models.region_capacity.findAll({
-            where: {
-                parking_count: {
-                    [db_opt.Op.gt]: 0
+        if (autoCallVehicleRunning) {
+            return;
+        }
+        autoCallVehicleRunning = true;
+        try {
+            let sq = db_opt.get_sq();
+            let regions = await sq.models.region_capacity.findAll({
+                where: {
+                    parking_count: {
+                        [db_opt.Op.gt]: 0
+                    }
+                },
+                include: [sq.models.stuff]
+            });
+            for (let index = 0; index < regions.length; index++) {
+                const region = regions[index];
+                let stuff_ids = (region.stuff || []).map(s => s.id);
+                if (stuff_ids.length === 0) {
+                    continue;
                 }
-            },
-            include: [sq.models.stuff]
-        });
-        for (let index = 0; index < regions.length; index++) {
-            const region = regions[index];
-            let stuff_ids = (region.stuff || []).map(s => s.id);
-            if (stuff_ids.length === 0) {
-                continue;
+                await this.auto_call_for_region(region.parking_count, stuff_ids);
             }
-            await this.auto_call_for_region(region.parking_count, stuff_ids);
+        } finally {
+            autoCallVehicleRunning = false;
         }
     },
     auto_call_for_region: async function (parking_count, stuff_ids) {
@@ -136,11 +145,19 @@ module.exports = {
                 if (plan.status != expect_status) {
                     continue;
                 }
+                let called_one = false;
                 try {
-                    let full_plan = await util_lib.get_single_plan_by_id(plan.id);
-                    await this.handle_call_vehicle(full_plan);
-                    await plan_lib.rp_history_call(full_plan, '自动');
-                    break;
+                    await plan_lib.action_in_plan(plan.id, null, -1, async (full_plan) => {
+                        if (full_plan.status != expect_status || full_plan.register_time == null || full_plan.call_time != null || full_plan.count != 0) {
+                            return;
+                        }
+                        await this.handle_call_vehicle(full_plan);
+                        await plan_lib.rp_history_call(full_plan, '自动');
+                        called_one = true;
+                    }, true);
+                    if (called_one) {
+                        break;
+                    }
                 } catch (e) {
                     continue;
                 }
