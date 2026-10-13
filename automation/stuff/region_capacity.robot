@@ -28,6 +28,7 @@ Auto Call On Check In
     Add Region Stuff  ${region}[id]  ${test_stuff}[id]
     ${plan}  Prepare Paid Plan  ${0}
     Check In A Plan  ${plan}  open_id=oid_auto_0
+    sleep  10s
     ${plan}  Get Plan By Id  ${plan}[id]
     Should Not Be Empty  ${plan}[register_time]
     Should Not Be Empty  ${plan}[call_time]
@@ -49,6 +50,7 @@ Auto Call Respects Parking Count
     Check In A Plan  ${plan1}  open_id=oid_cap_0
     Sleep  1s
     Check In A Plan  ${plan2}  open_id=oid_cap_1
+    sleep  10s
     ${plan1}  Get Plan By Id  ${plan1}[id]
     ${plan2}  Get Plan By Id  ${plan2}[id]
     Should Not Be Empty  ${plan1}[call_time]
@@ -63,9 +65,11 @@ Auto Call After Cancel Check In
     Check In A Plan  ${plan1}  open_id=oid_cancel_0
     Sleep  1s
     Check In A Plan  ${plan2}  open_id=oid_cancel_1
+    sleep  10s
     ${plan1}  Get Plan By Id  ${plan1}[id]
     Should Not Be Empty  ${plan1}[call_time]
     Cancel Check In Plan  ${plan1}
+    sleep  10s
     ${plan2}  Get Plan By Id  ${plan2}[id]
     Should Not Be Empty  ${plan2}[call_time]
     ${latest_node}  Get Latest History Node  ${plan2}
@@ -82,11 +86,13 @@ Auto Call After Deliver
     Check In A Plan  ${plan1}  open_id=oid_deliver_0
     Sleep  1s
     Check In A Plan  ${plan2}  open_id=oid_deliver_1
+    sleep  10s
     ${plan1}  Get Plan By Id  ${plan1}[id]
     Should Not Be Empty  ${plan1}[call_time]
     ${plan2}  Get Plan By Id  ${plan2}[id]
     Should Not Contain  ${plan2}  call_time
     Deliver A Plan  ${plan1}  ${20}
+    sleep  10s
     ${plan2}  Get Plan By Id  ${plan2}[id]
     Should Not Be Empty  ${plan2}[call_time]
     ${latest_node}  Get Latest History Node  ${plan2}
