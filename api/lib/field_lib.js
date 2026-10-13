@@ -145,7 +145,6 @@ module.exports = {
                 if (plan.status != expect_status) {
                     continue;
                 }
-                let called_one = false;
                 try {
                     await plan_lib.action_in_plan(plan.id, null, -1, async (full_plan) => {
                         if (full_plan.status != expect_status || full_plan.register_time == null || full_plan.call_time != null || full_plan.count != 0) {
@@ -153,11 +152,7 @@ module.exports = {
                         }
                         await this.handle_call_vehicle(full_plan);
                         await plan_lib.rp_history_call(full_plan, '自动');
-                        called_one = true;
                     }, true);
-                    if (called_one) {
-                        break;
-                    }
                 } catch (e) {
                     continue;
                 }
