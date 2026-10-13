@@ -406,6 +406,7 @@ else {
         field_lib.auto_uncheck_in();
         plan_lib.walk_through2checkout();
         t_plus_lib.walk_through_tplus_settle();
+        field_lib.auto_call_vehicle();
     });
     add_min_timer(6, async () => {
         let sq = db_opt.get_sq();

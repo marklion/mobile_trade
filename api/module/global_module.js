@@ -809,7 +809,6 @@ module.exports = {
                         const field_lib = require('../lib/field_lib');
                         await field_lib.handle_driver_check_in(plan);
                         await plan_lib.rp_history_checkin(plan);
-                        await field_lib.auto_call_vehicle();
                         return { result: true };
                     }
                     else {
