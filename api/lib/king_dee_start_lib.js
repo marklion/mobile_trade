@@ -17,24 +17,35 @@ async function req_to_king_dee_start(king_dee_start_config, api_path, method, da
     if (headers) {
         req.headers = headers;
     }
-    let resp = await kds.request(req);
-    ret = resp.data;
-    if (ret.errcode && ret.errcode != 0) {
-        let stuff = await king_dee_start_config.getStuff();
-        if (stuff) {
-            let company = await stuff.getCompany();
-            if (company) {
-                await company.createKing_dee_error({
-                    error_string: ret.description
-                });
+    try {
+        let resp = await kds.request(req);
+        ret = resp.data;
+        if (ret.errcode && ret.errcode != 0) {
+            let stuff = await king_dee_start_config.getStuff();
+            if (stuff) {
+                let company = await stuff.getCompany();
+                if (company) {
+                    await company.createKing_dee_error({
+                        error_string: ret.description
+                    });
+                }
             }
+            throw new Error('king_dee_start_api_error:' + ret.description);
         }
-        throw new Error('king_dee_start_api_error:' + ret.description);
+        ret = ret.data;
     }
-    ret = ret.data;
+    catch (error) {
+        let orig_msg = error.message;
+        if (error.response) {
+            orig_msg = error.response.data ? JSON.stringify(error.response.data) : error.message;
+        }
+        throw new Error('king_dee_start_api_error:' + orig_msg);
+    }
+
     return ret;
 }
-async function req_to_king_dee_start_full(king_dee_start_config, api_path, method, data) {
+
+async function get_king_dee_token(king_dee_start_config) {
     let resp = await req_to_king_dee_start(king_dee_start_config,
         "https://api.kingdee.com/jdyconnector/app_management/push_app_authorize",
         "POST",
@@ -56,8 +67,50 @@ async function req_to_king_dee_start_full(king_dee_start_config, api_path, metho
         });
     let app_token = resp["app-token"];
     let domain = auth_info.domain;
+    return {
+        app_token: app_token,
+        domain: domain,
+    }
+}
 
-    resp = await req_to_king_dee_start(king_dee_start_config,
+const king_dee_token_manager = {
+    token_cache: {},
+    make_token: async function (king_dee_start_config) {
+        let token_info = {
+            token: '',
+            domain: '',
+            make_time: 0,
+        }
+        try {
+            let token_resp = await get_king_dee_token(king_dee_start_config);
+            token_info = {
+                token: token_resp.app_token,
+                domain: token_resp.domain,
+                make_time: Date.now()
+            };
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
+        this.token_cache[king_dee_start_config.id] = token_info;
+    },
+    get_token: async function (king_dee_start_config) {
+        let exist_cache = this.token_cache[king_dee_start_config.id];
+        if (!exist_cache || Date.now() - this.token_cache[king_dee_start_config.id].make_time > 20 * 60 * 1000) {
+            await this.make_token(king_dee_start_config);
+            exist_cache = this.token_cache[king_dee_start_config.id];
+        }
+        return {
+            token: exist_cache.token,
+            domain: exist_cache.domain
+        }
+    }
+};
+
+async function req_to_king_dee_start_full(king_dee_start_config, api_path, method, data) {
+    let { token: app_token, domain } = await king_dee_token_manager.get_token(king_dee_start_config);
+
+    let resp = await req_to_king_dee_start(king_dee_start_config,
         api_path,
         method,
         data,
