@@ -9,7 +9,9 @@ const fs = require('fs');
 let currentDay = moment().format('YYYY-MM-DD');
 let autoCallVehicleRunning = false;
 function get_increased_number(stuff_id) {
-    let currentNumberMap = JSON.parse(fs.readFileSync('current_number_map.json', 'utf8') || '{}');
+    let currentNumberMap = fs.existsSync('current_number_map.json')
+        ? JSON.parse(fs.readFileSync('current_number_map.json', 'utf8'))
+        : {};
     if (!currentNumberMap[stuff_id]) {
         currentNumberMap[stuff_id] = 0;
     }
@@ -17,7 +19,9 @@ function get_increased_number(stuff_id) {
     if (today === currentDay) {
         currentNumberMap[stuff_id] += 1;
     } else {
-        currentNumberMap[stuff_id] = 1;
+        for (let key in currentNumberMap) {
+            currentNumberMap[key] = 1;
+        }
         currentDay = today;
     }
     fs.writeFileSync('current_number_map.json', JSON.stringify(currentNumberMap), 'utf8');
@@ -185,7 +189,7 @@ module.exports = {
     handle_driver_check_in: async function (_plan) {
         await hook_plan('check_in', _plan);
         _plan.register_time = moment().format('YYYY-MM-DD HH:mm:ss');
-        _plan.register_number = get_increased_number();
+        _plan.register_number = get_increased_number(_plan.stuff.id);
         await _plan.save();
     },
     handle_cancel_check_in: async function (_plan) {
