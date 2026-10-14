@@ -5,18 +5,28 @@ const { hook_plan } = require('./hook_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('./util_lib');
 const fc_lib = require('./fc_lib');
+const fs = require('fs');
 let currentDay = moment().format('YYYY-MM-DD');
-let currentNumber = 0;
 let autoCallVehicleRunning = false;
-function get_increased_number() {
+const cnm_file = '/database/current_number_map.json';
+function get_increased_number(stuff_id) {
+    let currentNumberMap = fs.existsSync(cnm_file)
+        ? JSON.parse(fs.readFileSync(cnm_file, 'utf8'))
+        : {};
+    if (!currentNumberMap[stuff_id]) {
+        currentNumberMap[stuff_id] = 0;
+    }
     const today = moment().format('YYYY-MM-DD');
     if (today === currentDay) {
-        currentNumber += 1;
+        currentNumberMap[stuff_id] += 1;
     } else {
-        currentNumber = 1;
+        for (let key in currentNumberMap) {
+            currentNumberMap[key] = 1;
+        }
         currentDay = today;
     }
-    return currentNumber;
+    fs.writeFileSync(cnm_file, JSON.stringify(currentNumberMap), 'utf8');
+    return currentNumberMap[stuff_id];
 }
 async function run_plugin_based_on_company(company, name, func) {
     const plugin = all_plugin.get_plugin_by_name(company.script);
@@ -180,7 +190,7 @@ module.exports = {
     handle_driver_check_in: async function (_plan) {
         await hook_plan('check_in', _plan);
         _plan.register_time = moment().format('YYYY-MM-DD HH:mm:ss');
-        _plan.register_number = get_increased_number();
+        _plan.register_number = get_increased_number(_plan.stuff.id);
         await _plan.save();
     },
     handle_cancel_check_in: async function (_plan) {
