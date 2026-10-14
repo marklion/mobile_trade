@@ -72,22 +72,22 @@ const king_dee_token_manager = {
             make_time: 0,
         }
         try {
-            let token_info = await get_king_dee_token(king_dee_start_config);
+            let token_resp = await get_king_dee_token(king_dee_start_config);
             token_info = {
-                token: token_info.app_token,
-                domain: token_info.domain,
+                token: token_resp.app_token,
+                domain: token_resp.domain,
                 make_time: Date.now()
             };
         } catch (error) {
             console.log(error);
         }
-        this.token_cache[king_dee_start_config.app_key] = token_info;
+        this.token_cache[king_dee_start_config.id] = token_info;
     },
     get_token: async function (king_dee_start_config) {
-        let exist_cache = this.token_cache[king_dee_start_config.app_key];
-        if (!exist_cache || Date.now() - this.token_cache[king_dee_start_config.app_key].make_time > 20 * 60 * 1000) {
+        let exist_cache = this.token_cache[king_dee_start_config.id];
+        if (!exist_cache || Date.now() - this.token_cache[king_dee_start_config.id].make_time > 20 * 60 * 1000) {
             await this.make_token(king_dee_start_config);
-            exist_cache = this.token_cache[king_dee_start_config.app_key];
+            exist_cache = this.token_cache[king_dee_start_config.id];
         }
         return {
             token: exist_cache.token,
