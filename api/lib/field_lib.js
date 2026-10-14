@@ -8,9 +8,10 @@ const fc_lib = require('./fc_lib');
 const fs = require('fs');
 let currentDay = moment().format('YYYY-MM-DD');
 let autoCallVehicleRunning = false;
+const cnm_file = '/database/current_number_map.json';
 function get_increased_number(stuff_id) {
-    let currentNumberMap = fs.existsSync('current_number_map.json')
-        ? JSON.parse(fs.readFileSync('current_number_map.json', 'utf8'))
+    let currentNumberMap = fs.existsSync(cnm_file)
+        ? JSON.parse(fs.readFileSync(cnm_file, 'utf8'))
         : {};
     if (!currentNumberMap[stuff_id]) {
         currentNumberMap[stuff_id] = 0;
@@ -24,7 +25,7 @@ function get_increased_number(stuff_id) {
         }
         currentDay = today;
     }
-    fs.writeFileSync('current_number_map.json', JSON.stringify(currentNumberMap), 'utf8');
+    fs.writeFileSync(cnm_file, JSON.stringify(currentNumberMap), 'utf8');
     return currentNumberMap[stuff_id];
 }
 async function run_plugin_based_on_company(company, name, func) {
