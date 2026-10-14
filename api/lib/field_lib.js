@@ -5,18 +5,23 @@ const { hook_plan } = require('./hook_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('./util_lib');
 const fc_lib = require('./fc_lib');
+const fs = require('fs');
 let currentDay = moment().format('YYYY-MM-DD');
-let currentNumber = 0;
 let autoCallVehicleRunning = false;
-function get_increased_number() {
+function get_increased_number(stuff_id) {
+    let currentNumberMap = JSON.parse(fs.readFileSync('current_number_map.json', 'utf8') || '{}');
+    if (!currentNumberMap[stuff_id]) {
+        currentNumberMap[stuff_id] = 0;
+    }
     const today = moment().format('YYYY-MM-DD');
     if (today === currentDay) {
-        currentNumber += 1;
+        currentNumberMap[stuff_id] += 1;
     } else {
-        currentNumber = 1;
+        currentNumberMap[stuff_id] = 1;
         currentDay = today;
     }
-    return currentNumber;
+    fs.writeFileSync('current_number_map.json', JSON.stringify(currentNumberMap), 'utf8');
+    return currentNumberMap[stuff_id];
 }
 async function run_plugin_based_on_company(company, name, func) {
     const plugin = all_plugin.get_plugin_by_name(company.script);
