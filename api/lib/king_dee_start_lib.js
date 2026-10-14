@@ -80,6 +80,7 @@ const king_dee_token_manager = {
             };
         } catch (error) {
             console.log(error);
+            throw error;
         }
         this.token_cache[king_dee_start_config.id] = token_info;
     },
