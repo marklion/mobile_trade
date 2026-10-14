@@ -34,7 +34,8 @@ async function req_to_king_dee_start(king_dee_start_config, api_path, method, da
     ret = ret.data;
     return ret;
 }
-async function req_to_king_dee_start_full(king_dee_start_config, api_path, method, data) {
+
+async function get_king_dee_token(king_dee_start_config) {
     let resp = await req_to_king_dee_start(king_dee_start_config,
         "https://api.kingdee.com/jdyconnector/app_management/push_app_authorize",
         "POST",
@@ -56,8 +57,41 @@ async function req_to_king_dee_start_full(king_dee_start_config, api_path, metho
         });
     let app_token = resp["app-token"];
     let domain = auth_info.domain;
+    return {
+        app_token: app_token,
+        domain: domain,
+    }
+}
 
-    resp = await req_to_king_dee_start(king_dee_start_config,
+const king_dee_token_manager = {
+    token: '',
+    domain: '',
+    make_time: 0,
+    make_token: async function (king_dee_start_config) {
+        try {
+            let token_info = await get_king_dee_token(king_dee_start_config);
+            this.token = token_info.app_token;
+            this.domain = token_info.domain;
+            this.make_time = Date.now();
+        } catch (error) {
+            console.log(error);
+        }
+    },
+    get_token: async function (king_dee_start_config) {
+        if (Date.now() - this.make_time > 20 * 60 * 1000) {
+            await this.make_token(king_dee_start_config);
+        }
+        return {
+            token: this.token,
+            domain: this.domain
+        }
+    }
+};
+
+async function req_to_king_dee_start_full(king_dee_start_config, api_path, method, data) {
+    let { token: app_token, domain } = await king_dee_token_manager.get_token(king_dee_start_config);
+
+    let resp = await req_to_king_dee_start(king_dee_start_config,
         api_path,
         method,
         data,
