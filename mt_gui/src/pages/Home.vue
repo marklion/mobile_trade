@@ -204,21 +204,6 @@
                 </view>
             </view>
         </module-filter>
-        <view id="llm-export-section" class="section-shell section-shell-last" @click="goto_llm_export">
-            <view class="section-head llm-section-head">
-                <view class="section-head-left">
-                    <view class="section-bar"></view>
-                    <view class="section-titles">
-                        <text class="section-title">智能导出</text>
-                        <text class="section-en">AI · EXPORT</text>
-                    </view>
-                </view>
-                <fui-icon name="arrowright" size="28" color="#9AA3B8"></fui-icon>
-            </view>
-            <view class="section-body">
-                <text class="llm-entry-desc">用自然语言描述需求，AI自动生成导出文件与图表，点击进入</text>
-            </view>
-        </view>
         <module-filter require_module="stuff">
             <view class="section-shell">
                 <view class="section-head">
