@@ -2,6 +2,7 @@ const api_param_result_define = require('../api_param_result_define');
 const rbac_lib = require('../lib/rbac_lib');
 const db_opt = require('../db_opt');
 const field_lib = require('../lib/field_lib');
+const device_permission_lib = require('../lib/device_permission_lib');
 module.exports = {
     name: 'rbac',
     description: '权限管理',
@@ -340,6 +341,89 @@ module.exports = {
                 else {
                     throw { err_msg: '角色或表不存在' };
                 }
+            },
+        },
+        device_action_get_all: {
+            name: '获取设备动作列表',
+            description: '获取可绑定的设备动作列表',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                actions: {
+                    type: Array, mean: '动作列表',
+                    explain: {
+                        name: { type: String, mean: '动作标识', example: 'gate_open' },
+                        description: { type: String, mean: '动作描述', example: '开门/开闸' },
+                    },
+                },
+            },
+            func: async function () {
+                return { actions: device_permission_lib.get_all_actions() };
+            },
+        },
+        device_permission_get_all: {
+            name: '获取设备权限绑定',
+            description: '获取设备-动作-角色绑定关系',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                device_name: { type: String, have_to: false, mean: '设备名称', example: '1号磅' },
+            },
+            result: {
+                bindings: {
+                    type: Array, mean: '绑定列表',
+                    explain: {
+                        id: { type: Number, mean: '绑定id', example: 1 },
+                        device_name: { type: String, mean: '设备名称', example: '1号磅' },
+                        action: { type: String, mean: '动作标识', example: 'gate_open' },
+                        action_name: { type: String, mean: '动作描述', example: '开门/开闸' },
+                        role_id: { type: Number, mean: '角色id', example: 1 },
+                        role_name: { type: String, mean: '角色名', example: '现场操作员' },
+                        role_description: { type: String, mean: '角色描述', example: '可操作设备' },
+                    },
+                },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let bindings = await device_permission_lib.list(company, body.device_name);
+                return { bindings: bindings };
+            },
+        },
+        bind_device_action2role: {
+            name: '绑定设备动作到角色',
+            description: '增加设备、动作和角色的绑定关系',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                device_name: { type: String, have_to: true, mean: '设备名称', example: '1号磅' },
+                action: { type: String, have_to: true, mean: '动作标识', example: 'gate_open' },
+                role_id: { type: Number, have_to: true, mean: '角色id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '绑定结果', example: true },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await device_permission_lib.bind(company, body.device_name, body.action, body.role_id);
+                return { result: true };
+            },
+        },
+        unbind_device_action2role: {
+            name: '解绑设备动作与角色',
+            description: '删除设备、动作和角色的绑定关系',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '绑定id', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '解绑结果', example: true },
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                await device_permission_lib.unbind(company, body.id);
+                return { result: true };
             },
         },
         get_health_info: {

@@ -44,6 +44,10 @@
                     </el-switch>
                 </vue-cell>
                 <vue-cell width="3of12">
+                    <el-switch v-model="device_permission_control" active-text="是否控制设备权限" @change="set_device_permission_control">
+                    </el-switch>
+                </vue-cell>
+                <vue-cell width="3of12">
                     <el-switch v-model="support_location_detail" active-text="卸车地点支持细节输入" @change="set_support_location_detail">
                     </el-switch>
                 </vue-cell>
@@ -240,6 +244,7 @@ export default {
             ticket_hasOrhasnt_place: false,
             access_control_permission: false,
             barriergate_control_permission: false,
+            device_permission_control: false,
             is_the_order_display_price: false,
             change_finished_order_price_switch: false,
             dup_not_permit: false,
@@ -299,6 +304,7 @@ export default {
         this.get_access_control_permission();
         this.get_support_location_detail();
         this.get_barriergate_control_permission();
+        this.get_device_permission_control();
         this.get_is_allowed_order_return();
         this.get_the_order_display_price();
         this.get_hide_order_detail_price();
@@ -558,6 +564,15 @@ export default {
         get_barriergate_control_permission: async function () {
             let ret = await this.$send_req('/global/get_barriergate_control_permission', {});
             this.barriergate_control_permission = ret.barriergate_control_permission;
+        },
+        get_device_permission_control: async function () {
+            let ret = await this.$send_req('/global/get_device_permission_control', {});
+            this.device_permission_control = ret.device_permission_control;
+        },
+        set_device_permission_control: async function () {
+            await this.$send_req('/stuff/set_device_permission_control', {
+                device_permission_control: this.device_permission_control
+            });
         },
         get_the_order_display_price: async function () {
             let ret = await this.$send_req('/global/get_the_order_display_price', {});
