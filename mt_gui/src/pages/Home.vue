@@ -204,21 +204,6 @@
                 </view>
             </view>
         </module-filter>
-        <view id="llm-export-section" class="section-shell section-shell-last" @click="goto_llm_export">
-            <view class="section-head llm-section-head">
-                <view class="section-head-left">
-                    <view class="section-bar"></view>
-                    <view class="section-titles">
-                        <text class="section-title">智能导出</text>
-                        <text class="section-en">AI · EXPORT</text>
-                    </view>
-                </view>
-                <fui-icon name="arrowright" size="28" color="#9AA3B8"></fui-icon>
-            </view>
-            <view class="section-body">
-                <text class="llm-entry-desc">用自然语言描述需求，AI自动生成导出文件与图表，点击进入</text>
-            </view>
-        </view>
         <module-filter require_module="stuff">
             <view class="section-shell">
                 <view class="section-head">
@@ -356,7 +341,7 @@ export default {
                 day_offset: this.day_offset,
                 base_day: this.base_day,
                 stat_context_company_id: this.stat_context_company_id,
-            });
+            }, true);
             let format_confirm_count = (confirm_count, cancel_count) => {
                 let cc = cancel_count || 0;
                 return cc > 0 ? `${confirm_count}(${cc})` : `${confirm_count}`;
@@ -549,7 +534,7 @@ export default {
             if (this.$has_module('stuff')) {
                 let res = await this.$send_req('/stuff/get_count_by_today_yesterday', {
                     stat_context_company_id: this.stat_context_company_id,
-                });
+                }, true);
                 this.totalCountData = res.statistic
                 this.totalCountData.forEach(item => {
                     if (item.second_unit == '吨') {
@@ -591,7 +576,7 @@ export default {
 
             // 发送请求获取订单数量的函数
             let get_count = async (url, cond) => {
-                return (await this.$send_req(url, cond)).total;
+                return (await this.$send_req(url, cond, true)).total;
             };
 
             // 生成图表数据的函数

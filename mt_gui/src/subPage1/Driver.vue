@@ -134,6 +134,15 @@
         <fui-form ref="driver" top="100">
             <fui-input required label="姓名" borderTop placeholder="请输入姓名" v-model="bind_req.name"></fui-input>
             <fui-input required label="身份证号" borderTop placeholder="请输入身份证" v-model="bind_req.id_card"></fui-input>
+            <view class="agree-row">
+                <view class="agree-box" :class="{ checked: agree_policy }" @click="agree_policy = !agree_policy">
+                    <text class="agree-mark" v-if="agree_policy">✓</text>
+                </view>
+                <text class="agree-text" @click="agree_policy = !agree_policy">我已阅读并同意</text>
+                <text class="agree-link" @click.stop="view_policy('user')">《用户服务协议》</text>
+                <text class="agree-text">和</text>
+                <text class="agree-link" @click.stop="view_policy('privacy')">《隐私政策》</text>
+            </view>
             <fui-button type="primary" open-type="getPhoneNumber" text="绑定" @getphonenumber="update_driver"></fui-button>
         </fui-form>
     </fui-modal>
@@ -290,6 +299,7 @@ export default {
             show_sc: false,
             data2show: [],
             show_bind_id_card: false,
+            agree_policy: false,
             driver_self: {
                 "id": 0,
                 "id_card": "",
@@ -868,9 +878,22 @@ export default {
                 "open_id_code": "",
                 "phone_code": ""
             };
+            this.agree_policy = false;
             this.show_bind_id_card = true;
         },
+        view_policy: function (type) {
+            uni.navigateTo({
+                url: '/subPage2/PolicyView?type=' + type
+            });
+        },
         update_driver: async function (phone_param) {
+            if (!this.agree_policy) {
+                uni.showToast({
+                    title: '请先阅读并同意《用户服务协议》和《隐私政策》',
+                    icon: 'none'
+                });
+                return;
+            }
             let rules = [{
                 name: 'name',
                 rule: ['required'],
@@ -1541,6 +1564,42 @@ export default {
     font-size: 20rpx;
     color: #FFFFFF;
     font-weight: 700;
+}
+.agree-row {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 20rpx 0;
+    font-size: 24rpx;
+}
+.agree-box {
+    width: 32rpx;
+    height: 32rpx;
+    margin-right: 10rpx;
+    border: 2rpx solid #9AA3B8;
+    border-radius: 6rpx;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+.agree-box.checked {
+    background: #465CFF;
+    border-color: #465CFF;
+}
+.agree-mark {
+    color: #FFFFFF;
+    font-size: 22rpx;
+    line-height: 1;
+}
+.agree-text {
+    color: #6B7280;
+    font-size: 24rpx;
+}
+.agree-link {
+    color: #465CFF;
+    font-size: 24rpx;
 }
 .driver-sc-act.primary { background: #465CFF; }
 .driver-sc-act.danger { background: #FF4D4F; }

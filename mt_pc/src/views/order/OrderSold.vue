@@ -1,7 +1,7 @@
 <template>
-<div>
-    <order-show-table req_url="/sale_management/order_search" ></order-show-table>
-</div>
+  <div>
+    <order-show-table req_url="/sale_management/order_search_brief" />
+  </div>
 </template>
 
 <script>

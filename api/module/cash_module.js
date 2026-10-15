@@ -22,13 +22,14 @@ module.exports = {
                 contract_id: { type: Number, have_to: false, mean: '合同ID', example: 1 },
                 cash_increased: { type: Number, have_to: false, mean: '增加金额', example: 100 },
                 comment: { type: String, have_to: false, mean: '备注', example: '充值100元' },
+                bank_name: { type: String, have_to: false, mean: '银行名称', example: '鄂尔多斯银行' },
                 stat_context_company_id: stat_context_company_id_param,
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await cash_lib.charge(token, body.contract_id, body.cash_increased, body.comment, body.stat_context_company_id);
+                await cash_lib.charge(token, body.contract_id, body.cash_increased, body.comment, body.stat_context_company_id, body.bank_name);
                 return { result: true };
             },
         },

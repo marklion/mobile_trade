@@ -122,6 +122,7 @@ Specified Approver And Default Approver
     Should Be Equal  ${records}[1][auditer]  ap_user_name
     Approve Record  ${records}[1][id]  ${new_user_token}
     Approve Record  ${records}[0][id]  ${new_user_token}
+    sleep  3s
     Assert Plan Unit Price  ${approval_closed_plan_id}  ${77.77}
     Assert Sale Plan Status And Arrears  ${approval_pay_plan_d_id}  ${2}  ${0}
 

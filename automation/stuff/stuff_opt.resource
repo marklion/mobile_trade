@@ -392,12 +392,48 @@ Driver Online
     ${resp}  Req to Server  /global/driver_online  none  ${req}
     RETURN  ${resp}
 Check In A Plan
-    [Arguments]  ${plan}  ${expect_fail}=${False}  ${index}=0
-    ${driver}  Driver Online  ${plan}[driver][phone]  open_id_for_test  11100090909
+    [Arguments]  ${plan}  ${expect_fail}=${False}  ${index}=0  ${open_id}=open_id_for_test
+    ${driver}  Driver Online  ${plan}[driver][phone]  ${open_id}  11100090909
     ${req}  Create Dictionary  open_id=${driver}[open_id]
     ${resp}  Req Get to Server  /global/driver_get_order  none  plans  -1  &{req}
     ${req}  Create Dictionary  open_id=${driver}[open_id]  plan_id=${resp[${index}]}[id]  lat=${123}  lon=${333}
     Req to Server  /global/driver_checkin  none  ${req}  ${expect_fail}
+
+Add Region Capacity
+    [Arguments]  ${name}  ${parking_count}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  name=${name}  parking_count=${parking_count}
+    ${resp}  Req to Server  /scale/add_region_capacity  ${token}  ${req}
+    RETURN  ${resp}
+
+Del Region Capacity
+    [Arguments]  ${id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${id}
+    Req to Server  /scale/del_region_capacity  ${token}  ${req}
+
+Get Region Capacities
+    [Arguments]  ${token}=${sc_admin_token}
+    @{resp}  Req Get to Server  /scale/get_region_capacity  ${token}  region_capacities
+    RETURN  @{resp}
+
+Add Region Stuff
+    [Arguments]  ${region_id}  ${stuff_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${region_id}  stuff_id=${stuff_id}
+    Req to Server  /scale/add_region_stuff  ${token}  ${req}
+
+Del Region Stuff
+    [Arguments]  ${stuff_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  stuff_id=${stuff_id}
+    Req to Server  /scale/del_region_stuff  ${token}  ${req}
+
+Prepare Paid Plan
+    [Arguments]  ${itr}=0
+    ${mv}  Search Main Vehicle by Index  ${itr}
+    ${bv}  Search behind Vehicle by Index  ${itr}
+    ${dv}  Search Driver by Index  ${itr}
+    ${plan}  Create A Plan  ${bv}[id]  ${mv}[id]  ${dv}[id]
+    Confirm A Plan  ${plan}
+    Manual Pay A Plan  ${plan}
+    RETURN  ${plan}
 
 Driver Confirm
     [Arguments]  ${plan}  ${is_confirm}=${True}  ${expect_fail}=${False}  ${index}=0
@@ -482,19 +518,14 @@ Search Plans Based on User
     ${resp}  Req Get to Server  ${url}  ${token}  ${data_name}  ${-1}  &{req}
     RETURN  ${resp}
 Get Plan By Id
-    [Arguments]  ${plan_id}
-    ${resp}  Search Plans Based on User  ${sc_admin_token}
-    ${more_resp}  Search Orders Based on User  ${sc_admin_token}
-    ${resp}  Combine Lists  ${resp}  ${more_resp}
-    ${plan}  Create Dictionary
-    FOR  ${itr}  IN  @{resp}
-        ${plan_found_id}  Get From Dictionary  ${itr}  id
-        IF  $plan_found_id == $plan_id
-            ${plan}  Set To Dictionary  ${itr}
-            Exit For Loop
-        END
+    [Arguments]  ${plan_id}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  plan_id=${plan_id}
+    ${status}  ${resp}  Run Keyword And Ignore Error  Req to Server  /sale_management/get_order_by_id  ${token}  ${req}
+    IF  '${status}' == 'PASS'
+        RETURN  ${resp}[plan]
     END
-    RETURN  ${plan}
+    ${resp}  Req to Server  /buy_management/get_order_by_id  ${token}  ${req}
+    RETURN  ${resp}[plan]
 Get Latest History Node
     [Arguments]  ${plan}
     ${history}  Copy List  ${plan}[plan_histories]

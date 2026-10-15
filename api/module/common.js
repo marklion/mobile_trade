@@ -4,6 +4,7 @@ const rbac_lib = require('../lib/rbac_lib');
 const moment = require('moment');
 const util_lib = require('../lib/util_lib');
 const api_param_result_define = require('../api_param_result_define');
+const group_lib = require('../lib/group_lib');
 
 const export_center = {
     task_queue: [],
@@ -218,6 +219,55 @@ module.exports = {
                 return {
                     plan: await plan_lib.get_order_detail(body.plan_id, token, view_role, body.stat_context_company_id),
                 };
+            },
+        };
+    },
+    make_sold_order_search: function (name, description, is_buy, brief = false) {
+        return {
+            name: name,
+            description: description,
+            is_write: false,
+            is_get_api: true,
+            params: api_param_result_define.order_search_cond,
+            result: {
+                plans: {
+                    type: Array,
+                    mean: '计划',
+                    explain: brief ? api_param_result_define.plan_brief_define : api_param_result_define.plan_detail_define,
+                },
+            },
+            func: async function (body, token) {
+                let company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                let search_ret = await plan_lib.search_sold_plans(company, body.pageNo, body, is_buy, brief);
+                return { plans: search_ret.rows, total: search_ret.count };
+            },
+        };
+    },
+    make_bought_order_search: function (name, description, is_buy, brief = false) {
+        return {
+            name: name,
+            description: description,
+            is_write: false,
+            is_get_api: true,
+            params: api_param_result_define.order_search_cond,
+            result: {
+                plans: {
+                    type: Array,
+                    mean: '订单',
+                    explain: brief ? api_param_result_define.plan_brief_define : api_param_result_define.plan_detail_define,
+                },
+            },
+            func: async function (body, token) {
+                let user = await rbac_lib.get_user_by_token(token);
+                let home = await rbac_lib.get_company_by_token(token);
+                let ctx = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                let search_ret;
+                if (ctx.id !== home.id) {
+                    search_ret = await plan_lib.search_bought_plans_as_buyer_company(ctx, body.pageNo, body, is_buy, brief);
+                } else {
+                    search_ret = await plan_lib.search_bought_plans_with_contract_authorization(user, home, body.pageNo, body, is_buy, brief);
+                }
+                return { plans: search_ret.rows, total: search_ret.count };
             },
         };
     },

@@ -895,11 +895,14 @@ module.exports = {
     searchPlansByModel: async function (model, where_condition, search_condition, replacePlanFn, isUserModel = false) {
         let result = [];
         let count;
+        const only_count = !!search_condition.only_count;
+        const query_condition = { ...search_condition };
+        delete query_condition.only_count;
         // 根据模型类型选择查询方法
         if (isUserModel) {
             count = await model.countPlans({ where: where_condition });
-            if (!search_condition.only_count) {
-                let plans = await model.getPlans(search_condition);
+            if (!only_count) {
+                let plans = await model.getPlans(query_condition);
                 for (const element of plans) {
                     result.push(await this.processPlan(element, replacePlanFn));
                 }
@@ -907,8 +910,8 @@ module.exports = {
         } else {
             let sq = db_opt.get_sq();
             count = await sq.models.plan.count({ where: where_condition });
-            if (!search_condition.only_count) {
-                let plans = await sq.models.plan.findAll(search_condition);
+            if (!only_count) {
+                let plans = await sq.models.plan.findAll(query_condition);
                 for (const element of plans) {
                     result.push(await this.processPlan(element, replacePlanFn));
                 }
@@ -919,8 +922,9 @@ module.exports = {
     },
     processPlan: async function (element, replacePlanFn) {
         let arc_p = await replacePlanFn(element);
-        this.setDuplicateInfoAndCompany(element);
-        return arc_p || element;
+        let result = arc_p || element;
+        this.setDuplicateInfoAndCompany(result);
+        return result;
     },
     setDuplicateInfoAndCompany: function (element) {
         element.duplicateInfo = {
@@ -1012,34 +1016,39 @@ module.exports = {
         let result = await this.processPlan(plan, this.replace_plan2archive.bind(this));
         if (typeof result?.toJSON === 'function') {
             result = result.toJSON();
+            // toJSON 不会保留 processPlan 挂在实例上的非字段属性
+            this.setDuplicateInfoAndCompany(result);
         }
         return result;
     },
-    search_bought_plans: async function (user, _pageNo, _condition, is_buy = false) {
-        let sq = db_opt.get_sq();
-        let where_condition = this.make_plan_where_condition(_condition, is_buy);
-        let search_condition = {
+    build_plan_search_condition: function (sq, where_condition, _pageNo, _condition, brief = false) {
+        return {
             order: this.resolve_plan_list_order(sq, _condition),
             offset: _pageNo * 20,
             limit: 20,
             where: where_condition,
-            include: util_lib.plan_detail_include(),
+            include: brief ? util_lib.plan_brief_include() : util_lib.plan_detail_include(),
+            only_count: !!_condition.only_count,
         };
-
-        return await this.searchPlansByModel(user, where_condition, search_condition, this.replace_plan2archive.bind(this), true);
     },
-    search_bought_plans_as_buyer_company: async function (company, _pageNo, _condition, is_buy = false) {
+    plan_list_replace_fn: function (brief = false) {
+        if (brief) {
+            return async function (plan) { return plan; };
+        }
+        return this.replace_plan2archive.bind(this);
+    },
+    search_bought_plans: async function (user, _pageNo, _condition, is_buy = false, brief = false) {
+        let sq = db_opt.get_sq();
+        let where_condition = this.make_plan_where_condition(_condition, is_buy);
+        let search_condition = this.build_plan_search_condition(sq, where_condition, _pageNo, _condition, brief);
+        return await this.searchPlansByModel(user, where_condition, search_condition, this.plan_list_replace_fn(brief), true);
+    },
+    search_bought_plans_as_buyer_company: async function (company, _pageNo, _condition, is_buy = false, brief = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         where_condition[db_opt.Op.and].push({ companyId: company.id });
-        let search_condition = {
-            order: this.resolve_plan_list_order(sq, _condition),
-            offset: _pageNo * 20,
-            limit: 20,
-            where: where_condition,
-            include: util_lib.plan_detail_include(),
-        };
-        return await this.searchPlansByModel(company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+        let search_condition = this.build_plan_search_condition(sq, where_condition, _pageNo, _condition, brief);
+        return await this.searchPlansByModel(company, where_condition, search_condition, this.plan_list_replace_fn(brief), false);
     },
     get_authorized_counterparty_company_ids_for_user: async function (user_id, home_company_id, is_buy = false) {
         let sq = db_opt.get_sq();
@@ -1083,7 +1092,7 @@ module.exports = {
         }
         return Array.from(company_id_set);
     },
-    search_bought_plans_with_contract_authorization: async function (user, buyer_company, _pageNo, _condition, is_buy = false) {
+    search_bought_plans_with_contract_authorization: async function (user, buyer_company, _pageNo, _condition, is_buy = false, brief = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
         where_condition[db_opt.Op.and].push({ companyId: buyer_company.id });
@@ -1114,17 +1123,11 @@ module.exports = {
             [db_opt.Op.or]: or_condition,
         });
 
-        let search_condition = {
-            order: this.resolve_plan_list_order(sq, _condition),
-            offset: _pageNo * 20,
-            limit: 20,
-            where: where_condition,
-            include: util_lib.plan_detail_include(),
-        };
+        let search_condition = this.build_plan_search_condition(sq, where_condition, _pageNo, _condition, brief);
 
-        return await this.searchPlansByModel(buyer_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+        return await this.searchPlansByModel(buyer_company, where_condition, search_condition, this.plan_list_replace_fn(brief), false);
     },
-    search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false) {
+    search_sold_plans: async function (_company, _pageNo, _condition, is_buy = false, brief = false) {
         let sq = db_opt.get_sq();
         let where_condition = this.make_plan_where_condition(_condition, is_buy);
 
@@ -1138,14 +1141,8 @@ module.exports = {
             [db_opt.Op.or]: stuff_or,
         });
 
-        let search_condition = {
-            order: this.resolve_plan_list_order(sq, _condition),
-            offset: _pageNo * 20,
-            limit: 20,
-            where: where_condition,
-            include: util_lib.plan_detail_include(),
-        };
-        return await this.searchPlansByModel(_company, where_condition, search_condition, this.replace_plan2archive.bind(this), false);
+        let search_condition = this.build_plan_search_condition(sq, where_condition, _pageNo, _condition, brief);
+        return await this.searchPlansByModel(_company, where_condition, search_condition, this.plan_list_replace_fn(brief), false);
     },
     update_single_plan: async function (_plan_id, _token, _update_data) {
         let sq = db_opt.get_sq();

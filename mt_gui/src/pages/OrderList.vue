@@ -349,7 +349,7 @@ export default {
     },
     computed: {
         show_sale_scope_switch: function () {
-            return this.cur_get_url === '/sale_management/order_search'
+            return this.cur_get_url === '/sale_management/order_search_brief'
                 && this.self_info
                 && this.self_info.company_is_group === true
                 && this.has_group_member_scope;
@@ -782,11 +782,11 @@ export default {
         },
         go_to_order_detail: function (item) {
             let role = 'customer';
-            if (this.cur_get_url === '/sale_management/order_search') {
+            if (this.cur_get_url === '/sale_management/order_search_brief') {
                 role = 'sale_management';
-            } else if (this.cur_get_url === '/buy_management/order_search') {
+            } else if (this.cur_get_url === '/buy_management/order_search_brief') {
                 role = 'buy_management';
-            } else if (this.cur_get_url === '/supplier/order_sale_search') {
+            } else if (this.cur_get_url === '/supplier/order_search_brief') {
                 role = 'supplier';
             }
             let url = '/subPage1/order_detail?id=' + item.id + '&role=' + role;
@@ -1009,7 +1009,7 @@ export default {
             if (this.$has_module('customer')) {
                 this.seg.push({
                     name: '采购下单',
-                    url: '/customer/order_buy_search',
+                    url: '/customer/order_search_brief',
                     cancel_url: '/customer/order_buy_cancel',
                     update_url: '/customer/order_buy_update',
                     motion: true,
@@ -1019,7 +1019,7 @@ export default {
             if (this.$has_module('sale_management')) {
                 this.seg.push({
                     name: '销售接单',
-                    url: '/sale_management/order_search',
+                    url: '/sale_management/order_search_brief',
                     batch_url: '/sale_management/order_batch_confirm',
                     confirm_url: '/sale_management/order_sale_confirm',
                     rollback_url: '/sale_management/order_rollback',
@@ -1032,7 +1032,7 @@ export default {
             if (this.$has_module('supplier')) {
                 this.seg.push({
                     name: '销售下单',
-                    url: '/supplier/order_sale_search',
+                    url: '/supplier/order_search_brief',
                     cancel_url: '/supplier/order_sale_cancel',
                     update_url: '/supplier/order_sale_update',
                     motion: true,
@@ -1042,7 +1042,7 @@ export default {
             if (this.$has_module('buy_management')) {
                 this.seg.push({
                     name: '采购接单',
-                    url: '/buy_management/order_search',
+                    url: '/buy_management/order_search_brief',
                     batch_url: '/buy_management/order_batch_confirm',
                     confirm_url: '/buy_management/order_buy_confirm',
                     rollback_url: '/buy_management/order_rollback',
@@ -1105,10 +1105,10 @@ export default {
         uni.stopPullDownRefresh();
     },
     async onLoad() {
+        this.init_top_seg();
         await this.load_self_info();
         await this.load_stat_scopes();
         this.reset_order_date(false);
-        this.init_top_seg();
         this.init_number_of_sold_plan();
         this.get_price_display_config();
         this.get_hide_order_detail_price_config();

@@ -174,6 +174,9 @@
             <el-form-item label="充值原因" prop="comment">
                 <el-input v-model="charge_req.comment"></el-input>
             </el-form-item>
+            <el-form-item label="银行名称" prop="bank_name">
+                <el-input v-model="charge_req.bank_name"></el-input>
+            </el-form-item>
         </el-form>
         <span slot="footer">
             <el-button @click="show_charge_diag = false">取 消</el-button>
@@ -192,10 +195,10 @@
                     <el-table-column label="操作">
                         <template slot-scope="scope">
                         <div v-if="scope.row.reversed">已冲销</div>
-                            <el-button 
+                            <el-button
                                 v-else
-                                type="warning" 
-                                size="small" 
+                                type="warning"
+                                size="small"
                                 @click="reverseCharge(scope.row)"
                             >冲销</el-button>
                         </template>
@@ -313,6 +316,7 @@ export default {
             charge_req: {
                 cash_increased: '',
                 comment: '',
+                bank_name: '',
             },
             charge_input_rules: {
                 cash_increased: [{
@@ -539,7 +543,7 @@ export default {
             this.$message.success('已清空');
             this.$refs.contracts.refresh(this.$refs.contracts.cur_page || 1);
         },
-        reverseCharge: function (charge) { 
+        reverseCharge: function (charge) {
             this.$confirm('确定冲销该充值吗?', '提示', {
             confirmButtonText: '确定',
             cancelButtonText: '取消',
@@ -552,7 +556,7 @@ export default {
             }));
             this.$refs.charge_history.refresh(1);
         });
-        },      
+        },
         del_contract: function (contract) {
             this.$confirm('确定删除该合同吗?', '提示', {
                 confirmButtonText: '确定',
@@ -578,6 +582,7 @@ export default {
                         contract_id: this.focus_contract.id,
                         cash_increased: parseFloat(this.charge_req.cash_increased),
                         comment: this.charge_req.comment,
+                        bank_name:this.charge_req.bank_name
                     }));
                     this.$refs.contracts.refresh(1);
                     this.show_charge_diag = false;
