@@ -2,6 +2,7 @@ const api_param_result_define = require('../api_param_result_define');
 const plan_lib = require('../lib/plan_lib');
 const field_lib = require('../lib/field_lib');
 const rbac_lib = require('../lib/rbac_lib');
+const device_permission_lib = require('../lib/device_permission_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
 const moment = require('moment');
@@ -289,6 +290,9 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                await device_permission_lib.assert_allowed(
+                    token, company, body.name, body.is_open ? 'gate_open' : 'gate_close'
+                );
                 await field_lib.dev_opt.gate_ctrl(company, body.name, body.is_enter, body.is_open);
                 return { result: true };
             }
@@ -306,6 +310,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                await device_permission_lib.assert_allowed(token, company, body.name, 'confirm_scale');
                 await field_lib.dev_opt.confirm_scale(company, body.name);
                 return { result: true };
             }
@@ -323,6 +328,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                await device_permission_lib.assert_allowed(token, company, body.name, 'reset_scale');
                 await field_lib.dev_opt.reset_scale(company, body.name);
                 return { result: true };
             }
@@ -342,6 +348,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                await device_permission_lib.assert_allowed(token, company, body.name, 'trigger_cap');
                 await field_lib.dev_opt.trigger_cap(company, body.name, body.is_enter, body.vehicle_number);
                 return { result: true };
             }
@@ -360,6 +367,7 @@ module.exports = {
             },
             func: async function (body, token) {
                 let company = await rbac_lib.get_company_by_token(token);
+                await device_permission_lib.assert_allowed(token, company, body.name, 'take_pic');
                 let resp = await field_lib.dev_opt.take_pic(company, body.name, body.is_enter);
                 return { pic: resp };
             }

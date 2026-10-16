@@ -47,6 +47,27 @@
             </el-table-column>
         </el-table>
 
+        <div v-permission="['rbac']" style="margin-top: 24px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px;">
+                <h3 style="margin: 0;">设备权限绑定</h3>
+                <div>
+                    <el-button type="primary" size="mini" @click="open_bind_dialog">新增绑定</el-button>
+                    <el-button size="mini" @click="load_bindings">刷新</el-button>
+                </div>
+            </div>
+            <el-table v-loading="binding_loading" :data="bindings" stripe>
+                <el-table-column prop="device_name" label="设备" min-width="140" />
+                <el-table-column prop="action_name" label="动作" min-width="120" />
+                <el-table-column prop="role_name" label="角色" min-width="140" />
+                <el-table-column prop="role_description" label="角色描述" min-width="160" />
+                <el-table-column label="操作" width="100" fixed="right">
+                    <template slot-scope="scope">
+                        <el-button type="text" size="small" style="color: #f56c6c" @click="remove_binding(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </div>
+
         <el-dialog :visible.sync="pic_path.length != 0" center>
             <el-image :src="pic_path"></el-image>
         </el-dialog>
@@ -56,6 +77,30 @@
             <span slot="footer">
                 <el-button @click="show_cap = false">取 消</el-button>
                 <el-button type="primary" @click="trigger_cap(cap_enter)">确 定</el-button>
+            </span>
+        </el-dialog>
+
+        <el-dialog title="新增设备权限绑定" :visible.sync="show_bind_dialog" width="480px" @closed="reset_bind_form">
+            <el-form label-width="90px">
+                <el-form-item label="设备" required>
+                    <el-select v-model="bind_form.device_name" placeholder="选择设备" filterable style="width: 100%">
+                        <el-option v-for="dev in all_dev" :key="dev.name" :label="dev.name" :value="dev.name" />
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="动作" required>
+                    <el-select v-model="bind_form.action" placeholder="选择动作" style="width: 100%">
+                        <el-option v-for="act in actions" :key="act.name" :label="act.description" :value="act.name" />
+                    </el-select>
+                </el-form-item>
+                <el-form-item label="角色" required>
+                    <el-select v-model="bind_form.role_id" placeholder="选择角色" filterable style="width: 100%">
+                        <el-option v-for="role in roles" :key="role.id" :label="role.name" :value="role.id" />
+                    </el-select>
+                </el-form-item>
+            </el-form>
+            <span slot="footer">
+                <el-button @click="show_bind_dialog = false">取消</el-button>
+                <el-button type="primary" :loading="bind_saving" @click="save_binding">保存</el-button>
             </span>
         </el-dialog>
     </el-main>
@@ -83,11 +128,26 @@ export default {
                 saler_name: '',
                 scale_status: '',
             },
+            bindings: [],
+            binding_loading: false,
+            actions: [],
+            roles: [],
+            show_bind_dialog: false,
+            bind_saving: false,
+            bind_form: {
+                device_name: '',
+                action: '',
+                role_id: '',
+            },
         };
     },
     mounted() {
         this.init_dev();
         this.init_health_info();
+        if (this.$hasPermission('rbac')) {
+            this.load_permission_meta();
+            this.load_bindings();
+        }
     },
     computed: {
         gate_name: function () {
@@ -113,6 +173,73 @@ export default {
                 let resp = await this.$send_req('/rbac/get_health_info', {});
                 this.health_info = resp.result;
             }
+        },
+        load_permission_meta: async function () {
+            try {
+                let [action_ret, role_ret] = await Promise.all([
+                    this.$send_req('/rbac/device_action_get_all', {}),
+                    this.$send_req('/rbac/role_get_all', { pageNo: 0 }),
+                ]);
+                this.actions = action_ret.actions || [];
+                this.roles = role_ret.all_role || [];
+            } catch (e) {
+                this.actions = [];
+                this.roles = [];
+            }
+        },
+        load_bindings: async function () {
+            this.binding_loading = true;
+            try {
+                let ret = await this.$send_req('/rbac/device_permission_get_all', {});
+                this.bindings = ret.bindings || [];
+            } catch (e) {
+                this.bindings = [];
+            } finally {
+                this.binding_loading = false;
+            }
+        },
+        open_bind_dialog: async function () {
+            if (!this.all_dev.length) {
+                await this.init_dev();
+            }
+            if (!this.actions.length || !this.roles.length) {
+                await this.load_permission_meta();
+            }
+            this.show_bind_dialog = true;
+        },
+        reset_bind_form: function () {
+            this.bind_form = {
+                device_name: '',
+                action: '',
+                role_id: '',
+            };
+            this.bind_saving = false;
+        },
+        save_binding: async function () {
+            if (!this.bind_form.device_name || !this.bind_form.action || !this.bind_form.role_id) {
+                this.$message.warning('请完整选择设备、动作和角色');
+                return;
+            }
+            this.bind_saving = true;
+            try {
+                await this.$send_req('/rbac/bind_device_action2role', {
+                    device_name: this.bind_form.device_name,
+                    action: this.bind_form.action,
+                    role_id: this.bind_form.role_id,
+                });
+                this.$message.success('绑定成功');
+                this.show_bind_dialog = false;
+                await this.load_bindings();
+            } finally {
+                this.bind_saving = false;
+            }
+        },
+        remove_binding: function (row) {
+            this.$confirm('确定删除该设备权限绑定吗?').then(async () => {
+                await this.$send_req('/rbac/unbind_device_action2role', { id: row.id });
+                this.$message.success('已删除');
+                await this.load_bindings();
+            }).catch(() => {});
         },
         reboot_scale_system: function () {
             this.$confirm('确定要重启过磅系统吗?').then(async () => {

@@ -2555,6 +2555,20 @@ module.exports = {
                 return { barriergate_control_permission: company.barriergate_control_permission };
             }
         },
+        get_device_permission_control: {
+            name: '获取设备权限控制开关',
+            description: '获取是否启用设备权限控制',
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                device_permission_control: { type: Boolean, mean: '是否启用设备权限控制', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                return { device_permission_control: company.device_permission_control };
+            }
+        },
         get_is_allowed_order_return: {
             name: '获取是否允许订单回退',
             description: '获取是否允许订单回退',

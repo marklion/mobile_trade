@@ -1527,6 +1527,26 @@ module.exports = {
                 return { result: true };
             }
         },
+        set_device_permission_control: {
+            name: '设置设备权限控制开关',
+            description: '设置是否启用设备权限控制',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                device_permission_control: { type: Boolean, have_to: true, mean: '是否启用设备权限控制', example: true }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (company) {
+                    company.device_permission_control = body.device_permission_control;
+                    await company.save();
+                }
+                return { result: true };
+            }
+        },
         set_change_finished_order_price_switch: {
             name: '设置已完成订单修改价格开关',
             description: '设置已完成订单修改价格开关',

@@ -353,6 +353,13 @@
                         </view>
                         <view class="policy-row">
                             <view class="policy-copy">
+                                <text class="policy-title">控制设备权限</text>
+                                <text class="policy-desc">开启后按设备-动作-角色绑定校验操作权限</text>
+                            </view>
+                            <u-switch v-model="device_permission_control" @change="set_device_permission_control"></u-switch>
+                        </view>
+                        <view class="policy-row">
+                            <view class="policy-copy">
                                 <text class="policy-title">卸车地点支持细节输入</text>
                                 <text class="policy-desc">允许填写更细的卸车位置说明</text>
                             </view>
@@ -619,6 +626,7 @@ export default {
             ticket_hasOrhasnt_place: false,
             access_control_permission: false,
             barriergate_control_permission: false,
+            device_permission_control: false,
             support_location_detail: false,
             is_allowed_order_return: false,
             is_the_order_display_price: false,
@@ -657,6 +665,11 @@ export default {
                     getUrl: '/global/get_barriergate_control_permission',
                     setUrl: '/stuff/set_barriergate_control_permission',
                     key: 'barriergate_control_permission'
+                },
+                device_permission_control: {
+                    getUrl: '/global/get_device_permission_control',
+                    setUrl: '/stuff/set_device_permission_control',
+                    key: 'device_permission_control'
                 },
                 support_location_detail: {
                     getUrl: '/global/get_support_location_detail',
@@ -1373,6 +1386,12 @@ export default {
         },
         set_barriergate_control_permission: function () {
             return this.setGlobalConfig('barriergate_control_permission');
+        },
+        get_device_permission_control: function () {
+            return this.getGlobalConfig('device_permission_control');
+        },
+        set_device_permission_control: function () {
+            return this.setGlobalConfig('device_permission_control');
         },
         get_support_location_detail: function () {
             return this.getGlobalConfig('support_location_detail');

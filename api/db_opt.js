@@ -132,6 +132,7 @@ let db_opt = {
             access_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
             support_location_detail: { type: DataTypes.BOOLEAN, defaultValue: false },
             barriergate_control_permission: { type: DataTypes.BOOLEAN, defaultValue: false },
+            device_permission_control: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_the_order_display_price: { type: DataTypes.BOOLEAN, defaultValue: false },
             hide_order_detail_price: { type: DataTypes.BOOLEAN, defaultValue: false },
             is_allowed_order_return: { type: DataTypes.BOOLEAN, defaultValue: false },
@@ -585,6 +586,11 @@ let db_opt = {
             chart_result: { type: DataTypes.TEXT },
             sql: { type: DataTypes.TEXT },
         },
+        device_permission_binding: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            device_name: { type: DataTypes.STRING },
+            action: { type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -830,6 +836,11 @@ let db_opt = {
         });
         _sq.models.llm_export_record.belongsTo(_sq.models.rbac_user);
         _sq.models.rbac_user.hasMany(_sq.models.llm_export_record);
+
+        _sq.models.device_permission_binding.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.device_permission_binding);
+        _sq.models.device_permission_binding.belongsTo(_sq.models.rbac_role);
+        _sq.models.rbac_role.hasMany(_sq.models.device_permission_binding);
     },
     install: async function () {
         console.log('run install');
