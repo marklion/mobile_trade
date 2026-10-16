@@ -59,6 +59,10 @@
                         <text class="meta-item">{{ driver_name(item) }}</text>
                         <text class="meta-sep">·</text>
                         <text class="meta-item phone" :data-phone="driver_phone(item)" @click="on_copy_phone">{{ driver_phone(item) }}</text>
+                        <template v-if="complex_text_of(item)">
+                            <text class="meta-sep">·</text>
+                            <text class="meta-item">{{ complex_text_of(item) }}</text>
+                        </template>
                     </view>
 
                     <view class="plan-facts">
@@ -164,6 +168,7 @@
     <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
+        <fui-input v-for="meta in complex_input_metas" :key="meta.name" :label="meta.label" borderTop :placeholder="'请输入' + meta.label" v-model="complex_input[meta.name]"></fui-input>
         <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
             <slot v-if="focus_company.pressure_config" name="default">
                 <fui-button type="success" btnSize="mini" @click="confirmSealNo">确认泄压</fui-button>
@@ -243,6 +248,8 @@ export default {
             only_show_uncalled: false,
             show_one_att: false,
             one_att: [''],
+            complex_input_metas: [],
+            complex_input: {},
         };
     },
     methods: {
@@ -263,6 +270,21 @@ export default {
         },
         driver_phone: function (item) {
             return (item && item.driver && item.driver.phone) ? item.driver.phone : '-';
+        },
+        complex_text_of: function (item) {
+            if (!item || !item.complex_input) {
+                return '';
+            }
+            try {
+                const values = JSON.parse(item.complex_input);
+                const metas = JSON.parse(item.complex_input_metas || '[]') || [];
+                return metas
+                    .filter(m => values[m.name] !== undefined && values[m.name] !== '')
+                    .map(m => m.label + ':' + values[m.name])
+                    .join(' ');
+            } catch (err) {
+                return String(item.complex_input);
+            }
         },
         short_time: function (val) {
             if (!val) {
@@ -496,6 +518,9 @@ export default {
             this.focus_plan_id = item.id;
             this.tmp_seal_no = item.seal_no;
             this.zone_name = '';
+            this.complex_input_metas = JSON.parse(item.complex_input_metas || '[]') || [];
+            this.complex_input = {};
+            this.complex_input_metas.forEach(m => this.$set(this.complex_input, m.name, ''));
             this.show_confirm_vehicle = true;
             this.focus_company = item.stuff.company;
             this.zones = item.stuff.drop_take_zones;
@@ -504,11 +529,23 @@ export default {
             this.tmp_seal_no = '正在泄压';
         },
         confirm_vehicle: async function (e) {
+            if (e.index == 1) {
+                for (const m of this.complex_input_metas) {
+                    if (!String(this.complex_input[m.name] ?? '').trim()) {
+                        uni.showToast({
+                            title: '请输入' + m.label,
+                            icon: 'none'
+                        });
+                        return;
+                    }
+                }
+            }
             await this.$send_req('/scale/confirm_vehicle', {
                 plan_id: this.focus_plan_id,
                 is_confirm: e.index == 1,
                 seal_no: this.tmp_seal_no,
-                drop_take_zone_name: this.zone_name
+                drop_take_zone_name: this.zone_name,
+                complex_input: JSON.stringify(this.complex_input)
             });
             this.refresh_plans();
             this.show_confirm_vehicle = false;

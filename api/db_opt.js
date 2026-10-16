@@ -211,6 +211,7 @@ let db_opt = {
             subsidy_price: { type: DataTypes.DECIMAL(12, 2), defaultValue: 0, get: getDecimalValue('subsidy_price') },
             king_dee_comment: { type: DataTypes.STRING },
             driver_confirm_time:{ type: DataTypes.STRING },
+            complex_input: { type: DataTypes.TEXT },
         },
         vehicle: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -260,6 +261,7 @@ let db_opt = {
             need_driver_sign: { type: DataTypes.BOOLEAN, defaultValue: false },
             protocol_doc_path: { type: DataTypes.TEXT },
             protocol_signers: { type: DataTypes.TEXT },
+            complex_plugin:{type:DataTypes.TEXT},
         },
         contract: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

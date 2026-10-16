@@ -35,8 +35,7 @@
                 </view>
             </view>
 
-            <image v-if="stamp_path" class="stamp-watermark"
-                :src="$convert_attach_url(stamp_path)" mode="aspectFit"></image>
+            <image v-if="stamp_path" class="stamp-watermark" :src="$convert_attach_url(stamp_path)" mode="aspectFit"></image>
         </view>
     </view>
 
@@ -105,7 +104,9 @@ export default {
             });
         },
         download_pic: async function () {
-            uni.showLoading({ title: '生成中...' });
+            uni.showLoading({
+                title: '生成中...'
+            });
             try {
                 let resp = await this.$send_req('/global/download_ticket', {
                     id: this.id
@@ -133,12 +134,18 @@ export default {
                                 }
                             });
                         } else {
-                            uni.showToast({ title: '下载失败', icon: 'none' });
+                            uni.showToast({
+                                title: '下载失败',
+                                icon: 'none'
+                            });
                         }
                     },
                     fail: () => {
                         uni.hideLoading();
-                        uni.showToast({ title: '下载失败', icon: 'none' });
+                        uni.showToast({
+                            title: '下载失败',
+                            icon: 'none'
+                        });
                     }
                 });
             } catch (e) {
@@ -265,6 +272,12 @@ export default {
                 value: ticket.seal_no,
             });
         }
+        if (ticket.complex_content) {
+            this.ticket_content.list.push({
+                label: '环境信息',
+                value: ticket.complex_content,
+            });
+        }
         if (ticket.trans_company_name) {
             this.ticket_content.list.push({
                 label: ticket.transportation_company || '运输公司',
@@ -310,12 +323,14 @@ export default {
     padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
     box-sizing: border-box;
 }
+
 .hero {
     position: relative;
     padding: 28rpx 28rpx 48rpx;
     background: linear-gradient(145deg, #2F3FCF 0%, #465CFF 68%, #6B7CFF 100%);
     overflow: hidden;
 }
+
 .hero-logo-bg {
     position: absolute;
     top: -20rpx;
@@ -325,10 +340,12 @@ export default {
     opacity: 0.16;
     pointer-events: none;
 }
+
 .hero-logo-img {
     width: 100%;
     height: 100%;
 }
+
 .hero-top {
     position: relative;
     z-index: 1;
@@ -338,11 +355,13 @@ export default {
     justify-content: space-between;
     gap: 16rpx;
 }
+
 .hero-copy {
     flex: 1;
     min-width: 0;
     padding-right: 8rpx;
 }
+
 .hero-qr {
     flex-shrink: 0;
     width: 212rpx;
@@ -355,16 +374,19 @@ export default {
     align-items: center;
     gap: 6rpx;
 }
+
 .hero-qr-tip {
     font-size: 18rpx;
     color: #6B7280;
     font-weight: 600;
 }
+
 .hero-label {
     font-size: 22rpx;
     color: rgba(255, 255, 255, 0.75);
     letter-spacing: 2rpx;
 }
+
 .hero-title {
     display: block;
     margin-top: 10rpx;
@@ -374,6 +396,7 @@ export default {
     line-height: 1.35;
     word-break: break-all;
 }
+
 .hero-plates {
     display: flex;
     flex-direction: row;
@@ -381,6 +404,7 @@ export default {
     gap: 10rpx;
     margin-top: 16rpx;
 }
+
 .plate-tag {
     padding: 6rpx 14rpx;
     border-radius: 6rpx;
@@ -392,13 +416,16 @@ export default {
     border: 2rpx solid #111111;
     line-height: 1.2;
 }
+
 .shell {
     margin: -24rpx 20rpx 0;
 }
+
 .ticket-body {
     position: relative;
     margin-bottom: 16rpx;
 }
+
 .count-card {
     background: #FFFFFF;
     border-radius: 20rpx 20rpx 0 0;
@@ -411,11 +438,13 @@ export default {
     flex-direction: column;
     align-items: center;
 }
+
 .count-label {
     font-size: 24rpx;
     color: #9AA3B8;
     font-weight: 600;
 }
+
 .count-value {
     margin-top: 8rpx;
     font-size: 56rpx;
@@ -423,6 +452,7 @@ export default {
     font-weight: 800;
     line-height: 1.2;
 }
+
 .info-card {
     background: #FFFFFF;
     border-radius: 0 0 20rpx 20rpx;
@@ -433,6 +463,7 @@ export default {
     margin-bottom: 0;
     overflow: hidden;
 }
+
 .info-row {
     display: flex;
     flex-direction: row;
@@ -442,15 +473,18 @@ export default {
     padding: 18rpx 4rpx;
     border-bottom: 1rpx solid #F5F7FC;
 }
+
 .info-row:last-child {
     border-bottom: none;
 }
+
 .info-label {
     flex-shrink: 0;
     max-width: 40%;
     font-size: 24rpx;
     color: #9AA3B8;
 }
+
 .info-value {
     flex: 1;
     min-width: 0;
@@ -460,11 +494,13 @@ export default {
     font-weight: 600;
     word-break: break-all;
 }
+
 .info-value.plate {
     color: #111111;
     font-weight: 800;
     letter-spacing: 1rpx;
 }
+
 .stamp-watermark {
     position: absolute;
     left: 36%;
@@ -477,6 +513,7 @@ export default {
     pointer-events: none;
     z-index: 2;
 }
+
 .actions {
     margin: 8rpx 20rpx 0;
     display: flex;
@@ -484,6 +521,7 @@ export default {
     align-items: stretch;
     gap: 12rpx;
 }
+
 .action-btn {
     flex: 1;
     min-width: 0;
@@ -498,31 +536,39 @@ export default {
     margin: 0;
     line-height: normal;
 }
+
 .action-btn::after {
     border: none;
 }
+
 .action-btn.primary {
     background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
     box-shadow: 0 8rpx 16rpx rgba(47, 63, 207, 0.22);
 }
+
 .action-btn.success {
     background: linear-gradient(145deg, #6FDB9A 0%, #2DBE6C 100%);
 }
+
 .action-btn.warn {
     background: linear-gradient(145deg, #FFB06B 0%, #FF8A2B 100%);
 }
+
 .action-btn.ghost {
     background: #EEF1FF;
 }
+
 .action-btn-text {
     font-size: 24rpx;
     color: #FFFFFF;
     font-weight: 700;
     text-align: center;
 }
+
 .action-btn-text.ghost {
     color: #2F3FCF;
 }
+
 .share-btn {
     flex: 1;
     width: auto;
