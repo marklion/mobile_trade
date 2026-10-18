@@ -7,12 +7,81 @@ const uuid = require('uuid');
 const fs = require('fs');
 const mcache = require('memory-cache');
 const plan_lib = require('./plan_lib');
+const group_lib = require('./group_lib');
+
+async function resolve_bidding_factory(token, stat_context_company_id, need_write) {
+    const factory = await group_lib.resolve_stat_company(token, stat_context_company_id);
+    if (!factory) {
+        throw { err_msg: '无权限' };
+    }
+    const home = await rbac_lib.get_company_by_token(token);
+    if (need_write && home && home.is_group === true && factory.id !== home.id) {
+        const user = await rbac_lib.get_user_by_token(token);
+        const can_operate = user && await group_lib.user_can_use_group_member_stuff(user.id, home, factory.id, true);
+        if (!can_operate) {
+            throw { err_msg: '无权限' };
+        }
+    }
+    return factory;
+}
+
+async function assert_can_operate_bidding_stuff(token, stuff) {
+    const home = await rbac_lib.get_company_by_token(token);
+    if (!stuff || !home) {
+        throw { err_msg: '无权限' };
+    }
+    if (await home.hasStuff(stuff)) {
+        return;
+    }
+    if (home.is_group !== true) {
+        throw { err_msg: '无权限' };
+    }
+    const factory = await stuff.getCompany();
+    const user = await rbac_lib.get_user_by_token(token);
+    if (!factory || !user || !await group_lib.user_can_use_group_member_stuff(user.id, home, factory.id, true)) {
+        throw { err_msg: '无权限' };
+    }
+}
+
+async function contracts_containing_stuff(buy_company_id, stuff) {
+    const factory = stuff.company || await stuff.getCompany();
+    if (!factory) {
+        return [];
+    }
+    const contracts = plan_lib.pick_sale_contracts_for_supply(
+        await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company_id, factory.id),
+        factory.id
+    );
+    const matched = [];
+    for (const contract of contracts) {
+        const rows = await contract.getStuff({
+            where: { id: stuff.id },
+            attributes: ['id'],
+        });
+        if (rows.length > 0) {
+            matched.push(contract);
+        }
+    }
+    return matched;
+}
+
+async function assert_joiner_contract_has_stuff(joiner, stuff) {
+    const buy_company = await joiner.getCompany();
+    if (!buy_company) {
+        throw { err_msg: '参与客户不存在' };
+    }
+    const matched = await contracts_containing_stuff(buy_company.id, stuff);
+    if (matched.length === 0) {
+        throw { err_msg: (buy_company.name || '客户') + '的合同未包含该工厂物料' };
+    }
+}
+
 module.exports = {
-    create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token, price_hide) {
+    create_bidding: async function (stuff_id, total, comment, min, max, total_turn, pay_first, token, price_hide, stat_context_company_id) {
         let sq = db_opt.get_sq();
         let stuff = await sq.models.stuff.findByPk(stuff_id);
-        let company = await rbac_lib.get_company_by_token(token);
-        if (stuff && company && await company.hasStuff(stuff)) {
+        let factory = await resolve_bidding_factory(token, stat_context_company_id, true);
+        if (stuff && factory && await factory.hasStuff(stuff)) {
             let bidding = await sq.models.bidding_config.create({
                 stuffId: stuff.id,
                 total: total,
@@ -87,10 +156,9 @@ module.exports = {
         });
         return ret;
     },
-    get_all_created_bidding: async function (token, pageNo) {
+    get_all_created_bidding: async function (token, pageNo, stat_context_company_id) {
         let ret = { biddings: [], total: 0 };
-        let sq = db_opt.get_sq();
-        let company = await rbac_lib.get_company_by_token(token);
+        let company = await resolve_bidding_factory(token, stat_context_company_id, false);
         if (company) {
             ret = await this.get_bidding_by_created_company(company, pageNo);
         }
@@ -103,14 +171,24 @@ module.exports = {
         let sq = db_opt.get_sq();
         let bc = await sq.models.bidding_config.findByPk(bc_id, { include: [sq.models.stuff] });
         let company = await rbac_lib.get_company_by_token(token);
-        if (bc.status == 0 && bc.stuff && company && await company.hasStuff(bc.stuff)) {
+        if (bc.status == 0 && bc.stuff && company) {
+            await assert_can_operate_bidding_stuff(token, bc.stuff);
             let exist_bts = await bc.getBidding_turns({ order: [['turn', 'DESC'], ['id', 'DESC']] });
             if (exist_bts.length == 0 || exist_bts[0].turn + 1 < bc.total_turn) {
                 let cur_turn = exist_bts.length == 0 ? 0 : (exist_bts[0].turn + 1);
-                let bt = await bc.createBidding_turn({ begin_time: begin_time, end_time: end_time, turn: cur_turn });
+                const joiners = [];
                 for (let index = 0; index < joiner_ids.length; index++) {
                     const element = joiner_ids[index];
                     let joiner = await sq.models.rbac_user.findByPk(element.id);
+                    if (!joiner) {
+                        throw { err_msg: '参与客户不存在' };
+                    }
+                    await assert_joiner_contract_has_stuff(joiner, bc.stuff);
+                    joiners.push(joiner);
+                }
+                let bt = await bc.createBidding_turn({ begin_time: begin_time, end_time: end_time, turn: cur_turn });
+                for (let index = 0; index < joiners.length; index++) {
+                    const joiner = joiners[index];
                     await joiner.createBidding_item({ biddingTurnId: bt.id });
                     wx_api_util.bidding_start_msg(bc.comment + '-' + bc.stuff.name, begin_time, joiner.open_id);
                 }
@@ -162,10 +240,7 @@ module.exports = {
                         { model: sq.models.stuff, include: [sq.models.company] }]
                 });
                 if (buy_company && bc && bc.stuff && bc.stuff.company) {
-                    let contracts = plan_lib.pick_sale_contracts_for_supply(
-                        await plan_lib.get_sale_contracts_for_buyer_and_supply_company(buy_company.id, bc.stuff.company.id),
-                        bc.stuff.company.id
-                    );
+                    let contracts = await contracts_containing_stuff(buy_company.id, bc.stuff);
                     if (contracts.length == 1) {
                         let cur_balance = contracts[0].balance;
                         if (cur_balance >= bc.pay_first) {
@@ -289,7 +364,8 @@ module.exports = {
         let sq = db_opt.get_sq();
         let bc = await sq.models.bidding_config.findByPk(bc_id, { include: [sq.models.stuff] });
         let company = await rbac_lib.get_company_by_token(token);
-        if (bc.status == 0 && bc.stuff && company && await company.hasStuff(bc.stuff)) {
+        if (bc.status == 0 && bc.stuff && company) {
+            await assert_can_operate_bidding_stuff(token, bc.stuff);
             let exist_bts = await bc.getBidding_turns({ order: [['turn', 'DESC'], ['id', 'DESC']] });
             if (exist_bts.length == 0) {
                 throw { err_msg: '前一轮还未开始' };
@@ -314,7 +390,8 @@ module.exports = {
         let sq = db_opt.get_sq();
         let bc = await sq.models.bidding_config.findByPk(bc_id, { include: [sq.models.stuff] });
         let company = await rbac_lib.get_company_by_token(token);
-        if (bc.stuff && company && await company.hasStuff(bc.stuff)) {
+        if (bc.stuff && company) {
+            await assert_can_operate_bidding_stuff(token, bc.stuff);
             let cur_bts = await bc.getBidding_turns({ where: { finish: false } });
             if (cur_bts.length == 1) {
                 await this.try_finish_bidding(cur_bts[0], 2);

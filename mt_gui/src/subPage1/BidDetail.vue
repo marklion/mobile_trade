@@ -224,10 +224,14 @@ export default {
         get_related_companies: async function (pageNo, [stuffId, show_start_bid]) {
             let ret = [];
             if (show_start_bid) {
-                let resp = await this.$send_req('/sale_management/contract_get', {
+                const req = {
                     pageNo: pageNo,
                     stuff_id: stuffId,
-                })
+                };
+                if (this.bd && this.bd.stuff && this.bd.stuff.company && this.bd.stuff.company.id) {
+                    req.stat_context_company_id = this.bd.stuff.company.id;
+                }
+                let resp = await this.$send_req('/sale_management/contract_get', req);
                 resp.contracts.forEach(item => {
                     item.cond = item.company.name
                     if (item.rbac_users.length > 0) {

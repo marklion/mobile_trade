@@ -12,7 +12,11 @@
     </view>
 
     <view class="shell">
-        <list-show ref="bc_list" :fetch_function="get_bc_list" height="62vh" search_key="cond" v-model="bc_list">
+        <view class="scope-card" v-if="show_scope_switch" @click="show_scope_picker = true">
+            <text class="scope-label">当前工厂</text>
+            <text class="scope-name">{{ current_scope_name || '请选择工厂' }}</text>
+        </view>
+        <list-show ref="bc_list" :fetch_function="get_bc_list" :fetch_params="[stat_context_company_id]" height="62vh" search_key="cond" v-model="bc_list">
             <view v-for="single_bc in bc_list" :key="single_bc.id">
                 <bid-detail :bd="single_bc"></bid-detail>
             </view>
@@ -47,11 +51,18 @@
             <text class="popup-title">选择物料</text>
         </view>
         <fui-list>
-            <list-show v-model="stuff_data2show" :fetch_function="get_stuff" search_key="name" height="40vh">
+            <list-show v-model="stuff_data2show" :fetch_function="get_stuff" :fetch_params="[stat_context_company_id]" search_key="name" height="40vh">
                 <fui-list-cell arrow v-for="item in stuff_data2show" :key="item.id" @click="add_stuff2bc(item)">
                     {{item.name}}
                 </fui-list-cell>
             </list-show>
+        </fui-list>
+    </fui-bottom-popup>
+    <fui-bottom-popup v-if="show_scope_picker" :show="show_scope_picker" @close="show_scope_picker = false">
+        <fui-list>
+            <fui-list-cell v-for="s in stat_scopes" :key="s.id" @click="choose_stat_scope(s.id)">
+                <text>{{ s.name }}</text>
+            </fui-list-cell>
         </fui-list>
     </fui-bottom-popup>
 </view>
@@ -72,6 +83,10 @@ export default {
             bc_list: [],
             stuff_data2show: [],
             show_stuff_select: false,
+            self_info: { company_is_group: false, company_id: null },
+            stat_scopes: [],
+            stat_context_company_id: null,
+            show_scope_picker: false,
             new_bc: {
                 "comment": "",
                 "max": 120,
@@ -85,7 +100,58 @@ export default {
             },
         };
     },
+    computed: {
+        show_scope_switch: function () {
+            return this.self_info
+                && this.self_info.company_is_group === true
+                && (this.stat_scopes || []).some((s) => s.id !== this.self_info.company_id);
+        },
+        current_scope_name: function () {
+            const current = (this.stat_scopes || []).find((s) => s.id === this.stat_context_company_id);
+            return current ? current.name : '';
+        },
+    },
     methods: {
+        scope_req: function (body, scope_id) {
+            const req = { ...body };
+            const id = scope_id !== undefined ? scope_id : this.stat_context_company_id;
+            if (this.show_scope_switch && id != null) {
+                req.stat_context_company_id = id;
+            }
+            return req;
+        },
+        init_scope: async function () {
+            try {
+                const info = await this.$send_req('/global/self_info', {});
+                this.self_info = info || { company_is_group: false, company_id: null };
+            } catch (e) {
+                this.self_info = { company_is_group: false, company_id: null };
+            }
+            try {
+                const ret = await this.$send_req('/global/home_stat_scope_list', {});
+                this.stat_scopes = ret.scopes || [];
+                if (this.stat_scopes.length && this.stat_context_company_id == null) {
+                    const first_member = this.stat_scopes.find((s) => this.self_info && s.id !== this.self_info.company_id);
+                    this.stat_context_company_id = first_member ? first_member.id : this.stat_scopes[0].id;
+                }
+            } catch (e) {
+                this.stat_scopes = [];
+            }
+        },
+        choose_stat_scope: function (company_id) {
+            this.show_scope_picker = false;
+            if (this.stat_context_company_id === company_id) {
+                return;
+            }
+            this.stat_context_company_id = company_id;
+            this.new_bc.stuff_id = 0;
+            this.new_bc.stuff_name = '';
+            this.$nextTick(() => {
+                if (this.$refs.bc_list) {
+                    this.$refs.bc_list.refresh();
+                }
+            });
+        },
         add_bc: async function (detail) {
             if (detail.index == 1) {
                 let rules = [{
@@ -144,7 +210,7 @@ export default {
                 this.new_bc.total = parseFloat(this.new_bc.total);
                 this.new_bc.total_turn = parseInt(this.new_bc.total_turn);
                 this.new_bc.pay_first = parseFloat(this.new_bc.pay_first);
-                await this.$send_req('/bid/create', this.new_bc);
+                await this.$send_req('/bid/create', this.scope_req(this.new_bc));
                 uni.startPullDownRefresh();
             }
             this.show_create_diag = false;
@@ -154,19 +220,21 @@ export default {
             this.new_bc.stuff_name = item.name;
             this.show_stuff_select = false;
         },
-        get_stuff: async function (pageNo) {
+        get_stuff: async function (pageNo, params) {
             if (this.$has_module('stuff') == false) {
                 return [];
             }
-            let ret = await this.$send_req('/stuff/get_all', {
+            const scope_id = params && params.length ? params[0] : this.stat_context_company_id;
+            let ret = await this.$send_req('/stuff/get_all', this.scope_req({
                 pageNo: pageNo
-            });
+            }, scope_id));
             return ret.stuff;
         },
-        get_bc_list: async function (_pageNo) {
-            let res = await this.$send_req('/bid/get_all_created', {
+        get_bc_list: async function (_pageNo, params) {
+            const scope_id = params && params.length ? params[0] : this.stat_context_company_id;
+            let res = await this.$send_req('/bid/get_all_created', this.scope_req({
                 pageNo: _pageNo
-            });
+            }, scope_id));
             res.biddings.forEach((item) => {
                 item.cond = item.comment + item.stuff.name
             });
@@ -176,6 +244,14 @@ export default {
             this.$refs.bc_list.refresh();
         },
     },
+    async onLoad() {
+        await this.init_scope();
+        this.$nextTick(() => {
+            if (this.$refs.bc_list) {
+                this.$refs.bc_list.refresh();
+            }
+        });
+    },
     onPullDownRefresh: function () {
         this.refresh_bidding_list();
         uni.stopPullDownRefresh();
@@ -184,6 +260,24 @@ export default {
 </script>
 
 <style scoped>
+.scope-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 12px 14px;
+    background: #fff;
+    border-radius: 12px;
+}
+.scope-label {
+    color: #8a90a2;
+    font-size: 12px;
+}
+.scope-name {
+    color: #1f2430;
+    font-size: 14px;
+    font-weight: 600;
+}
 .bid-config-page {
     min-height: 100vh;
     background: linear-gradient(180deg, #eef1ff 0%, #f7f8fc 42%, #f3f5f9 100%);
