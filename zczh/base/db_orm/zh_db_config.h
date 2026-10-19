@@ -172,6 +172,8 @@ public:
         add_parent_type<sql_device_meta>("scale");
         add_parent_type<sql_device_meta>("card_reader");
         add_parent_type<sql_device_meta>("card_deliver");
+        add_parent_type<sql_device_meta>("front_check_cam");
+        add_parent_type<sql_device_meta>("back_check_cam");
     }
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
@@ -418,6 +420,7 @@ public:
     long force_close = 0;
     long wait_cycle = 0;
     double min_weight = 0;
+    long double_check_plate = 0;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -437,6 +440,7 @@ public:
         ret.push_back(sqlite_orm_column("force_close", sqlite_orm_column::INTEGER, &force_close));
         ret.push_back(sqlite_orm_column("wait_cycle", sqlite_orm_column::INTEGER, &wait_cycle));
         ret.push_back(sqlite_orm_column("min_weight", sqlite_orm_column::REAL, &min_weight));
+        ret.push_back(sqlite_orm_column("double_check_plate", sqlite_orm_column::INTEGER, &double_check_plate));
 
         return ret;
     }

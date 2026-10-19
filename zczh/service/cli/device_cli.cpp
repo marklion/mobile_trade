@@ -113,6 +113,8 @@ void show_device_scale(std::ostream &out, std::vector<std::string> _params)
         PUT_DEVICE_TO_SET(scale);
         PUT_DEVICE_TO_SET(card_reader);
         PUT_DEVICE_TO_SET(card_deliver);
+        PUT_DEVICE_TO_SET(check_cam.front);
+        PUT_DEVICE_TO_SET(check_cam.back);
         tab.add_row({std::to_string(itr.id), itr.name, util_join_string(device_info, "\n")});
     }
     tab.format().multi_byte_characters(true);
@@ -499,6 +501,20 @@ void clear_device(std::ostream &out, std::vector<std::string> _params)
             }
             try
             {
+                client->del_device_from_set(itr.check_cam.back.id);
+            }
+            catch (gen_exp &e)
+            {
+            }
+            try
+            {
+                client->del_device_from_set(itr.check_cam.front.id);
+            }
+            catch (gen_exp &e)
+            {
+            }
+            try
+            {
                 client->del_device_from_set(itr.video_cam.back.id);
             }
             catch (gen_exp &e)
@@ -845,6 +861,8 @@ std::string device_cli::make_bdr()
         ret += sub_bdr_make(itr.scale, "scale", itr.name);
         ret += sub_bdr_make(itr.card_reader, "card_reader", itr.name);
         ret += sub_bdr_make(itr.card_deliver, "card_deliver", itr.name);
+        ret += sub_bdr_make(itr.check_cam.front, "front_check_cam", itr.name);
+        ret += sub_bdr_make(itr.check_cam.back, "back_check_cam", itr.name);
     }
     THR_CALL_END();
 

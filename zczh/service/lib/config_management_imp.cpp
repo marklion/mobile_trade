@@ -326,6 +326,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->weight_turn = rule.weight_turn;
         er->issue_card_path = rule.issue_card_path;
         er->gate_strict = rule.gate_strict;
+        er->double_check_plate = rule.double_check_plate;
         er->max_j_weight = rule.max_j_weight;
         er->max_m_weight = rule.max_m_weight;
         er->weight_coe = rule.weight_coe;
@@ -348,6 +349,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         tmp.max_j_weight = rule.max_j_weight;
         tmp.max_m_weight = rule.max_m_weight;
         tmp.gate_strict = rule.gate_strict;
+        tmp.double_check_plate = rule.double_check_plate;
         tmp.weight_coe = rule.weight_coe;
         tmp.force_close = rule.force_close;
         tmp.wait_cycle = rule.wait_cycle;
@@ -451,6 +453,7 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.weight_turn = er->weight_turn;
         _return.issue_card_path = er->issue_card_path;
         _return.gate_strict = er->gate_strict;
+        _return.double_check_plate = er->double_check_plate;
         _return.max_j_weight = er->max_j_weight;
         _return.max_m_weight = er->max_m_weight;
         _return.weight_coe = er->weight_coe;
@@ -545,6 +548,8 @@ void config_management_handler::db_2_rpc(sql_device_set &_db, device_scale_set &
     DEV_FROM_SET_TO_RPC(back_gate, _rpc.gate.back);
     DEV_FROM_SET_TO_RPC(front_plate_cam, _rpc.plate_cam.front);
     DEV_FROM_SET_TO_RPC(back_plate_cam, _rpc.plate_cam.back);
+    DEV_FROM_SET_TO_RPC(front_check_cam, _rpc.check_cam.front);
+    DEV_FROM_SET_TO_RPC(back_check_cam, _rpc.check_cam.back);
     DEV_FROM_SET_TO_RPC(front_video_cam, _rpc.video_cam.front);
     DEV_FROM_SET_TO_RPC(back_video_cam, _rpc.video_cam.back);
     DEV_FROM_SET_TO_RPC(front_id_reader, _rpc.id_reader.front);
