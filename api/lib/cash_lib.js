@@ -37,7 +37,7 @@ module.exports = {
         if (user && contract) {
             let sale_company = await plan_lib.resolve_sale_contract_context_company(_token, stat_context_company_id, true);
             if (sale_company && await sale_company.hasSale_contract(contract)) {
-                let final_comment = _comment;
+                let final_comment = _comment||'';
                 let real_bank_name = bank_name;
                 if (real_bank_name) {
                     final_comment += `，银行名称:${real_bank_name}`;
