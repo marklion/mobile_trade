@@ -2044,7 +2044,10 @@ void scale_state_double_check_plate::before_enter(abs_state_machine &_sm)
     THR_CALL_BEGIN(config_management);
     running_rule tmp;
     client->get_rule(tmp);
-    double_check_timeout = tmp.wait_cycle * 5;
+    if (tmp.wait_cycle > 0)
+    {
+        double_check_timeout = tmp.wait_cycle * 5;
+    }
     THR_CALL_END();
     auto &sm = dynamic_cast<scale_sm &>(_sm);
     sm.start_scale_timer(double_check_timeout);
