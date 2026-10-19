@@ -3,11 +3,11 @@
     <el-header style="padding-top: 20px;">
         <div style="display:flex; justify-content:flex-start;gap: 10px;">
             <el-button type="success" @click="show_create_diag = true">新增</el-button>
-            <select-search v-model="search_info" filterable get_url="/stuff/get_all" first_item="所有物料" :search_key="['stuff.name']" item_label="name" item_value="name" :permission_array="['stuff']" body_key="stuff" @refresh="do_search"></select-search>
+            <select-search :key="'search-stuff-' + scope_key" v-model="search_info" filterable get_url="/stuff/get_all" first_item="所有物料" :search_key="['stuff.name']" item_label="name" item_value="name" :permission_array="['stuff']" body_key="stuff" :req_body="bid_scope_body" @refresh="do_search"></select-search>
         </div>
     </el-header>
     <el-main>
-        <page-content :ref="'bc_list'" body_key="biddings" :search_input="search_info" :search_key="['stuff.name']" :req_url="'/bid/get_all_created'" :enable="true">
+        <page-content :key="'bc-list-' + scope_key" :ref="'bc_list'" body_key="biddings" :search_input="search_info" :search_key="['stuff.name']" :req_url="'/bid/get_all_created'" :req_body="bid_scope_body" :enable="true">
             <template #default="slotProps">
                 <el-table :data="slotProps.content" :table-layout="table_layout">
                     <el-table-column label="展开" type="expand">
@@ -131,7 +131,7 @@
                     <el-input type="number" v-model="new_bc.pay_first" placeholder="请输入押金"></el-input>
                 </el-form-item>
                 <el-form-item label="物料" prop="stuff_name">
-                    <select-search ref="stuff_select" v-model="new_bc.stuff_id" filterable get_url="/stuff/get_all" first_item="请选择" :search_key="['stuff.name']" item_label="name" item_value="id" :permission_array="['stuff']" body_key="stuff" @on-change="add_stuff2bc"></select-search>
+                    <select-search :key="'create-stuff-' + scope_key" ref="stuff_select" v-model="new_bc.stuff_id" filterable get_url="/stuff/get_all" first_item="请选择" :search_key="['stuff.name']" item_label="name" item_value="id" :permission_array="['stuff']" body_key="stuff" :req_body="bid_scope_body" @on-change="add_stuff2bc"></select-search>
                 </el-form-item>
                 <el-form-item label="物料总量" prop="total">
                     <el-input type="number" v-model="new_bc.total" placeholder="请输入总量"></el-input>
@@ -192,12 +192,28 @@
 import PageContent from '@/components/PageContent.vue';
 import PageSelect from '@/components/PageSelect.vue';
 import SelectSearch from '@/components/SelectSearch.vue';
+import { mapGetters } from 'vuex';
 export default {
     name: 'BiddingConfig',
     components: {
         "page-content": PageContent,
         "page-select": PageSelect,
         "select-search": SelectSearch
+    },
+    computed: {
+        ...mapGetters([
+            'globalStatScopeVisible',
+            'globalStatContextCompanyId',
+        ]),
+        scope_key: function () {
+            return this.globalStatScopeVisible ? (this.globalStatContextCompanyId || 'none') : 'self';
+        },
+        bid_scope_body: function () {
+            if (!this.globalStatScopeVisible || this.globalStatContextCompanyId == null) {
+                return {};
+            }
+            return { stat_context_company_id: this.globalStatContextCompanyId };
+        },
     },
     data: function () {
         return {
@@ -275,7 +291,12 @@ export default {
             this.start_bid_req.end_time = newVal[1];
             this.next_bid_req.begin_time = newVal[0];
             this.next_bid_req.end_time = newVal[1];
-        }
+        },
+        scope_key: function () {
+            this.search_info = '';
+            this.new_bc.stuff_id = 0;
+            this.new_bc.stuff_name = '';
+        },
     },
     methods: {
         refresh: function () {
@@ -325,7 +346,10 @@ export default {
                     this.new_bc.total = parseFloat(this.new_bc.total);
                     this.new_bc.total_turn = parseInt(this.new_bc.total_turn);
                     this.new_bc.pay_first = parseInt(this.new_bc.pay_first);
-                    this.$send_req('/bid/create', this.new_bc).then(() => {
+                    this.$send_req('/bid/create', {
+                        ...this.new_bc,
+                        ...this.bid_scope_body,
+                    }).then(() => {
                         this.$refs.bc_list.refresh();
                         this.show_create_diag = false;
                     });
@@ -347,6 +371,7 @@ export default {
             let resp = await this.$send_req('/sale_management/contract_get', {
                 pageNo: params.pageNo,
                 stuff_id: params.stuff_id,
+                ...this.bid_scope_body,
             })
             resp.contracts.forEach(item => {
                 item.cond = item.company.name
@@ -438,7 +463,7 @@ export default {
             this.show_company_select = true;
         },
         get_stuff: async function () {
-            let resp = await this.$send_req('/stuff/get_all');
+            let resp = await this.$send_req('/stuff/get_all', this.bid_scope_body);
             this.stuff_list = resp.stuff;
         }
 

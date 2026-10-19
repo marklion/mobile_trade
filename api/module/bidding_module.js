@@ -20,10 +20,11 @@ module.exports = {
                 total_turn: { type: Number, have_to: true, mean: '总轮次', example: 10 },
                 pay_first: { type: Number, have_to: true, mean: '押金额度', example: 123 },
                 price_hide:{type:Boolean,have_to:false,mean:'价格隐藏',example:true},
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团切换的工厂公司id', example: 1 },
             },
             result: api_param_result_define.bc_detail(),
             func: async function (body, token) {
-                return await bidding_lib.create_bidding(body.stuff_id, body.total, body.comment, body.min, body.max, body.total_turn, body.pay_first, token, body.price_hide);
+                return await bidding_lib.create_bidding(body.stuff_id, body.total, body.comment, body.min, body.max, body.total_turn, body.pay_first, token, body.price_hide, body.stat_context_company_id);
             },
         },
         get_all_created: {
@@ -31,12 +32,14 @@ module.exports = {
             description: '获取所有创建的竞价',
             is_write: false,
             is_get_api: true,
-            params: {},
+            params: {
+                stat_context_company_id: { type: Number, have_to: false, mean: '集团切换的工厂公司id', example: 1 },
+            },
             result: {
                 biddings: { type: Array, mean: '竞价列表', explain: api_param_result_define.bc_detail(true) },
             },
             func: async function (body, token) {
-                return await bidding_lib.get_all_created_bidding(token, body.pageNo);
+                return await bidding_lib.get_all_created_bidding(token, body.pageNo, body.stat_context_company_id);
             },
         },
         add_turn: {
