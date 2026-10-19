@@ -139,6 +139,8 @@ void device_management_handler::init_all_set()
         start_device_no_exp(itr.scale.id);
         start_device_no_exp(itr.card_reader.id);
         start_device_no_exp(itr.card_deliver.id);
+        start_device_no_exp(itr.check_cam.back.id);
+        start_device_no_exp(itr.check_cam.front.id);
         sm_init_add(std::make_shared<scale_sm>(itr.id, this), itr.id);
     }
 }
@@ -492,6 +494,36 @@ void device_management_handler::push_plate_read(const int64_t plate_cam_id, cons
                     return ret;
                 });
         }
+        else
+        {
+            set.reset(pc_device->get_children<sql_device_set>("front_check_cam").release());
+            if (!set)
+            {
+                set.reset(pc_device->get_children<sql_device_set>("back_check_cam").release());
+            }
+            if (set)
+            {
+                sm_trigger(
+                    set->get_pri_id(),
+                    [&](abs_state_machine &_sm)
+                    {
+                        bool ret = false;
+                        if (get_diff_side_device(_sm.trigger_device_id, "check_cam") == plate_cam_id)
+                        {
+                            if (_sm.pass_plate_number == plate_no)
+                            {
+                                _sm.tft = abs_state_machine::double_check_pass;
+                            }
+                            else
+                            {
+                                _sm.tft = abs_state_machine::double_check_fail;
+                            }
+                            ret = true;
+                        }
+                        return ret;
+                    });
+            }
+        }
     }
 }
 
@@ -553,8 +585,22 @@ void device_management_handler::get_scale_sm_info(std::vector<scale_sm_info> &_r
         tmp.set_info = itr;
         /* 原为 THR_CALL_DM_BEGIN() 自环回本进程 8124，占双份 worker；
            改为同进程直接调用，避免池耗尽。 */
-        try { tmp.front_gate_is_close = gate_is_close(tmp.set_info.gate.front.id); } catch (...) { tmp.front_gate_is_close = false; }
-        try { tmp.back_gate_is_close = gate_is_close(tmp.set_info.gate.back.id); } catch (...) { tmp.back_gate_is_close = false; }
+        try
+        {
+            tmp.front_gate_is_close = gate_is_close(tmp.set_info.gate.front.id);
+        }
+        catch (...)
+        {
+            tmp.front_gate_is_close = false;
+        }
+        try
+        {
+            tmp.back_gate_is_close = gate_is_close(tmp.set_info.gate.back.id);
+        }
+        catch (...)
+        {
+            tmp.back_gate_is_close = false;
+        }
         _return.push_back(tmp);
     }
 }
@@ -932,6 +978,8 @@ int64_t device_management_handler::get_same_side_device(int64_t _input_id, const
     {
         auto fpc_set = ipd->get_children<sql_device_set>("front_plate_cam");
         auto bpc_set = ipd->get_children<sql_device_set>("back_plate_cam");
+        auto fcc_set = ipd->get_children<sql_device_set>("front_check_cam");
+        auto bcc_set = ipd->get_children<sql_device_set>("back_check_cam");
         auto fi_set = ipd->get_children<sql_device_set>("front_id_reader");
         auto bi_set = ipd->get_children<sql_device_set>("back_id_reader");
         auto fq_set = ipd->get_children<sql_device_set>("front_qr_reader");
@@ -940,6 +988,8 @@ int64_t device_management_handler::get_same_side_device(int64_t _input_id, const
         auto fg_set = ipd->get_children<sql_device_set>("front_gate");
         GOTHROUGH_EACH_SET(fpc_set, front_direc);
         GOTHROUGH_EACH_SET(bpc_set, back_direc);
+        GOTHROUGH_EACH_SET(fcc_set, front_direc);
+        GOTHROUGH_EACH_SET(bcc_set, back_direc);
         GOTHROUGH_EACH_SET(fi_set, front_direc);
         GOTHROUGH_EACH_SET(bi_set, back_direc);
         GOTHROUGH_EACH_SET(fq_set, front_direc);
@@ -1224,9 +1274,9 @@ void scale_sm::cast_common(const std::string &_content)
     }
 }
 
-void scale_sm::cast_wait_timeout()
+void scale_sm::cast_check_fail()
 {
-    cast_common("等待上磅超时，请重置");
+    cast_common("车牌检查失败，请联系管理员重置");
 }
 
 void scale_sm::cast_enter_info()
@@ -1376,6 +1426,7 @@ void scale_sm::cast_is_lack_weight()
 void scale_state_idle::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.close_both_gates();
     sm.clear_state();
 }
 
@@ -1397,6 +1448,17 @@ void scale_state_idle::after_exit(abs_state_machine &_sm)
     client->order_push_attach(sm.order_number, "上磅照片", pic_path);
     THR_CALL_END();
     sm.record_scale_start();
+    auto another_gate = device_management_handler::get_diff_side_device(sm.trigger_device_id, "gate");
+    if (another_gate)
+    {
+        try
+        {
+            sm.belong->gate_ctrl(another_gate, false);
+        }
+        catch (...)
+        {
+        }
+    }
 }
 
 std::unique_ptr<abs_sm_state> scale_state_idle::proc_event(abs_state_machine &_sm)
@@ -1406,7 +1468,18 @@ std::unique_ptr<abs_sm_state> scale_state_idle::proc_event(abs_state_machine &_s
         _sm.tft == abs_state_machine::id_reader ||
         _sm.tft == abs_state_machine::qr_reader)
     {
-        ret.reset(new scale_state_prepare());
+        running_rule rule;
+        THR_CALL_BEGIN(config_management);
+        client->get_rule(rule);
+        THR_CALL_END();
+        if (rule.double_check_plate)
+        {
+            ret.reset(new scale_state_double_check_plate());
+        }
+        else
+        {
+            ret.reset(new scale_state_prepare());
+        }
     }
     return ret;
 }
@@ -1582,17 +1655,6 @@ void scale_state_prepare::before_enter(abs_state_machine &_sm)
     client->get_rule(rule);
     THR_CALL_END();
     m_timer_max_count = rule.wait_cycle;
-    auto another_gate = device_management_handler::get_diff_side_device(sm.trigger_device_id, "gate");
-    if (another_gate)
-    {
-        try
-        {
-            sm.belong->gate_ctrl(another_gate, false);
-        }
-        catch (...)
-        {
-        }
-    }
 }
 
 void scale_state_prepare::after_exit(abs_state_machine &_sm)
@@ -1649,7 +1711,7 @@ std::unique_ptr<abs_sm_state> scale_state_prepare::proc_event(abs_state_machine 
                 m_timer_cur_count++;
                 if (m_timer_max_count > 0 && m_timer_cur_count > m_timer_max_count)
                 {
-                    ret.reset(new scale_state_wait_timeout());
+                    ret.reset(new scale_state_idle());
                 }
                 else
                 {
@@ -1696,9 +1758,13 @@ void scale_state_clean::before_enter(abs_state_machine &_sm)
         auto cam_meta = sqlite_orm::search_record<sql_device_meta>("name = '%s'", gate_cam_name.c_str());
         if (cam_meta)
         {
-            try {
+            try
+            {
                 sm.belong->push_plate_read(cam_meta->get_pri_id(), sm.pass_plate_number);
-            } catch(...){}
+            }
+            catch (...)
+            {
+            }
         }
     }
     sm.start_scale_timer();
@@ -1931,18 +1997,18 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
     return ret;
 }
 
-void scale_state_wait_timeout::before_enter(abs_state_machine &_sm)
+void scale_state_check_fail::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
-    sm.cast_wait_timeout();
+    sm.cast_check_fail();
     sm.close_both_gates();
 }
 
-void scale_state_wait_timeout::after_exit(abs_state_machine &_sm)
+void scale_state_check_fail::after_exit(abs_state_machine &_sm)
 {
 }
 
-std::unique_ptr<abs_sm_state> scale_state_wait_timeout::proc_event(abs_state_machine &_sm)
+std::unique_ptr<abs_sm_state> scale_state_check_fail::proc_event(abs_state_machine &_sm)
 {
     std::unique_ptr<abs_sm_state> ret;
     if (_sm.tft == abs_state_machine::manual_reset)
@@ -1969,5 +2035,56 @@ std::unique_ptr<abs_sm_state> scale_state_wrong_weight::proc_event(abs_state_mac
         ret.reset(new scale_state_idle());
     }
 
+    return ret;
+}
+
+void scale_state_double_check_plate::before_enter(abs_state_machine &_sm)
+{
+    int double_check_timeout = 15;
+    THR_CALL_BEGIN(config_management);
+    running_rule tmp;
+    client->get_rule(tmp);
+    if (tmp.wait_cycle > 0)
+    {
+        double_check_timeout = tmp.wait_cycle * 5;
+    }
+    THR_CALL_END();
+    auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.start_scale_timer(double_check_timeout);
+}
+
+void scale_state_double_check_plate::after_exit(abs_state_machine &_sm)
+{
+    auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.stop_scale_timer();
+}
+
+std::unique_ptr<abs_sm_state> scale_state_double_check_plate::proc_event(abs_state_machine &_sm)
+{
+    std::unique_ptr<abs_sm_state> ret;
+    if (_sm.tft == abs_state_machine::double_check_pass || _sm.tft == abs_state_machine::manual_confirm)
+    {
+        ret.reset(new scale_state_prepare());
+    }
+    else if (_sm.tft == abs_state_machine::double_check_fail)
+    {
+        ret.reset(new scale_state_check_fail());
+    }
+    else if (_sm.tft == abs_state_machine::manual_reset)
+    {
+        ret.reset(new scale_state_idle());
+    }
+    else if (_sm.tft == abs_state_machine::timer)
+    {
+        auto &sm = dynamic_cast<scale_sm &>(_sm);
+        if (sm.is_lack_weight())
+        {
+            ret.reset(new scale_state_idle());
+        }
+        else
+        {
+            ret.reset(new scale_state_check_fail());
+        }
+    }
     return ret;
 }

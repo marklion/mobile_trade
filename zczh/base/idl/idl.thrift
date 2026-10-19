@@ -93,6 +93,7 @@ struct device_scale_set {
     11:device_meta scale,
     12:device_meta card_reader,
     13:device_meta card_deliver,
+    14:device_couple check_cam,
 }
 
 struct device_gate_set{
@@ -146,6 +147,7 @@ struct running_rule {
     13:bool force_close,
     14:i64 wait_cycle,
     15:double min_weight,
+    16:bool double_check_plate,
 }
 
 struct weight_ref_config {
