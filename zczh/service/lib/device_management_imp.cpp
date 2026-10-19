@@ -1448,6 +1448,17 @@ void scale_state_idle::after_exit(abs_state_machine &_sm)
     client->order_push_attach(sm.order_number, "上磅照片", pic_path);
     THR_CALL_END();
     sm.record_scale_start();
+    auto another_gate = device_management_handler::get_diff_side_device(sm.trigger_device_id, "gate");
+    if (another_gate)
+    {
+        try
+        {
+            sm.belong->gate_ctrl(another_gate, false);
+        }
+        catch (...)
+        {
+        }
+    }
 }
 
 std::unique_ptr<abs_sm_state> scale_state_idle::proc_event(abs_state_machine &_sm)
@@ -1644,17 +1655,6 @@ void scale_state_prepare::before_enter(abs_state_machine &_sm)
     client->get_rule(rule);
     THR_CALL_END();
     m_timer_max_count = rule.wait_cycle;
-    auto another_gate = device_management_handler::get_diff_side_device(sm.trigger_device_id, "gate");
-    if (another_gate)
-    {
-        try
-        {
-            sm.belong->gate_ctrl(another_gate, false);
-        }
-        catch (...)
-        {
-        }
-    }
 }
 
 void scale_state_prepare::after_exit(abs_state_machine &_sm)
@@ -2070,9 +2070,21 @@ std::unique_ptr<abs_sm_state> scale_state_double_check_plate::proc_event(abs_sta
     {
         ret.reset(new scale_state_check_fail());
     }
-    else if (_sm.tft == abs_state_machine::manual_reset || _sm.tft == abs_state_machine::timer)
+    else if (_sm.tft == abs_state_machine::manual_reset)
     {
         ret.reset(new scale_state_idle());
+    }
+    else if (_sm.tft == abs_state_machine::timer)
+    {
+        auto &sm = dynamic_cast<scale_sm &>(_sm);
+        if (sm.is_lack_weight())
+        {
+            ret.reset(new scale_state_idle());
+        }
+        else
+        {
+            ret.reset(new scale_state_check_fail());
+        }
     }
     return ret;
 }
