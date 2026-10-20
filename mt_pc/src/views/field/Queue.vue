@@ -245,7 +245,7 @@ export default {
             this.focus_plan_id = item.id;
             this.tmp_seal_no = item.seal_no;
             this.zone_name = '';
-            this.complex_input_metas =JSON.parse(item.complex_input_metas) || [];
+            this.complex_input_metas = JSON.parse(item.complex_input_metas || '[]') || [];
             this.complex_input = {};
             this.complex_input_metas.forEach(m => this.$set(this.complex_input, m.name, ''));
             this.show_confirm_vehicle = true;
