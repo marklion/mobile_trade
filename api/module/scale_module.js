@@ -5,6 +5,7 @@ const rbac_lib = require('../lib/rbac_lib');
 const device_permission_lib = require('../lib/device_permission_lib');
 const db_opt = require('../db_opt');
 const util_lib = require('../lib/util_lib');
+const all_plugin = require('../plugin/all_plugin');
 const moment = require('moment');
 
 function build_one_time_scale_context(plan, one_weight) {
@@ -216,12 +217,19 @@ module.exports = {
                 is_confirm: { type: Boolean, have_to: true, mean: '是否确认', example: true },
                 seal_no: { type: String, have_to: false, mean: '封号', example: '123456' },
                 drop_take_zone_name: { type: String, have_to: false, mean: '装卸区', example: '装卸区' },
+                complex_input:{type: String, have_to: false, mean: '复杂输入', example: '温度: 25, 压强: 101.3'}
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
+                    if (complex_plugin && body.is_confirm) {
+                        if (!complex_plugin.verify_input(body.complex_input || '{}')) {
+                            throw { err_msg: '输入不合法' };
+                        }
+                    }
                     let confirm_failure_msg = '';
                     if (body.is_confirm) {
                         let need_driver_confirm = plan.stuff.company.need_driver_confirm;
@@ -236,6 +244,7 @@ module.exports = {
                         if (!body.is_confirm) {
                             plan.driver_confirm_time = '';
                         }
+                        plan.complex_input = body.complex_input;
                         await plan.save();
                         let user = await rbac_lib.get_user_by_token(token);
                         await plan_lib.rp_history_confirm_deliver(plan, user.name);
@@ -390,7 +399,13 @@ module.exports = {
             },
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
-                    plan.count = body.count;
+                    let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
+                    if (complex_plugin && body.count > 0) {
+                        plan.count = await complex_plugin.calc_count(body.count, plan.complex_input);
+                    }
+                    else {
+                        plan.count = body.count;
+                    }
                     plan.first_weight = body.first_weight;
                     plan.second_weight = body.second_weight;
                     plan.first_weight_fileList = body.first_weight_fileList;

@@ -14,6 +14,7 @@ const { Mutex } = require('async-mutex');
 const mutex = new Mutex();
 const king_dee_start_lib = require('./king_dee_start_lib');
 const { Sequelize } = require('sequelize');
+const all_plugin = require('../plugin/all_plugin');
 const g_verify_pay_company_set = new Set();
 const g_vpcs_mutex = new Mutex();
 const regStrReplace = /[\t\s]/g;
@@ -1672,7 +1673,13 @@ module.exports = {
             status_req = 1;
         }
         await this.action_in_plan(_plan_id, _token, status_req, async (plan, t) => {
-            plan.count = _count;
+            let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
+            if (complex_plugin) {
+                plan.count = await complex_plugin.calc_count(_count, plan.complex_input);
+            }
+            else {
+                plan.count = _count;
+            }
             plan.p_time = (p_time ? p_time : moment().format('YYYY-MM-DD HH:mm:ss'));
             plan.p_weight = p_weight;
             plan.m_time = (m_time ? m_time : moment().format('YYYY-MM-DD HH:mm:ss'));
@@ -1779,7 +1786,7 @@ module.exports = {
     rp_history_call: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, "叫号");
     },
-    rp_history_driver_confirm:async function(_plan, is_confirm) {
+    rp_history_driver_confirm: async function (_plan, is_confirm) {
         let action = is_confirm ? "司机确认出厂" : "司机取消确认出厂";
         await this.record_plan_history(_plan, _plan.driver.name, action);
     },
@@ -2136,6 +2143,10 @@ module.exports = {
             // 未进厂不需要一次重，避免对排队列表逐条打外部称重接口拖慢
             if (element.enter_time && element.stuff && !element.stuff.manual_weight) {
                 element.p_weight = await hook_plan('get_p_weight', element);
+            }
+            let complex_plugin = await all_plugin.get_plugin_by_name(element.stuff.complex_plugin);
+            if (complex_plugin) {
+                element.complex_input_metas = JSON.stringify(complex_plugin.input_metas);
             }
         }
         return { rows: plans, count: count };

@@ -62,6 +62,13 @@ function append_weight_rows(data, rows, plan_sct_infos) {
     } else if ((data.m_time || data.p_time) && plan_sct_infos.length <= 0) {
         rows.push({ label: '计量时间', value: data.m_time || data.p_time });
     }
+    let cc_array = data.complex_content ? JSON.parse(data.complex_content) : [];
+    for (let cc_item of cc_array) {
+        rows.push({
+            label: cc_item.label,
+            value: cc_item.content,
+        });
+    }
 }
 
 function append_extra_rows(data, rows) {

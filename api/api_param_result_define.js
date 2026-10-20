@@ -219,6 +219,7 @@ module.exports = {
         replace_m_time: { type: String, mean: '过毛时间替换文字', example: '过毛时间替换文字' },
         replace_seal_no: { type: String, mean: '封签号替换文字', example: '封签号替换文字' },
         need_protocol: { type: Boolean, mean: '是否需要签署协议', example: false },
+        complex_content: { type: String, mean: '复杂内容', example: '复杂内容' }
     },
     device_status_define: {
         name: { type: String, mean: '设备名称', example: '设备名称' },
@@ -407,6 +408,8 @@ module.exports = {
                 }
             }
         },
+        complex_input_metas:{type: String, mean: '复杂输入元数据', example: '[{"label": "温度", "name": "temperature"}, {"label": "压强", "name": "pressure"}]'},
+        complex_input: { type: String, mean: '复杂输入', example: '温度: 25, 压强: 101.3' },
     },
     bidding_items: bidding_items,
     dev_data: {

@@ -20,6 +20,7 @@ const svgCaptcha = require('svg-captcha');
 const mcache = require('memory-cache');
 const t_plus_lib = require('../lib/t_plus_lib');
 const qwen_lib = require('../lib/qwen_lib');
+const all_plugin = require('../plugin/all_plugin');
 
 function create_api_error(message) {
     const error = new Error(message);
@@ -67,6 +68,23 @@ async function get_ticket_func(body, token) {
     } else {
         drop_address = null
     }
+    let complex_content = '[]';
+    let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
+    if (complex_plugin)
+    {
+        let cc_array = [];
+        let input_metas = complex_plugin.input_metas;
+        let ci_object = JSON.parse(plan.complex_input || '{}');
+        for (let meta of input_metas) {
+            if (ci_object[meta.name] !== undefined) {
+                cc_array.push({
+                    label: meta.label,
+                    content: ci_object[meta.name]
+                });
+            }
+        }
+        complex_content = JSON.stringify(cc_array);
+    }
 
     return {
         id: plan.id,
@@ -105,6 +123,7 @@ async function get_ticket_func(body, token) {
         replace_p_time: plan.stuff.company.global_replace_form?.replace_p_time || '过皮时间',
         replace_m_time: plan.stuff.company.global_replace_form?.replace_m_time || '过毛时间',
         replace_seal_no: plan.stuff.company.global_replace_form?.replace_seal_no || '封签号',
+        complex_content: complex_content,
         need_protocol: protocol_lib.need_protocol(plan.stuff),
     }
 }
@@ -2876,7 +2895,7 @@ module.exports = {
             is_write: false,
             is_get_api: false,
             params: {
-                export_id: { type: Number, mean: '导出记录ID', have_to: true, example:1 },
+                export_id: { type: Number, mean: '导出记录ID', have_to: true, example: 1 },
             },
             result: {
                 result: { type: Boolean, mean: '操作是否成功', example: true },

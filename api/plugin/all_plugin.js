@@ -3,6 +3,7 @@ const hnmhg = require('./hnmhg')
 const old_zczh = require('./old_zczh')
 const new_zczh = require('./new_zczh')
 const yt_audit = require('./yt_audit')
+const HeTPW2V = require('./HeTPW2V')
 function make_plugin_map() {
     return {
         normal: normal,
@@ -10,6 +11,7 @@ function make_plugin_map() {
         old_zczh: old_zczh,
         new_zczh: new_zczh,
         yt_audit: yt_audit,
+        HeTPW2V: HeTPW2V,
     }
 }
 module.exports = {

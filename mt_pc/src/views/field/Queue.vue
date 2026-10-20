@@ -45,6 +45,10 @@
                     <el-table-column prop="call_time" label="叫号时间" show-overflow-tooltip>
                     </el-table-column>
                     <el-table-column prop="p_weight" label="一次重量">
+                        <template slot-scope="scope">
+                            <div>{{scope.row.p_weight}}</div>
+                            <div v-if="complex_text_of(scope.row)">{{complex_text_of(scope.row)}}</div>
+                        </template>
                     </el-table-column>
                     <el-table-column prop="confirmed" label="装卸货确认" align="center" show-overflow-tooltip>
                         <template slot-scope="scope">
@@ -102,6 +106,9 @@
 
         <el-dialog title="装卸货确认" :visible.sync="show_confirm_vehicle" width="30%">
             <el-form>
+                <el-form-item v-for="meta in complex_input_metas" :key="meta.name" :label="meta.label" required>
+                    <el-input v-model="complex_input[meta.name]" :placeholder="'请输入' + meta.label"></el-input>
+                </el-form-item>
                 <el-form-item label="铅封号">
                     <el-input v-model="tmp_seal_no" placeholder="请输入铅封号">
                         <el-button slot="append" type="success" v-if="focus_company.pressure_config" @click="confirmSealNo">确认泄压</el-button>
@@ -148,11 +155,28 @@ export default {
             zone_name: '',
             focus_plan: {},
             only_show_uncalled: false,
+            complex_input_metas: [],
+            complex_input: {},
         };
     },
     methods: {
         filteredContent(content) {
             return content || [];
+        },
+        complex_text_of(item) {
+            if (!item || !item.complex_input) {
+                return '';
+            }
+            try {
+                const values = JSON.parse(item.complex_input);
+                const metas = JSON.parse(item.complex_input_metas || '[]') || [];
+                return metas
+                    .filter(m => values[m.name] !== undefined && values[m.name] !== '')
+                    .map(m => m.label + ':' + values[m.name])
+                    .join(' ');
+            } catch (err) {
+                return String(item.complex_input);
+            }
         },
         init_dev: async function () {
             let resp = await this.$send_req('/scale/get_device_status', {});
@@ -220,7 +244,10 @@ export default {
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
             this.tmp_seal_no = item.seal_no;
-            this.zone_name = ''; 
+            this.zone_name = '';
+            this.complex_input_metas = JSON.parse(item.complex_input_metas || '[]') || [];
+            this.complex_input = {};
+            this.complex_input_metas.forEach(m => this.$set(this.complex_input, m.name, ''));
             this.show_confirm_vehicle = true;
             this.focus_company = item.stuff.company;
             this.zones = item.stuff.drop_take_zones;
@@ -229,11 +256,18 @@ export default {
             this.tmp_seal_no = '正在泄压';
         },
         confirm_vehicle: async function () {
+            for (const m of this.complex_input_metas) {
+                if (!String(this.complex_input[m.name] ?? '').trim()) {
+                    this.$message.error('请输入' + m.label);
+                    return;
+                }
+            }
             await this.$send_req('/scale/confirm_vehicle', {
                 plan_id: this.focus_plan_id,
                 is_confirm: true,
                 seal_no: this.tmp_seal_no,
-                drop_take_zone_name: this.zone_name
+                drop_take_zone_name: this.zone_name,
+                complex_input: JSON.stringify(this.complex_input)
             });
             this.refresh_wait_que();
             this.show_confirm_vehicle = false;
