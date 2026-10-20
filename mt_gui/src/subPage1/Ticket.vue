@@ -272,12 +272,14 @@ export default {
                 value: ticket.seal_no,
             });
         }
-        if (ticket.complex_content) {
+        let cc_array = ticket.complex_content ? JSON.parse(ticket.complex_content) : [];
+        for (let cc_item of cc_array) {
             this.ticket_content.list.push({
-                label: '环境信息',
-                value: ticket.complex_content,
+                label: cc_item.label,
+                value: cc_item.content,
             });
         }
+
         if (ticket.trans_company_name) {
             this.ticket_content.list.push({
                 label: ticket.transportation_company || '运输公司',

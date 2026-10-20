@@ -68,17 +68,22 @@ async function get_ticket_func(body, token) {
     } else {
         drop_address = null
     }
-    let complex_content = '';
+    let complex_content = '[]';
     let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
     if (complex_plugin)
     {
+        let cc_array = [];
         let input_metas = complex_plugin.input_metas;
         let ci_object = JSON.parse(plan.complex_input || '{}');
         for (let meta of input_metas) {
             if (ci_object[meta.name] !== undefined) {
-                complex_content += meta.label + ':' + ci_object[meta.name] + ' ';
+                cc_array.push({
+                    label: meta.label,
+                    content: ci_object[meta.name]
+                });
             }
         }
+        complex_content = JSON.stringify(cc_array);
     }
 
     return {

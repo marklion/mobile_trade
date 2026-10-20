@@ -1,29 +1,45 @@
+const { calcTotalVolume } = require('./He2Volume_yingtong/helium_volume.js');
 module.exports = {
     input_metas: [
         {
-            name: 'temperature',
-            label: '温度'
+            name: "tank_volume",
+            label: '罐容积(立方米)'
         },
         {
-            name: 'pressure',
-            label: '压强'
+            name: 'pre_temperature',
+            label: '初始温度(摄氏度))'
+        },
+        {
+            name: 'pre_pressure',
+            label: '初始压强(barg)'
+        },
+        {
+            name: 'post_temperature',
+            label: '最终温度(摄氏度)'
+        },
+        {
+            name: 'post_pressure',
+            label: '最终压强(barg)'
         }
     ],
     calc_count: async function (orig_count, input_content) {
         let ret = orig_count;
         let ic_object = JSON.parse(input_content);
-        if (ic_object && ic_object.temperature != null && ic_object.pressure != null) {
-            const T = Number(ic_object.temperature);
-            const P = Number(ic_object.pressure);
-            ret = 1.0770e+00 - 3.9506e-03 * T + 1.0625e+00 * P +
-                1.7250e-05 * T ** 2 - 3.8796e-03 * T * P - 5.8724e-04 * P ** 2 -
-                2.5619e-07 * T ** 3 + 1.3951e-05 * T ** 2 * P + 4.2787e-06 * T * P ** 2 +
-                6.2438e-07 * P ** 3 + 5.2606e-09 * T ** 4 - 4.5217e-08 * T ** 3 * P -
-                1.9524e-08 * T ** 2 * P ** 2 - 5.1043e-09 * T * P ** 3 - 8.0673e-10 * P ** 4 -
-                4.0746e-11 * T ** 5 + 8.8202e-11 * T ** 4 * P + 5.2277e-11 * T ** 3 * P ** 2 +
-                1.4307e-11 * T ** 2 * P ** 3 + 4.5078e-12 * T * P ** 4 + 5.8827e-13 * P ** 5;
-            ret *= orig_count * 1000;
+        if (ic_object && ic_object.tank_volume != null && ic_object.pre_temperature != null && ic_object.pre_pressure != null && ic_object.post_temperature != null && ic_object.post_pressure != null) {
+            const V = Number(ic_object.tank_volume);
+            const T1 = Number(ic_object.pre_temperature);
+            const P1 = Number(ic_object.pre_pressure);
+            const T2 = Number(ic_object.post_temperature);
+            const P2 = Number(ic_object.post_pressure);
+            ret = calcTotalVolume({
+                D4: V,
+                C7: T1,
+                D7: P1,
+                E7: T2,
+                F7: P2
+            });
         }
+
         return Number(ret.toFixed(2));
     },
     convert_to_export_record: async function (input_content) {
