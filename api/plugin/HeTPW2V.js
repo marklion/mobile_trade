@@ -31,6 +31,9 @@ module.exports = {
             const P1 = Number(ic_object.pre_pressure);
             const T2 = Number(ic_object.post_temperature);
             const P2 = Number(ic_object.post_pressure);
+            if (![V, T1, P1, T2, P2].every(Number.isFinite) || V <= 0) {
+                throw { err_msg: '罐容积必须为正数，温度和压强必须为有效数字' };
+            }
             ret = calcTotalVolume({
                 D4: V,
                 C7: T1,
