@@ -223,6 +223,12 @@ module.exports = {
             },
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, -1, async (plan) => {
+                    let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
+                    if (complex_plugin && plan.complex_input && body.is_confirm) {
+                        if (!complex_plugin.verify_input(plan.complex_input)) {
+                            throw { err_msg: '输入不合法' };
+                        }
+                    }
                     let confirm_failure_msg = '';
                     if (body.is_confirm) {
                         let need_driver_confirm = plan.stuff.company.need_driver_confirm;
