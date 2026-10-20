@@ -392,7 +392,7 @@ module.exports = {
             func: async function (body, token) {
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
                     let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
-                    if (complex_plugin) {
+                    if (complex_plugin && body.count > 0) {
                         plan.count = await complex_plugin.calc_count(body.count, plan.complex_input);
                     }
                     else {
