@@ -387,10 +387,10 @@ module.exports = {
                 await plan_lib.action_in_plan(body.plan_id, token, 2, async (plan) => {
                     let complex_plugin = await all_plugin.get_plugin_by_name(plan.stuff.complex_plugin);
                     if (complex_plugin) {
-                        plan.count = await complex_plugin.calc_count(_count, plan.complex_input);
+                        plan.count = await complex_plugin.calc_count(body.count, plan.complex_input);
                     }
                     else {
-                        plan.count = _count;
+                        plan.count = body.count;
                     }
                     plan.first_weight = body.first_weight;
                     plan.second_weight = body.second_weight;
