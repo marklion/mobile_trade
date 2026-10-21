@@ -148,6 +148,7 @@ public:
     std::string begin_scale_date;
     std::string end_scale_date;
     bool pressed_manual_weight = false;
+    double m_stable_weight = 0;
     scale_sm(int64_t _set_id, device_management_handler *dmh);
     void clear_state();
     void open_entry();

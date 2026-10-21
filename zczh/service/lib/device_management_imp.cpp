@@ -1487,11 +1487,14 @@ std::unique_ptr<abs_sm_state> scale_state_idle::proc_event(abs_state_machine &_s
 void scale_state_scale::before_enter(abs_state_machine &_sm)
 {
     auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.m_stable_weight = 0;
     sm.cast_wait_scale();
 }
 
 void scale_state_scale::after_exit(abs_state_machine &_sm)
 {
+    auto &sm = dynamic_cast<scale_sm &>(_sm);
+    sm.m_stable_weight = sm.cur_weight;
 }
 
 double weight_make_scense(double _cur_weight, const std::string &_stuff_name, bool _is_p)
@@ -1736,7 +1739,7 @@ void scale_state_clean::before_enter(abs_state_machine &_sm)
     auto &sm = dynamic_cast<scale_sm &>(_sm);
     sm.cast_result();
     THR_CALL_BEGIN(order_center);
-    client->order_push_weight(sm.order_number, sm.cur_weight, "自动");
+    client->order_push_weight(sm.order_number, sm.m_stable_weight, "自动");
     THR_CALL_END();
     sm.print_ticket();
     auto scale_gate_name = sm.open_exit();
