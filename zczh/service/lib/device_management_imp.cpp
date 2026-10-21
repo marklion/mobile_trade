@@ -1961,7 +1961,7 @@ std::unique_ptr<abs_sm_state> scale_state_issue_card::proc_event(abs_state_machi
                 }
                 if (card_no.length() > 0)
                 {
-                    if (issue_card(sm.order_number, sm.cur_weight, card_no))
+                    if (issue_card(sm.order_number, sm.m_stable_weight, card_no))
                     {
                         ret.reset(new scale_state_clean());
                     }
