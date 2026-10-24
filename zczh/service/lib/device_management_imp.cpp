@@ -1849,7 +1849,24 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
                 catch (...)
                 {
                 }
-                if (sm.cur_weight == 0)
+                bool should_scale = false;
+                auto fg = set->get_parent<sql_device_meta>("front_gate");
+                auto bg = set->get_parent<sql_device_meta>("back_gate");
+                if (fg && bg)
+                {
+                    try
+                    {
+                        if (sm.belong->gate_is_close(fg->get_pri_id()) &&
+                            sm.belong->gate_is_close(bg->get_pri_id()))
+                        {
+                            should_scale = true;
+                        }
+                    }
+                    catch (...)
+                    {
+                    }
+                }
+                if (sm.cur_weight == 0 && should_scale)
                 {
                     ret.reset(new scale_state_idle());
                 }
