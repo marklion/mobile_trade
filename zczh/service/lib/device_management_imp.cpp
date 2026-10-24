@@ -1856,9 +1856,10 @@ std::unique_ptr<abs_sm_state> scale_state_clean::proc_event(abs_state_machine &_
                 {
                     try
                     {
-                        if (!sm.belong->gate_is_close(fg->get_pri_id()) || !sm.belong->gate_is_close(bg->get_pri_id()))
+                        if (sm.belong->gate_is_close(fg->get_pri_id()) &&
+                            sm.belong->gate_is_close(bg->get_pri_id()))
                         {
-                            should_scale = false;
+                            should_scale = true;
                         }
                     }
                     catch (...)
