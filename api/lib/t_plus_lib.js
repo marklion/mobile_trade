@@ -605,62 +605,83 @@ module.exports = {
         }
         const settle_type = is_buy ? 'buy' : 'sale';
 
-        plans = await this.tplus_settle(plans);
+        let settle_error = null;
+        try {
+            plans = await this.tplus_settle(plans);
 
-        let all_success = true;
-        let plate_summary = '';
-        if (plans.length > 0) {
-            const first = plans[0];
-            plate_summary = first.main_vehicle ? first.main_vehicle.plate : '';
-            if (plans.length > 1) {
-                plate_summary += `等${plans.length}车`;
+            let all_success = true;
+            let plate_summary = '';
+            if (plans.length > 0) {
+                const first = plans[0];
+                plate_summary = first.main_vehicle ? first.main_vehicle.plate : '';
+                if (plans.length > 1) {
+                    plate_summary += `等${plans.length}车`;
+                }
+            } else {
+                plate_summary = '无计划';
             }
-        } else {
-            plate_summary = '无计划';
-        }
 
-        for (let i = 0; i < plans.length; i++) {
-            if (!plans[i].tplus_success) {
-                all_success = false;
-                break;
+            for (let i = 0; i < plans.length; i++) {
+                if (!plans[i].tplus_success) {
+                    all_success = false;
+                    break;
+                }
+            }
+
+            const record = await company.createTplus_settle_record({
+                settle_time,
+                settle_type,
+                status: plans.length === 0 ? '无待结算计划' : (all_success ? '推送成功' : '推送失败'),
+                plate_summary,
+                operator: op,
+            });
+
+            for (let i = 0; i < plans.length; i++) {
+                const plan = plans[i];
+                const success = !!plan.tplus_success;
+                const execute_result = plan.execute_result || '';
+                const settle_unit_price = is_buy
+                    ? get_buy_settle_price(buy_prices, plan.stuffId, plan.unit_price)
+                    : (Number.parseFloat(plan.unit_price) || 0);
+                await plan.setTplus_settle_record(record);
+
+                let push_log = await plan.getTplus_push_log();
+                if (push_log) {
+                    push_log.success = success;
+                    push_log.execute_result = execute_result;
+                    push_log.unit_price = settle_unit_price;
+                    push_log.in_process = false;
+                    await push_log.save();
+                }
+            }
+
+            if (is_buy) {
+                config.buy_last_settle_time = settle_time;
+            } else {
+                config.sale_last_settle_time = settle_time;
+            }
+            await config.save();
+
+            return record;
+        } catch (e) {
+            settle_error = e;
+            throw e;
+        } finally {
+            const err_msg = settle_error
+                ? (settle_error.err_msg || settle_error.message || '结算异常')
+                : '';
+            for (let plan of plans) {
+                let push_log = await plan.getTplus_push_log();
+                if (push_log && push_log.in_process) {
+                    push_log.in_process = false;
+                    if (settle_error) {
+                        push_log.success = false;
+                        push_log.execute_result = err_msg;
+                    }
+                    await push_log.save();
+                }
             }
         }
-
-        const record = await company.createTplus_settle_record({
-            settle_time,
-            settle_type,
-            status: plans.length === 0 ? '无待结算计划' : (all_success ? '推送成功' : '推送失败'),
-            plate_summary,
-            operator: op,
-        });
-
-        for (let i = 0; i < plans.length; i++) {
-            const plan = plans[i];
-            const success = !!plan.tplus_success;
-            const execute_result = plan.execute_result || '';
-            const settle_unit_price = is_buy
-                ? get_buy_settle_price(buy_prices, plan.stuffId, plan.unit_price)
-                : (Number.parseFloat(plan.unit_price) || 0);
-            await plan.setTplus_settle_record(record);
-
-            let push_log = await plan.getTplus_push_log();
-            if (push_log) {
-                push_log.success = success;
-                push_log.execute_result = execute_result;
-                push_log.unit_price = settle_unit_price;
-                push_log.in_process = false;
-                await push_log.save();
-            }
-        }
-
-        if (is_buy) {
-            config.buy_last_settle_time = settle_time;
-        } else {
-            config.sale_last_settle_time = settle_time;
-        }
-        await config.save();
-
-        return record;
     },
     should_auto_settle: function (last_settle_time, settle_time, cycle_days) {
         if (!settle_time || settle_time === '00:00:00') {
