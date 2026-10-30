@@ -30,6 +30,7 @@
                     </view>
                     <view class="sc-card-copy">
                         <text class="sc-card-name">{{ item.name }}</text>
+                        <text class="sc-card-input" v-if="item.sc_content && item.sc_content.input">{{ item.sc_content.input }}</text>
                         <text class="sc-card-meta" v-if="item.sc_content">
                             {{ item.need_expired ? item.sc_content.expired_time : '长期' }}
                             <text v-if="item.sc_content.checker"> · {{ item.sc_content.checker }}</text>
@@ -354,6 +355,13 @@ export default {
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
+    word-break: break-all;
+}
+.sc-card-input {
+    font-size: 18rpx;
+    color: #3A4256;
+    font-weight: 600;
+    line-height: 1.3;
     word-break: break-all;
 }
 .sc-card-meta {
