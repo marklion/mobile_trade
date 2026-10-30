@@ -298,10 +298,11 @@
                                 </view>
                             </view>
                             <text class="sc-card-name">{{ sc_node.name }}</text>
+                            <text class="sc-card-input" v-if="sc_node.sc_content && sc_node.sc_content.input">{{ sc_node.sc_content.input }}</text>
                             <text class="sc-card-expire" v-if="sc_node.sc_content && sc_node.sc_content.expired_time">
                                 {{ sc_node.sc_content.expired_time }}
                             </text>
-                            <text class="sc-card-expire muted" v-else>未上传</text>
+                            <text class="sc-card-expire muted" v-if="!(sc_node.sc_content && sc_node.sc_content.expired_time)">未上传</text>
                         </view>
                     </view>
                     <view class="sc-empty" v-else-if="!focus_plan.sc_info">
@@ -2232,6 +2233,19 @@ export default {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     word-break: break-all;
+}
+
+.sc-card-input {
+    margin-top: 4rpx;
+    font-size: 18rpx;
+    color: #3A4256;
+    font-weight: 600;
+    line-height: 1.3;
+    word-break: break-all;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .sc-card-expire {
