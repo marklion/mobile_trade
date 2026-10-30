@@ -54,7 +54,7 @@ module.exports = {
             stuff_ids = stuff.map(s => s.id);
             let plans = await db_opt.get_sq().models.plan.findAll({
                 where: {
-                    register_time: {
+                    call_time: {
                         [db_opt.Op.ne]: null
                     },
                     status: [1, 2],
@@ -75,12 +75,11 @@ module.exports = {
                 if (plan.enter_time && plan.enter_time.length > 0) {
                     continue;
                 }
-                if (plan.call_time && plan.call_time.length > 0) {
-                    let stop_time = moment(plans[j].register_time).add(element.check_in_stay_minutes, 'minutes');
-                    if (moment().isAfter(stop_time)) {
-                        let full_plan = await util_lib.get_single_plan_by_id(plans[j].id);
-                        await this.handle_cancel_check_in(full_plan);
-                    }
+                let stop_time = moment(plans[j].call_time).add(element.check_in_stay_minutes, 'minutes');
+                if (moment().isAfter(stop_time)) {
+                    let full_plan = await util_lib.get_single_plan_by_id(plans[j].id);
+                    await this.handle_cancel_check_in(full_plan);
+                    await util_lib.history_record_cancel_checkin(full_plan, '自动');
                 }
             }
         }

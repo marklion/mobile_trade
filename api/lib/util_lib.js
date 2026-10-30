@@ -110,4 +110,7 @@ module.exports = {
 
         return ret;
     },
+    history_record_cancel_checkin: async function (_plan, _operator) {
+        await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: '取消排号' });
+    },
 }
