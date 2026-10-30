@@ -1,3 +1,4 @@
+const moment = require('moment');
 const db_opt = require('../db_opt')
 module.exports = {
     plan_detail_include() {
@@ -109,5 +110,8 @@ module.exports = {
         ret = await sq.models.plan.findByPk(_plan_id, options);
 
         return ret;
+    },
+    history_record_cancel_checkin: async function (_plan, _operator) {
+        await _plan.createPlan_history({ time: moment().format('YYYY-MM-DD HH:mm:ss'), operator: _operator, action_type: '取消排号' });
     },
 }

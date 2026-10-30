@@ -1798,7 +1798,7 @@ module.exports = {
         await this.record_plan_history(_plan, _operator, content);
     },
     rp_history_cancel_checkin: async function (_plan, _operator) {
-        await this.record_plan_history(_plan, _operator, "取消排号");
+        await util_lib.history_record_cancel_checkin(_plan, _operator);
     },
     rp_history_create: async function (_plan, _operator) {
         await this.record_plan_history(_plan, _operator, '创建');
