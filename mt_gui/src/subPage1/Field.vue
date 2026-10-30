@@ -168,6 +168,11 @@
     <fui-modal width="600" :descr="'确定' + (is_exit_confirm ? '撤销' : '') + '车辆进厂吗？'" v-if="show_enter_vehicle" :show="show_enter_vehicle" @click="enter_vehicle">
     </fui-modal>
     <fui-modal width="600" v-if="show_confirm_vehicle" :show="show_confirm_vehicle" @click="confirm_vehicle">
+        <view class="confirm-weight" v-if="possible_net_weight !== ''">
+            <text class="confirm-weight-label">可能净重</text>
+            <text class="confirm-weight-value">{{ possible_net_weight }}</text>
+            <text class="confirm-weight-sub">当前 {{ confirm_cur_weight }} - 一次 {{ focus_plan.p_weight }}</text>
+        </view>
         <fui-input v-for="meta in complex_input_metas" :key="meta.name" :label="meta.label" borderTop :placeholder="'请输入' + meta.label" v-model="complex_input[meta.name]"></fui-input>
         <fui-input label="铅封号" borderTop placeholder="请输入铅封号" v-model="tmp_seal_no">
             <slot v-if="focus_company.pressure_config" name="default">
@@ -252,7 +257,45 @@ export default {
             complex_input: {},
         };
     },
+    computed: {
+        // 磅状态信息里识别到当前确认车辆（车号相同）时，地磅上的当前重量；取不到为空
+        confirm_cur_weight: function () {
+            const plate = this.norm_plate(this.focus_plan &&
+                this.focus_plan.main_vehicle && this.focus_plan.main_vehicle.plate);
+            if (!plate || plate === '-') {
+                return '';
+            }
+            const matched = (this.all_dev || []).find(dev => {
+                if (!dev.scale_status || dev.cur_weight === '' || dev.cur_weight == null) {
+                    return false;
+                }
+                return this.norm_plate(dev.scale_status).indexOf(plate) >= 0;
+            });
+            if (!matched) {
+                return '';
+            }
+            const weight = Number(matched.cur_weight);
+            return Number.isFinite(weight) ? weight : '';
+        },
+        // 可能净重 = |当前重量 - 一次重量|，当前重量不存在时不展示
+        possible_net_weight: function () {
+            const cur = this.confirm_cur_weight;
+            const pWeight = this.focus_plan ? this.focus_plan.p_weight : null;
+            if (cur === '' || pWeight === '' || pWeight == null) {
+                return '';
+            }
+            const first = Number(pWeight);
+            if (!Number.isFinite(first)) {
+                return '';
+            }
+            const net = Math.round(Math.abs(cur - first) * 100) / 100;
+            return net.toFixed(2);
+        },
+    },
     methods: {
+        norm_plate: function (val) {
+            return String(val || '').replace(/\s+/g, '').toUpperCase();
+        },
         plate_of: function (item) {
             return (item && item.main_vehicle && item.main_vehicle.plate) ? item.main_vehicle.plate : '-';
         },
@@ -516,6 +559,7 @@ export default {
         },
         prepare_confirm_vehicle: async function (item) {
             this.focus_plan_id = item.id;
+            this.focus_plan = item;
             this.tmp_seal_no = item.seal_no;
             this.zone_name = '';
             this.complex_input_metas = JSON.parse(item.complex_input_metas || '[]') || [];
@@ -524,6 +568,8 @@ export default {
             this.show_confirm_vehicle = true;
             this.focus_company = item.stuff.company;
             this.zones = item.stuff.drop_take_zones;
+            // 刷新设备管理的磅状态，以拿到该车在地磅上的最新当前重量
+            this.init_dev();
         },
         confirmSealNo: function () {
             this.tmp_seal_no = '正在泄压';
@@ -1027,6 +1073,40 @@ export default {
 
 .act.warn .act-text {
     background: #FF8A2B;
+}
+
+.confirm-weight {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 4rpx 0 10rpx;
+    padding: 14rpx 18rpx;
+    border-radius: 12rpx;
+    background: rgba(70, 92, 255, 0.08);
+    border: 1rpx solid rgba(70, 92, 255, 0.22);
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    flex-wrap: wrap;
+}
+
+.confirm-weight-label {
+    font-size: 24rpx;
+    color: #6B7280;
+    font-weight: 600;
+}
+
+.confirm-weight-value {
+    margin-left: 12rpx;
+    font-size: 36rpx;
+    color: #2F3FCF;
+    font-weight: 800;
+}
+
+.confirm-weight-sub {
+    width: 100%;
+    margin-top: 6rpx;
+    font-size: 20rpx;
+    color: #9AA3B8;
 }
 
 .stamp-card {
