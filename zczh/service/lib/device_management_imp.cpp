@@ -2035,6 +2035,10 @@ std::unique_ptr<abs_sm_state> scale_state_check_fail::proc_event(abs_state_machi
     {
         ret.reset(new scale_state_idle());
     }
+    else if (_sm.tft == abs_state_machine::manual_confirm || _sm.tft == abs_state_machine::double_check_pass)
+    {
+        ret.reset(new scale_state_prepare());
+    }
 
     return ret;
 }
