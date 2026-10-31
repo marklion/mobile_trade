@@ -328,6 +328,15 @@ module.exports = {
             ret.driver_name = plan.driver && plan.driver.name;
             ret.seal_no = plan.seal_no;
             ret.count = plan.count;
+            // 订单证件安检输入内容：模板中可用 {sc_info.安检项名称} 引用 sc_info 中同名项的输入值
+            if (Array.isArray(plan.sc_info)) {
+                ret.sc_info = {};
+                plan.sc_info.forEach(item => {
+                    if (item && item.name) {
+                        ret.sc_info[item.name] = item.sc_content && item.sc_content.input ? item.sc_content.input : '';
+                    }
+                });
+            }
         }
         if (!ret.finish_time) {
             ret = undefined;
