@@ -664,6 +664,9 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
+                if (!(body.enter_count > 0)) {
+                    throw { err_msg: '装车量必须大于0' };
+                }
                 let sq = db_opt.get_sq();
                 let driver = await sq.models.driver.findOne({ where: { open_id: body.open_id } });
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
