@@ -419,6 +419,7 @@ let db_opt = {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             name: { type: DataTypes.STRING },
             parking_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+            is_open: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
         field_check_table: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },

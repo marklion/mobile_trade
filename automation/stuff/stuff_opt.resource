@@ -405,6 +405,12 @@ Add Region Capacity
     ${resp}  Req to Server  /scale/add_region_capacity  ${token}  ${req}
     RETURN  ${resp}
 
+Update Region Capacity
+    [Arguments]  ${region_id}  ${name}  ${parking_count}  ${is_open}  ${token}=${sc_admin_token}
+    ${req}  Create Dictionary  id=${region_id}  name=${name}  parking_count=${parking_count}  is_open=${is_open}
+    ${resp}  Req to Server  /scale/update_region_capacity  ${token}  ${req}
+    RETURN  ${resp}
+
 Del Region Capacity
     [Arguments]  ${id}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  id=${id}

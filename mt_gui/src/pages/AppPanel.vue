@@ -209,6 +209,14 @@ export default {
                     group: 'field',
                     desc: '磅单印章图片',
                 }, {
+                    name: '区域容量',
+                    icon: 'warehouse',
+                    require_module: 'scale',
+                    path: 'RegionCapacity',
+                    sub_page_name: 'subPage2',
+                    group: 'field',
+                    desc: '车位与自动叫号',
+                }, {
                     name: '合同管理',
                     icon: 'pullup',
                     require_module: undefined,

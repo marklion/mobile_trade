@@ -61,6 +61,14 @@
 			"root": "subPage2",
 			"pages": [
 				{
+					"path": "RegionCapacity",
+					"style": {
+						"navigationBarBackgroundColor": "#2F3FCF",
+						"navigationBarTextStyle": "white",
+						"navigationBarTitleText": "区域容量"
+					}
+				},
+				{
 					"path": "ProtocolSignPad",
 					"style": {
 						"navigationBarBackgroundColor": "#2F3FCF",
