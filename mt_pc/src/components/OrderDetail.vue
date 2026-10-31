@@ -93,6 +93,7 @@
                     <el-descriptions-item v-if="!plan.is_buy" label="卸货地址">{{plan.drop_address}}</el-descriptions-item>
                     <el-descriptions-item v-if="plan.p_time" :label="'皮重(' + plan.p_time + ')'">{{plan.p_weight}}</el-descriptions-item>
                     <el-descriptions-item label="装卸量">{{plan.count}}</el-descriptions-item>
+                    <el-descriptions-item v-if="plan.enter_count" label="入场前装车量">{{plan.enter_count}}</el-descriptions-item>
                     <el-descriptions-item v-if="plan.m_time" :label="'毛重(' + plan.m_time + ')'">{{plan.m_weight}}</el-descriptions-item>
                 </el-descriptions>
             </el-card>

@@ -131,6 +131,9 @@ const BASE_EXPORT_COLUMNS = [{
     label: '装车量',
     name: 'count',
 }, {
+    label: '进厂前装车量',
+    name: 'enter_count',
+}, {
     label: '单价',
     name: 'unit_price',
 }, {

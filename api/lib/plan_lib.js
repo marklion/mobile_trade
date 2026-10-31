@@ -2401,6 +2401,7 @@ module.exports = {
                 p_weight: this.place_hold(element.p_weight, 0),
                 m_weight: this.place_hold(element.m_weight, 0),
                 count: this.place_hold(element.count),
+                enter_count: this.place_hold(element.enter_count, 0),
                 unit_price: element.unit_price,
                 total_price: this.place_hold(element.unit_price, 0) * this.place_hold(element.count, 0),
                 seal_no: element.seal_no,
@@ -2463,6 +2464,9 @@ module.exports = {
         }, {
             header: '装车量',
             key: 'count',
+        }, {
+            header: '进厂前装车量',
+            key: 'enter_count',
         }, {
             header: '单价',
             key: 'unit_price',
@@ -2557,6 +2561,9 @@ module.exports = {
         }
         if (worksheet.columns.some((column) => column && column.key === 'count')) {
             worksheet.getColumn('count').numFmt = '0.00';
+        }
+        if (worksheet.columns.some((column) => column && column.key === 'enter_count')) {
+            worksheet.getColumn('enter_count').numFmt = '0.00';
         }
         if (worksheet.columns.some((column) => column && column.key === 'unit_price')) {
             worksheet.getColumn('unit_price').numFmt = '0.00';
