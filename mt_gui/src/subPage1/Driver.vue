@@ -216,7 +216,7 @@
     </fui-bottom-popup>
     <fui-modal :zIndex="1003" width="600" v-if="show_upload_enter" :show="show_upload_enter" @click="upload_enter_weight">
         <fui-form ref="uew" top="100">
-            <fui-input label="装车量" borderTop placeholder="请输入进厂前装车量" v-model="enter_weight.weight"></fui-input>
+            <fui-input label="装车量" type="digit" borderTop placeholder="请输入进厂前装车量" v-model="enter_weight.weight"></fui-input>
             <fui-form-item label="磅单">
                 <fui-upload max="1" :sizeType="['compressed']" immediate :fileList="fileList" :url="upload_url" ref="upload_kit" @success="after_attach_uploaded" @error="meet_upload_error" @complete="after_other_action"></fui-upload>
             </fui-form-item>
@@ -850,8 +850,8 @@ export default {
             if (e.index == 1) {
                 let rules = [{
                     name: 'weight',
-                    rule: ['required'],
-                    msg: ['请输入重量']
+                    rule: ['required', 'isAmount'],
+                    msg: ['请输入装车量', '请输入正确的装车量']
                 }, {
                     name: 'attach',
                     rule: ['required'],
@@ -859,6 +859,14 @@ export default {
                 }];
                 let val_ret = await this.$refs.uew.validator(this.enter_weight, rules);
                 if (!val_ret.isPassed) {
+                    return;
+                }
+                // isAmount 只校验数字格式，0/0.0 仍能通过，需额外要求大于 0
+                if (!(parseFloat(this.enter_weight.weight) > 0)) {
+                    uni.showToast({
+                        title: '装车量必须大于0',
+                        icon: 'none'
+                    });
                     return;
                 }
                 await this.$send_req('/global/driver_upload_enter_info', {
