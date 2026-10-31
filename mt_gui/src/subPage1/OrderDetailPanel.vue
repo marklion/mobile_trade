@@ -227,6 +227,10 @@
                             <text class="trip-meta-value accent">{{ focus_plan.count != null ? focus_plan.count : '-'
                                 }}</text>
                         </view>
+                        <view class="trip-meta" v-if="focus_plan.enter_count">
+                            <text class="trip-meta-label">入场前装车量</text>
+                            <text class="trip-meta-value">{{ focus_plan.enter_count }}</text>
+                        </view>
                         <view class="trip-meta full" v-if="focus_plan.drop_address">
                             <text class="trip-meta-label">卸货地址</text>
                             <text class="trip-meta-value">{{ focus_plan.drop_address }}</text>
