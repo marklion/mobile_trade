@@ -94,6 +94,7 @@ module.exports = {
             let sq = db_opt.get_sq();
             let regions = await sq.models.region_capacity.findAll({
                 where: {
+                    is_open: true,
                     parking_count: {
                         [db_opt.Op.gt]: 0
                     }

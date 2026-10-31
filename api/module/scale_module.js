@@ -486,7 +486,7 @@ module.exports = {
         },
         add_region_capacity: {
             name: '添加区域容量',
-            description: '添加区域容量配置项',
+            description: '添加区域容量配置项，新增区域默认关闭，需开启后才参与自动叫号',
             is_write: true,
             is_get_api: false,
             params: {
@@ -514,6 +514,43 @@ module.exports = {
                 });
                 await region.setCompany(company);
                 return { id: region.id };
+            },
+        },
+        update_region_capacity: {
+            name: '修改区域容量',
+            description: '修改区域容量的名称、车位数和是否开启',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                id: { type: Number, have_to: true, mean: '区域容量ID', example: 1 },
+                name: { type: String, have_to: true, mean: '区域名称', example: '一号装卸区' },
+                parking_count: { type: Number, have_to: true, mean: '车位数', example: 2 },
+                is_open: { type: Boolean, have_to: true, mean: '是否开启', example: true },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                if (!company) {
+                    throw { err_msg: '公司信息不存在' };
+                }
+                let region = await db_opt.get_sq().models.region_capacity.findByPk(body.id);
+                if (!region || region.companyId != company.id) {
+                    throw { err_msg: '区域容量不存在' };
+                }
+                if (!Number.isInteger(body.parking_count) || body.parking_count < 0) {
+                    throw { err_msg: '车位数必须为非负整数' };
+                }
+                let exist = await company.getRegion_capacities({ where: { name: body.name } });
+                if (exist.some(item => item.id !== region.id)) {
+                    throw { err_msg: '区域名称已存在' };
+                }
+                region.name = body.name;
+                region.parking_count = body.parking_count;
+                region.is_open = body.is_open;
+                await region.save();
+                return { result: true };
             },
         },
         del_region_capacity: {
@@ -553,6 +590,7 @@ module.exports = {
                         id: { type: Number, mean: '区域容量ID', example: 1 },
                         name: { type: String, mean: '区域名称', example: '一号装卸区' },
                         parking_count: { type: Number, mean: '车位数', example: 2 },
+                        is_open: { type: Boolean, mean: '是否开启', example: true },
                         stuff: {
                             type: Array, mean: '关联物料', explain: {
                                 id: { type: Number, mean: '物料ID', example: 1 },
