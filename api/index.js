@@ -2,7 +2,6 @@ const express = require('express');
 const json2md = require('json2md');
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const moment = require('moment');
-const mergeImg = require('merge-img');
 const jimp = require('jimp').default;
 const king_dee_start_lib = require('./lib/king_dee_start_lib');
 const cash_lib = require('./lib/cash_lib');
@@ -12,35 +11,51 @@ app.openapi_paths = {};
 if (!isMainThread) {
     const { pic_list } = workerData;
     const targetWidth = 800; // 设定目标宽度
-    const targetFileSize = 100 * 1024; // 设定目标文件大小
+    const targetFileSize = 500 * 1024; // 合成图目标文件大小
+    const initialQuality = 85; // 合成图初始 JPEG 质量
 
     (async () => {
         try {
             let begin_time = new Date().getTime();
+            // 逐张解码、缩放。直接在同一 Jimp 实例上做纵向合成，
+            // 避免“编码成 buffer 再让 merge-img 解码一遍”的额外开销
             const resizedImages = await Promise.all(
                 pic_list.map(async (file) => {
                     const image = await jimp.read('/database' + file);
-                    image.resize(targetWidth, jimp.AUTO);
-                    let quality = 100;
-                    let buffer = await image.getBufferAsync(jimp.MIME_JPEG);
-                    while (buffer.byteLength > targetFileSize && quality > 0) {
-                        quality -= 5;
-                        image.quality(quality);
-                        buffer = await image.getBufferAsync(jimp.MIME_JPEG);
+                    if (image.bitmap.width > targetWidth) {
+                        image.resize(targetWidth, jimp.AUTO);
                     }
-                    return image.getBufferAsync(jimp.MIME_PNG);
+                    return image;
                 })
             );
-            const mergedImage = await mergeImg(resizedImages, {
-                direction: true
-            });
+            const canvasWidth = Math.max(...resizedImages.map(image => image.bitmap.width));
+            const canvasHeight = resizedImages.reduce(
+                (sum, image) => sum + image.bitmap.height, 0
+            );
+            const mergedImage = await jimp.create(canvasWidth, canvasHeight, 0xffffffff);
+            let offsetY = 0;
+            for (const image of resizedImages) {
+                mergedImage.composite(image, 0, offsetY);
+                offsetY += image.bitmap.height;
+            }
 
-            let end_time = new Date().getTime();
-            console.log('resize time:', end_time - begin_time);
+            // 合成图只做 JPEG 编码；超过目标大小才逐档降质（每次都是对合成图重新编码）
+            let quality = initialQuality;
+            mergedImage.quality(quality);
+            let buffer = await mergedImage.getBufferAsync(jimp.MIME_JPEG);
+            while (buffer.byteLength > targetFileSize && quality > 50) {
+                quality -= 10;
+                mergedImage.quality(quality);
+                buffer = await mergedImage.getBufferAsync(jimp.MIME_JPEG);
+            }
+
             const uuid = require('uuid');
+            const fs = require('fs');
             const real_file_name = uuid.v4();
             const filePath = '/uploads/' + real_file_name + '.jpg';
-            await mergedImage.write('/database' + filePath);
+            fs.writeFileSync('/database' + filePath, buffer);
+            let end_time = new Date().getTime();
+            console.log('resize time:', end_time - begin_time);
             parentPort.postMessage(filePath);
         } catch (error) {
             parentPort.postMessage({ error: error.message });
@@ -242,23 +257,51 @@ else {
     app.use('/uploads', express.static('/database/uploads'));
     app.use('/logo_res', express.static('/database/logo_res'));
 
+    // 拼图是 CPU 密集任务，限制在途 worker 数量，避免并发请求把所有核打满
+    const mergeConcurrency = Math.max(1, Math.floor(totalCpuCores) - 1);
+    let activeMergeCount = 0;
     app.post('/api/v1/merge_pics', async (req, res) => {
         let body = req.body;
         let pic_list = body.pic_list;
+        if (!Array.isArray(pic_list) || pic_list.length === 0) {
+            res.send({ result: '', err_msg: 'pic_list 参数不合法' });
+            return;
+        }
+        if (pic_list.length > 9) {
+            res.send({ result: '', err_msg: '一次最多合并9张图片' });
+            return;
+        }
+        if (!pic_list.every(file => typeof file === 'string' && file.startsWith('/uploads/'))) {
+            res.send({ result: '', err_msg: '图片路径不合法' });
+            return;
+        }
+        if (activeMergeCount >= mergeConcurrency) {
+            res.set('Retry-After', '5');
+            res.status(503).send({ result: '', err_msg: '图片处理繁忙，请稍后重试' });
+            return;
+        }
+        activeMergeCount++;
         const worker = new Worker(__filename, {
             workerData: { pic_list }
         });
 
-        worker.on('message', (filePath) => {
-            res.send({ result: filePath, err_msg: '' });
+        worker.on('message', (data) => {
+            if (data && typeof data === 'object' && data.error) {
+                res.status(500).send({ result: '', err_msg: data.error });
+            } else {
+                res.send({ result: data, err_msg: '' });
+            }
         });
 
         worker.on('error', (error) => {
-            res.status(500).send({ result: '', err_msg: error.message });
+            if (!res.headersSent) {
+                res.status(500).send({ result: '', err_msg: error.message });
+            }
         });
 
         worker.on('exit', (code) => {
-            if (code !== 0) {
+            activeMergeCount--;
+            if (code !== 0 && !res.headersSent) {
                 res.status(500).send({ result: '', err_msg: `Worker stopped with exit code ${code}` });
             }
             console.log('Worker stopped with exit code', code);
