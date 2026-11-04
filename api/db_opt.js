@@ -905,8 +905,8 @@ let db_opt = {
                             await result.save();
                             result_by_item.set(result.fieldCheckItemId, result);
                         } else {
-                            // 同一检查项有两份结果，保留填了内容（pass_time/input）的那份
-                            if ((result.pass_time || result.input) && !(exist.pass_time || exist.input)) {
+                            // 仅补齐未提交表的空结果，保留已提交表的检查结论
+                            if (!survivor.finish_time && (result.pass_time || result.input) && !(exist.pass_time || exist.input)) {
                                 exist.pass_time = result.pass_time;
                                 exist.input = result.input;
                                 await exist.save();
