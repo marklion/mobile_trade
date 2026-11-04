@@ -107,33 +107,6 @@ function parse_history_time_with_fallback(raw_time) {
     };
 }
 
-function resolve_statement_date_key(history) {
-    const parsed_time = parse_history_time_with_fallback(history.time);
-    const fallback_date = parsed_time.date_key;
-    const comment = String(history.comment || '').trim();
-    if (!comment) {
-        return fallback_date;
-    }
-
-    const full_date_match = comment.match(/(20\d{2})[.\-/年](\d{1,2})[.\-/月](\d{1,2})/);
-    if (full_date_match) {
-        const candidate = moment(`${full_date_match[1]}-${full_date_match[2]}-${full_date_match[3]}`, 'YYYY-M-D', true);
-        if (candidate.isValid()) {
-            return candidate.format('YYYY-MM-DD');
-        }
-    }
-
-    const md_match = comment.match(/(^|\D)(\d{1,2})[.\-/月](\d{1,2})(?=\D|$)/);
-    if (md_match && parsed_time.valid) {
-        const candidate = moment(`${parsed_time.moment_time.year()}-${md_match[2]}-${md_match[3]}`, 'YYYY-M-D', true);
-        if (candidate.isValid()) {
-            return candidate.format('YYYY-MM-DD');
-        }
-    }
-
-    return fallback_date;
-}
-
 module.exports = {
     clean_plan_str,
     sanitize_order_update_body,
@@ -3031,6 +3004,16 @@ module.exports = {
             opening_balance += (Number(contract.balance) || 0) - sum_after_start;
         });
 
+        const period_histories = history_rows.filter((history) => {
+            const parsed = parse_history_time_with_fallback(history.time);
+            const in_period = parsed.valid
+                ? parsed.moment_time.isBetween(report_start, report_end, undefined, '[]')
+                : (parsed.date_key >= report_start_date && parsed.date_key <= report_end_date);
+            const delta = Number(history.cash_increased) || 0;
+            return in_period && delta !== 0
+                && (is_statement_amount_history(history) || is_statement_prepayment_history(history));
+        }).sort((a, b) => a.id - b.id);
+
         const home_company = await rbac_lib.get_company_by_token(token);
         const user = await rbac_lib.get_user_by_token(token);
         let stuff_ids = await this.get_stuff_ids_for_stat_scope(owner_company, home_company, user, null);
@@ -3044,102 +3027,56 @@ module.exports = {
             });
             stuff_ids = filtered_stuff_rows.map((item) => item.id);
         }
-        const plan_events = [];
-        if (stuff_ids.length > 0) {
-            const plans = await sq.models.plan.findAll({
+
+        const checkout_times = [...new Set(period_histories
+            .filter((history) => is_statement_amount_history(history))
+            .map((history) => history.time))];
+        const plan_histories = [];
+        if (checkout_times.length > 0 && stuff_ids.length > 0) {
+            const rows = await sq.models.plan_history.findAll({
                 where: {
-                    is_buy: false,
-                    companyId: customer_id,
-                    stuffId: { [db_opt.Op.in]: stuff_ids },
-                    manual_close: false,
-                    count: { [db_opt.Op.gt]: 0 },
+                    time: { [db_opt.Op.in]: checkout_times },
                     [db_opt.Op.or]: [
-                        { status: 3 },
-                        {
-                            [db_opt.Op.and]: [
-                                { status: 2 },
-                                { checkout_delay: true },
-                                { count: { [db_opt.Op.gt]: 0 } },
-                            ],
-                        },
-                    ],
-                    [db_opt.Op.and]: [
-                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                            [db_opt.Op.gte]: sq.fn('TIMESTAMP', report_start.format('YYYY-MM-DD HH:mm:ss'))
-                        }),
-                        sq.where(sq.fn('TIMESTAMP', sq.col('plan_time')), {
-                            [db_opt.Op.lte]: sq.fn('TIMESTAMP', report_end.format('YYYY-MM-DD HH:mm:ss'))
-                        }),
+                        { action_type: '结算' },
+                        { action_type: { [db_opt.Op.like]: '回退结算%' } },
                     ],
                 },
-                include: [
-                    { model: sq.models.stuff, paranoid: false },
-                    { model: sq.models.vehicle, as: 'main_vehicle', paranoid: false },
-                    { model: sq.models.vehicle, as: 'behind_vehicle', paranoid: false },
-                ],
-                order: [[sq.fn('TIMESTAMP', sq.col('plan_time')), 'ASC'], ['id', 'ASC']],
+                attributes: ['id', 'time', 'action_type', 'planId'],
+                include: [{
+                    model: sq.models.plan,
+                    required: true,
+                    where: {
+                        is_buy: false,
+                        companyId: customer_id,
+                        stuffId: { [db_opt.Op.in]: stuff_ids },
+                    },
+                    include: [
+                        { model: sq.models.stuff, paranoid: false },
+                        { model: sq.models.vehicle, as: 'main_vehicle', paranoid: false },
+                        { model: sq.models.vehicle, as: 'behind_vehicle', paranoid: false },
+                    ],
+                }],
+                order: [['id', 'ASC']],
             });
-            plans.forEach((plan) => {
-                const count = Number(plan.count) || 0;
-                const unit_price = Number(plan.unit_price) || 0;
-                plan_events.push({
-                    used: false,
-                    date: (plan.plan_time || '').slice(0, 10),
-                    plan_time: plan.plan_time || '',
-                    delivery_time: plan.m_time || plan.p_time || '',
-                    delivery_date: (plan.m_time || plan.p_time || '').slice(0, 10),
-                    ticket_no: plan.ticket_no || '',
-                    stuff_name: plan.stuff ? plan.stuff.name : '',
-                    main_vehicle: plan.main_vehicle ? plan.main_vehicle.plate : '',
-                    behind_vehicle: plan.behind_vehicle ? plan.behind_vehicle.plate : '',
-                    p_weight: Number(plan.p_weight) || 0,
-                    m_weight: Number(plan.m_weight) || 0,
-                    net_weight: count,
-                    unit_price,
-                    amount: count * unit_price,
-                });
-            });
+            plan_histories.push(...rows);
         }
-        const consume_plan_event = (date_keys, target_amount, history_time) => {
-            const available_events = plan_events.filter((item) => !item.used);
-            const epsilon = 0.01;
-            let candidates = available_events.filter((item) => Math.abs((item.amount || 0) - target_amount) < epsilon);
-            if (candidates.length === 0) {
-                candidates = available_events.filter((item) => date_keys.includes(item.delivery_date) || date_keys.includes(item.date));
-            }
-            if (candidates.length === 0) {
-                return null;
-            }
 
-            const parsed_history_time = parse_history_time_with_fallback(history_time);
-            const get_date_rank = (event) => {
-                if (date_keys.includes(event.delivery_date)) {
-                    return 0;
-                }
-                if (date_keys.includes(event.date)) {
-                    return 1;
-                }
-                return 2;
-            };
-            const get_time_distance = (event) => {
-                const parsed_event_time = parse_history_time_with_fallback(event.delivery_time || event.plan_time);
-                if (!parsed_history_time.valid || !parsed_event_time.valid) {
-                    return Number.MAX_SAFE_INTEGER;
-                }
-                return Math.abs(parsed_history_time.moment_time.diff(parsed_event_time.moment_time));
-            };
-            candidates.sort((a, b) => get_date_rank(a) - get_date_rank(b) || get_time_distance(a) - get_time_distance(b));
-            const found = candidates[0];
-            found.used = true;
-            return found;
+        const plan_histories_by_event = new Map();
+        plan_histories.forEach((history) => {
+            const event_type = (history.action_type || '').startsWith('回退结算') ? 'rollback' : 'checkout';
+            const event_key = `${history.time}|${event_type}`;
+            if (!plan_histories_by_event.has(event_key)) {
+                plan_histories_by_event.set(event_key, []);
+            }
+            plan_histories_by_event.get(event_key).push(history);
+        });
+        const take_statement_plan = (history) => {
+            const event_type = (history.comment || '').includes('回退出货增加') ? 'rollback' : 'checkout';
+            const event_key = `${history.time}|${event_type}`;
+            const candidates = plan_histories_by_event.get(event_key) || [];
+            const matched_history = candidates.shift();
+            return matched_history ? matched_history.plan : null;
         };
-
-        const period_histories = history_rows.filter((history) => {
-            const parsed = parse_history_time_with_fallback(history.time);
-            return parsed.valid
-                ? parsed.moment_time.isBetween(report_start, report_end, undefined, '[]')
-                : (parsed.date_key >= report_start_date && parsed.date_key <= report_end_date);
-        }).sort((a, b) => a.id - b.id);
 
         let running_balance = opening_balance;
         const table_rows = [];
@@ -3149,41 +3086,30 @@ module.exports = {
         let seq = 1;
         period_histories.forEach((history) => {
             const delta = Number(history.cash_increased) || 0;
-            if (delta === 0) {
-                return;
-            }
             const is_amount = is_statement_amount_history(history);
+            const matched_plan = is_amount ? take_statement_plan(history) : null;
+            const parsed_history_time = parse_history_time_with_fallback(history.time);
             const amount = is_amount ? (-delta) : 0;
             const prepayment = is_amount ? 0 : delta;
-            const parsed_history_time = parse_history_time_with_fallback(history.time);
-            const business_date = resolve_statement_date_key(history);
-            const op_date = parsed_history_time.date_key;
-            const target_amount = Math.abs(amount);
-            let matched_plan = null;
-            if (is_amount && target_amount > 0) {
-                const date_keys = [...new Set([business_date, op_date].filter(Boolean))];
-                matched_plan = consume_plan_event(date_keys, target_amount, history.time);
-            }
+            const net_weight = matched_plan ? (Number(matched_plan.count) || 0) : 0;
 
             running_balance += delta;
             total_amount += amount;
             total_prepayment += prepayment;
-            if (matched_plan) {
-                total_net_weight += Number(matched_plan.net_weight) || 0;
-            }
+            total_net_weight += net_weight;
 
             table_rows.push({
                 seq: seq++,
                 time: parsed_history_time.valid ? parsed_history_time.moment_time.format('YYYY-MM-DD HH:mm:ss') : parsed_history_time.time_str,
-                plan_date: matched_plan ? matched_plan.date : '',
-                ticket_no: matched_plan ? matched_plan.ticket_no : '',
-                stuff_name: matched_plan ? matched_plan.stuff_name : '',
-                main_vehicle: matched_plan ? matched_plan.main_vehicle : '',
-                behind_vehicle: matched_plan ? matched_plan.behind_vehicle : '',
-                p_weight: matched_plan ? matched_plan.p_weight : 0,
-                m_weight: matched_plan ? matched_plan.m_weight : 0,
-                net_weight: matched_plan ? matched_plan.net_weight : 0,
-                unit_price: matched_plan ? matched_plan.unit_price : 0,
+                plan_date: matched_plan ? (matched_plan.plan_time || '').slice(0, 10) : '',
+                ticket_no: matched_plan ? (matched_plan.ticket_no || '') : '',
+                stuff_name: matched_plan && matched_plan.stuff ? matched_plan.stuff.name : '',
+                main_vehicle: matched_plan && matched_plan.main_vehicle ? matched_plan.main_vehicle.plate : '',
+                behind_vehicle: matched_plan && matched_plan.behind_vehicle ? matched_plan.behind_vehicle.plate : '',
+                p_weight: matched_plan ? (Number(matched_plan.p_weight) || 0) : 0,
+                m_weight: matched_plan ? (Number(matched_plan.m_weight) || 0) : 0,
+                net_weight,
+                unit_price: matched_plan ? (Number(matched_plan.unit_price) || 0) : 0,
                 amount,
                 prepayment,
                 balance: running_balance,
