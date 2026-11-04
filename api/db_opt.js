@@ -871,8 +871,14 @@ let db_opt = {
                     paranoid: false,
                     order: [['id', 'ASC']],
                 });
-                // 优先保留已完成（有 finish_time）的；都没完成则保留最早的
-                let survivor_index = rows.findIndex(row => row.finish_time);
+                // 优先保留有效记录，再按已完成、最早的顺序选择
+                let survivor_index = rows.findIndex(row => !row.deletedAt && row.finish_time);
+                if (survivor_index === -1) {
+                    survivor_index = rows.findIndex(row => !row.deletedAt);
+                }
+                if (survivor_index === -1) {
+                    survivor_index = rows.findIndex(row => row.finish_time);
+                }
                 if (survivor_index === -1) {
                     survivor_index = 0;
                 }
