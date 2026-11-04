@@ -2976,43 +2976,10 @@ module.exports = {
             order: [['id', 'ASC']],
             raw: true,
         });
-        const history_by_contract = new Map();
-        history_rows.forEach((row) => {
-            if (!history_by_contract.has(row.contractId)) {
-                history_by_contract.set(row.contractId, []);
-            }
-            history_by_contract.get(row.contractId).push(row);
-        });
-        // 期初=报表开始时刻的合同余额（与余额明细表一致）。
         const start_prev = report_start.clone().subtract(1, 'seconds');
         const report_start_text = report_start.format('YYYY-MM-DD HH:mm:ss');
         const report_start_date = report_start.format('YYYY-MM-DD');
         const report_end_date = report_end.format('YYYY-MM-DD');
-        let opening_balance = 0;
-        contracts.forEach((contract) => {
-            const list = history_by_contract.get(contract.id) || [];
-            let sum_after_start = 0;
-            list.forEach((history) => {
-                const parsed = parse_history_time_with_fallback(history.time);
-                const in_after_start = parsed.valid
-                    ? parsed.moment_time.isAfter(start_prev)
-                    : parsed.time_str >= report_start_text;
-                if (in_after_start) {
-                    sum_after_start += Number(history.cash_increased) || 0;
-                }
-            });
-            opening_balance += (Number(contract.balance) || 0) - sum_after_start;
-        });
-
-        const period_histories = history_rows.filter((history) => {
-            const parsed = parse_history_time_with_fallback(history.time);
-            const in_period = parsed.valid
-                ? parsed.moment_time.isBetween(report_start, report_end, undefined, '[]')
-                : (parsed.date_key >= report_start_date && parsed.date_key <= report_end_date);
-            const delta = Number(history.cash_increased) || 0;
-            return in_period && delta !== 0
-                && (is_statement_amount_history(history) || is_statement_prepayment_history(history));
-        }).sort((a, b) => a.id - b.id);
 
         const home_company = await rbac_lib.get_company_by_token(token);
         const user = await rbac_lib.get_user_by_token(token);
@@ -3028,14 +2995,24 @@ module.exports = {
             stuff_ids = filtered_stuff_rows.map((item) => item.id);
         }
 
-        const checkout_times = [...new Set(period_histories
-            .filter((history) => is_statement_amount_history(history))
-            .map((history) => history.time))];
-        const plan_histories = [];
-        if (checkout_times.length > 0 && stuff_ids.length > 0) {
-            const rows = await sq.models.plan_history.findAll({
+        const amount_histories = history_rows.filter((history) => is_statement_amount_history(history));
+        const valid_history_times = amount_histories
+            .map((history) => parse_history_time_with_fallback(history.time))
+            .filter((parsed) => parsed.valid)
+            .map((parsed) => parsed.moment_time);
+        let plan_histories = [];
+        const time_tolerance_seconds = 60;
+        if (valid_history_times.length > 0 && stuff_ids.length > 0) {
+            const query_start = moment.min(...valid_history_times).clone().subtract(time_tolerance_seconds, 'seconds');
+            const query_end = moment.max(...valid_history_times).clone().add(time_tolerance_seconds, 'seconds');
+            plan_histories = await sq.models.plan_history.findAll({
                 where: {
-                    time: { [db_opt.Op.in]: checkout_times },
+                    time: {
+                        [db_opt.Op.between]: [
+                            query_start.format('YYYY-MM-DD HH:mm:ss'),
+                            query_end.format('YYYY-MM-DD HH:mm:ss'),
+                        ],
+                    },
                     [db_opt.Op.or]: [
                         { action_type: '结算' },
                         { action_type: { [db_opt.Op.like]: '回退结算%' } },
@@ -3058,25 +3035,105 @@ module.exports = {
                 }],
                 order: [['id', 'ASC']],
             });
-            plan_histories.push(...rows);
         }
 
-        const plan_histories_by_event = new Map();
-        plan_histories.forEach((history) => {
-            const event_type = (history.action_type || '').startsWith('回退结算') ? 'rollback' : 'checkout';
-            const event_key = `${history.time}|${event_type}`;
-            if (!plan_histories_by_event.has(event_key)) {
-                plan_histories_by_event.set(event_key, []);
+        const match_candidates = [];
+        amount_histories.forEach((history) => {
+            const parsed_history_time = parse_history_time_with_fallback(history.time);
+            if (!parsed_history_time.valid) {
+                return;
             }
-            plan_histories_by_event.get(event_key).push(history);
-        });
-        const take_statement_plan = (history) => {
             const event_type = (history.comment || '').includes('回退出货增加') ? 'rollback' : 'checkout';
-            const event_key = `${history.time}|${event_type}`;
-            const candidates = plan_histories_by_event.get(event_key) || [];
-            const matched_history = candidates.shift();
-            return matched_history ? matched_history.plan : null;
-        };
+            plan_histories.forEach((plan_history) => {
+                const plan_event_type = (plan_history.action_type || '').startsWith('回退结算') ? 'rollback' : 'checkout';
+                if (plan_event_type !== event_type) {
+                    return;
+                }
+                const parsed_plan_time = parse_history_time_with_fallback(plan_history.time);
+                if (!parsed_plan_time.valid) {
+                    return;
+                }
+                const distance = event_type === 'checkout'
+                    ? parsed_history_time.moment_time.diff(parsed_plan_time.moment_time, 'seconds')
+                    : parsed_plan_time.moment_time.diff(parsed_history_time.moment_time, 'seconds');
+                if (distance >= 0 && distance <= time_tolerance_seconds) {
+                    match_candidates.push({ history, plan_history, distance });
+                }
+            });
+        });
+        match_candidates.sort((a, b) => a.distance - b.distance
+            || a.history.id - b.history.id
+            || a.plan_history.id - b.plan_history.id);
+
+        const matched_plan_by_history = new Map();
+        const used_balance_history_ids = new Set();
+        const used_plan_history_ids = new Set();
+        match_candidates.forEach((candidate) => {
+            if (used_balance_history_ids.has(candidate.history.id) || used_plan_history_ids.has(candidate.plan_history.id)) {
+                return;
+            }
+            used_balance_history_ids.add(candidate.history.id);
+            used_plan_history_ids.add(candidate.plan_history.id);
+            matched_plan_by_history.set(candidate.history.id, candidate.plan_history.plan);
+        });
+
+        const amount_entries_by_plan = new Map();
+        amount_histories.forEach((history) => {
+            const matched_plan = matched_plan_by_history.get(history.id) || null;
+            const group_key = matched_plan ? `plan:${matched_plan.id}` : `history:${history.id}`;
+            if (!amount_entries_by_plan.has(group_key)) {
+                amount_entries_by_plan.set(group_key, []);
+            }
+            amount_entries_by_plan.get(group_key).push({
+                history,
+                plan: matched_plan,
+                event_type: (history.comment || '').includes('回退出货增加') ? 'rollback' : 'checkout',
+            });
+        });
+        const effective_amount_entries = [];
+        amount_entries_by_plan.forEach((entries) => {
+            const latest_entry = entries[entries.length - 1];
+            if (latest_entry.event_type === 'checkout') {
+                effective_amount_entries.push(latest_entry);
+            }
+        });
+        const recharge_entries = history_rows
+            .filter((history) => !is_statement_amount_history(history) && is_statement_prepayment_history(history))
+            .map((history) => ({ history, plan: null }));
+        const statement_entries = recharge_entries.concat(effective_amount_entries)
+            .sort((a, b) => a.history.id - b.history.id);
+
+        const history_by_contract = new Map();
+        statement_entries.forEach(({ history }) => {
+            if (!history_by_contract.has(history.contractId)) {
+                history_by_contract.set(history.contractId, []);
+            }
+            history_by_contract.get(history.contractId).push(history);
+        });
+        // 期初=报表开始时刻的合同余额（与余额明细表一致）。
+        let opening_balance = 0;
+        contracts.forEach((contract) => {
+            const list = history_by_contract.get(contract.id) || [];
+            let sum_after_start = 0;
+            list.forEach((history) => {
+                const parsed = parse_history_time_with_fallback(history.time);
+                const in_after_start = parsed.valid
+                    ? parsed.moment_time.isAfter(start_prev)
+                    : parsed.time_str >= report_start_text;
+                if (in_after_start) {
+                    sum_after_start += Number(history.cash_increased) || 0;
+                }
+            });
+            opening_balance += (Number(contract.balance) || 0) - sum_after_start;
+        });
+
+        const period_entries = statement_entries.filter(({ history }) => {
+            const parsed = parse_history_time_with_fallback(history.time);
+            const in_period = parsed.valid
+                ? parsed.moment_time.isBetween(report_start, report_end, undefined, '[]')
+                : (parsed.date_key >= report_start_date && parsed.date_key <= report_end_date);
+            return in_period && (Number(history.cash_increased) || 0) !== 0;
+        });
 
         let running_balance = opening_balance;
         const table_rows = [];
@@ -3084,10 +3141,9 @@ module.exports = {
         let total_amount = 0;
         let total_prepayment = 0;
         let seq = 1;
-        period_histories.forEach((history) => {
+        period_entries.forEach(({ history, plan: matched_plan }) => {
             const delta = Number(history.cash_increased) || 0;
             const is_amount = is_statement_amount_history(history);
-            const matched_plan = is_amount ? take_statement_plan(history) : null;
             const parsed_history_time = parse_history_time_with_fallback(history.time);
             const amount = is_amount ? (-delta) : 0;
             const prepayment = is_amount ? 0 : delta;
