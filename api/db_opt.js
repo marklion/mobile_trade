@@ -845,13 +845,83 @@ let db_opt = {
         _sq.models.device_permission_binding.belongsTo(_sq.models.rbac_role);
         _sq.models.rbac_role.hasMany(_sq.models.device_permission_binding);
     },
+    // 各模型除 paranoid 外的额外 define 选项
+    model_define_options: {
+        // 同一张现场检查表在同一个计划下只能有一行：唯一索引兜底并发补建，防止产生重复 fc_plan_table
+        fc_plan_table: {
+            indexes: [
+                { name: 'fc_plan_table_table_plan_uk', unique: true, fields: ['fieldCheckTableId', 'planId'] },
+            ],
+        },
+    },
+    // 唯一索引上线前，并发调用 prepare_empty_fc 可能已经产生重复 fc_plan_table；
+    // sync 创建唯一索引之前先把存量重复行合并掉，否则建索引会失败
+    dedupe_fc_plan_table: async function (sq) {
+        if (!await sq.getQueryInterface().tableExists('fc_plan_table')) {
+            return; // 全新数据库，sync 会直接建表带唯一索引
+        }
+        const groups = await sq.query(
+            'SELECT planId, fieldCheckTableId FROM fc_plan_table GROUP BY planId, fieldCheckTableId HAVING COUNT(*) > 1',
+            { type: Sequelize.QueryTypes.SELECT }
+        );
+        for (const group of groups) {
+            await sq.transaction(async () => {
+                const rows = await sq.models.fc_plan_table.findAll({
+                    where: { planId: group.planId, fieldCheckTableId: group.fieldCheckTableId },
+                    paranoid: false,
+                    order: [['id', 'ASC']],
+                });
+                // 优先保留已完成（有 finish_time）的；都没完成则保留最早的
+                let survivor_index = rows.findIndex(row => row.finish_time);
+                if (survivor_index === -1) {
+                    survivor_index = 0;
+                }
+                const survivor = rows[survivor_index];
+                const survivor_results = await sq.models.fc_check_result.findAll({
+                    where: { fcPlanTableId: survivor.id },
+                    paranoid: false,
+                });
+                const result_by_item = new Map(survivor_results.map(r => [r.fieldCheckItemId, r]));
+                for (let i = 0; i < rows.length; i++) {
+                    if (i === survivor_index) {
+                        continue;
+                    }
+                    const loser = rows[i];
+                    const loser_results = await sq.models.fc_check_result.findAll({
+                        where: { fcPlanTableId: loser.id },
+                        paranoid: false,
+                    });
+                    for (const result of loser_results) {
+                        const exist = result_by_item.get(result.fieldCheckItemId);
+                        if (!exist) {
+                            // 保留行缺这个检查项的结果，直接挂过去
+                            result.fcPlanTableId = survivor.id;
+                            await result.save();
+                            result_by_item.set(result.fieldCheckItemId, result);
+                        } else {
+                            // 同一检查项有两份结果，保留填了内容（pass_time/input）的那份
+                            if ((result.pass_time || result.input) && !(exist.pass_time || exist.input)) {
+                                exist.pass_time = result.pass_time;
+                                exist.input = result.input;
+                                await exist.save();
+                            }
+                            await result.destroy({ force: true });
+                        }
+                    }
+                    await loser.destroy({ force: true });
+                    console.warn(`合并重复 fc_plan_table: plan=${group.planId}, field_check_table=${group.fieldCheckTableId}, 删除 id=${loser.id}, 保留 id=${survivor.id}`);
+                }
+            });
+        }
+    },
     install: async function () {
         console.log('run install');
         let sq = this.get_sq();
         Object.keys(this.model).forEach((key) => {
-            sq.define(key, this.model[key], { paranoid: true });
+            sq.define(key, this.model[key], Object.assign({ paranoid: true }, this.model_define_options[key]));
         });
         this.make_associate(sq);
+        await this.dedupe_fc_plan_table(sq);
         await sq.sync({ alter: { drop: false } });
         try {
             await sq.query(

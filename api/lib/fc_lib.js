@@ -218,40 +218,56 @@ module.exports = {
                     include: [sq.models.field_check_item]
                 }, sq.models.rbac_user]
             });
-            if (fc_plan_tables.length == 1) {
+            if (fc_plan_tables.length === 1) {
                 element.fc_plan_table = fc_plan_tables[0];
-
+            } else if (fc_plan_tables.length > 1) {
+                // 正常情况下唯一索引不会再让重复行出现；这里只作为存量数据的兜底：优先取已完成的，否则取最早的
+                console.warn('检测到重复 fc_plan_table:', {
+                    plan_id,
+                    field_check_table_id: element.id,
+                    fc_plan_table_ids: fc_plan_tables.map(item => item.id),
+                });
+                element.fc_plan_table = fc_plan_tables.find(item => item.finish_time) || fc_plan_tables[0];
             }
         }
         return { fc_plan_tables: ret.fc_table, total: ret.total };
     },
     prepare_empty_fc: async function (plan_id) {
-        await db_opt.get_sq().transaction({ savepoint: true }, async (new_t) => {
-            let plan = await sq.models.plan.findByPk(plan_id);
-            let stuff = await plan.getStuff();
-            let fc_tables = await stuff.getField_check_tables();
-            for (let index = 0; index < fc_tables.length; index++) {
-                const element = fc_tables[index];
-                let exist_fc_plan_tables = await element.getFc_plan_tables({
-                    where: { planId: plan_id },
-                    transaction: new_t,
-                    lock: new_t.LOCK.UPDATE
+        let plan = await sq.models.plan.findByPk(plan_id);
+        let stuff = await plan.getStuff();
+        let fc_tables = await stuff.getField_check_tables();
+        for (let index = 0; index < fc_tables.length; index++) {
+            const element = fc_tables[index];
+            // (fieldCheckTableId, planId) 上有唯一索引兜底：并发补建时抢输的一方会收到 ER_DUP_ENTRY，
+            // 回退为查询另一方刚建好的行即可，不再依赖事务隔离级别的 gap lock
+            let fc_plan_table;
+            try {
+                [fc_plan_table] = await sq.models.fc_plan_table.findOrCreate({
+                    where: { fieldCheckTableId: element.id, planId: plan_id },
                 });
-                if (exist_fc_plan_tables.length > 0) {
-                    continue;
+            } catch (e) {
+                const dup_code = (e.parent && e.parent.code) || (e.original && e.original.code);
+                if (dup_code !== 'ER_DUP_ENTRY') {
+                    throw e;
                 }
-                let new_one = await sq.models.fc_plan_table.create({
-                }, { transaction: new_t, lock: new_t.LOCK.UPDATE });
-                await element.addFc_plan_table(new_one);
-                await new_one.setPlan(plan);
-                let fc_items = await element.getField_check_items();
-                for (let j = 0; j < fc_items.length; j++) {
-                    const item = fc_items[j];
-                    await new_one.createFc_check_result({ fieldCheckItemId: item.id });
+                fc_plan_table = await sq.models.fc_plan_table.findOne({
+                    where: { fieldCheckTableId: element.id, planId: plan_id },
+                });
+            }
+            if (!fc_plan_table) {
+                throw { err_msg: '现场检查表补建失败' };
+            }
+            // 补齐检查结果行（防止历史上只建了主表、结果行没建全）
+            let fc_items = await element.getField_check_items();
+            let exist_results = await fc_plan_table.getFc_check_results();
+            let exist_item_ids = new Set(exist_results.map(item => item.fieldCheckItemId));
+            for (let j = 0; j < fc_items.length; j++) {
+                const item = fc_items[j];
+                if (!exist_item_ids.has(item.id)) {
+                    await fc_plan_table.createFc_check_result({ fieldCheckItemId: item.id });
                 }
             }
-        });
-
+        }
     },
     get_all_fc_plan_table: async function (plan) {
         let pageNo = 0;
