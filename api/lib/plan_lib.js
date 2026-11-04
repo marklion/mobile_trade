@@ -3085,6 +3085,9 @@ module.exports = {
                 plan_events.push({
                     used: false,
                     date: (plan.plan_time || '').slice(0, 10),
+                    plan_time: plan.plan_time || '',
+                    delivery_time: plan.m_time || plan.p_time || '',
+                    delivery_date: (plan.m_time || plan.p_time || '').slice(0, 10),
                     ticket_no: plan.ticket_no || '',
                     stuff_name: plan.stuff ? plan.stuff.name : '',
                     main_vehicle: plan.main_vehicle ? plan.main_vehicle.plate : '',
@@ -3097,27 +3100,38 @@ module.exports = {
                 });
             });
         }
-        const plan_events_by_date = new Map();
-        plan_events.forEach((event) => {
-            if (!plan_events_by_date.has(event.date)) {
-                plan_events_by_date.set(event.date, []);
+        const consume_plan_event = (date_keys, target_amount, history_time) => {
+            const available_events = plan_events.filter((item) => !item.used);
+            const epsilon = 0.01;
+            let candidates = available_events.filter((item) => Math.abs((item.amount || 0) - target_amount) < epsilon);
+            if (candidates.length === 0) {
+                candidates = available_events.filter((item) => date_keys.includes(item.delivery_date) || date_keys.includes(item.date));
             }
-            plan_events_by_date.get(event.date).push(event);
-        });
-        const consume_plan_event = (date_key, target_amount) => {
-            const day_events = plan_events_by_date.get(date_key) || [];
-            if (day_events.length === 0) {
+            if (candidates.length === 0) {
                 return null;
             }
-            const epsilon = 0.01;
-            let found = day_events.find((item) => !item.used && Math.abs((item.amount || 0) - target_amount) < epsilon);
-            if (!found) {
-                found = day_events.find((item) => !item.used);
-            }
-            if (found) {
-                found.used = true;
-            }
-            return found || null;
+
+            const parsed_history_time = parse_history_time_with_fallback(history_time);
+            const get_date_rank = (event) => {
+                if (date_keys.includes(event.delivery_date)) {
+                    return 0;
+                }
+                if (date_keys.includes(event.date)) {
+                    return 1;
+                }
+                return 2;
+            };
+            const get_time_distance = (event) => {
+                const parsed_event_time = parse_history_time_with_fallback(event.delivery_time || event.plan_time);
+                if (!parsed_history_time.valid || !parsed_event_time.valid) {
+                    return Number.MAX_SAFE_INTEGER;
+                }
+                return Math.abs(parsed_history_time.moment_time.diff(parsed_event_time.moment_time));
+            };
+            candidates.sort((a, b) => get_date_rank(a) - get_date_rank(b) || get_time_distance(a) - get_time_distance(b));
+            const found = candidates[0];
+            found.used = true;
+            return found;
         };
 
         const period_histories = history_rows.filter((history) => {
@@ -3141,15 +3155,14 @@ module.exports = {
             const is_amount = is_statement_amount_history(history);
             const amount = is_amount ? (-delta) : 0;
             const prepayment = is_amount ? 0 : delta;
+            const parsed_history_time = parse_history_time_with_fallback(history.time);
             const business_date = resolve_statement_date_key(history);
-            const op_date = parse_history_time_with_fallback(history.time).date_key;
+            const op_date = parsed_history_time.date_key;
             const target_amount = Math.abs(amount);
             let matched_plan = null;
             if (is_amount && target_amount > 0) {
-                matched_plan = consume_plan_event(business_date, target_amount);
-                if (!matched_plan && op_date && op_date !== business_date) {
-                    matched_plan = consume_plan_event(op_date, target_amount);
-                }
+                const date_keys = [...new Set([business_date, op_date].filter(Boolean))];
+                matched_plan = consume_plan_event(date_keys, target_amount, history.time);
             }
 
             running_balance += delta;
@@ -3161,7 +3174,8 @@ module.exports = {
 
             table_rows.push({
                 seq: seq++,
-                date: business_date,
+                time: parsed_history_time.valid ? parsed_history_time.moment_time.format('YYYY-MM-DD HH:mm:ss') : parsed_history_time.time_str,
+                plan_date: matched_plan ? matched_plan.date : '',
                 ticket_no: matched_plan ? matched_plan.ticket_no : '',
                 stuff_name: matched_plan ? matched_plan.stuff_name : '',
                 main_vehicle: matched_plan ? matched_plan.main_vehicle : '',
@@ -3180,21 +3194,21 @@ module.exports = {
         const worksheet = workbook.addWorksheet('客户对账单');
         const title = `${customer.name}${body.start_time} ~ ${body.end_time}对账单`;
         worksheet.addRow([title]);
-        worksheet.mergeCells(1, 1, 1, 13);
+        worksheet.mergeCells(1, 1, 1, 14);
         worksheet.addRow([
-            '序号', '日期', '磅单号', '物料名称', '车牌号', '挂车号',
+            '序号', '时间', '计划日期', '磅单号', '物料名称', '车牌号', '挂车号',
             '皮重(吨)', '毛重(吨)', '净重(吨)', '单价(元)', '金额(元)', '预收款(元)', '结余(元)'
         ]);
 
         table_rows.forEach((row) => {
             worksheet.addRow([
-                row.seq, row.date, row.ticket_no, row.stuff_name, row.main_vehicle, row.behind_vehicle,
+                row.seq, row.time, row.plan_date, row.ticket_no, row.stuff_name, row.main_vehicle, row.behind_vehicle,
                 row.p_weight, row.m_weight, row.net_weight, row.unit_price, row.amount, row.prepayment, row.balance
             ]);
         });
         worksheet.addRow([
-            '', '合计', '', '', '', '',
-            '', '', total_net_weight, '', total_amount, total_prepayment, running_balance
+            '', '合计', '', '', '', '', '', '', '',
+            total_net_weight, '', total_amount, total_prepayment, running_balance
         ]);
 
         worksheet.eachRow((row, row_number) => {
@@ -3206,14 +3220,14 @@ module.exports = {
             });
         });
 
-        const widths = [8, 12, 14, 14, 12, 12, 10, 10, 10, 10, 12, 12, 12];
+        const widths = [8, 20, 12, 14, 14, 12, 12, 10, 10, 10, 10, 12, 12, 12];
         widths.forEach((width, idx) => {
             worksheet.getColumn(idx + 1).width = width;
         });
-        [7, 8, 9, 10, 11, 12].forEach((col) => {
+        [8, 9, 10, 11, 12, 13].forEach((col) => {
             worksheet.getColumn(col).numFmt = '0.00';
         });
-        worksheet.getColumn(13).numFmt = '#,##0.00';
+        worksheet.getColumn(14).numFmt = '#,##0.00';
 
         const file_name = '/uploads/customer_statement' + uuid.v4() + '.xlsx';
         await workbook.xlsx.writeFile('/database' + file_name);
