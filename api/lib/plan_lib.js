@@ -70,24 +70,6 @@ function is_manual_recharge_history(history) {
     return true;
 }
 
-function is_statement_prepayment_history(history) {
-    const delta = Number(history.cash_increased) || 0;
-    if (delta === 0) {
-        return false;
-    }
-    const comment = history.comment || '';
-    // 对账单中的预收款仅统计手动充值或退回。
-    if (comment.indexOf('回退出货增加') >= 0 || comment.indexOf('退回') >= 0) {
-        return true;
-    }
-    return is_manual_recharge_history(history);
-}
-
-function is_statement_amount_history(history) {
-    const comment = history.comment || '';
-    return comment.indexOf('出货扣除') >= 0 || comment.indexOf('回退出货增加') >= 0;
-}
-
 function parse_history_time_with_fallback(raw_time) {
     const time_str = String(raw_time || '').trim();
     if (!time_str) {
@@ -2980,6 +2962,13 @@ module.exports = {
         const report_start_text = report_start.format('YYYY-MM-DD HH:mm:ss');
         const report_start_date = report_start.format('YYYY-MM-DD');
         const report_end_date = report_end.format('YYYY-MM-DD');
+        const period_histories = history_rows.filter((history) => {
+            const parsed = parse_history_time_with_fallback(history.time);
+            const in_period = parsed.valid
+                ? parsed.moment_time.isBetween(report_start, report_end, undefined, '[]')
+                : (parsed.date_key >= report_start_date && parsed.date_key <= report_end_date);
+            return in_period && (Number(history.cash_increased) || 0) !== 0;
+        });
 
         const home_company = await rbac_lib.get_company_by_token(token);
         const user = await rbac_lib.get_user_by_token(token);
@@ -2995,13 +2984,12 @@ module.exports = {
             stuff_ids = filtered_stuff_rows.map((item) => item.id);
         }
 
-        const amount_histories = history_rows.filter((history) => is_statement_amount_history(history));
-        const valid_history_times = amount_histories
+        const valid_history_times = period_histories
             .map((history) => parse_history_time_with_fallback(history.time))
             .filter((parsed) => parsed.valid)
             .map((parsed) => parsed.moment_time);
         let plan_histories = [];
-        const time_tolerance_seconds = 60;
+        const time_tolerance_seconds = 10;
         if (valid_history_times.length > 0 && stuff_ids.length > 0) {
             const query_start = moment.min(...valid_history_times).clone().subtract(time_tolerance_seconds, 'seconds');
             const query_end = moment.max(...valid_history_times).clone().add(time_tolerance_seconds, 'seconds');
@@ -3038,25 +3026,21 @@ module.exports = {
         }
 
         const match_candidates = [];
-        amount_histories.forEach((history) => {
+        period_histories.forEach((history) => {
             const parsed_history_time = parse_history_time_with_fallback(history.time);
             if (!parsed_history_time.valid) {
                 return;
             }
-            const event_type = (history.comment || '').includes('回退出货增加') ? 'rollback' : 'checkout';
+            const target_amount = Math.abs(Number(history.cash_increased) || 0);
             plan_histories.forEach((plan_history) => {
-                const plan_event_type = (plan_history.action_type || '').startsWith('回退结算') ? 'rollback' : 'checkout';
-                if (plan_event_type !== event_type) {
-                    return;
-                }
                 const parsed_plan_time = parse_history_time_with_fallback(plan_history.time);
-                if (!parsed_plan_time.valid) {
+                const plan = plan_history.plan;
+                const plan_amount = Math.abs((Number(plan.count) || 0) * (Number(plan.unit_price) || 0));
+                if (!parsed_plan_time.valid || Math.abs(target_amount - plan_amount) >= 0.01) {
                     return;
                 }
-                const distance = event_type === 'checkout'
-                    ? parsed_history_time.moment_time.diff(parsed_plan_time.moment_time, 'seconds')
-                    : parsed_plan_time.moment_time.diff(parsed_history_time.moment_time, 'seconds');
-                if (distance >= 0 && distance <= time_tolerance_seconds) {
+                const distance = Math.abs(parsed_history_time.moment_time.diff(parsed_plan_time.moment_time, 'seconds'));
+                if (distance <= time_tolerance_seconds) {
                     match_candidates.push({ history, plan_history, distance });
                 }
             });
@@ -3065,7 +3049,7 @@ module.exports = {
             || a.history.id - b.history.id
             || a.plan_history.id - b.plan_history.id);
 
-        const matched_plan_by_history = new Map();
+        const matched_order_by_history = new Map();
         const used_balance_history_ids = new Set();
         const used_plan_history_ids = new Set();
         match_candidates.forEach((candidate) => {
@@ -3074,37 +3058,14 @@ module.exports = {
             }
             used_balance_history_ids.add(candidate.history.id);
             used_plan_history_ids.add(candidate.plan_history.id);
-            matched_plan_by_history.set(candidate.history.id, candidate.plan_history.plan);
-        });
-
-        const amount_entries_by_plan = new Map();
-        amount_histories.forEach((history) => {
-            const matched_plan = matched_plan_by_history.get(history.id) || null;
-            const group_key = matched_plan ? `plan:${matched_plan.id}` : `history:${history.id}`;
-            if (!amount_entries_by_plan.has(group_key)) {
-                amount_entries_by_plan.set(group_key, []);
-            }
-            amount_entries_by_plan.get(group_key).push({
-                history,
-                plan: matched_plan,
-                event_type: (history.comment || '').includes('回退出货增加') ? 'rollback' : 'checkout',
+            matched_order_by_history.set(candidate.history.id, {
+                plan: candidate.plan_history.plan,
+                is_rollback: (candidate.plan_history.action_type || '').startsWith('回退结算'),
             });
         });
-        const effective_amount_entries = [];
-        amount_entries_by_plan.forEach((entries) => {
-            const latest_entry = entries[entries.length - 1];
-            if (latest_entry.event_type === 'checkout') {
-                effective_amount_entries.push(latest_entry);
-            }
-        });
-        const recharge_entries = history_rows
-            .filter((history) => !is_statement_amount_history(history) && is_statement_prepayment_history(history))
-            .map((history) => ({ history, plan: null }));
-        const statement_entries = recharge_entries.concat(effective_amount_entries)
-            .sort((a, b) => a.history.id - b.history.id);
 
         const history_by_contract = new Map();
-        statement_entries.forEach(({ history }) => {
+        history_rows.forEach((history) => {
             if (!history_by_contract.has(history.contractId)) {
                 history_by_contract.set(history.contractId, []);
             }
@@ -3127,27 +3088,23 @@ module.exports = {
             opening_balance += (Number(contract.balance) || 0) - sum_after_start;
         });
 
-        const period_entries = statement_entries.filter(({ history }) => {
-            const parsed = parse_history_time_with_fallback(history.time);
-            const in_period = parsed.valid
-                ? parsed.moment_time.isBetween(report_start, report_end, undefined, '[]')
-                : (parsed.date_key >= report_start_date && parsed.date_key <= report_end_date);
-            return in_period && (Number(history.cash_increased) || 0) !== 0;
-        });
-
         let running_balance = opening_balance;
         const table_rows = [];
         let total_net_weight = 0;
         let total_amount = 0;
         let total_prepayment = 0;
         let seq = 1;
-        period_entries.forEach(({ history, plan: matched_plan }) => {
+        period_histories.forEach((history) => {
             const delta = Number(history.cash_increased) || 0;
-            const is_amount = is_statement_amount_history(history);
+            const matched_order = matched_order_by_history.get(history.id);
+            const matched_plan = matched_order ? matched_order.plan : null;
+            const is_rollback = matched_order ? matched_order.is_rollback : false;
             const parsed_history_time = parse_history_time_with_fallback(history.time);
-            const amount = is_amount ? (-delta) : 0;
-            const prepayment = is_amount ? 0 : delta;
-            const net_weight = matched_plan ? (Number(matched_plan.count) || 0) : 0;
+            const amount = matched_order ? (-delta) : 0;
+            const prepayment = matched_order ? 0 : delta;
+            const count = matched_plan ? (Number(matched_plan.count) || 0) : 0;
+            const net_weight = is_rollback ? -count : count;
+            const ticket_no = matched_plan ? (matched_plan.ticket_no || '') : '';
 
             running_balance += delta;
             total_amount += amount;
@@ -3158,7 +3115,7 @@ module.exports = {
                 seq: seq++,
                 time: parsed_history_time.valid ? parsed_history_time.moment_time.format('YYYY-MM-DD HH:mm:ss') : parsed_history_time.time_str,
                 plan_date: matched_plan ? (matched_plan.plan_time || '').slice(0, 10) : '',
-                ticket_no: matched_plan ? (matched_plan.ticket_no || '') : '',
+                ticket_no: is_rollback ? `【回退结算】${ticket_no}` : ticket_no,
                 stuff_name: matched_plan && matched_plan.stuff ? matched_plan.stuff.name : '',
                 main_vehicle: matched_plan && matched_plan.main_vehicle ? matched_plan.main_vehicle.plate : '',
                 behind_vehicle: matched_plan && matched_plan.behind_vehicle ? matched_plan.behind_vehicle.plate : '',
