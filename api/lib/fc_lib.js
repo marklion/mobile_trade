@@ -257,16 +257,25 @@ module.exports = {
             if (!fc_plan_table) {
                 throw { err_msg: '现场检查表补建失败' };
             }
-            // 补齐检查结果行（防止历史上只建了主表、结果行没建全）
-            let fc_items = await element.getField_check_items();
-            let exist_results = await fc_plan_table.getFc_check_results();
-            let exist_item_ids = new Set(exist_results.map(item => item.fieldCheckItemId));
-            for (let j = 0; j < fc_items.length; j++) {
-                const item = fc_items[j];
-                if (!exist_item_ids.has(item.id)) {
-                    await fc_plan_table.createFc_check_result({ fieldCheckItemId: item.id });
+            // 在主表行锁内补齐检查结果，避免并发请求重复补建
+            await sq.transaction(async (new_t) => {
+                await sq.models.fc_plan_table.findByPk(fc_plan_table.id, {
+                    transaction: new_t,
+                    lock: new_t.LOCK.UPDATE,
+                });
+                let fc_items = await element.getField_check_items({ transaction: new_t });
+                let exist_results = await fc_plan_table.getFc_check_results({
+                    transaction: new_t,
+                    lock: new_t.LOCK.UPDATE,
+                });
+                let exist_item_ids = new Set(exist_results.map(item => item.fieldCheckItemId));
+                for (let j = 0; j < fc_items.length; j++) {
+                    const item = fc_items[j];
+                    if (!exist_item_ids.has(item.id)) {
+                        await fc_plan_table.createFc_check_result({ fieldCheckItemId: item.id }, { transaction: new_t });
+                    }
                 }
-            }
+            });
         }
     },
     get_all_fc_plan_table: async function (plan) {
