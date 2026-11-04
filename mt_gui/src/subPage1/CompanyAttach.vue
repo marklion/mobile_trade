@@ -54,12 +54,21 @@ export default {
         },
         upload_done: async function (e) {
             this.already_uploaded.push(e.res.data);
-            if (e.status == 'success') {
-                await this.merge_pics();
+            // status 变为 success/error 表示本批图片全部上传结束，此时只合并一次
+            if (e.status == 'success' || e.status == 'error') {
                 uni.hideLoading();
+                if (this.already_uploaded.length == 0) {
+                    uni.showToast({ title: '上传失败，请重试', icon: 'none' });
+                    return;
+                }
+                if (e.status == 'error') {
+                    uni.showToast({ title: '部分图片上传失败', icon: 'none' });
+                }
+                await this.merge_pics();
             }
         },
         upload_pics: async function () {
+            this.already_uploaded = [];
             this.$refs.upload.start();
             uni.showLoading({
                 title: '拼图上传',
