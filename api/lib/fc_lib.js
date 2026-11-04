@@ -259,10 +259,13 @@ module.exports = {
             }
             // 在主表行锁内补齐检查结果，避免并发请求重复补建
             await sq.transaction(async (new_t) => {
-                await sq.models.fc_plan_table.findByPk(fc_plan_table.id, {
+                const locked_fc_plan_table = await sq.models.fc_plan_table.findByPk(fc_plan_table.id, {
                     transaction: new_t,
                     lock: new_t.LOCK.UPDATE,
                 });
+                if (locked_fc_plan_table.finish_time) {
+                    return;
+                }
                 let fc_items = await element.getField_check_items({ transaction: new_t });
                 let exist_results = await fc_plan_table.getFc_check_results({
                     transaction: new_t,
