@@ -3031,12 +3031,15 @@ module.exports = {
             if (!parsed_history_time.valid) {
                 return;
             }
-            const target_amount = Math.abs(Number(history.cash_increased) || 0);
+            const delta = Number(history.cash_increased) || 0;
+            const target_amount = Math.abs(delta);
+            const expect_rollback = delta > 0;
             plan_histories.forEach((plan_history) => {
                 const parsed_plan_time = parse_history_time_with_fallback(plan_history.time);
                 const plan = plan_history.plan;
                 const plan_amount = Math.abs((Number(plan.count) || 0) * (Number(plan.unit_price) || 0));
-                if (!parsed_plan_time.valid || Math.abs(target_amount - plan_amount) >= 0.01) {
+                const is_rollback = (plan_history.action_type || '').startsWith('回退结算');
+                if (is_rollback !== expect_rollback || !parsed_plan_time.valid || Math.abs(target_amount - plan_amount) >= 0.01) {
                     return;
                 }
                 const distance = Math.abs(parsed_history_time.moment_time.diff(parsed_plan_time.moment_time, 'seconds'));
