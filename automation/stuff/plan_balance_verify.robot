@@ -91,6 +91,8 @@ Check All Plans
             ${lack_from_plan}  Evaluate  ${lack_from_plan} + ${plan}[arrears]
             ${extra_lack}  Evaluate  ${plan}[arrears] - ${plan}[unit_price] * 3
             ${lack_from_plan}  Evaluate  ${lack_from_plan} - ${extra_lack}
+            ${expected_outstanding_vehicles}  Evaluate  __import__('math').ceil(${plan}[arrears] / (${plan}[unit_price] * 3))
+            Should Be Equal As Numbers  ${plan}[outstanding_vehicles]  ${expected_outstanding_vehicles}
         END
         IF  $status == 2
             ${count}  Evaluate  ${count} + 1
