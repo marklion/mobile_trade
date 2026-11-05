@@ -66,7 +66,7 @@
 - `stuff.complex_plugin` 选择复杂计价插件，约定实现 `input_metas`、`verify_input`、`calc_count`，由计量和计划逻辑调用。
 - `api/index.js` 注册计划关闭、竞价超时、自动签出、金蝶预存款同步、微信 openid 映射等周期任务。部署环境可通过 `/api/v1/internal_timeout` 驱动这些任务。
 - 上传和生成的文件存放在 `/database`，其中 `/uploads`、`/logo_res` 作为静态资源提供。调试流程会把 LLM 提示词复制到 `/conf`。
-- 图片处理使用 Jimp；拼图在 `worker_threads` 中执行并限制并发。主进程按 cgroup 或 `CPU_LIMIT_CORES` 估算负载，过载时返回 HTTP 503 和 `Retry-After`。
+- 图片处理使用 Jimp；上传压缩和拼图共用常驻 `worker_threads` Worker 池，并限制并发及排队长度。主进程按 cgroup 或 `CPU_LIMIT_CORES` 估算负载，过载时返回 HTTP 503 和 `Retry-After`，并把 CPU 数值、进行中的请求、图片任务和定时任务限频记录到 `/database/cpu_record.log`。
 - 微信/公众号集成位于 `api/lib/wx_api_util.js`。消息会记录到 `/database/wx_api_log.txt`；测试模式使用 `MP_SECRET=none` 避免依赖真实微信调用，Robot 测试读取该日志断言消息。
 - 其他外部集成包括金蝶星空/Start、U8C、T+，以及 `api/lib/qwen_lib.js` 的 DashScope OpenAI 兼容接口。LLM 密钥来自 `DASHSCOPE_API_KEY`，提示词源文件在 `conf/export_prompt_template.txt` 和 `conf/chart_prompt_template.txt`。
 
