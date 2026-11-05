@@ -429,6 +429,7 @@ else {
             const real_file_name = uuid.v4();
             let filePath = '/uploads/' + real_file_name + fileExtension;
             await fs.promises.rename(req.file.path, '/database' + filePath);
+            req.file.path = '/database' + filePath;
             const need_compress = req.query.compress === '1' || req.body.compress === '1' || req.body.compress === true;
             if (need_compress) {
                 filePath = await compress_uploaded_image(filePath);
@@ -436,6 +437,9 @@ else {
             res.send(filePath);
         } catch (err) {
             if (err.code === 'IMAGE_WORKER_BUSY') {
+                await fs.promises.unlink(req.file.path).catch((cleanupError) => {
+                    console.error('删除未处理的上传文件失败:', cleanupError.message);
+                });
                 res.set('Retry-After', '5');
                 return res.status(503).send({ err_msg: err.message });
             }
