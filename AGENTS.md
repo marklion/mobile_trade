@@ -218,7 +218,7 @@ robot -d results \
 
 ### CI
 
-`.github/workflows/main.yml` 在 `main` 分支 push、PR 和手动触发时运行：SonarQube 扫描、MySQL 8 准备、部署镜像内全量构建、`make test`，并始终上传 `build/output.xml`、`build/log.html`、`build/report.html`。CI 所需数据库、Sonar 和千问配置来自 GitHub Secrets。
+`.github/workflows/main.yml` 在 `main` 分支 push、PR 和手动触发时运行：先完成 SonarQube 扫描和部署镜像内全量构建，再将同一个安装包交给 4 个并行测试分片；每个分片使用独立的 MySQL 8 数据库和 Docker 测试床，最后用 `rebot` 合并并上传 `build/output.xml`、`build/log.html`、`build/report.html`。CI 所需数据库、Sonar 和千问配置来自 GitHub Secrets。
 
 ## 部署流程
 

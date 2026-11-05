@@ -1,56 +1,112 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
   build:
     name: Build
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+          fetch-depth: 0
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      - name: Shutdown Ubuntu MySQL (SUDO)
-        run: sudo service mysql stop # Shutdown the Default MySQL, "sudo" is necessary, please not remove it
-      - name: setup-mysql
-        id: setup-mysql
+      - name: Build install package
+        run: |
+          docker pull marklion/mt_deploy:v1.1
+          docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.1 make -f `realpath .`/Makefile ENV_DASHSCOPE_API_KEY='${{ secrets.ALI_QWEN_KEY }}'
+      - name: Upload test bed
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-bed
+          path: build/install.sh
+          retention-days: 1
+
+  test:
+    name: Test shard ${{ matrix.shard }}
+    needs: build
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download test bed
+        uses: actions/download-artifact@v4
+        with:
+          name: test-bed
+          path: build
+      - name: Shutdown Ubuntu MySQL
+        run: sudo service mysql stop
+      - name: Setup MySQL
         uses: shogo82148/actions-setup-mysql@v1
         with:
           my-cnf: |
             [mysqld]
             bind-address=0.0.0.0
-          mysql-version: '8.0' # Optional, default value is "latest". The version of the MySQL
-          user: 'sysadmin' # Required if "mysql root password" is empty, default is empty. The superuser for the specified database. Can use secrets, too
-          password: ${{ secrets.DB_PASSWORD}} # Required if "mysql user" exists. The password for the "mysql user"
-      - name: connect via unix domain socket
-        run: mysql -uroot -e 'CREATE DATABASE automation_test; CREATE USER "sysadmin"@"%" IDENTIFIED BY "${{ secrets.DB_PASSWORD }}";GRANT ALL PRIVILEGES ON *.* TO "sysadmin"@"%"; FLUSH PRIVILEGES;'
-      - name: Run build-wrapper
+          mysql-version: '8.0'
+          user: 'sysadmin'
+          password: ${{ secrets.DB_PASSWORD }}
+      - name: Create test database
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: mysql -uroot -e "CREATE DATABASE automation_test_${{ matrix.shard }}; CREATE USER \"sysadmin\"@\"%\" IDENTIFIED BY \"${DB_PASSWORD}\"; GRANT ALL PRIVILEGES ON *.* TO \"sysadmin\"@\"%\"; FLUSH PRIVILEGES;"
+      - name: Run isolated test shard
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
         run: |
+          chmod +x build/install.sh
           docker pull marklion/mt_deploy:v1.1
-          docker run -v `realpath .`:`realpath .` marklion/mt_deploy:v1.1 make -f `realpath .`/Makefile ENV_DASHSCOPE_API_KEY='${{ secrets.ALI_QWEN_KEY }}'
           docker tag marklion/mt_deploy:v1.1 mt_deploy:v1.1
-          ip addr show docker0 | grep -Po 'inet \K[\d.]+'
           cur_ip=$(ip addr show docker0 | grep -Po 'inet \K[\d.]+')
-          make test db_password=${{ secrets.DB_PASSWORD }} db_host=${cur_ip}
-      - name: Upload artifacts
+          bash test.sh "${DB_PASSWORD}" "${cur_ip}" "automation_test_${{ matrix.shard }}" "${{ matrix.shard }}"
+      - name: Upload shard results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-shard-${{ matrix.shard }}
+          path: |
+            build/output.xml
+            build/log.html
+            build/report.html
+          retention-days: 7
+
+  merge-results:
+    name: Merge test results
+    needs: test
+    if: always()
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Install Robot Framework
+        run: python -m pip install --disable-pip-version-check robotframework==7.0
+      - name: Download shard results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: test-results-shard-*
+          path: build/test-results
+      - name: Merge Robot reports
+        run: |
+          shopt -s nullglob
+          outputs=(build/test-results/test-results-shard-*/output.xml)
+          if [ "${#outputs[@]}" -ne 4 ]; then
+            echo "Expected 4 shard output.xml files, found ${#outputs[@]}"
+            exit 1
+          fi
+          python -m robot.rebot --output build/output.xml --log build/log.html --report build/report.html "${outputs[@]}"
+      - name: Upload merged results
         if: always()
         uses: actions/upload-artifact@v4
         with:
