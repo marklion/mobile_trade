@@ -186,7 +186,7 @@ async function group_order_by_partner_code(plans) {
         const is_buy = !!(plan && plan.is_buy);
         const is_direct = plan.stuff.stuff_code[0] == '|';
         const inv_code = get_inv_code_from_stuff(plan.stuff.stuff_code);
-        const plan_time = plan.plan_time;
+        let plan_time = plan.plan_time;
         if (is_buy)
         {
             let tmp_time = moment(plan.p_time);
