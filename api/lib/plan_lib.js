@@ -1854,9 +1854,13 @@ module.exports = {
         if (arrears <= 0) {
             return { arrears: 0, outstanding_vehicles: 0 };
         } else {
+            let outstanding_vehicles = already_prepaied_plans.length + 1;
+            if (one_vehicle_cost > 0) {
+                outstanding_vehicles = Math.ceil(arrears / one_vehicle_cost);
+            }
             return {
                 arrears: arrears,
-                outstanding_vehicles: already_prepaied_plans.length + 1
+                outstanding_vehicles: outstanding_vehicles
             };
         }
     },
