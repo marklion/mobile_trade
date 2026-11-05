@@ -1578,7 +1578,14 @@ module.exports = {
         new_plan.trans_company_name = plan.trans_company_name;
         await new_plan.save();
         try {
-            await this.confirm_single_plan(new_plan.id, token, true, t);
+            if (t) {
+                await sq.transaction({ transaction: t }, async (confirm_t) => {
+                    await this.confirm_single_plan(new_plan.id, token, true, confirm_t);
+                });
+            }
+            else {
+                await this.confirm_single_plan(new_plan.id, token, true);
+            }
         }
         catch (err) {
             console.error(err);
