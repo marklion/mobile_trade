@@ -186,7 +186,18 @@ async function group_order_by_partner_code(plans) {
         const is_buy = !!(plan && plan.is_buy);
         const is_direct = plan.stuff.stuff_code[0] == '|';
         const inv_code = get_inv_code_from_stuff(plan.stuff.stuff_code);
-        const plan_time = plan.plan_time;
+        let plan_time = plan.plan_time;
+        if (is_buy)
+        {
+            let tmp_time = moment(plan.p_time);
+            if (tmp_time.hour() < 8) {
+                plan_time = tmp_time.subtract(1, 'day').format('YYYY-MM-DD');
+            }
+            else
+            {
+                plan_time = tmp_time.format('YYYY-MM-DD');
+            }
+        }
         const key = `${company_id}_${is_buy ? 1 : 0}_${is_direct ? 1 : 0}_${inv_code}_${plan_time}`;
         if (!group_map[key]) {
             group_map[key] = {
