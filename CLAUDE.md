@@ -43,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - 指定输出目录和共享变量：`robot -d results -v server_base:http://localhost:8080/api/v1 -v db_name:<db> -v db_host:<h> -v db_user:<u> -v db_pass:<p> automation`
 - `automation/var.resource` 存放数据库/服务器变量，会被 F5 流程重写（不要手工编辑/提交凭据）。
 - 测试引导事实：管理员登录手机号 `18911992582`，默认密码 `_P@ssw0rd_`（`DEFAULT_PWD`）；测试里写字面量 token `admin_token` 会自动以该用户登录。
-- CI：`.github/workflows/main.yml` 先跑 Sonar 扫描，在部署镜像里构建，启动 MySQL 8，运行 `make test`，最后上传 `output.xml/log.html/report.html`。
+- CI：`.github/workflows/main.yml` 先跑 Sonar 扫描并构建一次安装包，再交给 4 个并行分片；每个分片使用独立 MySQL 8 数据库和 Docker 测试床，最后用 `rebot` 合并并上传 `output.xml/log.html/report.html`。
 
 ## 架构
 

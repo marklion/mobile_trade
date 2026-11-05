@@ -1,68 +1,102 @@
-const express = require('express');
-const json2md = require('json2md');
-const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
-const moment = require('moment');
-const jimp = require('jimp').default;
-const king_dee_start_lib = require('./lib/king_dee_start_lib');
-const cash_lib = require('./lib/cash_lib');
-const app = express();
-app.help_info = [];
-app.openapi_paths = {};
+const { Worker, isMainThread, parentPort } = require('worker_threads');
 if (!isMainThread) {
-    const { pic_list } = workerData;
-    const targetWidth = 800; // 设定目标宽度
-    const targetFileSize = 500 * 1024; // 合成图目标文件大小
-    const initialQuality = 85; // 合成图初始 JPEG 质量
+    const jimp = require('jimp').default;
+    const fs = require('fs');
+    const path = require('path');
+    const uuid = require('uuid');
 
-    (async () => {
+    async function encodeJpeg(image, targetFileSize) {
+        let buffer = await image.quality(85).getBufferAsync(jimp.MIME_JPEG);
+        if (buffer.byteLength > targetFileSize) {
+            buffer = await image.quality(60).getBufferAsync(jimp.MIME_JPEG);
+        }
+        return buffer;
+    }
+
+    function saveJpeg(buffer) {
+        const filePath = '/uploads/' + uuid.v4() + '.jpg';
+        fs.writeFileSync('/database' + filePath, buffer);
+        return filePath;
+    }
+
+    async function compressImage(filePath) {
+        const targetWidth = 1280;
+        const targetFileSize = 200 * 1024;
+        const absPath = '/database' + filePath;
+        const ext = path.extname(filePath).toLowerCase();
+        const originalSize = fs.statSync(absPath).size;
+        const image = await jimp.read(absPath);
+        const canKeepOriginal = ['.jpg', '.jpeg'].includes(ext)
+            && originalSize <= targetFileSize
+            && image.bitmap.width <= targetWidth;
+        if (canKeepOriginal) {
+            return filePath;
+        }
+        if (image.bitmap.width > targetWidth) {
+            image.resize(targetWidth, jimp.AUTO);
+        }
+        const buffer = await encodeJpeg(image, targetFileSize);
+        const compressedPath = saveJpeg(buffer);
         try {
-            let begin_time = new Date().getTime();
-            // 逐张解码、缩放。直接在同一 Jimp 实例上做纵向合成，
-            // 避免“编码成 buffer 再让 merge-img 解码一遍”的额外开销
-            const resizedImages = await Promise.all(
-                pic_list.map(async (file) => {
-                    const image = await jimp.read('/database' + file);
-                    if (image.bitmap.width > targetWidth) {
-                        image.resize(targetWidth, jimp.AUTO);
-                    }
-                    return image;
-                })
-            );
-            const canvasWidth = Math.max(...resizedImages.map(image => image.bitmap.width));
-            const canvasHeight = resizedImages.reduce(
-                (sum, image) => sum + image.bitmap.height, 0
-            );
-            const mergedImage = await jimp.create(canvasWidth, canvasHeight, 0xffffffff);
-            let offsetY = 0;
-            for (const image of resizedImages) {
-                mergedImage.composite(image, 0, offsetY);
-                offsetY += image.bitmap.height;
-            }
+            fs.unlinkSync(absPath);
+        } catch (e) {
+            console.error('删除原图失败:', e.message);
+        }
+        return compressedPath;
+    }
 
-            // 合成图只做 JPEG 编码；超过目标大小才逐档降质（每次都是对合成图重新编码）
-            let quality = initialQuality;
-            mergedImage.quality(quality);
-            let buffer = await mergedImage.getBufferAsync(jimp.MIME_JPEG);
-            while (buffer.byteLength > targetFileSize && quality > 50) {
-                quality -= 10;
-                mergedImage.quality(quality);
-                buffer = await mergedImage.getBufferAsync(jimp.MIME_JPEG);
+    async function mergeImages(picList) {
+        const beginTime = Date.now();
+        const targetWidth = 800;
+        const resizedImages = [];
+        for (const file of picList) {
+            const image = await jimp.read('/database' + file);
+            if (image.bitmap.width > targetWidth) {
+                image.resize(targetWidth, jimp.AUTO);
             }
+            resizedImages.push(image);
+        }
+        const canvasWidth = Math.max(...resizedImages.map(image => image.bitmap.width));
+        const canvasHeight = resizedImages.reduce(
+            (sum, image) => sum + image.bitmap.height, 0
+        );
+        const mergedImage = await jimp.create(canvasWidth, canvasHeight, 0xffffffff);
+        let offsetY = 0;
+        for (const image of resizedImages) {
+            mergedImage.composite(image, 0, offsetY);
+            offsetY += image.bitmap.height;
+        }
+        const buffer = await encodeJpeg(mergedImage, 500 * 1024);
+        const filePath = saveJpeg(buffer);
+        console.log('resize time:', Date.now() - beginTime);
+        return filePath;
+    }
 
-            const uuid = require('uuid');
-            const fs = require('fs');
-            const real_file_name = uuid.v4();
-            const filePath = '/uploads/' + real_file_name + '.jpg';
-            fs.writeFileSync('/database' + filePath, buffer);
-            let end_time = new Date().getTime();
-            console.log('resize time:', end_time - begin_time);
-            parentPort.postMessage(filePath);
+    parentPort.on('message', async (job) => {
+        try {
+            let result;
+            if (job.type === 'compress') {
+                result = await compressImage(job.filePath);
+            } else if (job.type === 'merge') {
+                result = await mergeImages(job.picList);
+            } else {
+                throw new Error('未知图片任务');
+            }
+            parentPort.postMessage({ result });
         } catch (error) {
             parentPort.postMessage({ error: error.message });
         }
-    })();
+    });
 }
 else {
+    const express = require('express');
+    const json2md = require('json2md');
+    const moment = require('moment');
+    const king_dee_start_lib = require('./lib/king_dee_start_lib');
+    const cash_lib = require('./lib/cash_lib');
+    const app = express();
+    app.help_info = [];
+    app.openapi_paths = {};
     const os = require('os');
     const cgroupFs = require('fs');
     function getCpuLimitCores() {
@@ -108,8 +142,65 @@ else {
     }, 1000);
     cpuSampleTimer.unref();
 
+    const activeRequests = new Map();
+    const activeTimerTasks = new Map();
+    let nextRequestId = 0;
+    let nextTimerTaskId = 0;
+    function getCpuActivity(now) {
+        const requests = Array.from(activeRequests.values()).map(item => ({
+            method: item.method,
+            path: item.path,
+            elapsed_ms: now - item.startedAt,
+        })).sort((a, b) => b.elapsed_ms - a.elapsed_ms);
+        const activeImageJobs = [];
+        for (const worker of imageWorkers) {
+            if (worker.currentImageJob) {
+                activeImageJobs.push({
+                    type: worker.currentImageJob.task.type,
+                    elapsed_ms: now - worker.currentImageJob.startedAt,
+                });
+            }
+        }
+        const queuedImageJobs = imageJobQueue.map(job => ({
+            type: job.task.type,
+            waiting_ms: now - job.createdAt,
+        }));
+        const timerTasks = Array.from(activeTimerTasks.values()).map(item => ({
+            name: item.name,
+            elapsed_ms: now - item.startedAt,
+        })).sort((a, b) => b.elapsed_ms - a.elapsed_ms);
+        const possibleCauses = [];
+        if (activeImageJobs.length > 0 || queuedImageJobs.length > 0) {
+            possibleCauses.push(`图片处理：执行中 ${activeImageJobs.length}，排队 ${queuedImageJobs.length}`);
+        }
+        if (timerTasks.length > 0) {
+            possibleCauses.push(`定时任务：${timerTasks.map(item => item.name).join('、')}`);
+        }
+        if (requests.length > 0) {
+            const paths = [...new Set(requests.map(item => item.path))].slice(0, 5);
+            possibleCauses.push(`进行中的请求：${paths.join('、')}`);
+        }
+        if (possibleCauses.length === 0) {
+            possibleCauses.push('未捕获到活动任务，可能是短时任务、垃圾回收或 CPU 采样延迟');
+        }
+        return {
+            possible_causes: possibleCauses,
+            active_request_count: requests.length,
+            active_requests: requests.slice(0, 20),
+            image_tasks: {
+                concurrency: imageConcurrency,
+                active: activeImageJobs,
+                queued: queuedImageJobs.slice(0, 20),
+                queued_count: queuedImageJobs.length,
+            },
+            timer_tasks: timerTasks,
+        };
+    }
+    const recordCpuUsage = require('./cpu_record')(getCpuActivity);
+
     app.use((req, res, next) => {
         if (cpuUsageCores >= cpuLimitCores) {
+            recordCpuUsage(req, cpuUsageCores, cpuLimitCores, totalCpuCores);
             res.set('Retry-After', '1');
             console.log(`current cpu usage:${cpuUsageCores}`);
 
@@ -118,6 +209,15 @@ else {
                 result: null,
             });
         }
+        const requestId = ++nextRequestId;
+        activeRequests.set(requestId, {
+            method: req.method,
+            path: req.path,
+            startedAt: Date.now(),
+        });
+        const clearActiveRequest = () => activeRequests.delete(requestId);
+        res.once('finish', clearActiveRequest);
+        res.once('close', clearActiveRequest);
         return next();
     });
     app.use(express.json());
@@ -196,70 +296,161 @@ else {
         }
     }
     init_super_user();
+    const imageConcurrency = Math.max(1, Math.floor(totalCpuCores) - 1);
+    const maxImageQueueSize = imageConcurrency * 4;
+    const imageWorkers = new Set();
+    const idleImageWorkers = [];
+    const imageJobQueue = [];
+    let imageWorkersClosed = false;
+
+    function dispatchImageJobs() {
+        while (!imageWorkersClosed && idleImageWorkers.length > 0 && imageJobQueue.length > 0) {
+            const worker = idleImageWorkers.shift();
+            const job = imageJobQueue.shift();
+            job.startedAt = Date.now();
+            worker.currentImageJob = job;
+            worker.postMessage(job.task);
+        }
+    }
+
+    function createImageWorker() {
+        const worker = new Worker(__filename);
+        worker.currentImageJob = null;
+        imageWorkers.add(worker);
+        idleImageWorkers.push(worker);
+        worker.on('message', (data) => {
+            const job = worker.currentImageJob;
+            worker.currentImageJob = null;
+            if (job) {
+                if (data && data.error) {
+                    job.reject(new Error(data.error));
+                } else {
+                    job.resolve(data.result);
+                }
+            }
+            if (!imageWorkersClosed) {
+                idleImageWorkers.push(worker);
+            }
+            dispatchImageJobs();
+        });
+        worker.on('error', (error) => {
+            const job = worker.currentImageJob;
+            worker.currentImageJob = null;
+            if (job) {
+                job.reject(error);
+            }
+        });
+        worker.on('exit', (code) => {
+            imageWorkers.delete(worker);
+            const idleIndex = idleImageWorkers.indexOf(worker);
+            if (idleIndex >= 0) {
+                idleImageWorkers.splice(idleIndex, 1);
+            }
+            const job = worker.currentImageJob;
+            worker.currentImageJob = null;
+            if (job) {
+                job.reject(new Error(`图片处理 Worker 异常退出: ${code}`));
+            }
+            if (!imageWorkersClosed && imageJobQueue.length > 0) {
+                createImageWorker();
+            }
+            dispatchImageJobs();
+        });
+    }
+
+    function runImageTask(task) {
+        if (imageWorkersClosed) {
+            return Promise.reject(new Error('图片服务正在关闭'));
+        }
+        if (imageJobQueue.length >= maxImageQueueSize) {
+            const error = new Error('图片处理繁忙，请稍后重试');
+            error.code = 'IMAGE_WORKER_BUSY';
+            return Promise.reject(error);
+        }
+        return new Promise((resolve, reject) => {
+            imageJobQueue.push({ task, resolve, reject, createdAt: Date.now() });
+            if (idleImageWorkers.length === 0 && imageWorkers.size < imageConcurrency) {
+                createImageWorker();
+            }
+            dispatchImageJobs();
+        });
+    }
+
+    function closeImageWorkers() {
+        imageWorkersClosed = true;
+        while (imageJobQueue.length > 0) {
+            imageJobQueue.shift().reject(new Error('图片服务正在关闭'));
+        }
+        for (const worker of imageWorkers) {
+            worker.terminate();
+        }
+    }
+
+    function sendImageTaskError(res, error) {
+        if (error.code === 'IMAGE_WORKER_BUSY') {
+            res.set('Retry-After', '5');
+            return res.status(503).send({ result: '', err_msg: error.message });
+        }
+        return res.status(500).send({ result: '', err_msg: error.message });
+    }
+
     const multer = require('multer');
     const wx_api_util = require('./lib/wx_api_util');
-    const upload = multer({ dest: '/database/uploads/' });
+    const upload = multer({
+        dest: '/database/uploads/',
+        limits: { fileSize: 20 * 1024 * 1024 },
+    });
+    function uploadSingleFile(req, res, next) {
+        upload.single('file')(req, res, (error) => {
+            if (!error) {
+                return next();
+            }
+            if (error.code === 'LIMIT_FILE_SIZE') {
+                return res.status(413).send({ err_msg: '文件不能超过20MB' });
+            }
+            return res.status(400).send({ err_msg: error.message });
+        });
+    }
     async function compress_uploaded_image(filePath) {
         const path = require('path');
-        const fs = require('fs');
         const imageExts = ['.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif'];
         const ext = path.extname(filePath).toLowerCase();
         if (!imageExts.includes(ext)) {
             return filePath;
         }
-        const targetWidth = 1280;
-        const targetFileSize = 200 * 1024;
-        const absPath = '/database' + filePath;
-        const image = await jimp.read(absPath);
-        if (image.bitmap.width > targetWidth) {
-            image.resize(targetWidth, jimp.AUTO);
-        }
-        let quality = 85;
-        let buffer = await image.quality(quality).getBufferAsync(jimp.MIME_JPEG);
-        while (buffer.byteLength > targetFileSize && quality > 30) {
-            quality -= 10;
-            buffer = await image.quality(quality).getBufferAsync(jimp.MIME_JPEG);
-        }
-        const uuid = require('uuid');
-        const compressedPath = '/uploads/' + uuid.v4() + '.jpg';
-        fs.writeFileSync('/database' + compressedPath, buffer);
-        try {
-            fs.unlinkSync(absPath);
-        } catch (e) {
-            console.error('删除原图失败:', e.message);
-        }
-        return compressedPath;
+        return runImageTask({ type: 'compress', filePath });
     }
-    app.post('/api/v1/upload_file', upload.single('file'), async (req, res) => {
+    app.post('/api/v1/upload_file', uploadSingleFile, async (req, res) => {
         const path = require('path');
         const fs = require('fs');
         try {
             let fileExtension = path.extname(req.file.originalname);
-            const data = fs.readFileSync(req.file.path);
             const uuid = require('uuid');
             const real_file_name = uuid.v4();
             let filePath = '/uploads/' + real_file_name + fileExtension;
-            fs.writeFileSync('/database' + filePath, data);
-            try {
-                fs.unlinkSync(req.file.path);
-            } catch (e) { }
+            await fs.promises.rename(req.file.path, '/database' + filePath);
+            req.file.path = '/database' + filePath;
             const need_compress = req.query.compress === '1' || req.body.compress === '1' || req.body.compress === true;
             if (need_compress) {
                 filePath = await compress_uploaded_image(filePath);
             }
             res.send(filePath);
         } catch (err) {
+            if (err.code === 'IMAGE_WORKER_BUSY') {
+                await fs.promises.unlink(req.file.path).catch((cleanupError) => {
+                    console.error('删除未处理的上传文件失败:', cleanupError.message);
+                });
+                res.set('Retry-After', '5');
+                return res.status(503).send({ err_msg: err.message });
+            }
             console.error(err);
-            res.send({ err_msg: '文件上传失败' });
+            res.status(500).send({ err_msg: '文件上传失败' });
         }
     });
 
     app.use('/uploads', express.static('/database/uploads'));
     app.use('/logo_res', express.static('/database/logo_res'));
 
-    // 拼图是 CPU 密集任务，限制在途 worker 数量，避免并发请求把所有核打满
-    const mergeConcurrency = Math.max(1, Math.floor(totalCpuCores) - 1);
-    let activeMergeCount = 0;
     app.post('/api/v1/merge_pics', async (req, res) => {
         let body = req.body;
         let pic_list = body.pic_list;
@@ -275,37 +466,12 @@ else {
             res.send({ result: '', err_msg: '图片路径不合法' });
             return;
         }
-        if (activeMergeCount >= mergeConcurrency) {
-            res.set('Retry-After', '5');
-            res.status(503).send({ result: '', err_msg: '图片处理繁忙，请稍后重试' });
-            return;
+        try {
+            const result = await runImageTask({ type: 'merge', picList: pic_list });
+            res.send({ result, err_msg: '' });
+        } catch (error) {
+            sendImageTaskError(res, error);
         }
-        activeMergeCount++;
-        const worker = new Worker(__filename, {
-            workerData: { pic_list }
-        });
-
-        worker.on('message', (data) => {
-            if (data && typeof data === 'object' && data.error) {
-                res.status(500).send({ result: '', err_msg: data.error });
-            } else {
-                res.send({ result: data, err_msg: '' });
-            }
-        });
-
-        worker.on('error', (error) => {
-            if (!res.headersSent) {
-                res.status(500).send({ result: '', err_msg: error.message });
-            }
-        });
-
-        worker.on('exit', (code) => {
-            activeMergeCount--;
-            if (code !== 0 && !res.headersSent) {
-                res.status(500).send({ result: '', err_msg: `Worker stopped with exit code ${code}` });
-            }
-            console.log('Worker stopped with exit code', code);
-        });
     });
     app.get('/api/v1/download_ticket', async (req, res) => {
         let id = req.query.id;
@@ -428,30 +594,41 @@ else {
         wx_api_util.openid_map.sync_map()
     }
     const g_timer_node_set = [];
-    function add_min_timer(min_count, func) {
+    function add_min_timer(min_count, name, func) {
         g_timer_node_set.push({
             min_last: min_count - 1,
             min_count: min_count - 1,
+            name: name,
             func: func
         });
     }
+    function trackTimerTask(name, task) {
+        const taskId = ++nextTimerTaskId;
+        activeTimerTasks.set(taskId, { name, startedAt: Date.now() });
+        const clearTask = () => activeTimerTasks.delete(taskId);
+        if (task && typeof task.finally === 'function') {
+            task.finally(clearTask);
+        } else {
+            clearTask();
+        }
+    }
 
-    add_min_timer(60*24, async () => {
+    add_min_timer(60*24, '微信 openid 同步', async () => {
         await wx_api_util.openid_map.sync_map();
     });
-    add_min_timer(10, async () => {
+    add_min_timer(10, '自动关闭计划', async () => {
         await plan_lib.auto_close_plan();
     });
-    add_min_timer(1, async () => {
+    add_min_timer(1, '每分钟任务调度', async () => {
         console.log('1 min timer');
-        bidding_lib.stop_timeup_bt();
-        plan_lib.stuff_price_timeout();
-        field_lib.auto_uncheck_in();
-        plan_lib.walk_through2checkout();
-        t_plus_lib.walk_through_tplus_settle();
-        field_lib.auto_call_vehicle();
+        trackTimerTask('竞价超时处理', bidding_lib.stop_timeup_bt());
+        trackTimerTask('定时调价', plan_lib.stuff_price_timeout());
+        trackTimerTask('自动取消签到', field_lib.auto_uncheck_in());
+        trackTimerTask('自动签出', plan_lib.walk_through2checkout());
+        trackTimerTask('T+ 自动结算', t_plus_lib.walk_through_tplus_settle());
+        trackTimerTask('自动叫号', field_lib.auto_call_vehicle());
     });
-    add_min_timer(6, async () => {
+    add_min_timer(6, '金蝶预存款同步', async () => {
         let sq = db_opt.get_sq();
         let all_configs = await sq.models.king_dee_start_config.findAll({ group: ['clientId'] });
         for (let one_config of all_configs) {
@@ -480,9 +657,9 @@ else {
             }
         }
     });
-    add_min_timer(5, async () => {
+    add_min_timer(5, 'old_zczh 超时处理', async () => {
         console.log('5 min timer');
-        old_zczh.proc_timeout_5min();
+        await old_zczh.proc_timeout_5min();
     });
 
     app.post('/api/v1/internal_timeout', async (req, res) => {
@@ -491,7 +668,7 @@ else {
             for (let index = 0; index < g_timer_node_set.length; index++) {
                 const element = g_timer_node_set[index];
                 if (element.min_last == 0) {
-                    element.func();
+                    trackTimerTask(element.name, element.func());
                     element.min_last = element.min_count;
                 }
                 else {
@@ -513,6 +690,7 @@ else {
     let server = app.listen(listenPort, () => console.log('Server running on port ' + listenPort));
     process.on('SIGINT', () => {
         console.log('SIGINT signal received. Closing server...');
+        closeImageWorkers();
         server.close();
     });
 }
