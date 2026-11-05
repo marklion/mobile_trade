@@ -1577,7 +1577,12 @@ module.exports = {
         new_plan.is_buy = plan.is_buy
         new_plan.trans_company_name = plan.trans_company_name;
         await new_plan.save();
-        this.confirm_single_plan(new_plan.id, token, true, null);
+        try {
+            await this.confirm_single_plan(new_plan.id, token, true, t);
+        }
+        catch (err) {
+            console.error(err);
+        }
     },
     generate_ticket_no: async function (plan, external_ticket_no) {
         let ret = '';
