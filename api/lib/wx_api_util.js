@@ -61,16 +61,37 @@ const pub_token_store = {
 const appid = process.env.MP_APPID;
 const pub_appid = process.env.PUB_APPID;
 
+const WX_REQUEST_TIMEOUT = 10000;
+const WX_REQUEST_MAX_RETRIES = 2;
+
+async function request_wx(config) {
+    let last_error;
+    for (let attempt = 0; attempt <= WX_REQUEST_MAX_RETRIES; attempt++) {
+        try {
+            return await axios({ ...config, timeout: WX_REQUEST_TIMEOUT });
+        } catch (error) {
+            last_error = error;
+            console.log(`微信请求失败，第 ${attempt + 1} 次尝试`, error);
+            if (attempt < WX_REQUEST_MAX_RETRIES) {
+                await sleep(200 * (attempt + 1));
+            }
+        }
+    }
+    throw last_error;
+}
+
 async function call_wx_api(url, req, method) {
     let ret = '';
     let err_msg = '';
     try {
-        let resp = await axios.post(
-            'https://express-en1b-110417-4-1327111924.sh.run.tcloudbase.com/api/run_api', {
-            url: url,
-            method: method,
-            data: req,
-        }, {
+        let resp = await request_wx({
+            url: 'https://express-en1b-110417-4-1327111924.sh.run.tcloudbase.com/api/run_api',
+            method: 'POST',
+            data: {
+                url: url,
+                method: method,
+                data: req,
+            },
             headers: { 'share-key': process.env.SHARE_KEY }
         });
         if (!resp.data.err_msg) {
@@ -96,7 +117,7 @@ function proxy_is_open() {
 async function get_to_wx(url) {
     let ret = '';
     try {
-        let resp = await axios.get(url);
+        let resp = await request_wx({ url: url, method: 'GET' });
         ret = resp.data;
         if (ret.errcode && ret.errcode != 0) {
             throw new Error(`errmsg:${ret.errmsg},errcode:${ret.errcode}`);
@@ -110,7 +131,7 @@ async function get_to_wx(url) {
 async function post_to_wx(url, data) {
     let ret = '';
     try {
-        let resp = await axios.post(url, data);
+        let resp = await request_wx({ url: url, method: 'POST', data: data });
         ret = resp.data;
         if (ret.errcode && ret.errcode != 0) {
             throw new Error(`errmsg:${ret.errmsg},errcode:${ret.errcode}`);
@@ -120,6 +141,17 @@ async function post_to_wx(url, data) {
     }
     console.log(url, data, ret);
     return ret;
+}
+function update_token_store(store, resp) {
+    const expires_in = Number(resp && resp.expires_in);
+    if (resp && typeof resp.access_token === 'string' && resp.access_token.length > 0
+        && Number.isFinite(expires_in) && expires_in > 0) {
+        store.token = resp.access_token;
+        store.expire_time = Date.now() + expires_in * 1000;
+    } else {
+        store.token = '';
+        store.expire_time = 0;
+    }
 }
 async function get_mp_token() {
     let ret = '';
@@ -132,10 +164,11 @@ async function get_mp_token() {
         try {
             if (token_store.expire_time < Date.now()) {
                 let resp = await get_to_wx(url);
-                token_store.token = resp.access_token;
-                token_store.expire_time = Date.now() + resp.expires_in * 1000;
+                update_token_store(token_store, resp);
             }
         } catch (error) {
+            token_store.token = '';
+            token_store.expire_time = 0;
             console.log(error);
         }
         ret = token_store.token;
@@ -143,7 +176,7 @@ async function get_mp_token() {
 
     return ret;
 }
-async function get_pub_token() {
+async function get_pub_token(force_refresh = false) {
     let ret = '';
     if (proxy_is_open()) {
         ret = "whatever";
@@ -152,12 +185,16 @@ async function get_pub_token() {
         let sec = process.env.WECHAT_SECRET;
         let url = `https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=${pub_appid}&secret=${sec}`;
         try {
+            if (force_refresh) {
+                pub_token_store.expire_time = 0;
+            }
             if (pub_token_store.expire_time < Date.now()) {
                 let resp = await get_to_wx(url);
-                pub_token_store.token = resp.access_token;
-                pub_token_store.expire_time = Date.now() + resp.expires_in * 1000;
+                update_token_store(pub_token_store, resp);
             }
         } catch (error) {
+            pub_token_store.token = '';
+            pub_token_store.expire_time = 0;
             console.log(error);
         }
         ret = pub_token_store.token;
@@ -217,6 +254,10 @@ function writeStringToFile(filePath, content) {
     });
 }
 
+function is_token_invalid(resp) {
+    return resp && [40001, 40014, 42001].includes(Number(resp.errcode));
+}
+
 async function send_wx_msg(req, mp_open_id) {
     let token = await get_pub_token()
     if (token && req.touser.length > 0) {
@@ -224,7 +265,13 @@ async function send_wx_msg(req, mp_open_id) {
             await call_wx_api('https://api.weixin.qq.com/cgi-bin/message/template/send', req, 'POST');
         }
         else {
-            await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
+            let resp = await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
+            if (is_token_invalid(resp)) {
+                token = await get_pub_token(true);
+                if (token) {
+                    await post_to_wx(`https://api.weixin.qq.com/cgi-bin/message/template/send?access_token=${token}`, req);
+                }
+            }
         }
     }
     console.log('send wx msg:', req);
