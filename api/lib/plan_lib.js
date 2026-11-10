@@ -3145,6 +3145,7 @@ module.exports = {
                 amount,
                 prepayment,
                 balance: running_balance,
+                comment: matched_order ? '' : (history.comment || ''),
             });
         });
 
@@ -3152,21 +3153,21 @@ module.exports = {
         const worksheet = workbook.addWorksheet('客户对账单');
         const title = `${customer.name}${body.start_time} ~ ${body.end_time}对账单`;
         worksheet.addRow([title]);
-        worksheet.mergeCells(1, 1, 1, 14);
+        worksheet.mergeCells(1, 1, 1, 15);
         worksheet.addRow([
             '序号', '时间', '计划日期', '磅单号', '物料名称', '车牌号', '挂车号',
-            '皮重(吨)', '毛重(吨)', '净重(吨)', '单价(元)', '金额(元)', '预收款(元)', '结余(元)'
+            '皮重(吨)', '毛重(吨)', '净重(吨)', '单价(元)', '金额(元)', '预收款(元)', '结余(元)', '备注'
         ]);
 
         table_rows.forEach((row) => {
             worksheet.addRow([
                 row.seq, row.time, row.plan_date, row.ticket_no, row.stuff_name, row.main_vehicle, row.behind_vehicle,
-                row.p_weight, row.m_weight, row.net_weight, row.unit_price, row.amount, row.prepayment, row.balance
+                row.p_weight, row.m_weight, row.net_weight, row.unit_price, row.amount, row.prepayment, row.balance, row.comment
             ]);
         });
         worksheet.addRow([
             '', '合计', '', '', '', '', '', '', '',
-            total_net_weight, '', total_amount, total_prepayment, running_balance
+            total_net_weight, '', total_amount, total_prepayment, running_balance, ''
         ]);
 
         worksheet.eachRow((row, row_number) => {
@@ -3178,7 +3179,7 @@ module.exports = {
             });
         });
 
-        const widths = [8, 20, 12, 14, 14, 12, 12, 10, 10, 10, 10, 12, 12, 12];
+        const widths = [8, 20, 12, 14, 14, 12, 12, 10, 10, 10, 10, 12, 12, 12, 30];
         widths.forEach((width, idx) => {
             worksheet.getColumn(idx + 1).width = width;
         });
