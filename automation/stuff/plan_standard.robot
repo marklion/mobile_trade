@@ -107,9 +107,7 @@ Plan Confirm with Not Enough Cash and Check
     # 获取订单中的欠款额
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_first}  Get From Dictionary  ${data_plan}  arrears  false
-    ${first_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
-    Should Be Equal As Numbers    ${first_outstanding_vehicles}  ${1}
     ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
     ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
     ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count]
@@ -125,8 +123,6 @@ Plan Confirm with Not Enough Cash and Check
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_second}  Get From Dictionary  ${data_plan}  arrears  false
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
-    ${second_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
-    Should Be Equal As Numbers    ${second_outstanding_vehicles}  ${2}
     ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
     ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
     ${expr}  Set Variable  ${plan}[unit_price] * ${data_stuff}[expect_count] * 2
@@ -139,8 +135,6 @@ Plan Confirm with Not Enough Cash and Check
     Charge To A Company  ${buy_company1}[id]  ${unit_price * 20}
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${arrears_third}  Get From Dictionary  ${data_plan}  arrears  false
-    ${third_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
-    Should Be Equal As Numbers    ${third_outstanding_vehicles}  ${0}
     # 计算欠款额应该是多少：b = ${plan}[unit_price] * ${test_stuff}[expect_count]
     ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
     ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
@@ -159,13 +153,11 @@ Plan Price Change With Recalculation
     # 获取确认后的欠款信息
     ${data_plan}  Get Plan By Id  ${plan}[id]
     ${original_arrears}  Get From Dictionary  ${data_plan}  arrears  false
-    ${original_outstanding_vehicles}  Get From Dictionary  ${data_plan}  outstanding_vehicles  false
     ${original_unit_price}  Get From Dictionary  ${data_plan}  unit_price
     ${test_stuff_id}  Get From Dictionary  ${test_stuff}  id
     ${data_stuff}  Get Stuff By Id  ${test_stuff_id}
     ${expected_original_arrears}  Evaluate  ${original_unit_price} * ${data_stuff}[expect_count]
     Should Be Equal As Numbers    ${original_arrears}    ${expected_original_arrears}
-    Should Be Equal As Numbers    ${original_outstanding_vehicles}  ${1}
 
     # 改价为更高的价格
     ${new_price}  Evaluate  ${original_unit_price} * 1.5
@@ -175,23 +167,19 @@ Plan Price Change With Recalculation
     Sleep    2s
     ${data_plan_after}  Get Plan By Id  ${plan}[id]
     ${new_arrears}  Get From Dictionary  ${data_plan_after}  arrears  false
-    ${new_outstanding_vehicles}  Get From Dictionary  ${data_plan_after}  outstanding_vehicles  false
     ${new_unit_price}  Get From Dictionary  ${data_plan_after}  unit_price
 
     # 验证价格已更新
     Should Be Equal As Numbers    ${new_unit_price}    ${new_price}
     ${expected_new_arrears}  Evaluate  ${new_price} * ${data_stuff}[expect_count]
     Should Be Equal As Numbers    ${new_arrears}    ${expected_new_arrears}
-    Should Be Equal As Numbers    ${new_outstanding_vehicles}  ${1}
 
     # 验证新欠款大于原欠款（因为涨价了）
     Should Be True    ${new_arrears} > ${original_arrears}
     Charge To A Company  ${buy_company1}[id]  ${expected_new_arrears}
     ${data_plan_final}  Get Plan By Id  ${plan}[id]
     ${final_arrears}  Get From Dictionary  ${data_plan_final}  arrears  false
-    ${final_outstanding_vehicles}  Get From Dictionary  ${data_plan_final}  outstanding_vehicles  false
     Should Be Equal As Numbers    ${final_arrears}    ${0}
-    Should Be Equal As Numbers    ${final_outstanding_vehicles}  ${0}
     ${negative_amount}  Evaluate  -${expected_new_arrears}
     Charge To A Company  ${buy_company1}[id]  ${negative_amount}
 

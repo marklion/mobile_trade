@@ -74,6 +74,36 @@ module.exports = {
                 };
             },
         },
+        get_factory_recharge_notices: {
+            name: '获取工厂待充值提示',
+            description: '按接单工厂汇总预付款缺口，并折算为还需充值的车数',
+            is_write: false,
+            is_get_api: false,
+            params: {
+                stat_context_company_id: stat_context_company_id_param,
+            },
+            result: {
+                notices: {
+                    type: Array,
+                    mean: '待充值工厂列表',
+                    explain: {
+                        factory: {
+                            type: Object,
+                            mean: '接单工厂',
+                            explain: {
+                                id: { type: Number, mean: '公司ID', example: 1 },
+                                name: { type: String, mean: '公司名称', example: '工厂A' },
+                            },
+                        },
+                        vehicles: { type: Number, mean: '还需充值车数', example: 4 },
+                    },
+                },
+            },
+            func: async function (body, token) {
+                const company = await group_lib.resolve_stat_company(token, body.stat_context_company_id);
+                return { notices: await plan_lib.get_factory_recharge_notices(company) };
+            },
+        },
         get_charge_history: {
             name: '获取充值历史',
             description: '获取充值历史',

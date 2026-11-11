@@ -250,7 +250,6 @@ module.exports = {
         unit_price: { type: Number, mean: '单价', example: 1 },
         status: { type: Number, mean: '状态', example: 1 },
         arrears: { type: Number, mean: '欠款额', example: 10.00 },
-        outstanding_vehicles: { type: Number, mean: '欠款车数', example: 1 },
         comment: { type: String, mean: '备注', example: '备注' },
         from_bidding: { type: Boolean, mean: '是否来自竞价', example: true },
         count: { type: Number, mean: '数量', example: 1 },
@@ -485,7 +484,7 @@ function pick_define_fields(src, keys) {
     let detail = module.exports.plan_detail_define;
     module.exports.plan_brief_define = Object.assign(
         pick_define_fields(detail, [
-            'id', 'plan_time', 'unit_price', 'status', 'arrears', 'outstanding_vehicles',
+            'id', 'plan_time', 'unit_price', 'status', 'arrears',
             'comment', 'count', 'register_time', 'enter_time', 'manual_close', 'is_buy',
             'main_vehicle', 'behind_vehicle',
         ]),

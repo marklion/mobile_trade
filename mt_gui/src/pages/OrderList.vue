@@ -207,7 +207,7 @@
                                     装车量 {{ item.count }}
                                 </text>
                                 <text class="tag warn" v-if="item.status == 1 && item.arrears > 0">
-                                    欠款 {{ item.arrears }} · 需付 {{ item.outstanding_vehicles }} 车
+                                    欠款 {{ item.arrears }}
                                 </text>
                             </view>
 
