@@ -95,7 +95,6 @@ module.exports = {
     close_a_plan: async function (plan, token, t = null) {
         plan.status = 3;
         plan.arrears = 0;
-        plan.outstanding_vehicles = 0;
         if (t) {
             await plan.save({ transaction: t });
         } else {
@@ -1504,7 +1503,7 @@ module.exports = {
             if (plan?.status != 1) {
                 return;
             }
-            let { arrears, outstanding_vehicles } = await this.calculate_plan_arrears(plan, plan.unit_price);
+            let { arrears } = await this.calculate_plan_arrears(plan, plan.unit_price);
             let latest = await util_lib.get_single_plan_by_id(_plan.id);
             if (latest?.status != 1) {
                 return;
@@ -1512,13 +1511,11 @@ module.exports = {
             if (arrears <= 0) {
                 latest.status = 2;
                 latest.arrears = 0;
-                latest.outstanding_vehicles = 0;
                 await latest.save();
                 await this.rp_history_pay(latest, '自动');
                 plan4next = latest;
             } else {
                 latest.arrears = arrears;
-                latest.outstanding_vehicles = outstanding_vehicles;
                 await latest.save();
             }
         };
@@ -1545,7 +1542,6 @@ module.exports = {
             if (!plan.is_buy) {
                 plan.status = 2;
                 plan.arrears = 0;
-                plan.outstanding_vehicles = 0;
                 wx_api_util.send_plan_status_msg(plan);
                 await plan.save({ transaction: t });
                 await this.rp_history_pay(plan, (await rbac_lib.get_user_by_token(_token)).name);
@@ -1830,9 +1826,74 @@ module.exports = {
     rp_history_price_change: async function (_plan, _operator, _new_price) {
         await this.record_plan_history(_plan, _operator, '价格变为:' + _new_price);
     },
+    get_factory_recharge_notices: async function (company) {
+        let ret = [];
+        if (!company) {
+            return ret;
+        }
+        const sq = db_opt.get_sq();
+        const plans = await sq.models.plan.findAll({
+            where: {
+                companyId: company.id,
+                is_buy: false,
+                status: { [db_opt.Op.in]: [1, 2] },
+            },
+            include: [{
+                model: sq.models.stuff,
+                required: true,
+                include: [{
+                    model: sq.models.company,
+                    required: true,
+                    attributes: ['id', 'name'],
+                }],
+            }],
+            order: [['id', 'ASC']],
+        });
+        const factory_groups = new Map();
+        for (const plan of plans) {
+            const factory = plan.stuff.company;
+            if (!factory_groups.has(factory.id)) {
+                factory_groups.set(factory.id, {
+                    factory: { id: factory.id, name: factory.name },
+                    pending_count: 0,
+                    total_cost: 0,
+                    priced_order_count: 0,
+                });
+            }
+            const group = factory_groups.get(factory.id);
+            const cost = Number(plan.unit_price) * Number(plan.stuff.expect_count);
+            if (plan.status === 1) {
+                group.pending_count++;
+            }
+            if (Number.isFinite(cost) && cost > 0) {
+                group.total_cost += cost;
+                group.priced_order_count++;
+            }
+        }
+        for (const group of factory_groups.values()) {
+            if (group.pending_count === 0 || group.priced_order_count === 0) {
+                continue;
+            }
+            const contracts = this.pick_sale_contracts_for_supply(
+                await this.get_sale_contracts_for_buyer_and_supply_company(company.id, group.factory.id),
+                group.factory.id
+            );
+            const balance = contracts.length === 1 ? Number(contracts[0].balance) : 0;
+            const lack = Number((group.total_cost - balance).toFixed(2));
+            if (lack <= 0) {
+                continue;
+            }
+            const average_vehicle_cost = group.total_cost / group.priced_order_count;
+            ret.push({
+                factory: group.factory,
+                vehicles: Math.ceil(lack / average_vehicle_cost),
+            });
+        }
+        return ret;
+    },
     calculate_plan_arrears: async function (plan, unit_price = null, transaction = null) {
         if (!plan || plan.is_buy || plan.status !== 1) {
-            return { arrears: 0, outstanding_vehicles: 0 };
+            return { arrears: 0 };
         }
         const price_to_use = unit_price !== null ? unit_price : plan.unit_price;
         let contracts = this.pick_sale_contracts_for_supply(
@@ -1863,18 +1924,7 @@ module.exports = {
             already_verified_cash += single_plan.unit_price * plan.stuff.expect_count
         }
         let arrears = one_vehicle_cost - (cur_balance - already_verified_cash);
-        if (arrears <= 0) {
-            return { arrears: 0, outstanding_vehicles: 0 };
-        } else {
-            let outstanding_vehicles = already_prepaied_plans.length + 1;
-            if (one_vehicle_cost > 0) {
-                outstanding_vehicles = Math.ceil(arrears / one_vehicle_cost);
-            }
-            return {
-                arrears: arrears,
-                outstanding_vehicles: outstanding_vehicles
-            };
-        }
+        return { arrears: Math.max(0, arrears) };
     },
     pri_change_stuff_price: async function (stuff, _new_price, _comment, _operator, _to_plan) {
         stuff.price = _new_price;

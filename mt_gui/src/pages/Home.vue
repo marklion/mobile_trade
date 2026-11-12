@@ -44,6 +44,27 @@
     </fui-bottom-popup>
 
     <view class="content-stack">
+        <module-filter require_module="customer">
+            <view class="section-shell">
+                <view class="section-head">
+                    <view class="section-head-left">
+                        <view class="section-bar"></view>
+                        <view class="section-titles">
+                            <text class="section-title">预付款提示</text>
+                            <text class="section-en">PREPAYMENT</text>
+                        </view>
+                    </view>
+                </view>
+                <view class="section-body prepayment-body">
+                    <view class="prepayment-row" v-for="item in factory_recharge_notices" :key="item.factory.id">
+                        <text class="prepayment-factory">{{ item.factory.name }}</text>
+                        <text class="prepayment-notice">还需充值 <text class="prepayment-count">{{ item.vehicles }}</text> 车</text>
+                    </view>
+                    <view class="prepayment-empty" v-if="factory_recharge_notices.length === 0">暂无需充值的接单工厂</view>
+                </view>
+            </view>
+        </module-filter>
+
         <view class="section-shell">
             <view class="section-head">
                 <view class="section-head-left">
@@ -257,6 +278,7 @@ export default {
             },
             stuff2buy: [],
             stuff2sale: [],
+            factory_recharge_notices: [],
             charts: [],
             charts_anim: false,
             notice: {
@@ -670,10 +692,21 @@ export default {
             let res = await this.$send_req('/stuff/get_notice');
             this.notice = res;
         },
+        init_factory_recharge_notices: async function () {
+            if (!this.$has_module('customer')) {
+                this.factory_recharge_notices = [];
+                return;
+            }
+            const resp = await this.$send_req('/customer/get_factory_recharge_notices', {
+                stat_context_company_id: this.stat_context_company_id,
+            }, true);
+            this.factory_recharge_notices = resp.notices || [];
+        },
         init_brief_info: async function () {
             this.self_info = uni.getStorageSync('self_info');
             this.init_data_brief();
             this.init_notice();
+            this.init_factory_recharge_notices();
             if (this.$refs.sb_list)
                 this.$refs.sb_list.refresh();
             if (this.$refs.ss_list)
@@ -919,6 +952,48 @@ export default {
 
 .section-body {
     padding: 24rpx 24rpx 28rpx;
+}
+
+.prepayment-body {
+    padding-top: 8rpx;
+    padding-bottom: 8rpx;
+}
+
+.prepayment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 22rpx 4rpx;
+    border-bottom: 1rpx solid #EEF1F8;
+}
+
+.prepayment-row:last-child {
+    border-bottom: 0;
+}
+
+.prepayment-factory {
+    flex: 1;
+    color: #2D3748;
+    font-size: 28rpx;
+    font-weight: 600;
+}
+
+.prepayment-notice {
+    color: #8A94A6;
+    font-size: 26rpx;
+}
+
+.prepayment-count {
+    color: #E6A23C;
+    font-size: 34rpx;
+    font-weight: 700;
+}
+
+.prepayment-empty {
+    padding: 24rpx 4rpx;
+    color: #9AA3B8;
+    font-size: 26rpx;
+    text-align: center;
 }
 
 .meta-row-inner {

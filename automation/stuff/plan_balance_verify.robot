@@ -91,8 +91,6 @@ Check All Plans
             ${lack_from_plan}  Evaluate  ${lack_from_plan} + ${plan}[arrears]
             ${extra_lack}  Evaluate  ${plan}[arrears] - ${plan}[unit_price] * 3
             ${lack_from_plan}  Evaluate  ${lack_from_plan} - ${extra_lack}
-            ${expected_outstanding_vehicles}  Evaluate  __import__('math').ceil(${plan}[arrears] / (${plan}[unit_price] * 3))
-            Should Be Equal As Numbers  ${plan}[outstanding_vehicles]  ${expected_outstanding_vehicles}
         END
         IF  $status == 2
             ${count}  Evaluate  ${count} + 1
@@ -181,6 +179,26 @@ Charge And Check
     Append To List    ${enough_plans}  ${all_plans}[1][id]
     Make Balance Enough to Plans  @{enough_plans}
     Check All Plans    ${3}
+
+Factory Recharge Notice Follows All Pending Plans
+    [Setup]  Define Infrastructure
+    [Teardown]  Clean Plans
+    Set Balance    ${0}
+    FOR  ${i}  IN RANGE  0  3
+        Confirm A Plan    ${all_plans}[${i}]
+    END
+    ${req}  Create Dictionary
+    ${resp}  Req to Server  /customer/get_factory_recharge_notices  ${bc1_user_token}  ${req}
+    Length Should Be  ${resp}[notices]  1
+    Should Be Equal  ${resp}[notices][0][factory][name]  ${sale_company}[name]
+    Should Be Equal As Numbers  ${resp}[notices][0][vehicles]  3
+    Charge To A Company  ${buy_company1}[id]  ${6}
+    ${resp}  Req to Server  /customer/get_factory_recharge_notices  ${bc1_user_token}  ${req}
+    Length Should Be  ${resp}[notices]  1
+    Should Be Equal As Numbers  ${resp}[notices][0][vehicles]  2
+    Charge To A Company  ${buy_company1}[id]  ${12}
+    ${resp}  Req to Server  /customer/get_factory_recharge_notices  ${bc1_user_token}  ${req}
+    Length Should Be  ${resp}[notices]  0
 
 Change Price And Check
     [Setup]  Define Infrastructure

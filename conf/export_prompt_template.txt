@@ -74,7 +74,6 @@
 | dup_info | STRING | 重复单信息 |
 | expect_weight | DECIMAL(12,2) | 期望装载重量 |
 | arrears | DECIMAL(12,2) | 欠款金额 |
-| outstanding_vehicles | INT | 欠款对应多少车 |
 | subsidy_price | DECIMAL(12,2) | 补贴单价 |
 | king_dee_comment | STRING | 金蝶同步备注 |
 | driver_confirm_time | STRING | 司机确认时间 |

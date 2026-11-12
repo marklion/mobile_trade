@@ -2,6 +2,20 @@
 <div class="dashboard-container">
     <el-alert v-if="!can_view_dashboard" title="当前操作主体暂无查看权限，无法查看首页统计数据。" type="warning" :closable="false" show-icon style="margin-bottom: 10px;" />
     <template v-else>
+        <el-row :gutter="10" v-if="module_filter('customer')">
+            <el-col :span="24">
+                <el-card class="box-card" :body-style="{padding : '10px 20px'}" v-loading="factory_recharge_loading">
+                    <div slot="header" class="clearfix">
+                        <span>预付款提示</span>
+                    </div>
+                    <div class="prepayment-row" v-for="item in factory_recharge_notices" :key="item.factory.id">
+                        <span class="prepayment-factory">{{ item.factory.name }}</span>
+                        <span>还需充值 <strong class="prepayment-count">{{ item.vehicles }}</strong> 车</span>
+                    </div>
+                    <div class="prepayment-empty" v-if="factory_recharge_notices.length === 0">暂无需充值的接单工厂</div>
+                </el-card>
+            </el-col>
+        </el-row>
         <el-row :gutter="10">
             <el-col :span="12">
                 <el-card class="box-card" :body-style="{padding : 10}">
@@ -280,6 +294,8 @@ export default {
             ss_loading: true,
             day_offset: "0",
             tableData: [],
+            factory_recharge_notices: [],
+            factory_recharge_loading: false,
             charts: [],
             notice: {
                 notice: '',
@@ -648,12 +664,28 @@ export default {
             let res = await this.$send_req('/stuff/get_notice');
             this.notice = res;
         },
+        init_factory_recharge_notices: async function() {
+            if (!this.$hasPermission('customer')) {
+                this.factory_recharge_notices = []
+                return
+            }
+            this.factory_recharge_loading = true
+            try {
+                const resp = await this.$send_req('/customer/get_factory_recharge_notices', {
+                    stat_context_company_id: this.globalStatContextCompanyId,
+                })
+                this.factory_recharge_notices = resp.notices || []
+            } finally {
+                this.factory_recharge_loading = false
+            }
+        },
         init_brief_info: async function () {
             if (!this.can_view_dashboard) {
                 return;
             }
             this.init_data_brief();
             this.init_notice();
+            this.init_factory_recharge_notices()
             if (this.$refs.sb_page)
                 this.$refs.sb_page.refresh();
             if (this.$refs.ss_page)
@@ -680,6 +712,34 @@ export default {
 
 .box-card {
     margin-bottom: 10px
+}
+
+.prepayment-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid #ebeef5;
+}
+
+.prepayment-row:last-child {
+    border-bottom: 0;
+}
+
+.prepayment-factory {
+    color: #303133;
+    font-weight: 600;
+}
+
+.prepayment-count {
+    color: #e6a23c;
+    font-size: 20px;
+}
+
+.prepayment-empty {
+    padding: 12px 0;
+    color: #909399;
+    text-align: center;
 }
 
 .llm-step-content {

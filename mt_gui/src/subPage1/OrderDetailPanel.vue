@@ -119,7 +119,7 @@
                                     </text>
                                 </view>
                                 <text class="arrears-tag" v-if="focus_plan.status == 1 && focus_plan.arrears > 0">
-                                    欠款额:{{ focus_plan.arrears }} 需付{{ focus_plan.outstanding_vehicles }}车
+                                    欠款额:{{ focus_plan.arrears }}
                                 </text>
                             </view>
                             <view class="mini-btn success" v-if="user_authorize == '未授权'" @click="authorize_user">
