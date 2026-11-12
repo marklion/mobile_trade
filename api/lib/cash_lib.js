@@ -43,7 +43,10 @@ module.exports = {
                     final_comment += `，银行名称:${real_bank_name}`;
                 }
                 else if (final_comment.indexOf('回退') != -1) {
-                    real_bank_name = final_comment.match(/银行名称:([^，]+)/)[1];
+                    let rbn_array = final_comment.match(/银行名称:([^，]+)/);
+                    if (rbn_array.length > 1) {
+                        real_bank_name = rbn_array[1];
+                    }
                     if (!real_bank_name) {
                         real_bank_name = '鄂尔多斯银行';
                     }
