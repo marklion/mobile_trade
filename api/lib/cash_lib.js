@@ -44,7 +44,7 @@ module.exports = {
                 }
                 else if (final_comment.indexOf('回退') != -1) {
                     let rbn_array = final_comment.match(/银行名称:([^，]+)/);
-                    if (rbn_array.length > 1) {
+                    if (rbn_array && rbn_array.length > 1) {
                         real_bank_name = rbn_array[1];
                     }
                     if (!real_bank_name) {
