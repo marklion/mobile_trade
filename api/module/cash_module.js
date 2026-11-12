@@ -15,7 +15,6 @@ module.exports = {
         charge: {
             name: '充值',
             description: '充值',
-
             is_write: true,
             is_get_api: false,
             params: {
@@ -29,7 +28,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                await cash_lib.charge(token, body.contract_id, body.cash_increased, body.comment, body.stat_context_company_id, body.bank_name);
+                await cash_lib.charge(token, body.contract_id, body.cash_increased, body.comment, body.stat_context_company_id, body.bank_name || '');
                 return { result: true };
             },
         },
@@ -115,7 +114,7 @@ module.exports = {
                 return { result: true };
             },
         },
-        add_subsidy_params:{
+        add_subsidy_params: {
             name: '添加补贴参数',
             description: '添加补贴参数',
             is_write: true,
@@ -130,7 +129,7 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let ret = {result:false};
+                let ret = { result: false };
                 let sq = db_opt.get_sq();
                 let company = await rbac_lib.get_company_by_token(token);
                 let stuff = await sq.models.stuff.findByPk(body.stuff_id);
@@ -138,8 +137,7 @@ module.exports = {
                     throw { err_msg: '物料不存在或没有权限' };
                 }
                 const exist_records = await stuff.getSubsidy_gate_discounts({ where: { gate: body.gate } });
-                if (exist_records && exist_records.length == 1)
-                {
+                if (exist_records && exist_records.length == 1) {
                     if (body.discount && (body.discount > 0 && body.discount < 10)) {
                         exist_records[0].discount = body.discount;
                         exist_records[0].amount = null;
@@ -161,7 +159,7 @@ module.exports = {
                 return ret;
             }
         },
-        del_subsidy_params:{
+        del_subsidy_params: {
             name: '删除补贴参数',
             description: '删除补贴参数',
             is_write: true,
@@ -173,25 +171,25 @@ module.exports = {
                 result: { type: Boolean, mean: '结果', example: true }
             },
             func: async function (body, token) {
-                let ret = {result:false};
+                let ret = { result: false };
                 let sq = db_opt.get_sq();
-                let sub_gate_discount = await sq.models.subsidy_gate_discount.findByPk(body.id, {include:[{
-                    model:sq.models.stuff,
-                }]});
+                let sub_gate_discount = await sq.models.subsidy_gate_discount.findByPk(body.id, {
+                    include: [{
+                        model: sq.models.stuff,
+                    }]
+                });
                 let company = await rbac_lib.get_company_by_token(token);
-                if (sub_gate_discount && company && (await company.hasStuff(sub_gate_discount.stuff)))
-                {
+                if (sub_gate_discount && company && (await company.hasStuff(sub_gate_discount.stuff))) {
                     await sub_gate_discount.destroy();
                     ret.result = true;
                 }
-                else
-                {
+                else {
                     throw { err_msg: '补贴不存在或没有权限' }
                 }
                 return ret;
             }
         },
-        get_subsidy_params:{
+        get_subsidy_params: {
             name: '获取补贴参数',
             description: '获取补贴参数',
             is_write: false,
@@ -201,32 +199,34 @@ module.exports = {
             result: {
                 subsidy_params: {
                     type: Array, mean: '补贴参数', explain: {
-                        id:{type:Number,mean:'补贴参数ID',example:1},
-                        gate:{type:Number,mean:'补贴门槛',example:1},
-                        discount:{type:Number,mean:'折扣',example:1},
-                        amount:{type:Number,mean:'补贴金额',example:1},
-                        stuff:{type:Object,mean:'物料',explain:{
-                            id:{type:Number,mean:'物料ID',example:1},
-                            name:{type:String,mean:'物料名称',example:'物料1'},
-                        }},
+                        id: { type: Number, mean: '补贴参数ID', example: 1 },
+                        gate: { type: Number, mean: '补贴门槛', example: 1 },
+                        discount: { type: Number, mean: '折扣', example: 1 },
+                        amount: { type: Number, mean: '补贴金额', example: 1 },
+                        stuff: {
+                            type: Object, mean: '物料', explain: {
+                                id: { type: Number, mean: '物料ID', example: 1 },
+                                name: { type: String, mean: '物料名称', example: '物料1' },
+                            }
+                        },
                     }
                 }
             },
             func: async function (body, token) {
-                let ret = {subsidy_params:[], total:0};
+                let ret = { subsidy_params: [], total: 0 };
                 let sq = db_opt.get_sq();
                 let company = await rbac_lib.get_company_by_token(token);
                 let resp = await sq.models.subsidy_gate_discount.findAndCountAll({
-                    include:[
+                    include: [
                         {
-                            model:sq.models.stuff,
-                            where:{companyId:company.id},
-                            required:true,
+                            model: sq.models.stuff,
+                            where: { companyId: company.id },
+                            required: true,
                         }
                     ],
-                    offset:20*(body.pageNo),
-                    limit:20,
-                    order:[['stuffId', 'ASC'],['gate', 'ASC']],
+                    offset: 20 * (body.pageNo),
+                    limit: 20,
+                    order: [['stuffId', 'ASC'], ['gate', 'ASC']],
                 });
                 if (resp) {
                     ret.subsidy_params = resp.rows;
@@ -235,7 +235,7 @@ module.exports = {
                 return ret;
             }
         },
-        do_subsidy:{
+        do_subsidy: {
             name: '补贴',
             description: '补贴',
             is_write: true,
@@ -243,8 +243,8 @@ module.exports = {
             params: {
                 plan_time_start: { type: String, have_to: false, mean: '计划开始时间', example: '2020-01-01' },
                 plan_time_end: { type: String, have_to: false, mean: '计划结束时间', example: '2020-01-01' },
-                m_time_start:{ type: String, have_to: false, mean: '出厂时间开始', example: '2020-01-01' },
-                m_time_end:{ type: String, have_to: false, mean: '出厂时间结束', example: '2020-01-01' },
+                m_time_start: { type: String, have_to: false, mean: '出厂时间开始', example: '2020-01-01' },
+                m_time_end: { type: String, have_to: false, mean: '出厂时间结束', example: '2020-01-01' },
             },
             result: {
                 result: { type: Boolean, mean: '结果', example: true },
@@ -257,8 +257,7 @@ module.exports = {
                     time_filter_valid = true;
                     filter_by_plan_time = true;
                 }
-                else if (body.m_time_start && body.m_time_end)
-                {
+                else if (body.m_time_start && body.m_time_end) {
                     time_filter_valid = true;
                 }
                 if (time_filter_valid) {
@@ -302,8 +301,8 @@ module.exports = {
                 return ret;
             }
         },
-        undo_subsidy:{
-            name:'撤销补贴',
+        undo_subsidy: {
+            name: '撤销补贴',
             description: '撤销补贴',
             is_write: true,
             is_get_api: false,
@@ -315,16 +314,16 @@ module.exports = {
             },
             func: async function (body, token) {
                 let ret = {
-                    result:false,
+                    result: false,
                 };
                 let sq = db_opt.get_sq();
                 let sr = await sq.models.subsidy_record.findByPk(body.record_id);
                 let company = await rbac_lib.get_company_by_token(token);
-                if (sr && sr.status == '已完成' && company &&(await company.hasSubsidy_record(sr))) {
+                if (sr && sr.status == '已完成' && company && (await company.hasSubsidy_record(sr))) {
                     ret.result = true;
                     sr.status = '撤销中';
                     await sr.save();
-                    setTimeout(async()=>{
+                    setTimeout(async () => {
                         try {
                             await cash_lib.undo_subsidy_by_id(sr.id, token);
                             sr.status = '已撤销';
@@ -335,8 +334,7 @@ module.exports = {
                         await sr.save();
                     }, 200);
                 }
-                else
-                {
+                else {
                     throw { err_msg: '补贴记录不存在或未完成' };
                 }
                 return ret;
