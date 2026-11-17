@@ -128,10 +128,9 @@ public:
             if (is_hex)
             {
                 uint32_t card_no = std::stoul(last_card_no_read);
-                _return.push_back((card_no >> 24) & 0xff);
-                _return.push_back((card_no >> 16) & 0xff);
-                _return.push_back((card_no >> 8) & 0xff);
-                _return.push_back(card_no & 0xff);
+                char card_no_hex[9] = {0};
+                snprintf(card_no_hex, sizeof(card_no_hex), "%08X", card_no);
+                _return = card_no_hex;
             }
             else
             {
