@@ -1912,6 +1912,7 @@ bool issue_card(const std::string &_order_number, double _weight, const std::str
     bool ret = false;
     vehicle_order_info tmp;
     std::string host;
+    std::string issue_card_script;
 
     THR_CALL_BEGIN(order_center);
     client->get_order(tmp, _order_number);
@@ -1921,10 +1922,15 @@ bool issue_card(const std::string &_order_number, double _weight, const std::str
     running_rule rule;
     client->get_rule(rule);
     host = rule.issue_card_path;
+    issue_card_script = rule.issue_card_script;
     THR_CALL_END();
     if (tmp.order_number.length() > 0 && host.length() > 0)
     {
         std::string cmd = "/conf/issue_card.sh ";
+        if (issue_card_script.length() > 0)
+        {
+            cmd = issue_card_script + " ";
+        }
         char sql[1048];
         sprintf(
             sql,

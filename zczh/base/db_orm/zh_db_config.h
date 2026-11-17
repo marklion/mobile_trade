@@ -421,6 +421,7 @@ public:
     long wait_cycle = 0;
     double min_weight = 0;
     long double_check_plate = 0;
+    std::string issue_card_script;
     virtual std::vector<sqlite_orm_column> self_columns_defined()
     {
         std::vector<sqlite_orm_column> ret;
@@ -441,6 +442,7 @@ public:
         ret.push_back(sqlite_orm_column("wait_cycle", sqlite_orm_column::INTEGER, &wait_cycle));
         ret.push_back(sqlite_orm_column("min_weight", sqlite_orm_column::REAL, &min_weight));
         ret.push_back(sqlite_orm_column("double_check_plate", sqlite_orm_column::INTEGER, &double_check_plate));
+        ret.push_back(sqlite_orm_column("issue_card_script", sqlite_orm_column::STRING, &issue_card_script));
 
         return ret;
     }

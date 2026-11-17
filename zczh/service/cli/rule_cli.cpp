@@ -131,6 +131,30 @@ void call_time_out(std::ostream &out, std::vector<std::string> _params)
         TRH_CLOSE();
     }
 }
+void set_issue_card_script(std::ostream &out, std::vector<std::string> _params)
+{
+    if (_params.size() != 1)
+    {
+        out << "参数错误" << std::endl;
+    }
+    else
+    {
+        THR_DEF_CIENT(config_management);
+        THR_CONNECT(config_management);
+        try
+        {
+            running_rule tmp;
+            client->get_rule(tmp);
+            tmp.issue_card_script = _params[0];
+            client->set_rule(tmp);
+        }
+        catch (const gen_exp &e)
+        {
+            out << e.msg << std::endl;
+        }
+        TRH_CLOSE();
+    }
+}
 void set_issue_card_path(std::ostream &out, std::vector<std::string> _params)
 {
     if (_params.size() != 1)
@@ -521,6 +545,7 @@ std::unique_ptr<cli::Menu> make_rule_cli(const std::string &_menu_name)
     root_menu->Insert(CLI_MENU_ITEM(add_gate_scale_map), "添加大门-地磅映射", {"大门门名称", "地磅门名称"});
     root_menu->Insert(CLI_MENU_ITEM(del_gate_scale_map), "删除大门-地磅映射", {"大门门名称", "地磅门名称"});
     root_menu->Insert(CLI_MENU_ITEM(set_double_check_plate), "设置双重核对车牌");
+    root_menu->Insert(CLI_MENU_ITEM(set_issue_card_script), "设置发卡系统脚本路径", {"脚本路径"});
 
     return root_menu;
 }
@@ -563,6 +588,10 @@ std::string rule_cli::make_bdr()
     if (tmp.issue_card_path.length() > 0)
     {
         ret.push_back("set_issue_card_path " + tmp.issue_card_path);
+    }
+    if (tmp.issue_card_script.length() > 0)
+    {
+        ret.push_back("set_issue_card_script " + tmp.issue_card_script);
     }
     if (tmp.gate_strict)
     {

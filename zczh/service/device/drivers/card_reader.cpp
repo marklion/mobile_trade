@@ -57,6 +57,11 @@ public:
     std::string last_card_no_read;
     using common_driver::common_driver;
     int m_sel_fd = -1;
+    bool is_hex = false;
+    void set_is_hex(bool value)
+    {
+        is_hex = value;
+    }
     virtual void init_all_set()
     {
         std::function<void(const std::string &)> log_func = [&](const std::string &_msg)
@@ -120,12 +125,24 @@ public:
     {
         if (!last_card_no_read.empty())
         {
-            _return = last_card_no_read;
+            if (is_hex)
+            {
+                uint32_t card_no = std::stoul(last_card_no_read);
+                _return.push_back((card_no >> 24) & 0xff);
+                _return.push_back((card_no >> 16) & 0xff);
+                _return.push_back((card_no >> 8) & 0xff);
+                _return.push_back(card_no & 0xff);
+            }
+            else
+            {
+                _return = last_card_no_read;
+            }
             last_card_no_read = "";
         }
     }
 
-    virtual void clear_card_no(const int64_t card_reader_id) {
+    virtual void clear_card_no(const int64_t card_reader_id)
+    {
         last_card_no_read = "";
     }
 };
@@ -143,9 +160,11 @@ int main(int argc, char **argv)
     using namespace clipp;
     unsigned short run_port = 0;
     unsigned short self_id;
+    bool is_hex = false;
     auto cli = (required("-p") & value("port", run_port),
                 required("-i") & value("self_id", self_id),
-                required("-a") & value("device_ip", g_dev_ip));
+                required("-a") & value("device_ip", g_dev_ip),
+                option("-x") & value("is_hex", is_hex));
     if (!parse(argc, argv, cli))
     {
         std::cerr << "Usage:\n"
@@ -155,6 +174,7 @@ int main(int argc, char **argv)
     }
     auto pd = new card_reader_driver("card_reader_driver" + std::to_string(self_id), self_id);
     pd->init_all_set();
+    pd->set_is_hex(is_hex);
     common_driver::start_driver(run_port, pd);
     timer_wheel_fini();
     return 0;

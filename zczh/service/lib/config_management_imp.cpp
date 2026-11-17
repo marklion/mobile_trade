@@ -333,6 +333,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         er->force_close = rule.force_close;
         er->wait_cycle = rule.wait_cycle;
         er->min_weight = rule.min_weight;
+        er->issue_card_script = rule.issue_card_script;
         ret = er->update_record();
     }
     else
@@ -354,6 +355,7 @@ bool config_management_handler::set_rule(const running_rule &rule)
         tmp.force_close = rule.force_close;
         tmp.wait_cycle = rule.wait_cycle;
         tmp.min_weight = rule.min_weight;
+        tmp.issue_card_script = rule.issue_card_script;
         ret = tmp.insert_record();
     }
     return ret;
@@ -460,6 +462,7 @@ void config_management_handler::get_rule(running_rule &_return)
         _return.force_close = er->force_close;
         _return.wait_cycle = er->wait_cycle;
         _return.min_weight = er->min_weight;
+        _return.issue_card_script = er->issue_card_script;
     }
 }
 
