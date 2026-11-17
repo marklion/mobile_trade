@@ -57,7 +57,7 @@ Wait Batch Task Complete
     ${req}=    Create Dictionary
     FOR    ${index}    IN RANGE    120
         ${current}=    Req to Server    /global/batch_task_current    ${sc_admin_token}    ${req}
-        Exit For Loop If    not $current[has_task]
+        Exit For Loop If    not $current['has_task']
         Sleep    500ms
     END
     ${current}=    Req to Server    /global/batch_task_current    ${sc_admin_token}    ${req}
