@@ -89,7 +89,7 @@ function make_operation_body(body, operation) {
         }
     }
     if (body.url === '/sale_management/change_plan_delegate'
-        && (!Number.isSafeInteger(ret.delegate_id) || ret.delegate_id <= 0)) {
+        && ret.delegate_id !== undefined && (!Number.isSafeInteger(ret.delegate_id) || ret.delegate_id < 0)) {
         throw { err_msg: '批量代理参数错误' };
     }
     return ret;
