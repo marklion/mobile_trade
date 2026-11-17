@@ -21,6 +21,7 @@ const mcache = require('memory-cache');
 const t_plus_lib = require('../lib/t_plus_lib');
 const qwen_lib = require('../lib/qwen_lib');
 const all_plugin = require('../plugin/all_plugin');
+const batch_task_lib = require('../lib/batch_task_lib');
 
 function create_api_error(message) {
     const error = new Error(message);
@@ -408,6 +409,51 @@ module.exports = {
     name: 'global',
     description: '全局',
     methods: {
+        batch_task_create: {
+            name: '创建批量操作任务',
+            description: '按公司创建并异步执行批量订单操作，同一公司最多一个待执行或执行中任务',
+            need_rbac: false,
+            is_write: true,
+            is_get_api: false,
+            params: {
+                url: { type: String, have_to: true, mean: '批量操作接口', example: '/stuff/change_price_by_plan' },
+                plan_id: { type: String, have_to: true, mean: '计划ID列表', example: '1,2,3' },
+                unit_price: { type: Number, have_to: false, mean: '新单价', example: 66.88 },
+                comment: { type: String, have_to: false, mean: '操作备注', example: '批量调价' },
+                delegate_id: { type: Number, have_to: false, mean: '代理ID', example: 1 },
+                approval_auditer: { type: String, have_to: false, mean: '指定审批人', example: '张三' },
+                audit_id: { type: Number, have_to: false, mean: '审批记录ID', example: 1 },
+            },
+            result: {
+                task_id: { type: Number, mean: '任务ID，未创建时为0', example: 1 },
+                audit_id: { type: Number, mean: '审批记录ID，无需审批时为0', example: 0 },
+                comment: { type: String, mean: '审批摘要', example: '' },
+            },
+            func: async function (body, token) {
+                return await batch_task_lib.create_task(body, token);
+            },
+        },
+        batch_task_current: {
+            name: '查询当前公司耗时任务',
+            description: '查询当前用户所在公司是否有待执行或执行中的批量任务',
+            need_rbac: false,
+            is_write: false,
+            is_get_api: false,
+            params: {},
+            result: {
+                has_task: { type: Boolean, mean: '是否有耗时任务', example: true },
+                task_id: { type: Number, mean: '任务ID', example: 1 },
+                task_name: { type: String, mean: '任务名称', example: '批量调价' },
+                status: { type: String, mean: '任务状态', example: 'running' },
+                total_count: { type: Number, mean: '订单总数', example: 5 },
+                current_count: { type: Number, mean: '已处理数量', example: 2 },
+                success_count: { type: Number, mean: '成功数量', example: 2 },
+                failure_count: { type: Number, mean: '失败数量', example: 0 },
+            },
+            func: async function (body, token) {
+                return await batch_task_lib.current_task(token);
+            },
+        },
         driver_phone_online: {
             name: '司机手机号上线',
             description: '司机手机号上线',

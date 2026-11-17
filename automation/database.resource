@@ -62,6 +62,9 @@ Approval Reset
     Clear Table  approval_config
     Clear Table  audit_record
 
+Batch Task Reset
+    Clear Table  batch_task
+
 Contract Reset
     Clear Table  contract
     Clear Table  contract_stuff

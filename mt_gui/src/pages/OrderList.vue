@@ -582,7 +582,6 @@ export default {
             if (r) r('');
         },
         do_action: async function (e) {
-            let muti_success = true;
             if (!this.new_stuff_price.isMuti) {
                 if (e.text == "批量调价") {
                     this.new_stuff_price.show = true;
@@ -593,37 +592,25 @@ export default {
             }
             try {
                 let url = e.url;
-                let batch_approval_auditer = '';
+                const task_body = {
+                    url: url,
+                    plan_id: this.plan_selected.toString(),
+                };
                 if (e.text == '批量验款') {
-                    url = await this.get_pay_url();
+                    task_body.url = await this.get_pay_url();
                     await this.refresh_approval_projects();
                     const p = this.approval_item('manual_verify_pay');
                     if (p && p.enabled && p.approver_mode === 'submit_specify') {
-                        batch_approval_auditer = await this.pick_submit_specify_auditer();
-                        if (!batch_approval_auditer) {
+                        task_body.approval_auditer = await this.pick_submit_specify_auditer();
+                        if (!task_body.approval_auditer) {
                             return;
                         }
                     }
                 }
-                for (let index = 0; index < this.plan_selected.length; index++) {
-                    const element = this.plan_selected[index];
-                    const pay_body = {
-                        plan_id: element,
-                    };
-                    if (batch_approval_auditer) {
-                        pay_body.approval_auditer = batch_approval_auditer;
-                    }
-                    this.$send_req(url, pay_body).catch((error) => {
-                        console.log(error)
-                        muti_success = false
-                    })
-                }
-                if (muti_success) {
-                    this.$refs.toast.show({
-                        text: '操作成功'
-                    })
-                }
-
+                const ret = await this.$send_req('/global/batch_task_create', task_body);
+                this.$refs.toast.show({
+                    text: ret.audit_id > 0 ? '已提交审批，通过后执行' : '任务已创建，后台执行中'
+                });
             } catch (error) {
                 console.log(error)
             } finally {
@@ -763,14 +750,22 @@ export default {
             if (auditerRes.auditer) {
                 price_req.approval_auditer = auditerRes.auditer;
             }
-            this.$send_req("/stuff/change_price_by_plan", price_req).catch((error) => {
+            try {
+                const ret = await this.$send_req('/global/batch_task_create', {
+                    ...price_req,
+                    url: '/stuff/change_price_by_plan',
+                });
+                this.$refs.toast.show({
+                    text: ret.audit_id > 0 ? '已提交审批，通过后执行' : '任务已创建，后台执行中'
+                });
+            } catch (error) {
                 this.$refs.toast.show({
                     text: error,
                 });
-            }).finally(() => {
+            } finally {
                 this.cancel_new_stuff_price();
                 this.refresh_plans();
-            });
+            }
         },
         cancel_new_stuff_price: function (e) {
             this.new_stuff_price.price = 0;

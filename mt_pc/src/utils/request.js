@@ -32,11 +32,13 @@ service.interceptors.response.use(
   async response => {
     const res = response.data
     if ((res.err_msg || '').length > 0) {
-      Message({
-        message: res.err_msg || 'Error',
-        type: 'error',
-        duration: 10 * 1000
-      })
+      if (!response.config.silent_error) {
+        Message({
+          message: res.err_msg || 'Error',
+          type: 'error',
+          duration: 10 * 1000
+        })
+      }
       return Promise.reject(new Error(res.err_msg || 'Error'))
     } else {
       const auditId = res.audit_id
@@ -52,11 +54,13 @@ service.interceptors.response.use(
   },
   error => {
     console.log('err' + error) // for debug
-    Message({
-      message: error.message,
-      type: 'error',
-      duration: 5 * 1000
-    })
+    if (!error.config || !error.config.silent_error) {
+      Message({
+        message: error.message,
+        type: 'error',
+        duration: 5 * 1000
+      })
+    }
     return Promise.reject(error)
   }
 )
