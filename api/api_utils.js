@@ -1,6 +1,7 @@
 const result_maker = require('./result');
 const rbac_lib = require('./lib/rbac_lib');
 const approval_lib = require('./lib/approval_lib');
+const batch_task_lib = require('./lib/batch_task_lib');
 const { makeOpenApiPath } = require('./openapi_utils');
 //params = {
 //         version:{have_to:true, type:String, mean:'版本号', example:'V1.1'},
@@ -213,7 +214,12 @@ function make_api(path, module, is_write, need_rbac, params, result, title, desc
                             id: 0, comment: ''
                         }
                         if (token) {
-                            guard_ret = await approval_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
+                            const is_batch_task_execution = await batch_task_lib.verify_execution(
+                                this.path, req.headers['batch-task-id'], req.headers['batch-task-key']
+                            );
+                            if (!is_batch_task_execution) {
+                                guard_ret = await approval_lib.guard_req(this.path, await rbac_lib.get_company_by_token(token), body, await rbac_lib.get_user_by_token(token));
+                            }
                         }
                         if (0 == guard_ret.id) {
                             let rbac_verify_ret = '';

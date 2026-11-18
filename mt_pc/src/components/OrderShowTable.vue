@@ -244,7 +244,7 @@ export default {
             auto_refresh_interval_ms: 2 * 60 * 1000,
             batch_operate_array: [{
                 name: '批量确认',
-                url: this.is_buy ? '/buy_management/order_buy_confirm/' : '/sale_management/order_sale_confirm',
+                url: this.is_buy ? '/buy_management/order_buy_confirm' : '/sale_management/order_sale_confirm',
             }, {
                 name: '批量验款',
                 url: '',
@@ -312,17 +312,26 @@ export default {
             }
             return url_prefix + '/order_sale_pay';
         },
-        set_delegate: async function () {
-            for (let i = 0; i < this.order_selected.length; i++) {
-                let order = this.order_selected[i];
-                await this.$send_req('/sale_management/change_plan_delegate', {
-                    plan_id: order.id,
-                    delegate_id: this.delegate_id,
-                });
+        submit_batch_task: async function (url, extra_body = {}) {
+            const plan_ids = this.order_selected.map(item => item.id);
+            const ret = await this.$send_req('/global/batch_task_create', {
+                ...extra_body,
+                url: url,
+                plan_id: plan_ids.join(','),
+            });
+            if (ret.audit_id > 0) {
+                this.$message.success('已提交审批，通过后执行');
+            } else {
+                this.$message.success('任务已创建，后台执行中');
             }
-            this.delegate_show = false;
             this.$refs.order_table.clearSelection();
             this.refresh_order();
+        },
+        set_delegate: async function () {
+            await this.submit_batch_task('/sale_management/change_plan_delegate', {
+                delegate_id: this.delegate_id,
+            });
+            this.delegate_show = false;
         },
         do_batch_operate: async function (_index) {
             let opt = this.batch_operate_array[_index];
@@ -341,15 +350,10 @@ export default {
                     }).then(async ({
                         value
                     }) => {
-                        let plan_ids = this.order_selected.map(item => item.id);
-                        let plan_id_string = plan_ids.join(',');
-                        await this.$send_req(opt.url, {
-                            plan_id: plan_id_string,
+                        await this.submit_batch_task(opt.url, {
                             unit_price: unit_price,
                             comment: value
                         });
-                        this.$refs.order_table.clearSelection();
-                        this.refresh_order();
                     });
                 });
             } else if (opt.is_set_delegate) {
@@ -364,14 +368,7 @@ export default {
                     if (opt.is_pay) {
                         url = await this.get_pay_url();
                     }
-                    for (let i = 0; i < this.order_selected.length; i++) {
-                        let order = this.order_selected[i];
-                        await this.$send_req(url, {
-                            plan_id: order.id,
-                        });
-                    }
-                    this.$refs.order_table.clearSelection();
-                    this.refresh_order();
+                    await this.submit_batch_task(url);
                 });
             }
         },

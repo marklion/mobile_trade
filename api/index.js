@@ -295,7 +295,7 @@ else {
             }).install(app);
         }
     }
-    init_super_user();
+    const init_promise = init_super_user();
     const imageConcurrency = Math.max(1, Math.floor(totalCpuCores) - 1);
     const maxImageQueueSize = imageConcurrency * 4;
     const imageWorkers = new Set();
@@ -687,7 +687,12 @@ else {
         console.error(err.stack);
     });
     const listenPort = process.env.PORT != null && process.env.PORT !== '' ? Number(process.env.PORT) : 8080;
-    let server = app.listen(listenPort, () => console.log('Server running on port ' + listenPort));
+    let server = app.listen(listenPort, () => {
+        console.log('Server running on port ' + listenPort);
+        init_promise
+            .then(() => require('./lib/batch_task_lib').init())
+            .catch(error => console.error('批量任务恢复失败:', error));
+    });
     process.on('SIGINT', () => {
         console.log('SIGINT signal received. Closing server...');
         closeImageWorkers();

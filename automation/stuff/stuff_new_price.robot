@@ -52,6 +52,21 @@ Set Finished Price Change Switch
     ${req}  Create Dictionary  change_finished_order_price_switch=${is_open}
     Req to Server    /stuff/set_change_finished_order_price_switch  ${token}    ${req}
 
+Wait Batch Task Complete
+    [Arguments]  ${task_id}
+    ${req}=    Create Dictionary
+    FOR    ${index}    IN RANGE    120
+        ${current}=    Req to Server    /global/batch_task_current    ${sc_admin_token}    ${req}
+        Exit For Loop If    not $current['has_task']
+        Sleep    500ms
+    END
+    ${current}=    Req to Server    /global/batch_task_current    ${sc_admin_token}    ${req}
+    Should Be Equal    ${current}[has_task]    ${False}
+    DB Connect
+    ${rows}=    Query    select status from batch_task where id = ${task_id}
+    Disconnect From All Databases
+    Should Be Equal As Strings    ${rows}[0][0]    success
+
 *** Test Cases ***
 Change Price With Muti Plan
     [Documentation]    测试更改计划价格（批量）
@@ -60,6 +75,32 @@ Change Price With Muti Plan
     ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
     Do Change Price By Plan    ${plan_ids}    ${NEW_PRICE}
     Verify Plan Prices Updated    ${plan_ids}    ${NEW_PRICE}
+
+Change Price With Queued Muti Plan
+    [Documentation]    批量调价任务异步执行并保持原调价结果
+    [Setup]  Create Test Data
+    [Teardown]  Run Keywords    Plan Reset    AND    Batch Task Reset
+    ${plan_ids}=    Get Variable Value    ${TEST_PLAN_IDS}
+    ${plan_ids_str}=    Evaluate    ",".join(map(str, $plan_ids))
+    ${req}=    Create Dictionary    url=/stuff/change_price_by_plan    unit_price=${NEW_PRICE}    plan_id=${plan_ids_str}    comment=${COMMENT}
+    ${resp}=    Req to Server    /global/batch_task_create    ${sc_admin_token}    ${req}
+    Should Be True    ${resp}[task_id] > 0
+    Wait Batch Task Complete    ${resp}[task_id]
+    Verify Plan Prices Updated    ${plan_ids}    ${NEW_PRICE}
+
+Only One Batch Task Per Company
+    [Documentation]    同一公司已有执行中任务时拒绝创建第二个任务
+    [Teardown]  Batch Task Reset
+    DB Connect
+    Execute Sql String    INSERT INTO batch_task (url, task_name, request_body, plan_ids, submit_token, execution_key, status, total_count, companyId, createdAt, updatedAt) VALUES ('/stuff/change_price_by_plan', '批量调价', '{}', '[1]', 'test', 'test', 'running', 1, ${sale_company}[id], NOW(), NOW())
+    Disconnect From All Databases
+    ${empty}=    Create Dictionary
+    ${current}=    Req to Server    /global/batch_task_current    ${sc_admin_token}    ${empty}
+    Should Be Equal    ${current}[has_task]    ${True}
+    Should Be Equal As Strings    ${current}[task_name]    批量调价
+    ${req}=    Create Dictionary    url=/stuff/change_price_by_plan    unit_price=${NEW_PRICE}    plan_id=1    comment=${COMMENT}
+    ${error}=    Req to Server    /global/batch_task_create    ${sc_admin_token}    ${req}    ${True}
+    Should Contain    ${error}    已有耗时任务
 
 Change Price With Single Plan
     [Documentation]    测试更改计划价格（单个）

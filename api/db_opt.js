@@ -550,6 +550,24 @@ let db_opt = {
             need_checkout: { type: DataTypes.BOOLEAN, defaultValue: false },
             need_audit: { type: DataTypes.BOOLEAN, defaultValue: false },
         },
+        batch_task: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            url: { type: DataTypes.STRING },
+            task_name: { type: DataTypes.STRING },
+            request_body: { type: DataTypes.TEXT },
+            plan_ids: { type: DataTypes.TEXT },
+            submit_token: { type: DataTypes.STRING },
+            execution_key: { type: DataTypes.STRING },
+            status: { type: DataTypes.STRING, defaultValue: 'pending' },
+            total_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+            current_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+            success_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+            failure_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+            result: { type: DataTypes.TEXT },
+            error_msg: { type: DataTypes.TEXT },
+            started_at: { type: DataTypes.STRING },
+            finished_at: { type: DataTypes.STRING },
+        },
         audit_record: {
             id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
             url: { type: DataTypes.STRING },
@@ -803,6 +821,10 @@ let db_opt = {
         _sq.models.king_dee_start_config.belongsTo(_sq.models.stuff);
         _sq.models.stuff.hasOne(_sq.models.king_dee_start_config);
 
+        _sq.models.batch_task.belongsTo(_sq.models.company);
+        _sq.models.company.hasMany(_sq.models.batch_task);
+        _sq.models.batch_task.belongsTo(_sq.models.rbac_user);
+        _sq.models.rbac_user.hasMany(_sq.models.batch_task);
         _sq.models.audit_record.belongsTo(_sq.models.company);
         _sq.models.company.hasMany(_sq.models.audit_record);
         _sq.models.approval_config.belongsTo(_sq.models.company);

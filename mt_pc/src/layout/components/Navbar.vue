@@ -6,6 +6,7 @@
 
     <div class="right-menu">
         <global-stat-scope-bar />
+        <batch-task-indicator />
         <el-dropdown class="avatar-container" trigger="click">
             <div class="avatar-wrapper">
                 <div class="user-meta">
@@ -53,12 +54,14 @@ import {
 import Breadcrumb from '@/components/Breadcrumb'
 import Hamburger from '@/components/Hamburger'
 import GlobalStatScopeBar from '@/components/GlobalStatScopeBar.vue'
+import BatchTaskIndicator from '@/components/BatchTaskIndicator.vue'
 
 export default {
     components: {
         Breadcrumb,
         Hamburger,
-        'global-stat-scope-bar': GlobalStatScopeBar
+        'global-stat-scope-bar': GlobalStatScopeBar,
+        'batch-task-indicator': BatchTaskIndicator
     },
     data() {
         return {
