@@ -139,7 +139,7 @@ struct running_rule {
     5:string date_ticket_prefix,
     6:string oem_name,
     7:i64 weight_turn,
-    8:string issue_card_path
+    8:string issue_card_path,
     9:bool gate_strict,
     10:double max_m_weight,
     11:double max_j_weight,
@@ -148,6 +148,7 @@ struct running_rule {
     14:i64 wait_cycle,
     15:double min_weight,
     16:bool double_check_plate,
+    17:string issue_card_script,
 }
 
 struct weight_ref_config {
