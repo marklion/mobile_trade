@@ -16,6 +16,7 @@ const king_dee_start_lib = require('./king_dee_start_lib');
 const { Sequelize } = require('sequelize');
 const all_plugin = require('../plugin/all_plugin');
 const g_verify_pay_company_set = new Set();
+const g_verify_pay_pending_map = new Map();
 const g_vpcs_mutex = new Mutex();
 const regStrReplace = /[\t\s]/g;
 
@@ -1269,26 +1270,45 @@ module.exports = {
         }, force, t, true);
     },
     verify_pay_against_same_company: function (company_id, skip_plan_ids = []) {
-        setTimeout(async () => {
+        let pending = g_verify_pay_pending_map.get(company_id);
+        if (!pending) {
+            pending = {
+                skip_plan_id_set: new Set(),
+                timer: null,
+            };
+            g_verify_pay_pending_map.set(company_id, pending);
+        }
+        for (let plan_id of skip_plan_ids || []) {
+            pending.skip_plan_id_set.add(plan_id);
+        }
+        if (pending.timer) {
+            clearTimeout(pending.timer);
+        }
+        pending.timer = setTimeout(async () => {
             let rl = await g_vpcs_mutex.acquire();
             try {
-                if (g_verify_pay_company_set.has(company_id)) {
+                if (g_verify_pay_pending_map.get(company_id) !== pending) {
+                    return;
                 }
-                else {
-                    let skip_plan_id_set = new Set(skip_plan_ids || []);
-                    g_verify_pay_company_set.add(company_id);
+                g_verify_pay_pending_map.delete(company_id);
+                if (g_verify_pay_company_set.has(company_id)) {
+                    return;
+                }
+                g_verify_pay_company_set.add(company_id);
+                try {
                     await db_opt.get_sq().transaction({
                         savepoint: true,
                         isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED
                     }, async (t) => {
                         let plans = await db_opt.get_sq().models.plan.findAll({ where: { status: 1, is_buy: false, companyId: company_id } });
                         for (let element of plans) {
-                            if (skip_plan_id_set.has(element.id)) {
+                            if (pending.skip_plan_id_set.has(element.id)) {
                                 continue;
                             }
-                            await this.verify_plan_pay(element, t)
+                            await this.verify_plan_pay(element, t);
                         }
                     });
+                } finally {
                     g_verify_pay_company_set.delete(company_id);
                 }
             }

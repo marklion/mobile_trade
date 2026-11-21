@@ -502,7 +502,7 @@ Batch Checkout Test
 
 Batch Checkout With Timer
     [Teardown]  Run Keywords  Plan Reset  AND  Set Stuff Checkout Delay Time  ${EMPTY}  AND  Set Stuff Checkout Delay  delay=${False}
-    ${now_time}  Get Current Date  increment=1m  result_format=%H:%M:%S
+    ${now_time}  Get Current Date  increment=2m  result_format=%H:%M:%S
     Set Stuff Checkout Delay Time    ${now_time}
     ${orig_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Go Deliver Plan    ${6.5}
@@ -510,7 +510,7 @@ Batch Checkout With Timer
     Go Deliver Plan    ${6.5}
     ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
     Should Be Equal    ${orig_balance}    ${cur_balance}
-    Sleep    2m
+    Sleep    3m
     ${plan}  Go Deliver Plan    ${6.5}
     Sleep    2m
     ${cur_balance}  Get Cash Of A Company  ${buy_company1}[name]
