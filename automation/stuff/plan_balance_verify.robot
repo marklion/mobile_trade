@@ -167,6 +167,22 @@ Rollback And Check
     Rollback Plan    ${all_plans}[3]
     Check All Plans    ${3}
 
+Rollback Multiple Plans Before Delayed Verification
+    [Setup]  Define Infrastructure
+    [Teardown]  Clean Plans
+    @{enough_plans}  Create List  ${all_plans}[2][id]  ${all_plans}[3][id]
+    Make Balance Enough to Plans  @{enough_plans}
+    Confirm A Plan    ${all_plans}[2]
+    Confirm A Plan    ${all_plans}[3]
+    Confirm A Plan    ${all_plans}[1]
+    Confirm A Plan    ${all_plans}[4]
+    Rollback Plan    ${all_plans}[2]
+    Rollback Plan    ${all_plans}[3]
+    Check One Plan    ${all_plans}[2][id]    expect_pass=${False}
+    Check One Plan    ${all_plans}[3][id]    expect_pass=${False}
+    Check One Plan    ${all_plans}[1][id]
+    Check One Plan    ${all_plans}[4][id]
+
 Charge And Check
     [Setup]  Define Infrastructure
     [Teardown]  Clean Plans
