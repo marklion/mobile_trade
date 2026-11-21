@@ -180,7 +180,8 @@ Rollback Multiple Plans Before Delayed Verification
     Rollback Plan    ${all_plans}[3]
     Check One Plan    ${all_plans}[2][id]    expect_pass=${False}
     Check One Plan    ${all_plans}[3][id]    expect_pass=${False}
-    Check All Plans    ${2}
+    Check One Plan    ${all_plans}[1][id]
+    Check One Plan    ${all_plans}[4][id]
 
 Charge And Check
     [Setup]  Define Infrastructure
