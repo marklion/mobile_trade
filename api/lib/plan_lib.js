@@ -1269,7 +1269,7 @@ module.exports = {
         }, force, t, true);
     },
     verify_pay_against_same_company: function (company_id, skip_plan_ids = []) {
-        setImmediate(async () => {
+        setTimeout(async () => {
             let rl = await g_vpcs_mutex.acquire();
             try {
                 if (g_verify_pay_company_set.has(company_id)) {
@@ -1297,7 +1297,7 @@ module.exports = {
             finally {
                 rl();
             }
-        });
+        }, 1000);
     },
     plan_close: async function (plan, name, is_cancel = false, no_need_cast = false, t = undefined) {
         let need_verify_balance = false;
