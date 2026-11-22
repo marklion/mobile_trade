@@ -612,6 +612,11 @@ let db_opt = {
             device_name: { type: DataTypes.STRING },
             action: { type: DataTypes.STRING },
         },
+        dispatch_config: {
+            id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
+            ticket_title: { type: DataTypes.STRING },
+            ticket_prefix: { type: DataTypes.STRING },
+        },
     },
     make_associate: function (_sq) {
         _sq.models.rbac_user.belongsToMany(_sq.models.rbac_role, { through: 'rbac_user_role' });
@@ -866,6 +871,11 @@ let db_opt = {
         _sq.models.company.hasMany(_sq.models.device_permission_binding);
         _sq.models.device_permission_binding.belongsTo(_sq.models.rbac_role);
         _sq.models.rbac_role.hasMany(_sq.models.device_permission_binding);
+
+        _sq.models.dispatch_config.belongsTo(_sq.models.stuff);
+        _sq.models.stuff.hasMany(_sq.models.dispatch_config);
+        _sq.models.plan.belongsTo(_sq.models.dispatch_config);
+        _sq.models.dispatch_config.hasMany(_sq.models.plan);
     },
     // 各模型除 paranoid 外的额外 define 选项
     model_define_options: {

@@ -1280,5 +1280,38 @@ module.exports = {
                 return { result: true };
             }
         },
+        dispatch:{
+            name: '分劈计划',
+            description: '分劈计划',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+                dispatch_config_id: { type: Number, have_to: true, mean: '分劈配置ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let user = await rbac_lib.get_user_by_token(token);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (plan && company && plan.stuff.companyId == company.id) {
+                    let sq = db_opt.get_sq();
+                    let dispatch_config = await sq.models.dispatch_config.findByPk(body.dispatch_config_id);
+                    if (dispatch_config)
+                    {
+                        await plan.setDispatch_config(dispatch_config);
+                        await plan_lib.record_plan_history(plan, user.name, `分劈为${dispatch_config.ticket_title}`)
+                    }
+                    else
+                    {
+                        await plan.setDispatch_config(null);
+                        await plan_lib.record_plan_history(plan, user.name, `取消分劈`)
+                    }
+                }
+                return { result: true };
+            }
+        },
     },
 }

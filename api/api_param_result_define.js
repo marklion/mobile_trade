@@ -409,6 +409,14 @@ module.exports = {
         },
         complex_input_metas:{type: String, mean: '复杂输入元数据', example: '[{"label": "温度", "name": "temperature"}, {"label": "压强", "name": "pressure"}]'},
         complex_input: { type: String, mean: '复杂输入', example: '温度: 25, 压强: 101.3' },
+        dispatch_config: {
+            type: Object,
+            mean: '分劈配置',
+            explain: {
+                id: { type: Number, mean: 'ID', example: 1 },
+                ticket_title: { type: String, mean: '磅单标题', example: '标题' },
+            }
+        }
     },
     bidding_items: bidding_items,
     dev_data: {
@@ -518,6 +526,11 @@ function pick_define_fields(src, keys) {
                 mean: detail.driver.mean,
                 explain: pick_define_fields(detail.driver.explain, ['id', 'name', 'phone']),
             },
+            dispatch_config: {
+                type: Object,
+                mean: detail.dispatch_config.mean,
+                explain: pick_define_fields(detail.dispatch_config.explain, ['id', 'ticket_title']),
+            }
         }
     );
 })();
