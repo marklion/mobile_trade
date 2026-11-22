@@ -228,6 +228,11 @@ module.exports = {
                                 model: sq.models.sct_scale_item,
                                 separate: true,
                                 order: [['id', 'ASC']]
+                            },
+                            {
+                                model: sq.models.dispatch_config,
+                                separate: true,
+                                order: [['id', 'ASC']]
                             }
                             ]
                         }
@@ -1849,7 +1854,7 @@ module.exports = {
                     if (exist_records.length > 0) {
                         throw new Error('该分劈配置已存在');
                     }
-                    await stuff.addDispatch_config({
+                    await stuff.createDispatch_config({
                         ticket_title: body.ticket_title,
                         ticket_prefix: body.ticket_prefix,
                     });

@@ -1609,7 +1609,7 @@ module.exports = {
     },
     generate_ticket_no: async function (plan, external_ticket_no) {
         let ret = '';
-        if (external_ticket_no && external_ticket_no.length > 0 && (!plan.stuff.ticket_prefix || !plan.dispatch_config.title_prefix)) {
+        if (external_ticket_no && external_ticket_no.length > 0 && !plan.stuff.ticket_prefix && !(plan.dispatch_config && plan.dispatch_config.ticket_prefix)) {
             ret = external_ticket_no;
         }
         else {
@@ -1617,10 +1617,10 @@ module.exports = {
             if (plan.stuff.add_base) {
                 add_base = plan.stuff.add_base;
             }
-            const prefix = plan.stuff.ticket_prefix ? plan.stuff.ticket_prefix : 'TK';
+            let prefix = plan.stuff.ticket_prefix ? plan.stuff.ticket_prefix : 'TK';
             let statistic_object = plan.stuff;
-            if (plan.dispatch_config && plan.dispatch_config.title_prefix) {
-                prefix = plan.dispatch_config.title_prefix;
+            if (plan.dispatch_config && plan.dispatch_config.ticket_prefix) {
+                prefix = plan.dispatch_config.ticket_prefix;
                 statistic_object = plan.dispatch_config;
             }
             const date = moment().format('YYYYMMDD');

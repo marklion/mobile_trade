@@ -101,6 +101,11 @@ module.exports = {
                 }],
                 paranoid: false
             },
+            {
+                model: db_opt.get_sq().models.dispatch_config,
+                attributes: ['id', 'ticket_title'],
+                paranoid: false
+            },
         ];
     },
     get_single_plan_by_id: async function (_plan_id, _t) {

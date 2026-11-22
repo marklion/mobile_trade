@@ -1297,10 +1297,16 @@ module.exports = {
                 let user = await rbac_lib.get_user_by_token(token);
                 let plan = await util_lib.get_single_plan_by_id(body.plan_id);
                 if (plan && company && plan.stuff.companyId == company.id) {
+                    if (plan.status == 3) {
+                        throw { err_msg: '已关闭计划不能分劈' };
+                    }
                     let sq = db_opt.get_sq();
                     let dispatch_config = await sq.models.dispatch_config.findByPk(body.dispatch_config_id);
                     if (dispatch_config)
                     {
+                        if (dispatch_config.stuffId != plan.stuffId) {
+                            throw { err_msg: '分劈配置与计划物料不匹配' };
+                        }
                         await plan.setDispatch_config(dispatch_config);
                         await plan_lib.record_plan_history(plan, user.name, `分劈为${dispatch_config.ticket_title}`)
                     }
