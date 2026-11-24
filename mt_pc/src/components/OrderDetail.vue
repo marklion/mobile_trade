@@ -30,6 +30,7 @@
                         </div>
                     </el-descriptions-item>
                     <el-descriptions-item label="运输公司">{{plan.trans_company_name}}</el-descriptions-item>
+                    <el-descriptions-item v-if="plan.dispatch_config" label="分劈公司">{{plan.dispatch_config.ticket_title}}</el-descriptions-item>
                     <el-descriptions-item v-for="single_es_config in (plan.is_buy?[]:plan.stuff.company.extra_info_configs)" :key="single_es_config.id" :label="single_es_config.title">
                         {{find_content_by_id(single_es_config.id)}}
                         <el-button type="text" @click="set_extra_info(single_es_config.id)">修改</el-button>
@@ -42,6 +43,7 @@
                     </template>
                     <template slot="extra">
                         当前状态:{{status_string}}
+                        <el-button v-if="can_dispatch" type="primary" size="small" @click="prepare_dispatch">{{ plan.dispatch_config ? '重新分劈' : '分劈' }}</el-button>
                         <el-button v-if="plan.status != 3 && plan_creator" size="small" type="danger" @click="cancel_plan">取消</el-button>
                         <span v-if="has_plan_reciever_permission">
                             <el-button v-if="plan.status == 0" type="success" size="small" @click="confirm_plan">确认</el-button>
@@ -134,6 +136,15 @@
         <span slot="footer">
             <el-button @click="show_delegate_diag= false">取 消</el-button>
             <el-button type="primary" @click="set_delegate">确 定</el-button>
+        </span>
+    </el-dialog>
+    <el-dialog append-to-body title="分劈计划" :visible.sync="show_dispatch" width="400px">
+        <el-select v-model="dispatch_config_id" filterable placeholder="请选择分劈配置" style="width: 100%;">
+            <el-option v-for="config in dispatch_configs" :key="config.id" :label="`${config.ticket_title}（${config.ticket_prefix}）`" :value="config.id"></el-option>
+        </el-select>
+        <span slot="footer">
+            <el-button @click="show_dispatch = false">取 消</el-button>
+            <el-button type="primary" @click="dispatch_plan">确 定</el-button>
         </span>
     </el-dialog>
     <el-dialog append-to-body title="修改信息" :visible.sync="show_update" width="30%">
@@ -237,6 +248,9 @@ export default {
             }
             return status_array[index];
         },
+        can_dispatch: function () {
+            return !this.motived && !this.plan.is_buy && this.plan.status != 3 && this.$hasPermission('sale_management');
+        },
         can_pass_vehicle: function () {
             if (!this.plan || !this.plan.register_time) {
                 return false;
@@ -269,6 +283,9 @@ export default {
     data: function () {
         return {
             show_delegate_diag: false,
+            show_dispatch: false,
+            dispatch_configs: [],
+            dispatch_config_id: '',
             show_order_verify: false,
             show_fc_execute: false,
             show_sc_exe: true,
@@ -435,6 +452,48 @@ export default {
                 plan_id: this.plan.id,
                 delegate_id: this.delegate_id,
             });
+            this.$emit('refresh');
+        },
+        load_dispatch_configs: async function () {
+            let pageNo = 0;
+            let has_more = true;
+            while (has_more) {
+                const req = { pageNo: pageNo };
+                if (this.stat_context_company_id) {
+                    req.stat_context_company_id = this.stat_context_company_id;
+                }
+                const resp = await this.$send_req('/stuff/get_all', req);
+                const rows = resp.stuff || [];
+                const stuff = rows.find(item => item.id === this.plan.stuff.id);
+                if (stuff) {
+                    return stuff.dispatch_configs || [];
+                }
+                has_more = rows.length >= 20 && (pageNo + 1) * 20 < resp.total;
+                pageNo += 1;
+            }
+            return [];
+        },
+        prepare_dispatch: async function () {
+            this.dispatch_configs = await this.load_dispatch_configs();
+            if (!this.dispatch_configs.length) {
+                this.$message.warning('请先在物料配置中添加分劈配置');
+                return;
+            }
+            const current_id = this.plan.dispatch_config ? this.plan.dispatch_config.id : '';
+            this.dispatch_config_id = this.dispatch_configs.some(item => item.id === current_id) ? current_id : '';
+            this.show_dispatch = true;
+        },
+        dispatch_plan: async function () {
+            if (!this.dispatch_config_id) {
+                this.$message.warning('请选择分劈配置');
+                return;
+            }
+            await this.$send_req('/sale_management/dispatch', {
+                plan_id: this.plan.id,
+                dispatch_config_id: this.dispatch_config_id,
+            });
+            this.show_dispatch = false;
+            this.$message.success('计划分劈成功');
             this.$emit('refresh');
         },
         close_preview: function () {

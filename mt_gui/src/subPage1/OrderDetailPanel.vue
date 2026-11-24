@@ -87,6 +87,10 @@
                             </view>
                         </view>
                     </view>
+                    <view class="info-row" v-if="focus_plan.dispatch_config">
+                        <text class="info-label">分劈公司</text>
+                        <text class="info-value sm">{{ focus_plan.dispatch_config.ticket_title }}</text>
+                    </view>
                     <view class="info-row linkable" @click="open_attach_pics">
                         <text class="info-label">双方资质</text>
                         <fui-icon name="arrowright" size="28" color="#C5CAD5"></fui-icon>
@@ -375,6 +379,9 @@
                     @click="show_rollback_confirm = true">
                     <text class="action-chip-text">回退</text>
                 </view>
+                <view class="action-chip primary" v-if="can_dispatch" @click="prepare_dispatch">
+                    <text class="action-chip-text">分劈</text>
+                </view>
                 <view class="action-chip danger"
                     v-if="focus_plan.status != 3 && ($has_module('sale_management') || $has_module('buy_management'))"
                     @click="prepare_xxx_confirm(cur_close_url, '闭单')">
@@ -481,6 +488,20 @@
                 <fui-input label="备注" borderTop placeholder="调价备注" v-model="new_stuff_price.comment"></fui-input>
             </fui-form>
         </fui-modal>
+        <fui-modal :zIndex="1002" width="600" v-if="show_dispatch" title="分劈计划" :show="show_dispatch"
+            @click="dispatch_plan">
+            <view class="dispatch-picker">
+                <picker mode="selector" :range="dispatch_config_options" range-key="label"
+                    :value="dispatch_config_index < 0 ? 0 : dispatch_config_index" @change="choose_dispatch_config">
+                    <view class="dispatch-select">
+                        <text class="dispatch-select-text" :class="{ placeholder: !selected_dispatch_label }">
+                            {{ selected_dispatch_label || '请选择分劈配置' }}
+                        </text>
+                        <fui-icon name="arrowdown" size="28" color="#8A94A6"></fui-icon>
+                    </view>
+                </picker>
+            </view>
+        </fui-modal>
         <fui-toast ref="toast"></fui-toast>
         <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false"
             @change="change_index"></fui-gallery>
@@ -580,6 +601,9 @@ export default {
             show_attach: false,
             gallery_index: 0,
             new_stuff_price: { show: false, price: 0, comment: '' },
+            show_dispatch: false,
+            dispatch_configs: [],
+            dispatch_config_index: -1,
             cur_contract: { balance: 0, rbac_users: [], begin_time: '', end_time: '' },
             cur_is_buy: false,
             cur_confirm_url: '',
@@ -635,6 +659,19 @@ export default {
         },
         is_allowed_order_return: function () {
             return this.isAllowedOrderReturn;
+        },
+        can_dispatch: function () {
+            return this.role === 'sale_management' && !this.focus_plan.is_buy && this.focus_plan.status != 3;
+        },
+        dispatch_config_options: function () {
+            return this.dispatch_configs.map(item => ({
+                ...item,
+                label: `${item.ticket_title}（${item.ticket_prefix}）`,
+            }));
+        },
+        selected_dispatch_label: function () {
+            const selected = this.dispatch_config_options[this.dispatch_config_index];
+            return selected ? selected.label : '';
         },
         can_show_rollback: function () {
             const p = this.focus_plan || {};
@@ -806,6 +843,52 @@ export default {
                 ret.stat_context_company_id = this.stat_context_company_id;
             }
             return ret;
+        },
+        load_dispatch_configs: async function () {
+            let pageNo = 0;
+            let has_more = true;
+            while (has_more) {
+                const resp = await this.$send_req('/stuff/get_all', this.make_context_req({ pageNo: pageNo }));
+                const rows = resp.stuff || [];
+                const stuff = rows.find(item => item.id === this.focus_plan.stuff.id);
+                if (stuff) {
+                    return stuff.dispatch_configs || [];
+                }
+                has_more = rows.length >= 20 && (pageNo + 1) * 20 < resp.total;
+                pageNo += 1;
+            }
+            return [];
+        },
+        prepare_dispatch: async function () {
+            this.dispatch_configs = await this.load_dispatch_configs();
+            if (!this.dispatch_configs.length) {
+                uni.showToast({ title: '请先在PC端配置物料分劈', icon: 'none' });
+                return;
+            }
+            const current_id = this.focus_plan.dispatch_config ? this.focus_plan.dispatch_config.id : 0;
+            this.dispatch_config_index = this.dispatch_config_options.findIndex(item => item.id === current_id);
+            this.show_dispatch = true;
+        },
+        choose_dispatch_config: function (e) {
+            this.dispatch_config_index = Number(e.detail.value);
+        },
+        dispatch_plan: async function (e) {
+            if (e.index != 1) {
+                this.show_dispatch = false;
+                return;
+            }
+            const selected = this.dispatch_config_options[this.dispatch_config_index];
+            if (!selected) {
+                uni.showToast({ title: '请选择分劈配置', icon: 'none' });
+                return;
+            }
+            await this.$send_req('/sale_management/dispatch', {
+                plan_id: this.focus_plan.id,
+                dispatch_config_id: selected.id,
+            });
+            this.show_dispatch = false;
+            uni.showToast({ title: '计划分劈成功', icon: 'success' });
+            this.refresh_detail();
         },
         load_contract: async function (plan) {
             // 仅管理端角色拉合同；买方/供应商身份有销售模块时误调会报「无权限」
@@ -1579,12 +1662,44 @@ export default {
     background: linear-gradient(145deg, #6FDB9A 0%, #2DBE6C 100%);
 }
 
+.action-chip.primary {
+    background: linear-gradient(145deg, #5B6FFF 0%, #465CFF 48%, #2F3FCF 100%);
+}
+
 .action-chip.warn {
     background: linear-gradient(145deg, #FFB06B 0%, #FF8A2B 100%);
 }
 
 .action-chip.danger {
     background: linear-gradient(145deg, #FF8A8B 0%, #FF4D4F 100%);
+}
+
+.dispatch-picker {
+    padding: 24rpx 0 8rpx;
+}
+
+.dispatch-select {
+    min-height: 88rpx;
+    padding: 0 24rpx;
+    border: 2rpx solid #DDE2EF;
+    border-radius: 16rpx;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
+}
+
+.dispatch-select-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 28rpx;
+    color: #1A1F36;
+}
+
+.dispatch-select-text.placeholder {
+    color: #8A94A6;
 }
 
 .body {

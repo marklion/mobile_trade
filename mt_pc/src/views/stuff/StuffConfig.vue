@@ -107,6 +107,13 @@
                                     </el-popover>
                                 </template>
                             </el-table-column>
+                            <el-table-column label="分劈配置" width="100" align="center">
+                                <template slot-scope="scope">
+                                    <el-button size="mini" type="primary" plain @click="open_dispatch_config(scope.row)">
+                                        {{ (scope.row.dispatch_configs || []).length }}项
+                                    </el-button>
+                                </template>
+                            </el-table-column>
                             <el-table-column prop="comment" show-overflow-tooltip label="备注" width="120" align="center"></el-table-column>
                             <el-table-column prop="expect_count" label="期望单车装载量" width="150" align="center" sortable></el-table-column>
                             <el-table-column prop="delay_days" label="允许迟到天数" width="150" align="center" sortable></el-table-column>
@@ -194,6 +201,30 @@
                     <el-button @click="show_zone_add = false">取消</el-button>
                 </el-form-item>
             </el-form>
+        </el-dialog>
+        <el-dialog :visible.sync="show_dispatch_config" width="700px" :title="`物料【${dispatch_config_stuff.name || ''}】分劈配置`">
+            <el-form ref="dispatch_config_form" :model="dispatch_config_req" :rules="dispatch_config_rules" label-width="90px">
+                <el-form-item label="磅单标题" prop="ticket_title">
+                    <el-input v-model="dispatch_config_req.ticket_title" style="width: 100%;" placeholder="请输入分劈公司或磅单标题"></el-input>
+                </el-form-item>
+                <el-form-item label="磅单前缀" prop="ticket_prefix">
+                    <el-input v-model="dispatch_config_req.ticket_prefix" style="width: 100%;" placeholder="请输入磅单号前缀"></el-input>
+                </el-form-item>
+                <el-form-item>
+                    <el-button type="primary" @click="save_dispatch_config">{{ dispatch_config_req.id ? '保存修改' : '添加配置' }}</el-button>
+                    <el-button v-if="dispatch_config_req.id" @click="reset_dispatch_config_form">取消编辑</el-button>
+                </el-form-item>
+            </el-form>
+            <el-table :data="dispatch_config_stuff.dispatch_configs || []" size="mini" border>
+                <el-table-column prop="ticket_title" label="磅单标题"></el-table-column>
+                <el-table-column prop="ticket_prefix" label="磅单前缀" width="180"></el-table-column>
+                <el-table-column label="操作" width="150" align="center">
+                    <template slot-scope="scope">
+                        <el-button type="text" size="mini" @click="prepare_update_dispatch_config(scope.row)">修改</el-button>
+                        <el-button type="text" size="mini" style="color: #F56C6C;" @click="delete_dispatch_config(scope.row)">删除</el-button>
+                    </template>
+                </el-table-column>
+            </el-table>
         </el-dialog>
         <el-dialog :visible.sync="show_stuff_fetch" :title="is_update ? '修改物料' : '新增物料'">
             <el-form ref="form" :model="stuff_ready_fetch" :rules="rules">
@@ -417,6 +448,29 @@ export default {
             zone_req: {
                 zone_name: ''
             },
+            show_dispatch_config: false,
+            dispatch_config_stuff: {
+                id: 0,
+                name: '',
+                dispatch_configs: [],
+            },
+            dispatch_config_req: {
+                id: 0,
+                ticket_title: '',
+                ticket_prefix: '',
+            },
+            dispatch_config_rules: {
+                ticket_title: [{
+                    required: true,
+                    message: '请输入磅单标题',
+                    trigger: 'blur'
+                }],
+                ticket_prefix: [{
+                    required: true,
+                    message: '请输入磅单前缀',
+                    trigger: 'blur'
+                }],
+            },
             rules: {
                 name: [{
                     required: true,
@@ -585,9 +639,85 @@ export default {
                 console.log(error);
             }
         },
-        refresh_stuff: function () {
+        open_dispatch_config: function (stuff) {
+            this.dispatch_config_stuff = stuff;
+            this.reset_dispatch_config_form();
+            this.show_dispatch_config = true;
+        },
+        reset_dispatch_config_form: function () {
+            this.dispatch_config_req = {
+                id: 0,
+                ticket_title: '',
+                ticket_prefix: '',
+            };
+            this.$nextTick(() => {
+                if (this.$refs.dispatch_config_form) {
+                    this.$refs.dispatch_config_form.clearValidate();
+                }
+            });
+        },
+        prepare_update_dispatch_config: function (config) {
+            this.dispatch_config_req = {
+                id: config.id,
+                ticket_title: config.ticket_title,
+                ticket_prefix: config.ticket_prefix,
+            };
+            this.$nextTick(() => {
+                if (this.$refs.dispatch_config_form) {
+                    this.$refs.dispatch_config_form.clearValidate();
+                }
+            });
+        },
+        reload_dispatch_configs: async function () {
+            await this.refresh_stuff();
+            const stuff = this.$refs.stuff.content.find(item => item.id === this.dispatch_config_stuff.id);
+            if (stuff) {
+                this.dispatch_config_stuff = stuff;
+            }
+        },
+        save_dispatch_config: async function () {
+            this.$refs.dispatch_config_form.validate(async (valid) => {
+                if (!valid) {
+                    return;
+                }
+                const is_update = !!this.dispatch_config_req.id;
+                const req = {
+                    ticket_title: this.dispatch_config_req.ticket_title,
+                    ticket_prefix: this.dispatch_config_req.ticket_prefix,
+                };
+                if (is_update) {
+                    req.dispatch_config_id = this.dispatch_config_req.id;
+                } else {
+                    req.stuff_id = this.dispatch_config_stuff.id;
+                }
+                await this.$send_req(is_update ? '/stuff/update_dispatch_config' : '/stuff/add_dispatch_config', req);
+                this.$message.success(is_update ? '分劈配置已更新' : '分劈配置已添加');
+                this.reset_dispatch_config_form();
+                await this.reload_dispatch_configs();
+            });
+        },
+        delete_dispatch_config: async function (config) {
+            try {
+                await this.$confirm(`确定要删除分劈配置【${config.ticket_title}】吗？`, '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                });
+            } catch (error) {
+                return;
+            }
+            await this.$send_req('/stuff/del_dispatch_config', {
+                dispatch_config_id: config.id
+            });
+            if (this.dispatch_config_req.id === config.id) {
+                this.reset_dispatch_config_form();
+            }
+            this.$message.success('分劈配置已删除');
+            await this.reload_dispatch_configs();
+        },
+        refresh_stuff: async function () {
             let current_page = this.$refs.stuff.cur_page;
-            this.$refs.stuff.refresh(current_page);
+            await this.$refs.stuff.refresh(current_page);
         },
         do_search: function () {
             this.$refs.stuff.do_search();
