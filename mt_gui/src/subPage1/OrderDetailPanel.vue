@@ -684,7 +684,7 @@ export default {
             return this.role === 'sale_management' && !this.focus_plan.is_buy && this.focus_plan.status != 3 && (this.focus_plan.stuff.dispatch_configs || []).length > 0;
         },
         can_cancel_dispatch: function () {
-            return this.can_dispatch && !!this.focus_plan.dispatch_config;
+            return this.role === 'sale_management' && !this.focus_plan.is_buy && this.focus_plan.status != 3 && !!this.focus_plan.dispatch_config;
         },
         dispatch_config_options: function () {
             return this.focus_plan.stuff.dispatch_configs.map(item => ({
