@@ -26,7 +26,8 @@ module.exports = {
                         ],
                         paranoid: false
                     },
-                    db_opt.get_sq().models.drop_take_zone
+                    db_opt.get_sq().models.drop_take_zone,
+                    db_opt.get_sq().models.dispatch_config
                 ],
                 paranoid: false
             },

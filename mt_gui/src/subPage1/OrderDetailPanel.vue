@@ -380,7 +380,10 @@
                     <text class="action-chip-text">回退</text>
                 </view>
                 <view class="action-chip primary" v-if="can_dispatch" @click="prepare_dispatch">
-                    <text class="action-chip-text">分劈</text>
+                    <text class="action-chip-text">{{ focus_plan.dispatch_config ? '重新分劈' : '分劈' }}</text>
+                </view>
+                <view class="action-chip warn" v-if="can_cancel_dispatch" @click="show_cancel_dispatch_confirm = true">
+                    <text class="action-chip-text">取消分劈</text>
                 </view>
                 <view class="action-chip danger"
                     v-if="focus_plan.status != 3 && ($has_module('sale_management') || $has_module('buy_management'))"
@@ -491,17 +494,33 @@
         <fui-modal :zIndex="1002" width="600" v-if="show_dispatch" title="分劈计划" :show="show_dispatch"
             @click="dispatch_plan">
             <view class="dispatch-picker">
-                <picker mode="selector" :range="dispatch_config_options" range-key="label"
-                    :value="dispatch_config_index < 0 ? 0 : dispatch_config_index" @change="choose_dispatch_config">
-                    <view class="dispatch-select">
-                        <text class="dispatch-select-text" :class="{ placeholder: !selected_dispatch_label }">
-                            {{ selected_dispatch_label || '请选择分劈配置' }}
-                        </text>
-                        <fui-icon name="arrowdown" size="28" color="#8A94A6"></fui-icon>
-                    </view>
-                </picker>
+                <view class="dispatch-select" @click="show_dispatch_picker = true">
+                    <text class="dispatch-select-text" :class="{ placeholder: !selected_dispatch_label }">
+                        {{ selected_dispatch_label || '请选择分劈配置' }}
+                    </text>
+                    <fui-icon name="arrowdown" size="28" color="#8A94A6"></fui-icon>
+                </view>
             </view>
         </fui-modal>
+        <fui-modal :zIndex="1002" width="600" v-if="show_cancel_dispatch_confirm" title="取消分劈"
+            descr="确定要取消当前订单的分劈配置吗？" :show="show_cancel_dispatch_confirm" @click="cancel_dispatch">
+        </fui-modal>
+        <fui-bottom-popup v-if="show_dispatch_picker" :show="show_dispatch_picker" z-index="1003"
+            @close="show_dispatch_picker = false">
+            <view class="dispatch-popup-title">请选择分劈配置</view>
+            <scroll-view scroll-y class="dispatch-popup-options">
+                <fui-list>
+                    <fui-list-cell v-for="(item, index) in dispatch_config_options" :key="item.id"
+                        @click="choose_dispatch_config(index)">
+                        <view class="dispatch-option">
+                            <text>{{ item.label }}</text>
+                            <fui-icon v-if="dispatch_config_index === index" name="check" size="30"
+                                color="#465CFF"></fui-icon>
+                        </view>
+                    </fui-list-cell>
+                </fui-list>
+            </scroll-view>
+        </fui-bottom-popup>
         <fui-toast ref="toast"></fui-toast>
         <fui-gallery :urls="get_both_attach" v-if="show_attach" :show="show_attach" @hide="show_attach = false"
             @change="change_index"></fui-gallery>
@@ -602,7 +621,8 @@ export default {
             gallery_index: 0,
             new_stuff_price: { show: false, price: 0, comment: '' },
             show_dispatch: false,
-            dispatch_configs: [],
+            show_dispatch_picker: false,
+            show_cancel_dispatch_confirm: false,
             dispatch_config_index: -1,
             cur_contract: { balance: 0, rbac_users: [], begin_time: '', end_time: '' },
             cur_is_buy: false,
@@ -661,10 +681,13 @@ export default {
             return this.isAllowedOrderReturn;
         },
         can_dispatch: function () {
-            return this.role === 'sale_management' && !this.focus_plan.is_buy && this.focus_plan.status != 3;
+            return this.role === 'sale_management' && !this.focus_plan.is_buy && this.focus_plan.stuff.dispatch_configs.length > 0 && this.focus_plan.status != 3;
+        },
+        can_cancel_dispatch: function () {
+            return this.can_dispatch && !!this.focus_plan.dispatch_config;
         },
         dispatch_config_options: function () {
-            return this.dispatch_configs.map(item => ({
+            return this.focus_plan.stuff.dispatch_configs.map(item => ({
                 ...item,
                 label: `${item.ticket_title}（${item.ticket_prefix}）`,
             }));
@@ -844,36 +867,19 @@ export default {
             }
             return ret;
         },
-        load_dispatch_configs: async function () {
-            let pageNo = 0;
-            let has_more = true;
-            while (has_more) {
-                const resp = await this.$send_req('/stuff/get_all', this.make_context_req({ pageNo: pageNo }));
-                const rows = resp.stuff || [];
-                const stuff = rows.find(item => item.id === this.focus_plan.stuff.id);
-                if (stuff) {
-                    return stuff.dispatch_configs || [];
-                }
-                has_more = rows.length >= 20 && (pageNo + 1) * 20 < resp.total;
-                pageNo += 1;
-            }
-            return [];
-        },
-        prepare_dispatch: async function () {
-            this.dispatch_configs = await this.load_dispatch_configs();
-            if (!this.dispatch_configs.length) {
-                uni.showToast({ title: '请先在PC端配置物料分劈', icon: 'none' });
-                return;
-            }
+        prepare_dispatch: function () {
             const current_id = this.focus_plan.dispatch_config ? this.focus_plan.dispatch_config.id : 0;
             this.dispatch_config_index = this.dispatch_config_options.findIndex(item => item.id === current_id);
+            this.show_dispatch_picker = false;
             this.show_dispatch = true;
         },
-        choose_dispatch_config: function (e) {
-            this.dispatch_config_index = Number(e.detail.value);
+        choose_dispatch_config: function (index) {
+            this.dispatch_config_index = Number(index);
+            this.show_dispatch_picker = false;
         },
         dispatch_plan: async function (e) {
             if (e.index != 1) {
+                this.show_dispatch_picker = false;
                 this.show_dispatch = false;
                 return;
             }
@@ -886,8 +892,21 @@ export default {
                 plan_id: this.focus_plan.id,
                 dispatch_config_id: selected.id,
             });
+            this.show_dispatch_picker = false;
             this.show_dispatch = false;
             uni.showToast({ title: '计划分劈成功', icon: 'success' });
+            this.refresh_detail();
+        },
+        cancel_dispatch: async function (e) {
+            if (e.index != 1) {
+                this.show_cancel_dispatch_confirm = false;
+                return;
+            }
+            await this.$send_req('/sale_management/cancel_dispatch', {
+                plan_id: this.focus_plan.id,
+            });
+            this.show_cancel_dispatch_confirm = false;
+            uni.showToast({ title: '已取消分劈', icon: 'success' });
             this.refresh_detail();
         },
         load_contract: async function (plan) {
@@ -1700,6 +1719,26 @@ export default {
 
 .dispatch-select-text.placeholder {
     color: #8A94A6;
+}
+
+.dispatch-popup-title {
+    padding: 28rpx 24rpx 12rpx;
+    text-align: center;
+    font-size: 30rpx;
+    font-weight: bold;
+}
+
+.dispatch-popup-options {
+    max-height: 50vh;
+}
+
+.dispatch-option {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16rpx;
 }
 
 .body {

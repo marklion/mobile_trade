@@ -329,6 +329,13 @@ module.exports = {
                 need_driver_sign:{ type: Boolean, mean: '是否需要司机签字', example: false },
                 protocol_doc_path: { type: String, mean: '协议文本docx路径', example: '/uploads/protocol.docx' },
                 protocol_signers: { type: String, mean: '协议签名人（逗号分隔）', example: '司机,供方' },
+                dispatch_configs: {
+                    type: Array, mean: '分劈配置', explain: {
+                        id: { type: Number, mean: '配置ID', example: 1 },
+                        ticket_title: { type: String, mean: '标题', example: '标题' },
+                        ticket_prefix: { type: String, mean: '磅单前缀', example: '前缀' },
+                    }
+                }
             }
         },
         company: {

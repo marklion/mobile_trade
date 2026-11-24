@@ -44,6 +44,7 @@
                     <template slot="extra">
                         当前状态:{{status_string}}
                         <el-button v-if="can_dispatch" type="primary" size="small" @click="prepare_dispatch">{{ plan.dispatch_config ? '重新分劈' : '分劈' }}</el-button>
+                        <el-button v-if="can_cancel_dispatch" type="warning" size="small" @click="cancel_dispatch">取消分劈</el-button>
                         <el-button v-if="plan.status != 3 && plan_creator" size="small" type="danger" @click="cancel_plan">取消</el-button>
                         <span v-if="has_plan_reciever_permission">
                             <el-button v-if="plan.status == 0" type="success" size="small" @click="confirm_plan">确认</el-button>
@@ -140,7 +141,7 @@
     </el-dialog>
     <el-dialog append-to-body title="分劈计划" :visible.sync="show_dispatch" width="400px">
         <el-select v-model="dispatch_config_id" filterable placeholder="请选择分劈配置" style="width: 100%;">
-            <el-option v-for="config in dispatch_configs" :key="config.id" :label="`${config.ticket_title}（${config.ticket_prefix}）`" :value="config.id"></el-option>
+            <el-option v-for="config in plan.stuff.dispatch_configs" :key="config.id" :label="`${config.ticket_title}（${config.ticket_prefix}）`" :value="config.id"></el-option>
         </el-select>
         <span slot="footer">
             <el-button @click="show_dispatch = false">取 消</el-button>
@@ -249,7 +250,10 @@ export default {
             return status_array[index];
         },
         can_dispatch: function () {
-            return !this.motived && !this.plan.is_buy && this.plan.status != 3 && this.$hasPermission('sale_management');
+            return !this.motived && !this.plan.is_buy && this.plan.stuff.dispatch_configs.length > 0 && this.plan.status != 3 && this.$hasPermission('sale_management');
+        },
+        can_cancel_dispatch: function() {
+            return this.can_dispatch && !!this.plan.dispatch_config
         },
         can_pass_vehicle: function () {
             if (!this.plan || !this.plan.register_time) {
@@ -284,7 +288,6 @@ export default {
         return {
             show_delegate_diag: false,
             show_dispatch: false,
-            dispatch_configs: [],
             dispatch_config_id: '',
             show_order_verify: false,
             show_fc_execute: false,
@@ -454,33 +457,9 @@ export default {
             });
             this.$emit('refresh');
         },
-        load_dispatch_configs: async function () {
-            let pageNo = 0;
-            let has_more = true;
-            while (has_more) {
-                const req = { pageNo: pageNo };
-                if (this.stat_context_company_id) {
-                    req.stat_context_company_id = this.stat_context_company_id;
-                }
-                const resp = await this.$send_req('/stuff/get_all', req);
-                const rows = resp.stuff || [];
-                const stuff = rows.find(item => item.id === this.plan.stuff.id);
-                if (stuff) {
-                    return stuff.dispatch_configs || [];
-                }
-                has_more = rows.length >= 20 && (pageNo + 1) * 20 < resp.total;
-                pageNo += 1;
-            }
-            return [];
-        },
-        prepare_dispatch: async function () {
-            this.dispatch_configs = await this.load_dispatch_configs();
-            if (!this.dispatch_configs.length) {
-                this.$message.warning('请先在物料配置中添加分劈配置');
-                return;
-            }
+        prepare_dispatch: function () {
             const current_id = this.plan.dispatch_config ? this.plan.dispatch_config.id : '';
-            this.dispatch_config_id = this.dispatch_configs.some(item => item.id === current_id) ? current_id : '';
+            this.dispatch_config_id = this.plan.stuff.dispatch_configs.some(item => item.id === current_id) ? current_id : '';
             this.show_dispatch = true;
         },
         dispatch_plan: async function () {
@@ -495,6 +474,22 @@ export default {
             this.show_dispatch = false;
             this.$message.success('计划分劈成功');
             this.$emit('refresh');
+        },
+        cancel_dispatch: async function() {
+            try {
+                await this.$confirm(`确定要取消分劈公司【${this.plan.dispatch_config.ticket_title}】吗？`, '提示', {
+                    confirmButtonText: '确定',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                })
+            } catch (error) {
+                return
+            }
+            await this.$send_req('/sale_management/cancel_dispatch', {
+                plan_id: this.plan.id,
+            })
+            this.$message.success('已取消分劈')
+            this.$emit('refresh')
         },
         close_preview: function () {
             this.show_pics = false;

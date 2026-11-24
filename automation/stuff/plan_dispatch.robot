@@ -27,6 +27,12 @@ Dispatch Plan
     ${resp}  Req to Server  /sale_management/dispatch  ${sc_admin_token}  ${req}  ${expect_fail}
     RETURN  ${resp}
 
+Cancel Dispatch
+    [Arguments]  ${plan_id}  ${expect_fail}=${False}
+    ${req}  Create Dictionary  plan_id=${plan_id}
+    ${resp}  Req to Server  /sale_management/cancel_dispatch  ${sc_admin_token}  ${req}  ${expect_fail}
+    RETURN  ${resp}
+
 Deliver Plan With External Ticket
     [Arguments]  ${plan}  ${ticket_no}
     ${p_time}  Get Current Date  result_format=%Y-%m-%d %H:%M:%S
@@ -42,6 +48,8 @@ Dispatch Config Should Be Returned And Bound To Plan
     ${plan}  Prepare Paid Plan
     Dispatch Plan  ${plan}[id]  ${config}[id]
     ${current_plan}  Get Plan By Id  ${plan}[id]
+    Should Be Equal As Integers  ${current_plan}[stuff][dispatch_configs][0][id]  ${config}[id]
+    Should Be Equal As Strings  ${current_plan}[stuff][dispatch_configs][0][ticket_prefix]  DPA
     Should Be Equal As Integers  ${current_plan}[dispatch_config][id]  ${config}[id]
     Should Be Equal As Strings  ${current_plan}[dispatch_config][ticket_title]  分劈公司A
     ${latest_node}  Get Latest History Node  ${current_plan}
@@ -50,6 +58,20 @@ Dispatch Config Should Be Returned And Bound To Plan
     ${brief_plans}  Req Get to Server  /sale_management/order_search_brief  ${sc_admin_token}  plans  -1  &{req}
     Should Be Equal As Integers  ${brief_plans}[0][dispatch_config][id]  ${config}[id]
     Should Be Equal As Strings  ${brief_plans}[0][dispatch_config][ticket_title]  分劈公司A
+
+Cancel Dispatch Should Clear Config And Record History
+    [Teardown]  Dispatch Test Reset
+    ${config}  Add Dispatch Config  ${test_stuff}[id]  分劈公司A  DPA
+    ${plan}  Prepare Paid Plan
+    Dispatch Plan  ${plan}[id]  ${config}[id]
+    Cancel Dispatch  ${plan}[id]
+    ${current_plan}  Get Plan By Id  ${plan}[id]
+    Dictionary Should Not Contain Key  ${current_plan}  dispatch_config
+    ${latest_node}  Get Latest History Node  ${current_plan}
+    Should Contain  ${latest_node}[action_type]  取消分劈
+    ${req}  Create Dictionary  start_time=2018-01-01  end_time=2090-09-09
+    ${brief_plans}  Req Get to Server  /sale_management/order_search_brief  ${sc_admin_token}  plans  -1  &{req}
+    Dictionary Should Not Contain Key  ${brief_plans}[0]  dispatch_config
 
 Dispatch Plan Should Reject Config From Another Stuff
     [Teardown]  Dispatch Test Reset

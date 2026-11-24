@@ -1319,5 +1319,33 @@ module.exports = {
                 return { result: true };
             }
         },
+        cancel_dispatch: {
+            name: '取消分劈',
+            description: '取消计划的分劈配置',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                plan_id: { type: Number, have_to: true, mean: '计划ID', example: 1 },
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let user = await rbac_lib.get_user_by_token(token);
+                let plan = await util_lib.get_single_plan_by_id(body.plan_id);
+                if (plan && company && plan.stuff.companyId == company.id) {
+                    if (plan.status == 3) {
+                        throw { err_msg: '已关闭计划不能取消分劈' };
+                    }
+                    if (!plan.dispatch_config) {
+                        throw { err_msg: '计划尚未分劈' };
+                    }
+                    await plan.setDispatch_config(null);
+                    await plan_lib.record_plan_history(plan, user.name, '取消分劈');
+                }
+                return { result: true };
+            }
+        },
     },
 }
