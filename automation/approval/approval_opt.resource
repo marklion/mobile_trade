@@ -108,6 +108,7 @@ Approve Record
     [Arguments]  ${record_id}  ${token}=${sc_admin_token}
     ${req}  Create Dictionary  id=${record_id}  is_approve=${True}
     Req to Server  /approval/audit_req  ${token}  ${req}
+    Sleep  1400ms
 
 Reject Record
     [Arguments]  ${record_id}  ${token}=${sc_admin_token}
