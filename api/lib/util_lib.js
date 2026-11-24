@@ -26,7 +26,8 @@ module.exports = {
                         ],
                         paranoid: false
                     },
-                    db_opt.get_sq().models.drop_take_zone
+                    db_opt.get_sq().models.drop_take_zone,
+                    db_opt.get_sq().models.dispatch_config
                 ],
                 paranoid: false
             },
@@ -54,6 +55,11 @@ module.exports = {
                 include: [db_opt.get_sq().models.extra_info_config],
                 separate: true,
                 order: [['id', 'ASC']],
+            },
+            {
+                model: db_opt.get_sq().models.dispatch_config,
+                paranoid: false,
+                order: [['id', 'ASC']]
             }
         ];
     },
@@ -94,6 +100,11 @@ module.exports = {
                     attributes: ['id', 'name'],
                     paranoid: false
                 }],
+                paranoid: false
+            },
+            {
+                model: db_opt.get_sq().models.dispatch_config,
+                attributes: ['id', 'ticket_title'],
                 paranoid: false
             },
         ];

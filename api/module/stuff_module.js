@@ -203,6 +203,11 @@ module.exports = {
                         need_driver_sign: { type: Boolean, mean: '是否需要司机签字', example: false },
                         protocol_doc_path: { type: String, mean: '协议文本docx路径', example: '/uploads/protocol.docx' },
                         protocol_signers: { type: String, mean: '协议签名人（逗号分隔）', example: '司机,供方' },
+                        dispatch_configs:{type: Array, mean: '分劈配置', explain: {
+                            id: { type: Number, mean: 'ID', example: 1 },
+                            ticket_title: { type: String, mean: '磅单标题', example: '标题' },
+                            ticket_prefix: { type: String, mean: '磅单前缀', example: '前缀' },
+                        }},
                     }
                 },
             },
@@ -221,6 +226,11 @@ module.exports = {
                             include: [{ model: sq.models.drop_take_zone },
                             {
                                 model: sq.models.sct_scale_item,
+                                separate: true,
+                                order: [['id', 'ASC']]
+                            },
+                            {
+                                model: sq.models.dispatch_config,
                                 separate: true,
                                 order: [['id', 'ASC']]
                             }
@@ -1815,6 +1825,93 @@ module.exports = {
                 return {
                     extra_info_configs: resp.rows,
                     total: resp.count
+                }
+            }
+        },
+        add_dispatch_config:{
+            name: '添加分劈配置',
+            description: '添加分劈配置',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                ticket_title: { type: String, have_to: true, mean: '磅单标题', example: '标题' },
+                ticket_prefix: { type: String, have_to: true, mean: '磅单前缀', example: '前缀' },
+                stuff_id:{ type: Number, have_to: true, mean: '物料ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let stuff = await sq.models.stuff.findByPk(body.stuff_id);
+                if (stuff && company && await company.hasStuff(stuff)) {
+                    let exist_records = await stuff.getDispatch_configs({
+                        where: {
+                            ticket_title: body.ticket_title,
+                            ticket_prefix: body.ticket_prefix
+                        }
+                    });
+                    if (exist_records.length > 0) {
+                        throw new Error('该分劈配置已存在');
+                    }
+                    await stuff.createDispatch_config({
+                        ticket_title: body.ticket_title,
+                        ticket_prefix: body.ticket_prefix,
+                    });
+                    return { result: true };
+                } else {
+                    throw new Error('无权限操作该物料');
+                }
+            }
+        },
+        update_dispatch_config: {
+            name: '更新分劈配置',
+            description: '更新分劈配置',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                dispatch_config_id: { type: Number, have_to: true, mean: '分劈配置ID', example: 1 },
+                ticket_title: { type: String, have_to: true, mean: '磅单标题', example: '标题' },
+                ticket_prefix: { type: String, have_to: true, mean: '磅单前缀', example: '前缀' }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let sq = db_opt.get_sq();
+                let dispatch_config = await sq.models.dispatch_config.findByPk(body.dispatch_config_id);
+                if (dispatch_config && company && await company.hasStuff(await dispatch_config.getStuff())) {
+                    await dispatch_config.update({
+                        ticket_title: body.ticket_title,
+                        ticket_prefix: body.ticket_prefix
+                    });
+                    return { result: true };
+                } else {
+                    throw new Error('无权限操作该分劈配置');
+                }
+            }
+        },
+        del_dispatch_config: {
+            name: '删除分劈配置',
+            description: '删除分劈配置',
+            is_write: true,
+            is_get_api: false,
+            params: {
+                dispatch_config_id: { type: Number, have_to: true, mean: '分劈配置ID', example: 1 }
+            },
+            result: {
+                result: { type: Boolean, mean: '结果', example: true }
+            },
+            func: async function (body, token) {
+                let company = await rbac_lib.get_company_by_token(token);
+                let sq = db_opt.get_sq();
+                let dispatch_config = await sq.models.dispatch_config.findByPk(body.dispatch_config_id);
+                if (dispatch_config && company && await company.hasStuff(await dispatch_config.getStuff())) {
+                    await dispatch_config.destroy();
+                    return { result: true };
+                } else {
+                    throw new Error('无权限操作该分劈配置');
                 }
             }
         },

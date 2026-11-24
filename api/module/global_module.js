@@ -86,12 +86,17 @@ async function get_ticket_func(body, token) {
         }
         complex_content = JSON.stringify(cc_array);
     }
+    let ocn = plan.stuff.company.name;
+    if (plan.dispatch_config && plan.dispatch_config.ticket_title)
+    {
+        ocn = plan.dispatch_config.ticket_title;
+    }
 
     return {
         id: plan.id,
         company_name: plan.company.name,
         company_contact: order_company_contact,
-        order_company_name: plan.stuff.company.name,
+        order_company_name: ocn,
         plate: plan.main_vehicle.plate,
         behind_plate: plan.behind_vehicle.plate,
         ticket_no: plan.ticket_no,

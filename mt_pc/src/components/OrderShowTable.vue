@@ -74,6 +74,9 @@
                         <template slot-scope="scope">
                             {{scope.row.company && scope.row.company.name}}({{scope.row.rbac_user && scope.row.rbac_user.name}})
                             <el-tag size="mini" :type="scope.row.enter_time?'success':'info'">{{!!scope.row.enter_time?'已入场':'未入场'}}</el-tag>
+                            <el-tag size="mini" type="warning" v-if="scope.row.dispatch_config">
+                                {{scope.row.dispatch_config.ticket_title}}
+                            </el-tag>
                         </template>
                     </el-table-column>
                     <el-table-column min-width="50" prop="stuff.name" label="物料" width="220">
@@ -146,7 +149,9 @@ import page_content from './PageContent.vue';
 import moment from 'moment';
 import SelectSearch from './SelectSearch.vue';
 import OrderDetail from './OrderDetail.vue';
-import { mapGetters } from 'vuex';
+import {
+    mapGetters
+} from 'vuex';
 export default {
     name: 'OrderShowTable',
     components: {
@@ -160,8 +165,8 @@ export default {
             'globalStatContextCompanyId',
         ]),
         show_sale_scope_selector: function () {
-            return this.req_url === '/sale_management/order_search_brief'
-                && this.globalStatScopeVisible;
+            return this.req_url === '/sale_management/order_search_brief' &&
+                this.globalStatScopeVisible;
         },
         detail_url: function () {
             const module_name = (this.req_url || '').split('/')[1];
@@ -297,7 +302,9 @@ export default {
     },
     methods: {
         make_context_req: function (body = {}) {
-            const ret = { ...body };
+            const ret = {
+                ...body
+            };
             delete ret.stat_context_company_id;
             if (this.show_sale_scope_selector && this.globalStatContextCompanyId != null) {
                 ret.stat_context_company_id = this.globalStatContextCompanyId;
@@ -390,7 +397,9 @@ export default {
             this.$refs.order.do_search();
         },
         refresh_order_count: async function () {
-            let brief_filter = { ...this.filter };
+            let brief_filter = {
+                ...this.filter
+            };
             brief_filter.hide_manual_close = undefined;
             brief_filter.only_entered = undefined;
             brief_filter.status = undefined;
@@ -555,5 +564,4 @@ export default {
 .group_scope {
     margin-bottom: 8px;
 }
-
 </style>

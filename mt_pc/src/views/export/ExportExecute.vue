@@ -181,6 +181,9 @@ const BASE_EXPORT_COLUMNS = [{
 }, {
     label: '金蝶星辰同步信息',
     name: 'king_dee_comment',
+},{
+    label: '分劈公司',
+    name: 'dispatch_company'
 }];
 
 const SUPPLY_EXPORT_COLUMN = { label: '货源公司', name: 'supply_company' };
