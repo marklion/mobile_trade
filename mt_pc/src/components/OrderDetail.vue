@@ -250,10 +250,10 @@ export default {
             return status_array[index];
         },
         can_dispatch: function () {
-            return !this.motived && !this.plan.is_buy && this.plan.stuff.dispatch_configs.length > 0 && this.plan.status != 3 && this.$hasPermission('sale_management');
+            return !this.motived && !this.plan.is_buy && this.plan.status != 3 && (this.plan.stuff.dispatch_configs || []).length > 0 && this.$hasPermission('sale_management');
         },
         can_cancel_dispatch: function() {
-            return this.can_dispatch && !!this.plan.dispatch_config
+            return !this.motived && !this.plan.is_buy && this.plan.status != 3 && this.$hasPermission('sale_management') && !!this.plan.dispatch_config;
         },
         can_pass_vehicle: function () {
             if (!this.plan || !this.plan.register_time) {
