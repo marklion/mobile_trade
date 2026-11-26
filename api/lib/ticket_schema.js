@@ -92,7 +92,9 @@ function append_extra_rows(data, rows) {
     const extra_infos = data.extra_infos || [];
     if (extra_infos.length > 0) {
         const first_extra_info = extra_infos[0];
-        rows.splice(4, 0, { label: first_extra_info.title, value: first_extra_info.content });
+        if (first_extra_info?.content) {
+            rows.splice(4, 0, { label: first_extra_info.title, value: first_extra_info.content });
+        }
         extra_infos.slice(1).forEach((item) => {
             if (item?.content) {
                 rows.push({ label: item.title, value: item.content });
