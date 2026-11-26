@@ -359,12 +359,12 @@ module.exports = {
                 let dr = await plan_lib.fetch_driver(req_body.driverName, req_body.driverPhone, req_body.driverID);
                 let company = await rbac_lib.get_company_by_token(token);
                 let stuff = await company.getStuff({ where: { name: req_body.stuffName } });
-                let buy_company = await rbac_lib.add_company(req_body.customerName);
-                let user = await rbac_lib.add_user('28887888777');
+                let buy_company = await rbac_lib.add_company(req.body.c3?req.body.c3:req_body.customerName);
+                let user = await rbac_lib.add_user('28987888777');
                 if (company && user) {
                     await rbac_lib.user_bind_company(user, buy_company, 'no_open_id', '第三方代提用户', '');
                 }
-                let user_token = await rbac_lib.user_login('28887888777');
+                let user_token = await rbac_lib.user_login('28987888777');
                 let create_req = {
                     "behind_vehicle_id": bv.id,
                     "comment": "第三方创建",
@@ -385,11 +385,11 @@ module.exports = {
                     await plan_lib.manual_pay_plan(plan_id, token);
                     ret = { err_msg: "", result: { orderNumber: plan_id.toString() } };
                     let extra_info_config_ids = await plan_lib.get_extra_info_config_ids(plan_id);
-                    if (extra_info_config_ids.length > 0 && req_body.c3) {
-                        await plan_lib.set_extrac_info_content(plan_id, extra_info_config_ids[0], req_body.c3);
+                    if (extra_info_config_ids.length > 0 && req_body.c4) {
+                        await plan_lib.set_extrac_info_content(plan_id, extra_info_config_ids[0], req_body.c4);
                     }
-                    if (extra_info_config_ids.length > 1 && req_body.c4) {
-                        await plan_lib.set_extrac_info_content(plan_id, extra_info_config_ids[1], req_body.c4);
+                    if (extra_info_config_ids.length > 1) {
+                        await plan_lib.set_extrac_info_content(plan_id, extra_info_config_ids[1], req_body.customerName);
                     }
                 }
             } catch (error) {
