@@ -307,7 +307,7 @@ export default {
         });
         if (ticket.extra_infos && ticket.extra_infos.length > 0) {
             let fei = ticket.extra_infos[0];
-            this.ticket_content.list.splice(4, 0, {
+            this.ticket_content.list.splice(4,0, {
                 label: fei.title,
                 value: fei.content,
             });
