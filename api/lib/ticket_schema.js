@@ -76,7 +76,7 @@ function append_extra_rows(data, rows) {
         rows.push({ label: data.replace_seal_no || '封签号', value: data.seal_no });
     }
     if (data.trans_company_name) {
-        rows.push({ label: data.transportation_company || '运输公司', value: data.trans_company_name });
+        rows.splice(3, 0, { label: data.transportation_company || '运输公司', value: data.trans_company_name });
     }
     if (data.drop_address) {
         rows.push({ label: '卸货地址', value: data.drop_address });
@@ -89,11 +89,18 @@ function append_extra_rows(data, rows) {
         });
     });
 
-    (data.extra_infos || []).forEach((item) => {
-        if (item?.content) {
-            rows.push({ label: item.title, value: item.content });
+    const extra_infos = data.extra_infos || [];
+    if (extra_infos.length > 0) {
+        const first_extra_info = extra_infos[0];
+        if (first_extra_info?.content) {
+            rows.splice(4, 0, { label: first_extra_info.title, value: first_extra_info.content });
         }
-    });
+        extra_infos.slice(1).forEach((item) => {
+            if (item?.content) {
+                rows.push({ label: item.title, value: item.content });
+            }
+        });
+    }
 }
 
 function build_ticket_view(ticket, opts = {}) {
@@ -104,6 +111,13 @@ function build_ticket_view(ticket, opts = {}) {
     const title = (data.order_company_name || '') + dec_title + (data.replace_weighingSheet || '称重单');
 
     const count_label = data.replace_count || '装载量';
+    let tmp_content = ''
+    if (data.extra_infos && data.extra_infos.length > 1 && data.extra_infos[1].title == '液源供应') {
+        tmp_content = data.company_name;
+        data.company_name = data.extra_infos[0].content;
+        data.extra_infos[0].content = data.extra_infos[1].content;
+        data.extra_infos[1].content = tmp_content;
+    }
     const rows = build_base_rows(data);
     const count_value = apply_second_unit(data, rows, moneyFormatter(data.count));
     const plan_sct_infos = data.plan_sct_infos || [];

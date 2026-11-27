@@ -195,6 +195,13 @@ export default {
             dec_title = '入厂';
         }
         this.title = ticket.order_company_name + dec_title + (ticket.replace_weighingSheet || '称重单');
+        let tmp_content = ''
+        if (ticket.extra_infos && ticket.extra_infos.length > 1 && ticket.extra_infos[1].title == '液源供应') {
+            tmp_content = ticket.company_name;
+            ticket.company_name = ticket.extra_infos[0].content;
+            ticket.extra_infos[0].content = ticket.extra_infos[1].content;
+            ticket.extra_infos[1].content = tmp_content;
+        }
         this.ticket_content = {
             label: ticket.replace_count || '装载量',
             value: utils.moneyFormatter(ticket.count),
@@ -281,7 +288,7 @@ export default {
         }
 
         if (ticket.trans_company_name) {
-            this.ticket_content.list.push({
+            this.ticket_content.list.splice(3, 0, {
                 label: ticket.transportation_company || '运输公司',
                 value: ticket.trans_company_name,
             })
@@ -298,15 +305,24 @@ export default {
                 value: item.value,
             });
         });
-        ticket.extra_infos.forEach(item => {
-            if (item.content) {
-                this.ticket_content.list.push({
-                    label: item.title,
-                    value: item.content,
-                });
-            }
+        if (ticket.extra_infos && ticket.extra_infos.length > 0) {
+            let fei = ticket.extra_infos[0];
+            this.ticket_content.list.splice(4, 0, {
+                label: fei.title,
+                value: fei.content,
+            });
+            let leis = ticket.extra_infos
+            leis.splice(0, 1);
+            leis.forEach(item => {
+                if (item.content) {
+                    this.ticket_content.list.push({
+                        label: item.title,
+                        value: item.content,
+                    });
+                }
+            });
+        }
 
-        });
         this.ticket_ready = true;
     },
     onShareAppMessage: function () {
